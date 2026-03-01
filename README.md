@@ -45,6 +45,8 @@ Plan command notes:
 - Automation route (KFP API):
   - `POST /api/plans/:id/automation/apply`
   - `POST /api/projects/:project_id/plans/:id/automation/apply`
+- Plan bootstrap:
+  - `kfc plan init --project <path> --new` always creates a fresh plan file (`YYYY-MM-DD-00x-new-plan.md`).
 
 ## Local Workflow
 

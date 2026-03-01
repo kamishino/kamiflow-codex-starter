@@ -16,6 +16,7 @@ Commands:
 
 Options:
   --project <path>   Override target project directory
+  --new              Create a unique new plan file (init only)
   --port <number>    Override local server port (serve only)
   --workspace <name> Run server in workspace mode (serve only)
 `);

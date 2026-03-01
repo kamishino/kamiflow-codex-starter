@@ -13,6 +13,8 @@ Expected:
 - concrete scope
 - if request is vague (missing 2+ core fields), reroute to `start` first
 - if `START_CONTEXT` is provided, consume it directly
+- ensure target plan file exists before plan drafting:
+  - resolve provided/active plan, or run `kfc plan init --project <path> --new`
 - zero unresolved high-impact decisions
 - Start Summary is present and non-placeholder
 - explicit `Next Command: build`
@@ -30,7 +32,7 @@ Expected:
 - each question has 3 options + `Other`
 - second turn (after answers) returns numbered idea cards
 - includes `START_CONTEXT` block
-- ends with exact `Run next:` command for `plan`
+- ends with exact `Run next:` command for `plan` including plan-file bootstrap
 
 ## Build Route
 

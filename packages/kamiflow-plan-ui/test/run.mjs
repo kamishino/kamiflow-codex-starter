@@ -132,6 +132,22 @@ await runCase("init creates plan template", async () => {
   });
 });
 
+await runCase("init --new creates unique incremented plan files", async () => {
+  await withTempDir(async (tempDir) => {
+    const first = await runCli(["init", "--project", tempDir, "--new"]);
+    assert.equal(first, 0);
+    const second = await runCli(["init", "--project", tempDir, "--new"]);
+    assert.equal(second, 0);
+
+    const plansDir = path.join(tempDir, ".local", "plans");
+    const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md")).sort();
+    assert.equal(files.length, 2);
+    assert.ok(/-\d{3}-new-plan\.md$/i.test(files[0]));
+    assert.ok(/-\d{3}-new-plan\.md$/i.test(files[1]));
+    assert.notEqual(files[0], files[1]);
+  });
+});
+
 await runCase("validate succeeds for generated template", async () => {
   await withTempDir(async (tempDir) => {
     const initExit = await runCli(["init", "--project", tempDir]);

@@ -43,7 +43,10 @@ kfc plan serve --project . --port 4310
 
 - `start` route first when request is vague (missing 2+ core planning fields)
 - `start` final output must include `START_CONTEXT` + exact `Run next:` command
-- `plan` route to finalize scope and gates
+- `plan` route must resolve/create target plan file first:
+  - use provided/active plan file, or
+  - run `kfc plan init --project <path> --new` and use the created file
+- then finalize scope and gates
 - `build` route only when plan is build-ready
 - `check` route after each build slice
 - after PASS + done handoff, use complete/archive flow

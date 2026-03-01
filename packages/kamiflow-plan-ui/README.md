@@ -20,12 +20,15 @@ Phase 2 includes:
 
 ```bash
 npm run kfp -- init --project <path>
+npm run kfp -- init --project <path> --new
 npm run kfp -- validate --project <path>
 npm run kfp -- serve --project <path> --port 4310
 npm run kfp -- workspace list
 npm run kfp -- workspace add <name> [--project <path>]
 npm run kfp -- serve --workspace <name> --port 4310
 ```
+
+`init --new` always creates a unique file using `YYYY-MM-DD-00x-new-plan.md`.
 
 Then open:
 

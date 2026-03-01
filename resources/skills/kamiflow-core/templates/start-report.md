@@ -131,7 +131,7 @@ END_START_CONTEXT
 - Reason:
 - Immediate next command:
 
-Run next: $kamiflow-core plan use START_CONTEXT and update .local/plans/<file>.md to decision-complete build-ready spec.
+Run next: $kamiflow-core plan use START_CONTEXT, ensure plan file via `kfc plan init --project <path> --new` when missing, then update target .local/plans/<file>.md to decision-complete build-ready spec.
 
 ## Mode
 - Selected Mode: Plan
