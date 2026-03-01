@@ -26,3 +26,8 @@ export interface PlanRecord {
   parsed: ParsedPlan | null;
   errors: string[];
 }
+
+export interface WriteResponse {
+  summary: PlanSummary;
+  write_warning?: string;
+}

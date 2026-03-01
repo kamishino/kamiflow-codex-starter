@@ -8,6 +8,8 @@ Phase 2 includes:
 - private plan template in `.local/plans`
 - local API + SSE
 - read-only browser UI
+- guarded write actions for status/decision/task/gate
+- codex action bridge endpoint
 
 ## Usage
 
@@ -29,6 +31,11 @@ http://127.0.0.1:4310
 - `GET /api/plans`
 - `GET /api/plans/:id`
 - `GET /api/plans/:id/events` (SSE)
+- `PATCH /api/plans/:id/status`
+- `PATCH /api/plans/:id/decision`
+- `PATCH /api/plans/:id/task`
+- `PATCH /api/plans/:id/gate`
+- `POST /api/codex/action`
 
 Example `GET /api/plans`:
 

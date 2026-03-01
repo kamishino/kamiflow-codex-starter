@@ -76,7 +76,18 @@ await runCase("api returns plan list (when server deps are installed)", async ()
     const initExit = await runCli(["init", "--project", tempDir]);
     assert.equal(initExit, 0);
 
-    const server = await createServer({ projectDir: tempDir, withWatcher: false });
+    const server = await createServer({
+      projectDir: tempDir,
+      withWatcher: false,
+      runCodexAction: async () => ({
+        status: "completed",
+        command: "codex exec \"test\"",
+        stdout_tail: "ok",
+        stderr_tail: "",
+        exit_code: 0,
+        run_id: "run_test"
+      })
+    });
     await server.ready();
     const health = await server.inject({
       method: "GET",
@@ -141,6 +152,47 @@ updated_at: 2026-03-01
     assert.ok(badSummary);
     assert.equal(badSummary.is_valid, false);
     assert.ok(badSummary.error_count > 0);
+
+    const patchStatus = await server.inject({
+      method: "PATCH",
+      url: `/api/plans/${encodeURIComponent(planId)}/status`,
+      payload: { status: "active", expected_updated_at: detail.summary.updated_at }
+    });
+    assert.equal(patchStatus.statusCode, 200);
+    const patchStatusPayload = JSON.parse(patchStatus.payload);
+    assert.equal(patchStatusPayload.summary.status, "active");
+
+    const patchDecision = await server.inject({
+      method: "PATCH",
+      url: `/api/plans/${encodeURIComponent(planId)}/decision`,
+      payload: { decision: "GO", expected_updated_at: patchStatusPayload.summary.updated_at }
+    });
+    assert.equal(patchDecision.statusCode, 200);
+    const patchDecisionPayload = JSON.parse(patchDecision.payload);
+    assert.equal(patchDecisionPayload.summary.decision, "GO");
+
+    const patchTask = await server.inject({
+      method: "PATCH",
+      url: `/api/plans/${encodeURIComponent(planId)}/task`,
+      payload: { task_index: 0, checked: true, expected_updated_at: patchDecisionPayload.summary.updated_at }
+    });
+    assert.equal(patchTask.statusCode, 200);
+
+    const patchGate = await server.inject({
+      method: "PATCH",
+      url: `/api/plans/${encodeURIComponent(planId)}/gate`,
+      payload: { gate_index: 0, checked: true, expected_updated_at: patchDecisionPayload.summary.updated_at }
+    });
+    assert.equal(patchGate.statusCode, 200);
+
+    const codexAction = await server.inject({
+      method: "POST",
+      url: "/api/codex/action",
+      payload: { plan_id: planId, action_type: "plan", mode_hint: "Plan" }
+    });
+    assert.equal(codexAction.statusCode, 200);
+    const codexPayload = JSON.parse(codexAction.payload);
+    assert.equal(codexPayload.status, "completed");
 
     await server.close();
   });

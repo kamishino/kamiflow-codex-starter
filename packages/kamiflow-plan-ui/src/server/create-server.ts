@@ -1,7 +1,18 @@
 import Fastify from "fastify";
+import fs from "node:fs/promises";
 import { loadPlanByFilePath, loadPlanById, loadPlans } from "../lib/plan-store.js";
 import { watchPlans } from "./watch-plans.js";
-import type { PlanRecord } from "../types.js";
+import { parsePlanFileContent } from "../parser/plan-parser.js";
+import { validateParsedPlan } from "../schema/validate-plan.js";
+import { serializePlan } from "../lib/plan-serializer.js";
+import {
+  applyDecisionMutation,
+  applyGateMutation,
+  applyStatusMutation,
+  applyTaskMutation
+} from "../lib/plan-mutations.js";
+import { runCodexAction as runCodexActionDefault } from "../lib/codex-runner.js";
+import type { ParsedPlan, PlanRecord } from "../types.js";
 
 function toDetail(plan: PlanRecord) {
   return {
@@ -13,7 +24,7 @@ function toDetail(plan: PlanRecord) {
 }
 
 export async function createServer(options) {
-  const { projectDir, withWatcher = true } = options;
+  const { projectDir, withWatcher = true, runCodexAction = runCodexActionDefault } = options;
   const fastify = Fastify({ logger: false });
   const sseClients = new Map<string, Set<any>>();
 
@@ -60,6 +71,71 @@ export async function createServer(options) {
     }
   }
 
+  async function persistMutation(
+    planId: string,
+    expectedUpdatedAt: string | undefined,
+    mutator: (parsed: ParsedPlan) => ParsedPlan
+  ) {
+    const existing = await loadPlanById(projectDir, planId);
+    if (!existing) {
+      return {
+        statusCode: 404,
+        payload: { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: planId }
+      };
+    }
+    if (!existing.parsed) {
+      return {
+        statusCode: 409,
+        payload: { error: "Plan is invalid and cannot be mutated", error_code: "PLAN_INVALID" }
+      };
+    }
+
+    const previousUpdatedAt = existing.summary.updated_at || "";
+    const warning =
+      expectedUpdatedAt && expectedUpdatedAt !== previousUpdatedAt
+        ? "Plan changed since last read. Last-write-wins applied."
+        : undefined;
+
+    let nextParsed: ParsedPlan;
+    try {
+      nextParsed = mutator(existing.parsed);
+    } catch (err) {
+      return {
+        statusCode: 400,
+        payload: { error: err instanceof Error ? err.message : String(err), error_code: "BAD_REQUEST" }
+      };
+    }
+    nextParsed = {
+      ...nextParsed,
+      frontmatter: {
+        ...nextParsed.frontmatter,
+        updated_at: new Date().toISOString()
+      }
+    };
+
+    const markdown = serializePlan(nextParsed);
+    const reparsed = parsePlanFileContent(markdown, existing.summary.file_path);
+    const errors = validateParsedPlan(reparsed);
+    if (errors.length > 0) {
+      return {
+        statusCode: 400,
+        payload: { error: "Mutation produced invalid plan", error_code: "PLAN_INVALID", errors }
+      };
+    }
+
+    await fs.writeFile(existing.summary.file_path, markdown, "utf8");
+
+    await broadcastPlanEvent(planId, "plan_updated");
+    const updated = await loadPlanById(projectDir, planId);
+    return {
+      statusCode: 200,
+      payload: {
+        summary: updated?.summary ?? existing.summary,
+        write_warning: warning
+      }
+    };
+  }
+
   fastify.get("/api/health", async () => ({ ok: true }));
 
   fastify.get("/api/plans", async () => {
@@ -93,6 +169,94 @@ export async function createServer(options) {
     });
 
     return reply;
+  });
+
+  fastify.patch("/api/plans/:id/status", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as { status?: string; expected_updated_at?: string };
+    if (!body.status || typeof body.status !== "string") {
+      reply.code(400);
+      return { error: "Missing status", error_code: "BAD_REQUEST" };
+    }
+    const result = await persistMutation(id, body.expected_updated_at, (parsed) =>
+      applyStatusMutation(parsed, body.status as string)
+    );
+    reply.code(result.statusCode);
+    return result.payload;
+  });
+
+  fastify.patch("/api/plans/:id/decision", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as {
+      decision?: "GO" | "NO_GO";
+      expected_updated_at?: string;
+    };
+    if (body.decision !== "GO" && body.decision !== "NO_GO") {
+      reply.code(400);
+      return { error: "Invalid decision", error_code: "BAD_REQUEST" };
+    }
+    const result = await persistMutation(id, body.expected_updated_at, (parsed) =>
+      applyDecisionMutation(parsed, body.decision as "GO" | "NO_GO")
+    );
+    reply.code(result.statusCode);
+    return result.payload;
+  });
+
+  fastify.patch("/api/plans/:id/task", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as {
+      task_index?: number;
+      checked?: boolean;
+      expected_updated_at?: string;
+    };
+    if (!Number.isInteger(body.task_index) || typeof body.checked !== "boolean") {
+      reply.code(400);
+      return { error: "Invalid task payload", error_code: "BAD_REQUEST" };
+    }
+    const result = await persistMutation(id, body.expected_updated_at, (parsed) =>
+      applyTaskMutation(parsed, body.task_index as number, body.checked as boolean)
+    );
+    reply.code(result.statusCode);
+    return result.payload;
+  });
+
+  fastify.patch("/api/plans/:id/gate", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as {
+      gate_index?: number;
+      checked?: boolean;
+      expected_updated_at?: string;
+    };
+    if (!Number.isInteger(body.gate_index) || typeof body.checked !== "boolean") {
+      reply.code(400);
+      return { error: "Invalid gate payload", error_code: "BAD_REQUEST" };
+    }
+    const result = await persistMutation(id, body.expected_updated_at, (parsed) =>
+      applyGateMutation(parsed, body.gate_index as number, body.checked as boolean)
+    );
+    reply.code(result.statusCode);
+    return result.payload;
+  });
+
+  fastify.post("/api/codex/action", async (request, reply) => {
+    const body = (request.body ?? {}) as {
+      plan_id?: string;
+      action_type?: "start" | "plan" | "build" | "check" | "research" | "fix";
+      mode_hint?: "Plan" | "Build";
+      prompt?: string;
+    };
+    if (!body.plan_id || !body.action_type) {
+      reply.code(400);
+      return { error: "Missing plan_id or action_type", error_code: "BAD_REQUEST" };
+    }
+    const result = await runCodexAction({
+      plan_id: body.plan_id,
+      action_type: body.action_type,
+      mode_hint: body.mode_hint,
+      prompt: body.prompt
+    });
+    reply.code(result.status === "completed" ? 200 : 500);
+    return result;
   });
 
   fastify.get("/assets/app.js", async (_request, reply) => {
@@ -150,11 +314,101 @@ async function loadDetail() {
     <p>Status: \${data.summary.status} | Decision: \${data.summary.decision}</p>
     <p>Mode: \${data.summary.selected_mode} -> \${data.summary.next_mode}</p>
     <p>Next: \${data.summary.next_command}</p>
+    <div>
+      <button id="set-status-active">Set Status Active</button>
+      <button id="toggle-decision">Toggle Decision</button>
+      <button id="toggle-task-0">Toggle Task 1</button>
+      <button id="toggle-gate-0">Toggle Gate 1</button>
+      <button id="run-codex-plan">Send Plan Action to Codex</button>
+    </div>
     <h4>Validation</h4>
     <ul>\${errors || "<li>No validation errors</li>"}</ul>
     \${sections}
   \`;
+  bindActions(id, data);
   attachStream(id);
+}
+
+async function patch(url, payload) {
+  const res = await fetch(url, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  return await res.json();
+}
+
+function parseFirstChecklistState(sectionText) {
+  const m = (sectionText || "").match(/^- \\[( |x|X)\\]/m);
+  return m ? (m[1].toLowerCase() === "x") : false;
+}
+
+function bindActions(id, data) {
+  const updatedAt = data.summary.updated_at || "";
+  const statusBtn = document.querySelector("#set-status-active");
+  const decisionBtn = document.querySelector("#toggle-decision");
+  const taskBtn = document.querySelector("#toggle-task-0");
+  const gateBtn = document.querySelector("#toggle-gate-0");
+  const codexBtn = document.querySelector("#run-codex-plan");
+
+  statusBtn?.addEventListener("click", async () => {
+    const out = await patch("/api/plans/" + encodeURIComponent(id) + "/status", {
+      status: "active",
+      expected_updated_at: updatedAt
+    });
+    statusEl.textContent = out.write_warning || "Status updated.";
+    loadDetail();
+    loadList();
+  });
+
+  decisionBtn?.addEventListener("click", async () => {
+    const nextDecision = data.summary.decision === "GO" ? "NO_GO" : "GO";
+    const out = await patch("/api/plans/" + encodeURIComponent(id) + "/decision", {
+      decision: nextDecision,
+      expected_updated_at: updatedAt
+    });
+    statusEl.textContent = out.write_warning || "Decision updated.";
+    loadDetail();
+    loadList();
+  });
+
+  taskBtn?.addEventListener("click", async () => {
+    const current = parseFirstChecklistState(data.sections["Implementation Tasks"]);
+    const out = await patch("/api/plans/" + encodeURIComponent(id) + "/task", {
+      task_index: 0,
+      checked: !current,
+      expected_updated_at: updatedAt
+    });
+    statusEl.textContent = out.write_warning || "Task updated.";
+    loadDetail();
+    loadList();
+  });
+
+  gateBtn?.addEventListener("click", async () => {
+    const current = parseFirstChecklistState(data.sections["Go/No-Go Checklist"]);
+    const out = await patch("/api/plans/" + encodeURIComponent(id) + "/gate", {
+      gate_index: 0,
+      checked: !current,
+      expected_updated_at: updatedAt
+    });
+    statusEl.textContent = out.write_warning || "Gate updated.";
+    loadDetail();
+    loadList();
+  });
+
+  codexBtn?.addEventListener("click", async () => {
+    const res = await fetch("/api/codex/action", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        plan_id: id,
+        action_type: "plan",
+        mode_hint: "Plan"
+      })
+    });
+    const out = await res.json();
+    statusEl.textContent = "Codex action: " + (out.status || out.error_code || "unknown");
+  });
 }
 
 let currentStream;
