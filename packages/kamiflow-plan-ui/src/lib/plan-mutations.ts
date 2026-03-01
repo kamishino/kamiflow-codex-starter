@@ -96,7 +96,7 @@ export function applyGateMutation(parsed: ParsedPlan, gateIndex: number, checked
 
 export function applyWipMutation(
   parsed: ParsedPlan,
-  wip: { status?: string; blockers?: string; next_step?: string }
+  wip: { status?: string; blockers?: string; next_step?: string; evidence?: string[] }
 ): ParsedPlan {
   const sectionName = "WIP Log";
   const current = parsed.sections[sectionName];
@@ -112,6 +112,12 @@ export function applyWipMutation(
   }
   if (typeof wip.next_step === "string") {
     next = replaceWipLine(next, "Next step", wip.next_step);
+  }
+  if (Array.isArray(wip.evidence)) {
+    const compact = wip.evidence.map((item) => String(item).trim()).filter((item) => item.length > 0);
+    if (compact.length > 0) {
+      next = replaceWipLine(next, "Evidence", compact.join(" | "));
+    }
   }
   return {
     ...parsed,

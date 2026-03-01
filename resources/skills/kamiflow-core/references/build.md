@@ -21,7 +21,16 @@ Use this route to execute an approved plan.
 4. Implement in small logical steps.
 5. Run targeted checks relevant to changed areas.
 6. Summarize what changed and why.
-7. End with next command: `check`.
+7. Ensure KFP API is reachable before writing progress:
+   - Resolve base URL from `KFP_BASE_URL`, fallback `http://127.0.0.1:4310`
+   - Health check: `GET <base>/api/health` expects `{ "ok": true }`
+   - If unreachable, return `BLOCK` with exact recovery command:
+     - `kfc plan serve --project <path> --port <n>`
+8. Apply build result via Plan UI automation API:
+   - `POST /api/plans/<id>/automation/apply`
+   - `action_type: build_result`
+   - include task-scoped checklist updates and WIP evidence
+9. End with next command: `check`.
 
 ## Output
 

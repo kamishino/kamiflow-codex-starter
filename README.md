@@ -42,6 +42,9 @@ Plan command notes:
   - `kfc plan workspace add <name> --project <path>`
   - `kfc plan serve --workspace <name>`
   - `kfc plan workspace add <name>` auto-detects project root (Git -> package.json -> cwd)
+- Automation route (KFP API):
+  - `POST /api/plans/:id/automation/apply`
+  - `POST /api/projects/:project_id/plans/:id/automation/apply`
 
 ## Local Workflow
 
@@ -78,7 +81,15 @@ Sync `resources/skills` into `.agents/skills` runtime:
 npm run codex:sync
 ```
 
-KFP local loop:
+KFP local loop (client-facing via `kfc`):
+
+```bash
+kfc plan init --project .
+kfc plan validate --project .
+kfc plan serve --project . --port 4310
+```
+
+Internal package scripts still exist for repo maintenance:
 
 ```bash
 npm run plan-ui:init

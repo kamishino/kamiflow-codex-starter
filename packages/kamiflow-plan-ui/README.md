@@ -1,5 +1,8 @@
 # KamiFlow Plan UI CLI
 
+For normal project workflows, prefer `kfc plan ...` from `@kamishino/kamiflow-codex`.
+This package README documents direct `kfp` usage for package-level development and debugging.
+
 Phase 2 includes:
 
 - `kfp init`
@@ -40,6 +43,7 @@ http://127.0.0.1:4310
 - `PATCH /api/projects/:project_id/plans/:id/status|decision|task|gate`
 - `POST /api/projects/:project_id/plans/:id/progress`
 - `POST /api/projects/:project_id/plans/:id/complete`
+- `POST /api/projects/:project_id/plans/:id/automation/apply`
 - `POST /api/projects/:project_id/codex/action`
 - `GET /api/plans`
 - `GET /api/plans/:id`
@@ -50,6 +54,7 @@ http://127.0.0.1:4310
 - `PATCH /api/plans/:id/gate`
 - `POST /api/plans/:id/progress`
 - `POST /api/plans/:id/complete`
+- `POST /api/plans/:id/automation/apply`
 - `POST /api/codex/action`
 
 Example `GET /api/plans`:

@@ -283,6 +283,126 @@ updated_at: 2026-03-01
   });
 });
 
+await runCase("automation apply updates transitions and archives on PASS", async () => {
+  let createServer;
+  try {
+    ({ createServer } = await import("../dist/server/create-server.js"));
+  } catch (err) {
+    if (err && typeof err === "object" && (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND")) {
+      console.log("[test] SKIP automation test: install package dependencies first.");
+      return;
+    }
+    throw err;
+  }
+
+  await withTempDir(async (tempDir) => {
+    const initExit = await runCli(["init", "--project", tempDir]);
+    assert.equal(initExit, 0);
+
+    const server = await createServer({
+      projectDir: tempDir,
+      withWatcher: false,
+      runCodexAction: async () => ({
+        status: "completed",
+        command: "codex exec \"test\"",
+        stdout_tail: "ok",
+        stderr_tail: "",
+        exit_code: 0,
+        run_id: "run_test"
+      })
+    });
+    await server.ready();
+
+    const listResponse = await server.inject({ method: "GET", url: "/api/plans" });
+    assert.equal(listResponse.statusCode, 200);
+    const listPayload = JSON.parse(listResponse.payload);
+    const planId = listPayload.plans[0].plan_id;
+
+    const badAction = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: { action_type: "unknown_action" }
+    });
+    assert.equal(badAction.statusCode, 400);
+
+    const buildApply = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "build_result",
+        task_updates: [{ index: 0, checked: true }],
+        wip: {
+          status: "in_progress",
+          blockers: "none",
+          next_step: "run check",
+          evidence: ["cmd:npm run plan-ui:test -> pass"]
+        }
+      }
+    });
+    assert.equal(buildApply.statusCode, 200);
+    const buildPayload = JSON.parse(buildApply.payload);
+    assert.equal(buildPayload.summary.next_command, "check");
+    assert.equal(buildPayload.summary.next_mode, "Plan");
+    assert.equal(buildPayload.archive.archived, false);
+
+    const blockApply = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "check_result",
+        check: {
+          result: "BLOCK",
+          findings: ["missing acceptance criteria coverage"]
+        },
+        wip: {
+          next_step: "apply fix"
+        }
+      }
+    });
+    assert.equal(blockApply.statusCode, 200);
+    const blockPayload = JSON.parse(blockApply.payload);
+    assert.equal(blockPayload.summary.decision, "NO_GO");
+    assert.equal(blockPayload.summary.next_command, "fix");
+    assert.equal(blockPayload.summary.next_mode, "Build");
+    assert.equal(blockPayload.archive.archived, false);
+
+    const passApply = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "check_result",
+        ac_updates: [
+          { index: 0, checked: true },
+          { index: 1, checked: true }
+        ],
+        check: {
+          result: "PASS",
+          findings: []
+        },
+        wip: {
+          status: "done",
+          blockers: "none",
+          next_step: "archive complete",
+          evidence: ["check:PASS"]
+        }
+      }
+    });
+    assert.equal(passApply.statusCode, 200);
+    const passPayload = JSON.parse(passApply.payload);
+    assert.equal(passPayload.archive.archived, true);
+    assert.equal(typeof passPayload.archive.archived_path, "string");
+
+    const listAfter = await server.inject({ method: "GET", url: "/api/plans?include_done=true" });
+    assert.equal(listAfter.statusCode, 200);
+    const listAfterPayload = JSON.parse(listAfter.payload);
+    const archivedPlan = listAfterPayload.plans.find((item) => item.plan_id === planId);
+    assert.ok(archivedPlan);
+    assert.equal(archivedPlan.is_archived, true);
+
+    await server.close();
+  });
+});
+
 await runCase("sse stream supports replay and heartbeat", async () => {
   const writes = [];
   const reply = {

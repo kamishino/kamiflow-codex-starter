@@ -44,6 +44,8 @@ Select mode before executing route logic:
 - Do not skip required gates from the selected command reference.
 - If scope or risk increases mid-task, route back to `research` or `plan`.
 - If current mode does not meet route mode requirements, do not continue until mode is switched.
+- For plan persistence in `build`/`check`, treat KFP API as required after health preflight.
+- Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 
 ## Mode Mismatch Policy
 

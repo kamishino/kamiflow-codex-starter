@@ -8,6 +8,11 @@ Use this runbook to dogfood Kami Flow in this repo with predictable route behavi
 - `npm --prefix packages/kamiflow-plan-ui install` completed once
 - Codex CLI available in PATH
 
+## Command Policy
+
+- Client-facing workflow commands use `kfc`.
+- `kfp` is package-internal (`kamiflow-plan-ui`) and delegated by `kfc plan`.
+
 ## Canonical Local Flow
 
 1. Sync runtime skills from SSOT:
@@ -19,19 +24,19 @@ npm run codex:sync -- --force
 2. Initialize private plans directory and template:
 
 ```bash
-npm run plan-ui:init
+kfc plan init --project .
 ```
 
 3. Validate plans:
 
 ```bash
-npm run plan-ui:validate
+kfc plan validate --project .
 ```
 
 4. Serve local plan UI/API:
 
 ```bash
-npm run plan-ui:serve
+kfc plan serve --project . --port 4310
 ```
 
 5. Run Codex routes against one plan file:
@@ -61,11 +66,20 @@ Check:
 $kamiflow-core check verify current changes against Acceptance Criteria in .local/plans/<file>.md and return PASS or BLOCK.
 ```
 
-Complete/archive:
+Automation apply (build/check persistence):
 
 ```text
-POST /api/plans/<id>/complete with { "check_passed": true } after status/next_command/next_mode are all done.
+POST /api/plans/<id>/automation/apply with:
+- build_result: task/ac updates + wip, then handoff to check
+- check_result BLOCK: decision NO_GO, handoff fix/Build
+- check_result PASS: decision GO, done + auto archive by default
 ```
+
+Server resolution:
+
+- Use `KFP_BASE_URL` when set.
+- Default base URL: `http://127.0.0.1:4310`
+- Preflight before mutation: `GET <base>/api/health` must return `{ "ok": true }`.
 
 ## Operator Rules
 
@@ -76,6 +90,6 @@ POST /api/plans/<id>/complete with { "check_passed": true } after status/next_co
 
 ## Fast Troubleshooting
 
-- Missing `.local/`: run `npm run plan-ui:init`.
+- Missing `.local/`: run `kfc plan init --project .`.
 - Skill mismatch after edits: run `npm run codex:sync -- --force` and restart Codex CLI.
 - Build route blocked: check `resources/docs/PLAN_CONTRACT_V1.md` build readiness gate.

@@ -27,6 +27,10 @@ Expected:
 - validation command outcomes
 - explicit limitations
 - explicit next command `check`
+- if API is unreachable, return BLOCK with:
+  - `kfc plan serve --project <path> --port <n>`
+  - health check `GET <base>/api/health`
+- update plan via `POST /api/plans/<id>/automation/apply` with `action_type: build_result`
 
 ## Check Route
 
@@ -40,5 +44,9 @@ Expected:
 - acceptance criteria status
 - PASS/BLOCK decision
 - explicit next command (`fix` or `done`)
+- if API is unreachable, return BLOCK with:
+  - `kfc plan serve --project <path> --port <n>`
+  - health check `GET <base>/api/health`
+- apply decision via `POST /api/plans/<id>/automation/apply` with `action_type: check_result`
 
-When result is `done`, archive using Plan UI complete endpoint so active list stays clean.
+When check result is `PASS`, automation apply auto-archives by default (`auto_archive_on_pass: true`).

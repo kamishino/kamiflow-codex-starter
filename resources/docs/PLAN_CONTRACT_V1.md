@@ -6,7 +6,7 @@ This contract defines when a plan file in `.local/plans/*.md` is ready for each 
 
 - Plan files live in `.local/plans/`.
 - `.local/` is private and gitignored.
-- `kfp` is the source of truth for reading/validating plan files.
+- `kfc plan ...` is the client-facing entrypoint; it delegates to `kfp` for plan read/validate/serve.
 
 ## Required Frontmatter
 

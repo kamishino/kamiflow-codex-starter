@@ -15,7 +15,18 @@ Use this route for quality verification and review gates.
 3. Flag behavioral regressions or missing tests.
 4. Map each validation command to its outcome.
 5. Decide pass or block.
-6. End with next command: `fix` or `done`.
+6. Ensure KFP API is reachable before writing decision:
+   - Resolve base URL from `KFP_BASE_URL`, fallback `http://127.0.0.1:4310`
+   - Health check: `GET <base>/api/health` expects `{ "ok": true }`
+   - If unreachable, return `BLOCK` with exact recovery command:
+     - `kfc plan serve --project <path> --port <n>`
+7. Apply check result via Plan UI automation API:
+   - `POST /api/plans/<id>/automation/apply`
+   - `action_type: check_result`
+   - `check.result: PASS | BLOCK`
+   - include findings in WIP evidence
+   - PASS auto-archives by default
+8. End with next command: `fix` or `done`.
 
 ## Output
 
