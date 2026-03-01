@@ -1,4 +1,5 @@
 export interface PlanSummary {
+  project_id?: string;
   plan_id: string;
   title: string;
   status: string;

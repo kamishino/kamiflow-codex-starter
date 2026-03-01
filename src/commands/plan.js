@@ -31,6 +31,13 @@ async function pathExists(filePath) {
 }
 
 async function resolveKfpRunner(projectDir) {
+  if (path.resolve(projectDir) === REPO_ROOT && (await pathExists(REPO_KFP_BIN))) {
+    return {
+      command: process.execPath,
+      args: [REPO_KFP_BIN]
+    };
+  }
+
   const localKfpBin = path.join(
     projectDir,
     "node_modules",
@@ -71,7 +78,7 @@ export async function runPlan(options) {
   const [subcommand, ...rest] = options.args;
 
   if (!subcommand || subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
-    info("Usage: kfc plan <init|serve|validate> [kfp options]");
+    info("Usage: kfc plan <init|serve|validate|workspace> [kfp options]");
     info("Examples:");
     info("  kfc plan init");
     info("  kfc plan serve --port 4310");
@@ -79,15 +86,18 @@ export async function runPlan(options) {
     return 0;
   }
 
-  if (!["init", "serve", "validate"].includes(subcommand)) {
+  if (!["init", "serve", "validate", "workspace"].includes(subcommand)) {
     error(`Unknown plan subcommand: ${subcommand}`);
-    info("Supported: init, serve, validate");
+    info("Supported: init, serve, validate, workspace");
     return 1;
   }
 
-  const projectDir = parseProjectDir(options.cwd, rest);
+  const projectDir = subcommand === "workspace" ? options.cwd : parseProjectDir(options.cwd, rest);
   const hasProject = rest.includes("--project");
-  const forwarded = hasProject ? [subcommand, ...rest] : [subcommand, ...rest, "--project", projectDir];
+  const forwarded =
+    subcommand === "workspace" || hasProject
+      ? [subcommand, ...rest]
+      : [subcommand, ...rest, "--project", projectDir];
 
   let runner;
   try {

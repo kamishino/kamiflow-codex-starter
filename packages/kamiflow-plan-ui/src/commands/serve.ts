@@ -1,4 +1,5 @@
 import { resolveProjectDir } from "../lib/paths.js";
+import { loadWorkspaceProjects } from "../lib/workspace-registry.js";
 
 function resolvePort(args) {
   const idx = args.indexOf("--port");
@@ -12,8 +13,21 @@ function resolvePort(args) {
   return value;
 }
 
+function resolveWorkspace(args) {
+  const idx = args.indexOf("--workspace");
+  if (idx === -1) {
+    return null;
+  }
+  const value = args[idx + 1];
+  if (!value) {
+    throw new Error("Missing value for --workspace.");
+  }
+  return value;
+}
+
 export async function runServe(args) {
-  const projectDir = resolveProjectDir(args);
+  const workspaceName = resolveWorkspace(args);
+  const projectDir = workspaceName ? null : resolveProjectDir(args);
   const port = resolvePort(args);
   const host = "127.0.0.1";
 
@@ -35,11 +49,22 @@ export async function runServe(args) {
     throw err;
   }
 
-  const server = await createServer({ projectDir, withWatcher: true });
+  const projects = workspaceName ? await loadWorkspaceProjects(workspaceName) : undefined;
+  const server = await createServer({
+    projectDir: projectDir ?? undefined,
+    projects,
+    withWatcher: true,
+    workspaceName: workspaceName ?? undefined
+  });
   await server.listen({ host, port });
 
   console.log(`[kfp] Server running at http://${host}:${port}`);
-  console.log(`[kfp] Project: ${projectDir}`);
+  if (workspaceName) {
+    console.log(`[kfp] Workspace: ${workspaceName}`);
+    console.log(`[kfp] Projects: ${projects?.length ?? 0}`);
+  } else {
+    console.log(`[kfp] Project: ${projectDir}`);
+  }
 
   const shutdown = async () => {
     await server.close();

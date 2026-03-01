@@ -107,6 +107,23 @@ await runCase("api returns plan list (when server deps are installed)", async ()
     assert.ok(payload.plans.length >= 1);
     assert.equal(payload.plans[0].is_archived, false);
 
+    const projectsResponse = await server.inject({
+      method: "GET",
+      url: "/api/projects"
+    });
+    assert.equal(projectsResponse.statusCode, 200);
+    const projectsPayload = JSON.parse(projectsResponse.payload);
+    assert.ok(Array.isArray(projectsPayload.projects));
+    assert.equal(projectsPayload.projects[0].project_id, "default");
+
+    const scopedListResponse = await server.inject({
+      method: "GET",
+      url: "/api/projects/default/plans"
+    });
+    assert.equal(scopedListResponse.statusCode, 200);
+    const scopedListPayload = JSON.parse(scopedListResponse.payload);
+    assert.ok(Array.isArray(scopedListPayload.plans));
+
     const planId = payload.plans[0].plan_id;
     const detailResponse = await server.inject({
       method: "GET",
