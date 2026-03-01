@@ -16,3 +16,7 @@ export function resolveProjectDir(args) {
 export function resolvePlansDir(projectDir) {
   return path.join(projectDir, DEFAULT_PLAN_DIR);
 }
+
+export function resolveDonePlansDir(projectDir) {
+  return path.join(resolvePlansDir(projectDir), "done");
+}

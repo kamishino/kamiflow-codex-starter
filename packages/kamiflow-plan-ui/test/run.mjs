@@ -105,6 +105,7 @@ await runCase("api returns plan list (when server deps are installed)", async ()
     const payload = JSON.parse(listResponse.payload);
     assert.ok(Array.isArray(payload.plans));
     assert.ok(payload.plans.length >= 1);
+    assert.equal(payload.plans[0].is_archived, false);
 
     const planId = payload.plans[0].plan_id;
     const detailResponse = await server.inject({
@@ -185,6 +186,47 @@ updated_at: 2026-03-01
       payload: { gate_index: 0, checked: true, expected_updated_at: patchDecisionPayload.summary.updated_at }
     });
     assert.equal(patchGate.statusCode, 200);
+
+    const progress = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/progress`,
+      payload: {
+        ac_updates: [
+          { index: 0, checked: true },
+          { index: 1, checked: true }
+        ],
+        wip: {
+          status: "validated",
+          blockers: "none",
+          next_step: "archive"
+        },
+        handoff: {
+          status: "done",
+          next_command: "done",
+          next_mode: "done"
+        }
+      }
+    });
+    assert.equal(progress.statusCode, 200);
+
+    const complete = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/complete`,
+      payload: { check_passed: true }
+    });
+    assert.equal(complete.statusCode, 200);
+    const completePayload = JSON.parse(complete.payload);
+    assert.equal(typeof completePayload.archived_path, "string");
+
+    const listAfterArchive = await server.inject({
+      method: "GET",
+      url: "/api/plans?include_done=true"
+    });
+    assert.equal(listAfterArchive.statusCode, 200);
+    const archivePayload = JSON.parse(listAfterArchive.payload);
+    const archivedItem = archivePayload.plans.find((item) => item.plan_id === planId);
+    assert.ok(archivedItem);
+    assert.equal(archivedItem.is_archived, true);
 
     const codexAction = await server.inject({
       method: "POST",

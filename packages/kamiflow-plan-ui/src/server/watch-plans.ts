@@ -4,7 +4,7 @@ import { resolvePlansDir } from "../lib/paths.js";
 
 export function watchPlans(projectDir, onEvent) {
   const plansDir = resolvePlansDir(projectDir);
-  const glob = path.join(plansDir, "*.md").replace(/\\/g, "/");
+  const glob = path.join(plansDir, "**/*.md").replace(/\\/g, "/");
 
   const watcher = chokidar.watch(glob, {
     ignoreInitial: true,

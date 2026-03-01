@@ -44,6 +44,12 @@ A plan can move to done only when all are true:
 3. `next_command: done`
 4. `next_mode: done`
 
+## Archive Rule for Completed Plans
+
+- After check PASS and done handoff, archive plan file to `.local/plans/done/`.
+- Active list should exclude archived plans by default.
+- Archived plans remain queryable for history/review.
+
 ## Suggested Status Flow
 
 Use this transition order:

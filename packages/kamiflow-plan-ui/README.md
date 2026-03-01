@@ -11,6 +11,7 @@ Phase 2 includes:
 - read-only browser UI
 - guarded write actions for status/decision/task/gate
 - codex action bridge endpoint
+- completed plan archive flow (`.local/plans/done`)
 
 ## Usage
 
@@ -36,6 +37,8 @@ http://127.0.0.1:4310
 - `PATCH /api/plans/:id/decision`
 - `PATCH /api/plans/:id/task`
 - `PATCH /api/plans/:id/gate`
+- `POST /api/plans/:id/progress`
+- `POST /api/plans/:id/complete`
 - `POST /api/codex/action`
 
 Example `GET /api/plans`:
@@ -75,7 +78,7 @@ Example `GET /api/plans/:id` 404:
 
 - Server binds to `127.0.0.1` only.
 - Plans are read from `.local/plans`.
-- No write operations are performed by Phase 2 UI/API.
+- Completed plans can be archived into `.local/plans/done`.
 
 ## Troubleshooting
 

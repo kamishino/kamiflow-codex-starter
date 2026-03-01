@@ -39,6 +39,7 @@ npm run plan-ui:serve
 - `plan` route to finalize scope and gates
 - `build` route only when plan is build-ready
 - `check` route after each build slice
+- after PASS + done handoff, use complete/archive flow
 
 ## Minimal Route Prompts
 
@@ -58,6 +59,12 @@ Check:
 
 ```text
 $kamiflow-core check verify current changes against Acceptance Criteria in .local/plans/<file>.md and return PASS or BLOCK.
+```
+
+Complete/archive:
+
+```text
+POST /api/plans/<id>/complete with { "check_passed": true } after status/next_command/next_mode are all done.
 ```
 
 ## Operator Rules

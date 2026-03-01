@@ -7,12 +7,16 @@ import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
 import { serializePlan } from "../lib/plan-serializer.js";
 import {
+  applyAcceptanceCriteriaMutation,
   applyDecisionMutation,
   applyGateMutation,
+  applyHandoffMutation,
   applyStatusMutation,
-  applyTaskMutation
+  applyTaskMutation,
+  applyWipMutation
 } from "../lib/plan-mutations.js";
 import { runCodexAction as runCodexActionDefault } from "../lib/codex-runner.js";
+import { archivePlanFile } from "../lib/plan-archive.js";
 import type { ParsedPlan, PlanRecord } from "../types.js";
 
 function toDetail(plan: PlanRecord) {
@@ -30,7 +34,7 @@ export async function createServer(options) {
   const stream = new SSEStream(500);
 
   async function broadcastPlanEvent(planId: string, type: string) {
-    const plan = await loadPlanById(projectDir, planId);
+    const plan = await loadPlanById(projectDir, planId, { includeDone: true });
     const payload = plan
       ? {
           event_type: type,
@@ -97,7 +101,7 @@ export async function createServer(options) {
     await fs.writeFile(existing.summary.file_path, markdown, "utf8");
 
     await broadcastPlanEvent(planId, "plan_updated");
-    const updated = await loadPlanById(projectDir, planId);
+    const updated = await loadPlanById(projectDir, planId, { includeDone: true });
     return {
       statusCode: 200,
       payload: {
@@ -107,10 +111,31 @@ export async function createServer(options) {
     };
   }
 
+  function checklistAllChecked(section: string | undefined): boolean {
+    if (!section) {
+      return false;
+    }
+    const lines = section.split(/\r?\n/);
+    let found = false;
+    for (const line of lines) {
+      const m = line.match(/^- \[( |x|X)\]/);
+      if (!m) {
+        continue;
+      }
+      found = true;
+      if (m[1].toLowerCase() !== "x") {
+        return false;
+      }
+    }
+    return found;
+  }
+
   fastify.get("/api/health", async () => ({ ok: true }));
 
-  fastify.get("/api/plans", async () => {
-    const plans = await loadPlans(projectDir);
+  fastify.get("/api/plans", async (request) => {
+    const query = request.query as { include_done?: string };
+    const includeDone = query?.include_done === "true";
+    const plans = await loadPlans(projectDir, { includeDone });
     return {
       plans: plans.map((item) => item.summary)
     };
@@ -118,7 +143,9 @@ export async function createServer(options) {
 
   fastify.get("/api/plans/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
-    const plan = await loadPlanById(projectDir, id);
+    const query = request.query as { include_done?: string };
+    const includeDone = query?.include_done === "true";
+    const plan = await loadPlanById(projectDir, id, { includeDone });
     if (!plan) {
       reply.code(404);
       return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: id };
@@ -210,6 +237,98 @@ export async function createServer(options) {
     return result.payload;
   });
 
+  fastify.post("/api/plans/:id/progress", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as {
+      task_updates?: Array<{ index: number; checked: boolean }>;
+      ac_updates?: Array<{ index: number; checked: boolean }>;
+      wip?: { status?: string; blockers?: string; next_step?: string };
+      handoff?: { selected_mode?: string; next_command?: string; next_mode?: string; status?: string };
+      expected_updated_at?: string;
+    };
+
+    const result = await persistMutation(id, body.expected_updated_at, (parsed) => {
+      let next = parsed;
+      for (const item of body.task_updates ?? []) {
+        if (!Number.isInteger(item.index) || typeof item.checked !== "boolean") {
+          throw new Error("Invalid task_updates payload.");
+        }
+        next = applyTaskMutation(next, item.index, item.checked);
+      }
+      for (const item of body.ac_updates ?? []) {
+        if (!Number.isInteger(item.index) || typeof item.checked !== "boolean") {
+          throw new Error("Invalid ac_updates payload.");
+        }
+        next = applyAcceptanceCriteriaMutation(next, item.index, item.checked);
+      }
+      if (body.wip) {
+        next = applyWipMutation(next, body.wip);
+      }
+      if (body.handoff) {
+        next = applyHandoffMutation(next, body.handoff);
+      }
+      return next;
+    });
+    reply.code(result.statusCode);
+    return result.payload;
+  });
+
+  fastify.post("/api/plans/:id/complete", async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const body = (request.body ?? {}) as { check_passed?: boolean };
+    if (body.check_passed !== true) {
+      reply.code(400);
+      return {
+        error: "Completion requires check_passed=true.",
+        error_code: "CHECK_NOT_PASSED"
+      };
+    }
+
+    const existing = await loadPlanById(projectDir, id);
+    if (!existing) {
+      reply.code(404);
+      return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: id };
+    }
+    if (!existing.parsed) {
+      reply.code(409);
+      return { error: "Plan is invalid and cannot be completed", error_code: "PLAN_INVALID" };
+    }
+
+    const errors: string[] = [];
+    if (existing.parsed.frontmatter.status !== "done") {
+      errors.push("status must be done");
+    }
+    if (existing.parsed.frontmatter.next_command !== "done") {
+      errors.push("next_command must be done");
+    }
+    if (existing.parsed.frontmatter.next_mode !== "done") {
+      errors.push("next_mode must be done");
+    }
+    if (!checklistAllChecked(existing.parsed.sections["Acceptance Criteria"])) {
+      errors.push("all Acceptance Criteria checklist items must be checked");
+    }
+
+    if (errors.length > 0) {
+      reply.code(400);
+      return { error: "Completion gate failed", error_code: "COMPLETION_GATE_FAILED", errors };
+    }
+
+    const archivedPath = await archivePlanFile(projectDir, existing.summary.file_path);
+    const updated = await loadPlanById(projectDir, id, { includeDone: true });
+
+    await broadcastPlanEvent(id, "plan_updated");
+    stream.publish(
+      "plan_archived",
+      { event_type: "plan_archived", plan_id: id, archived_path: archivedPath, updated_at: Date.now() },
+      id
+    );
+
+    return {
+      summary: updated?.summary ?? existing.summary,
+      archived_path: archivedPath
+    };
+  });
+
   fastify.post("/api/codex/action", async (request, reply) => {
     const body = (request.body ?? {}) as {
       plan_id?: string;
@@ -237,21 +356,39 @@ export async function createServer(options) {
 const planListEl = document.querySelector("#plan-list");
 const detailEl = document.querySelector("#plan-detail");
 const statusEl = document.querySelector("#status");
+const filterEl = document.querySelector("#plan-filter");
+let allPlansCache = [];
 
-async function fetchPlans() {
-  const res = await fetch("/api/plans");
+function currentFilter() {
+  return filterEl?.value || "active";
+}
+
+async function fetchPlans(includeDone) {
+  const res = await fetch("/api/plans?include_done=" + (includeDone ? "true" : "false"));
   const data = await res.json();
   return data.plans ?? [];
 }
 
 function renderList(plans) {
-  if (!plans.length) {
+  const mode = currentFilter();
+  const filtered = plans.filter((p) => {
+    if (mode === "done") {
+      return !!p.is_done || !!p.is_archived;
+    }
+    if (mode === "active") {
+      return !p.is_done && !p.is_archived;
+    }
+    return true;
+  });
+
+  if (!filtered.length) {
     planListEl.innerHTML = "<li>No plans found in .local/plans</li>";
     return;
   }
-  planListEl.innerHTML = plans.map((p) => {
+  planListEl.innerHTML = filtered.map((p) => {
     const invalid = p.is_valid ? "" : " (invalid)";
-    return '<li><button data-plan-id="' + p.plan_id + '">' + p.plan_id + " - " + p.title + invalid + '</button></li>';
+    const archived = p.is_archived ? " [archived]" : "";
+    return '<li><button data-plan-id="' + p.plan_id + '">' + p.plan_id + " - " + p.title + archived + invalid + '</button></li>';
   }).join("");
   for (const button of planListEl.querySelectorAll("button[data-plan-id]")) {
     button.addEventListener("click", () => {
@@ -270,7 +407,7 @@ async function loadDetail() {
     return;
   }
   const id = decodeURIComponent(m[1]);
-  const res = await fetch("/api/plans/" + encodeURIComponent(id));
+  const res = await fetch("/api/plans/" + encodeURIComponent(id) + "?include_done=true");
   if (!res.ok) {
     detailEl.innerHTML = "<p>Plan not found.</p>";
     return;
@@ -286,11 +423,13 @@ async function loadDetail() {
     <p>Status: \${data.summary.status} | Decision: \${data.summary.decision}</p>
     <p>Mode: \${data.summary.selected_mode} -> \${data.summary.next_mode}</p>
     <p>Next: \${data.summary.next_command}</p>
+    <p>Archived: \${data.summary.is_archived ? "yes" : "no"}</p>
     <div>
       <button id="set-status-active">Set Status Active</button>
       <button id="toggle-decision">Toggle Decision</button>
       <button id="toggle-task-0">Toggle Task 1</button>
       <button id="toggle-gate-0">Toggle Gate 1</button>
+      <button id="complete-archive">Complete & Archive</button>
       <button id="run-codex-plan">Send Plan Action to Codex</button>
     </div>
     <h4>Validation</h4>
@@ -321,6 +460,7 @@ function bindActions(id, data) {
   const decisionBtn = document.querySelector("#toggle-decision");
   const taskBtn = document.querySelector("#toggle-task-0");
   const gateBtn = document.querySelector("#toggle-gate-0");
+  const completeBtn = document.querySelector("#complete-archive");
   const codexBtn = document.querySelector("#run-codex-plan");
 
   statusBtn?.addEventListener("click", async () => {
@@ -368,6 +508,22 @@ function bindActions(id, data) {
     loadList();
   });
 
+  completeBtn?.addEventListener("click", async () => {
+    const res = await fetch("/api/plans/" + encodeURIComponent(id) + "/complete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ check_passed: true })
+    });
+    const out = await res.json();
+    if (!res.ok) {
+      statusEl.textContent = out.error || out.error_code || "Complete failed.";
+      return;
+    }
+    statusEl.textContent = "Plan archived: " + (out.archived_path || "done");
+    loadDetail();
+    loadList();
+  });
+
   codexBtn?.addEventListener("click", async () => {
     const res = await fetch("/api/codex/action", {
       method: "POST",
@@ -386,6 +542,26 @@ function bindActions(id, data) {
 let currentStream;
 let lastHeartbeatTs = 0;
 let staleTimer = null;
+let pollTimer = null;
+
+function startPollingFallback() {
+  if (pollTimer) {
+    return;
+  }
+  pollTimer = setInterval(() => {
+    loadDetail();
+    loadList();
+  }, 15000);
+}
+
+function stopPollingFallback() {
+  if (!pollTimer) {
+    return;
+  }
+  clearInterval(pollTimer);
+  pollTimer = null;
+}
+
 function attachStream(id) {
   if (currentStream) {
     currentStream.close();
@@ -400,6 +576,7 @@ function attachStream(id) {
     }
     if (Date.now() - lastHeartbeatTs > 60000) {
       statusEl.textContent = "Connection stale. Resyncing...";
+      startPollingFallback();
       loadDetail();
       loadList();
     }
@@ -407,6 +584,7 @@ function attachStream(id) {
   currentStream.addEventListener("connected", () => {
     statusEl.textContent = "Connected.";
     lastHeartbeatTs = Date.now();
+    stopPollingFallback();
   });
   currentStream.addEventListener("heartbeat", () => {
     lastHeartbeatTs = Date.now();
@@ -431,15 +609,27 @@ function attachStream(id) {
     loadDetail();
     loadList();
   });
+  currentStream.addEventListener("plan_archived", () => {
+    statusEl.textContent = "Live update received: plan_archived";
+    loadDetail();
+    loadList();
+  });
   currentStream.onerror = () => {
     statusEl.textContent = "Disconnected. Reconnecting...";
+    startPollingFallback();
   };
 }
 
 async function loadList() {
-  const plans = await fetchPlans();
-  renderList(plans);
+  const includeDone = currentFilter() !== "active";
+  const plans = await fetchPlans(includeDone);
+  allPlansCache = plans;
+  renderList(allPlansCache);
 }
+
+filterEl?.addEventListener("change", () => {
+  loadList();
+});
 
 window.addEventListener("hashchange", () => loadDetail());
 loadList().then(() => loadDetail());
@@ -473,6 +663,12 @@ loadList().then(() => loadDetail());
   <div class="wrap">
     <aside>
       <h1>Plans</h1>
+      <label for="plan-filter">View</label>
+      <select id="plan-filter" style="width:100%; margin: 6px 0 12px; padding: 6px;">
+        <option value="active">Active</option>
+        <option value="done">Done</option>
+        <option value="all">All</option>
+      </select>
       <ul id="plan-list"></ul>
     </aside>
     <main>
@@ -490,7 +686,7 @@ loadList().then(() => loadDetail());
   const pending = new Map<string, { type: string; timer: NodeJS.Timeout }>();
   if (withWatcher) {
     watcher = watchPlans(projectDir, async ({ type, filePath }) => {
-      const existing = await loadPlanByFilePath(projectDir, filePath);
+      const existing = await loadPlanByFilePath(projectDir, filePath, { includeDone: true });
       const fallbackPlanId = filePath.split(/[\\/]/).pop().replace(/\.md$/i, "");
       const planId = existing?.summary.plan_id ?? fallbackPlanId;
       const eventType = existing && existing.errors.length > 0 ? "plan_invalid" : type;

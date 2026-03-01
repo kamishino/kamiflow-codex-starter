@@ -11,6 +11,10 @@ export interface PlanSummary {
   is_valid: boolean;
   error_count: number;
   duplicate_plan_id: boolean;
+  is_done: boolean;
+  is_archived: boolean;
+  archived_at?: string;
+  archived_path?: string;
 }
 
 export interface ParsedPlan {

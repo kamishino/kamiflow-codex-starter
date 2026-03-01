@@ -40,3 +40,5 @@ Expected:
 - acceptance criteria status
 - PASS/BLOCK decision
 - explicit next command (`fix` or `done`)
+
+When result is `done`, archive using Plan UI complete endpoint so active list stays clean.

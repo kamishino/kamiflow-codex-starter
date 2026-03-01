@@ -2,10 +2,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
-import { resolvePlansDir } from "./paths.js";
+import { resolveDonePlansDir, resolvePlansDir } from "./paths.js";
 import type { ParsedPlan, PlanRecord, PlanSummary } from "../types.js";
 
-function toSummary(parsed: ParsedPlan, errors: string[]): PlanSummary {
+function toSummary(parsed: ParsedPlan, errors: string[], archivedAt?: string): PlanSummary {
+  const normalizedPath = path.normalize(parsed.filePath);
+  const archivedMarker = `${path.sep}done${path.sep}`;
+  const isArchived = normalizedPath.includes(archivedMarker);
+  const isDone = parsed.frontmatter.status === "done" || parsed.frontmatter.next_command === "done";
   return {
     plan_id: parsed.frontmatter.plan_id ?? parsed.fileName,
     title: parsed.frontmatter.title ?? parsed.fileName,
@@ -18,7 +22,11 @@ function toSummary(parsed: ParsedPlan, errors: string[]): PlanSummary {
     file_path: parsed.filePath,
     is_valid: errors.length === 0,
     error_count: errors.length,
-    duplicate_plan_id: false
+    duplicate_plan_id: false,
+    is_done: isDone,
+    is_archived: isArchived,
+    archived_at: isArchived ? archivedAt : undefined,
+    archived_path: isArchived ? parsed.filePath : undefined
   };
 }
 
@@ -38,17 +46,24 @@ async function listMarkdownFiles(plansDir) {
     .map((entry) => path.join(plansDir, entry.name));
 }
 
-export async function loadPlans(projectDir) {
+export async function loadPlans(projectDir, options?: { includeDone?: boolean }) {
+  const includeDone = options?.includeDone ?? false;
   const plansDir = resolvePlansDir(projectDir);
   const files = await listMarkdownFiles(plansDir);
+  let allFiles = files;
+  if (includeDone) {
+    const doneFiles = await listMarkdownFiles(resolveDonePlansDir(projectDir));
+    allFiles = [...files, ...doneFiles];
+  }
   const plans: PlanRecord[] = [];
 
-  for (const filePath of files) {
+  for (const filePath of allFiles) {
     const raw = await fs.readFile(filePath, "utf8");
     try {
       const parsed = parsePlanFileContent(raw, filePath);
       const errors = validateParsedPlan(parsed);
-      const summary = toSummary(parsed, errors);
+      const stat = await fs.stat(filePath);
+      const summary = toSummary(parsed, errors, stat.mtime.toISOString());
       plans.push({
         summary,
         parsed,
@@ -68,7 +83,11 @@ export async function loadPlans(projectDir) {
           file_path: filePath,
           is_valid: false,
           error_count: 1,
-          duplicate_plan_id: false
+          duplicate_plan_id: false,
+          is_done: false,
+          is_archived: false,
+          archived_at: undefined,
+          archived_path: undefined
         },
         parsed: null,
         errors: [err instanceof Error ? err.message : String(err)]
@@ -92,17 +111,25 @@ export async function loadPlans(projectDir) {
     }
   }
 
-  plans.sort((a, b) => a.summary.plan_id.localeCompare(b.summary.plan_id));
+  plans.sort((a, b) => {
+    if (a.summary.plan_id === b.summary.plan_id) {
+      if (a.summary.is_archived === b.summary.is_archived) {
+        return a.summary.file_path.localeCompare(b.summary.file_path);
+      }
+      return a.summary.is_archived ? 1 : -1;
+    }
+    return a.summary.plan_id.localeCompare(b.summary.plan_id);
+  });
   return plans;
 }
 
-export async function loadPlanById(projectDir, planId) {
-  const plans = await loadPlans(projectDir);
+export async function loadPlanById(projectDir, planId, options?: { includeDone?: boolean }) {
+  const plans = await loadPlans(projectDir, options);
   return plans.find((item) => item.summary.plan_id === planId) ?? null;
 }
 
-export async function loadPlanByFilePath(projectDir, filePath) {
-  const plans = await loadPlans(projectDir);
+export async function loadPlanByFilePath(projectDir, filePath, options?: { includeDone?: boolean }) {
+  const plans = await loadPlans(projectDir, options);
   const normalizedPath = path.resolve(filePath);
   return plans.find((item) => path.resolve(item.summary.file_path) === normalizedPath) ?? null;
 }
