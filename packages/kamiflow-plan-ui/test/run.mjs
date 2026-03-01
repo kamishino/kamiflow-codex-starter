@@ -60,6 +60,92 @@ await runCase("validate succeeds for generated template", async () => {
   });
 });
 
+await runCase("api returns plan list (when server deps are installed)", async () => {
+  let createServer;
+  try {
+    ({ createServer } = await import("../src/server/create-server.js"));
+  } catch (err) {
+    if (err && typeof err === "object" && (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND")) {
+      console.log("[test] SKIP server test: install package dependencies first.");
+      return;
+    }
+    throw err;
+  }
+
+  await withTempDir(async (tempDir) => {
+    const initExit = await runCli(["init", "--project", tempDir]);
+    assert.equal(initExit, 0);
+
+    const server = await createServer({ projectDir: tempDir, withWatcher: false });
+    await server.ready();
+    const health = await server.inject({
+      method: "GET",
+      url: "/api/health"
+    });
+    assert.equal(health.statusCode, 200);
+    assert.deepEqual(JSON.parse(health.payload), { ok: true });
+
+    const listResponse = await server.inject({
+      method: "GET",
+      url: "/api/plans"
+    });
+    assert.equal(listResponse.statusCode, 200);
+    const payload = JSON.parse(listResponse.payload);
+    assert.ok(Array.isArray(payload.plans));
+    assert.ok(payload.plans.length >= 1);
+
+    const planId = payload.plans[0].plan_id;
+    const detailResponse = await server.inject({
+      method: "GET",
+      url: `/api/plans/${encodeURIComponent(planId)}`
+    });
+    assert.equal(detailResponse.statusCode, 200);
+    const detail = JSON.parse(detailResponse.payload);
+    assert.equal(detail.summary.plan_id, planId);
+
+    const missingResponse = await server.inject({
+      method: "GET",
+      url: "/api/plans/DOES_NOT_EXIST"
+    });
+    assert.equal(missingResponse.statusCode, 404);
+    const missing = JSON.parse(missingResponse.payload);
+    assert.equal(missing.error_code, "PLAN_NOT_FOUND");
+
+    const badPlanPath = path.join(tempDir, ".local", "plans", "bad-plan.md");
+    await fs.writeFile(
+      badPlanPath,
+      `---
+plan_id: BAD-PLAN
+title: bad
+status: draft
+decision: GO
+selected_mode: Plan
+next_mode: Build
+next_command: build
+updated_at: 2026-03-01
+---
+
+## Goal
+- only one section
+`,
+      "utf8"
+    );
+
+    const listAfterBad = await server.inject({
+      method: "GET",
+      url: "/api/plans"
+    });
+    assert.equal(listAfterBad.statusCode, 200);
+    const payloadAfterBad = JSON.parse(listAfterBad.payload);
+    const badSummary = payloadAfterBad.plans.find((item) => item.plan_id === "BAD-PLAN");
+    assert.ok(badSummary);
+    assert.equal(badSummary.is_valid, false);
+    assert.ok(badSummary.error_count > 0);
+
+    await server.close();
+  });
+});
+
 if (failed > 0) {
   process.exitCode = 1;
   console.error(`[test] ${failed} test(s) failed.`);

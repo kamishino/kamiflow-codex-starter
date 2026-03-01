@@ -11,7 +11,13 @@
   },
   "scripts": {
     "start": "node bin/kfp.js",
+    "serve": "node bin/kfp.js serve",
     "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "@kamishino/kamiflow-codex": "file:../..",
+    "chokidar": "4.0.3",
+    "fastify": "5.6.1"
   },
   "files": [
     "bin",

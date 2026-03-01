@@ -18,6 +18,7 @@
     "codex:setup": "node scripts/codex/setup-local.mjs",
     "codex:sync": "node scripts/codex/sync-resources-to-agents.mjs",
     "plan-ui:init": "node packages/kamiflow-plan-ui/bin/kfp.js init",
+    "plan-ui:serve": "node packages/kamiflow-plan-ui/bin/kfp.js serve",
     "plan-ui:validate": "node packages/kamiflow-plan-ui/bin/kfp.js validate",
     "plan-ui:test": "npm --prefix packages/kamiflow-plan-ui test",
     "link:self": "npm link",
