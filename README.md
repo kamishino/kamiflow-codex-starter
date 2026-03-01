@@ -65,6 +65,21 @@ Sync `resources/skills` into `.agents/skills` runtime:
 npm run codex:sync
 ```
 
+KFP local loop:
+
+```bash
+npm run plan-ui:init
+npm run plan-ui:validate
+npm run plan-ui:serve
+```
+
+Then use `kamiflow-core` routes against `.local/plans/*.md`.
+See:
+
+- `resources/docs/PLAN_CONTRACT_V1.md`
+- `resources/docs/CODEX_KFP_RUNBOOK.md`
+- `resources/docs/ROUTE_PROMPTS.md`
+
 ## `.codex` Policy
 
 Commit templates and structure:

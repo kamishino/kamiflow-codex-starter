@@ -15,7 +15,12 @@ Use this route for non-trivial implementation planning.
 4. Define acceptance criteria and validation steps.
 5. Split work into ordered tasks.
 6. Identify risks and fallback strategy.
-7. End with next command: `build`.
+7. Resolve high-impact open decisions before handoff.
+8. Set plan handoff metadata for build readiness:
+   - `decision: GO`
+   - `next_command: build`
+   - `next_mode: Build`
+9. End with next command: `build`.
 
 ## Output
 
@@ -24,4 +29,6 @@ Use `../templates/plan-spec.md` shape.
 ## Exit Criteria
 
 - Scope, tasks, and acceptance criteria are concrete and testable.
+- No unresolved high-impact open decisions remain.
+- Validation commands are concrete and runnable.
 - Final footer includes selected mode and next mode.

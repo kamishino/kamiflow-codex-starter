@@ -7,6 +7,7 @@ Current phase:
 - mode-aware route policy added for Plan/Build
 - `resources/` is SSOT for skill definitions and templates
 - `.agents/skills` is runtime working surface
+- Plan Contract v1 and Codex+KFP runbook added
 
 Policy:
 
@@ -17,7 +18,7 @@ Policy:
 
 Next phase:
 
-1. dogfood `$kamiflow-core` in this repo and tune routing behavior
-2. improve references based on real usage feedback
-3. define optional add-on skills only if needed
+1. dogfood the canonical `plan -> build -> check` loop with real plan files
+2. tune route prompts and gate wording from user feedback
+3. consider helper automation only after manual loop is stable
 4. validate portability across projects
