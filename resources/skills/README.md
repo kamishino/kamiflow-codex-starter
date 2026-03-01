@@ -1,3 +1,9 @@
-# Skills Placeholder
+# Skills (SSOT)
 
-Add reusable Codex skills here after Kami Flow documentation is finalized.
+Canonical source for Codex skills lives here.
+
+Current skill set:
+
+- `kamiflow-core/`: single-skill Kami Flow workflow router.
+
+Do not edit runtime output in `.agents/skills` directly.

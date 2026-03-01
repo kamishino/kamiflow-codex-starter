@@ -16,7 +16,7 @@
     "build": "node -e \"console.log('No build step. Running from source ESM.')\"",
     "typecheck": "node -e \"console.log('TypeScript typecheck not configured yet.')\"",
     "codex:setup": "node scripts/codex/setup-local.mjs",
-    "codex:sync": "node scripts/codex/sync-resources-to-codex.mjs",
+    "codex:sync": "node scripts/codex/sync-resources-to-agents.mjs",
     "link:self": "npm link",
     "pack:local": "npm pack",
     "dogfood:link": "node scripts/dogfood/link-all.mjs",

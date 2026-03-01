@@ -8,12 +8,8 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 
 const MAPPINGS = [
   {
-    from: path.join(ROOT_DIR, "resources", "prompts"),
-    to: path.join(ROOT_DIR, ".codex", "prompts")
-  },
-  {
     from: path.join(ROOT_DIR, "resources", "skills"),
-    to: path.join(ROOT_DIR, ".codex", "skills")
+    to: path.join(ROOT_DIR, ".agents", "skills")
   }
 ];
 
@@ -72,6 +68,9 @@ for (const mapping of MAPPINGS) {
   if (!fs.existsSync(mapping.from)) {
     console.log(`[codex-sync] Skip missing source: ${mapping.from}`);
     continue;
+  }
+  if (force && fs.existsSync(mapping.to)) {
+    fs.rmSync(mapping.to, { recursive: true, force: true });
   }
   copyRecursive(mapping.from, mapping.to);
 }

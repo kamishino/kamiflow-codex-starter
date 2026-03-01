@@ -1,3 +1,7 @@
-# Templates Placeholder
+# Templates
 
-Add reusable templates and static assets here when needed.
+Shared template directory for future cross-skill assets.
+
+Current Kami Flow templates are kept with the skill:
+
+- `resources/skills/kamiflow-core/templates/`

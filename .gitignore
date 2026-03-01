@@ -5,3 +5,5 @@ dist/
 *.tgz
 .npm-cache/
 .codex/config.toml
+temp/
+.agents/

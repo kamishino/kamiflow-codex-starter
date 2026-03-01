@@ -6,7 +6,7 @@ This repository is the CLI source and the dogfooding environment.
 
 - Build and evolve the publishable CLI package.
 - Dogfood the package in local in-repo fixtures.
-- Keep `resources/` as a portable placeholder layer for future Codex skills/prompts.
+- Keep `resources/` as SSOT for portable Codex skills content.
 
 ## Structure
 
@@ -14,9 +14,10 @@ This repository is the CLI source and the dogfooding environment.
 - `src/`: command and runtime source.
 - `dogfood/`: in-repo consumer fixtures.
 - `scripts/dogfood/`: link/unlink/smoke automation.
-- `.codex/`: in-repo Codex dogfood setup (prompts/skills/config templates).
-- `scripts/codex/`: local setup and sync utilities for `.codex/`.
-- `resources/`: future reusable Codex assets (still placeholders).
+- `.codex/`: local Codex config templates.
+- `.agents/`: generated runtime skills for repo-level dogfooding.
+- `scripts/codex/`: local setup and sync utilities.
+- `resources/`: SSOT reusable Codex assets.
 
 ## CLI Commands
 
@@ -58,7 +59,7 @@ Create local `.codex/config.toml` from the committed example:
 npm run codex:setup
 ```
 
-Sync `resources/prompts` and `resources/skills` into `.codex/`:
+Sync `resources/skills` into `.agents/skills` runtime:
 
 ```bash
 npm run codex:sync
@@ -66,10 +67,15 @@ npm run codex:sync
 
 ## `.codex` Policy
 
-- Commit templates and structure:
-  - `.codex/config.example.toml`
-  - `.codex/prompts/`
-  - `.codex/skills/`
-- Keep local/private runtime config untracked:
-  - `.codex/config.toml`
-- Keep human-facing documentation in `resources/` (SSOT), not in `.codex/`.
+Commit templates and structure:
+
+- `.codex/config.example.toml`
+
+Keep local/private runtime config untracked:
+
+- `.codex/config.toml`
+
+Skill policy:
+
+- Keep SSOT in `resources/skills`.
+- Treat `.agents/skills` as generated runtime output.

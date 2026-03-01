@@ -1,0 +1,6 @@
+interface:
+  display_name: Kami Flow Core
+  short_description: Structured workflow router for start, plan, build, and check.
+  default_prompt: Use Kami Flow Core to route this task and produce the required output format.
+policy:
+  allow_implicit_invocation: false
