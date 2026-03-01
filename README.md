@@ -41,6 +41,7 @@ Plan command notes:
 - Workspace mode:
   - `kfc plan workspace add <name> --project <path>`
   - `kfc plan serve --workspace <name>`
+  - `kfc plan workspace add <name>` auto-detects project root (Git -> package.json -> cwd)
 
 ## Local Workflow
 

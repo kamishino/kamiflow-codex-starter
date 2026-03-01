@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= it.title %></title>
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <aside>
+      <h1>Plans</h1>
+      <label for="project-filter">Project</label>
+      <select id="project-filter"></select>
+      <label for="plan-filter">View</label>
+      <select id="plan-filter">
+        <option value="active">Active</option>
+        <option value="done">Done</option>
+        <option value="all">All</option>
+      </select>
+      <ul id="plan-list"></ul>
+    </aside>
+    <main>
+      <h2>Plan Detail</h2>
+      <div id="status">Waiting for updates...</div>
+      <div id="plan-detail"><p>Select a plan.</p></div>
+    </main>
+  </div>
+  <script src="/assets/app.js" type="module"></script>
+</body>
+</html>

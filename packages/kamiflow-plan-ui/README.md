@@ -20,7 +20,7 @@ npm run kfp -- init --project <path>
 npm run kfp -- validate --project <path>
 npm run kfp -- serve --project <path> --port 4310
 npm run kfp -- workspace list
-npm run kfp -- workspace add <name> --project <path>
+npm run kfp -- workspace add <name> [--project <path>]
 npm run kfp -- serve --workspace <name> --port 4310
 ```
 
@@ -110,8 +110,15 @@ If your environment blocks registry access, `serve` cannot start until dependenc
 
 If global home path is restricted, set `KAMIFLOW_HOME` to override workspace config root.
 
+`workspace add` auto-detects project root when `--project` is omitted:
+1. nearest Git root
+2. nearest `package.json` root
+3. current directory
+
 ## Build Notes
 
 - Source files are TypeScript under `src/`.
 - `npm run build` compiles to `dist/`.
 - `bin/kfp.js` runs compiled output from `dist/`.
+- UI shell template is Eta under `src/server/views`.
+- Browser assets are under `src/server/public`.

@@ -7,6 +7,7 @@ import { runCli } from "../dist/cli.js";
 import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
 import { validateParsedPlan } from "../dist/schema/validate-plan.js";
 import { SSEStream } from "../dist/server/sse-stream.js";
+import { detectProjectRoot } from "../dist/lib/project-detect.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,30 @@ await runCase("validate succeeds for generated template", async () => {
     assert.equal(initExit, 0);
     const validateExit = await runCli(["validate", "--project", tempDir]);
     assert.equal(validateExit, 0);
+  });
+});
+
+await runCase("detectProjectRoot prefers git root then package then cwd", async () => {
+  await withTempDir(async (tempDir) => {
+    const gitRoot = path.join(tempDir, "git-root");
+    const gitNested = path.join(gitRoot, "a", "b");
+    await fs.mkdir(path.join(gitRoot, ".git"), { recursive: true });
+    await fs.mkdir(gitNested, { recursive: true });
+    const detectedGit = await detectProjectRoot(gitNested);
+    assert.equal(detectedGit, gitRoot);
+
+    const pkgRoot = path.join(tempDir, "pkg-root");
+    const pkgNested = path.join(pkgRoot, "x", "y");
+    await fs.mkdir(pkgNested, { recursive: true });
+    await fs.writeFile(path.join(pkgRoot, "package.json"), "{}", "utf8");
+    const detectedPkg = await detectProjectRoot(pkgNested);
+    assert.equal(detectedPkg, pkgRoot);
+
+    const plainRoot = path.join(tempDir, "plain");
+    const plainNested = path.join(plainRoot, "m", "n");
+    await fs.mkdir(plainNested, { recursive: true });
+    const detectedPlain = await detectProjectRoot(plainNested);
+    assert.equal(detectedPlain, plainNested);
   });
 });
 

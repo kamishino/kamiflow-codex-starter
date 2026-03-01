@@ -19,6 +19,7 @@
   "dependencies": {
     "@kamishino/kamiflow-codex": "file:../..",
     "chokidar": "4.0.3",
+    "eta": "3.5.0",
     "fastify": "5.6.1"
   },
   "devDependencies": {

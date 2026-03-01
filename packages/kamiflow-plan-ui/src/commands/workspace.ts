@@ -1,4 +1,3 @@
-import { resolveProjectDir } from "../lib/paths.js";
 import {
   addWorkspaceProject,
   getWorkspaceConfigPath,
@@ -7,6 +6,7 @@ import {
   removeWorkspaceProject,
   showWorkspace
 } from "../lib/workspace-registry.js";
+import { detectProjectRoot } from "../lib/project-detect.js";
 
 function parseName(args: string[]): string {
   const name = args[0];
@@ -16,7 +16,7 @@ function parseName(args: string[]): string {
   return name;
 }
 
-function parseProject(args: string[]): string {
+async function parseProject(args: string[]): Promise<string> {
   const idx = args.indexOf("--project");
   if (idx !== -1) {
     const value = args[idx + 1];
@@ -25,7 +25,7 @@ function parseProject(args: string[]): string {
     }
     return value;
   }
-  return resolveProjectDir([]);
+  return await detectProjectRoot(process.cwd());
 }
 
 export async function runWorkspace(args: string[]): Promise<number> {
@@ -34,7 +34,7 @@ export async function runWorkspace(args: string[]): Promise<number> {
     console.log(`Workspace commands:
   kfp workspace list
   kfp workspace show <name>
-  kfp workspace add <name> [--project <path>]
+  kfp workspace add <name> [--project <path>] (auto-detects project root if omitted)
   kfp workspace remove <name> --project <path|project_id>
 `);
     return 0;
@@ -72,7 +72,7 @@ export async function runWorkspace(args: string[]): Promise<number> {
 
   if (subcommand === "add") {
     const name = parseName(rest);
-    const projectArg = parseProject(rest.slice(1));
+    const projectArg = await parseProject(rest.slice(1));
     const result = await addWorkspaceProject(name, projectArg);
     console.log(`[kfp] Added: ${result.project.project_id} -> ${result.project.path}`);
     return 0;
@@ -80,7 +80,7 @@ export async function runWorkspace(args: string[]): Promise<number> {
 
   if (subcommand === "remove") {
     const name = parseName(rest);
-    const projectArg = parseProject(rest.slice(1));
+    const projectArg = await parseProject(rest.slice(1));
     const result = await removeWorkspaceProject(name, projectArg);
     if (!result.removed) {
       console.log(`[kfp] No matching project found in workspace: ${name}`);
@@ -102,4 +102,3 @@ export async function runWorkspace(args: string[]): Promise<number> {
 
   throw new Error(`Unknown workspace subcommand: ${subcommand}`);
 }
-
