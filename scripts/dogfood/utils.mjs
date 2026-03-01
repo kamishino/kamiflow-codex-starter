@@ -28,6 +28,9 @@ export function run(command, args, cwd, allowFailure = false) {
   });
 
   if (!allowFailure && result.status !== 0) {
+    if (result.error) {
+      throw result.error;
+    }
     throw new Error(
       `Command failed (${command} ${args.join(" ")}), exit code ${result.status}`
     );

@@ -1,26 +1,38 @@
 import fs from "node:fs";
 import path from "node:path";
 import { FIXTURES, ROOT_DIR, fixturePath, readPackageName, run } from "./utils.mjs";
-import { spawnSync } from "node:child_process";
 
 const packageName = readPackageName();
 
+function readPackageVersion() {
+  const packageJsonPath = path.join(ROOT_DIR, "package.json");
+  const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+  return pkg.version;
+}
+
+function expectedTarballName(name, version) {
+  const normalizedName = name.startsWith("@")
+    ? name.slice(1).replace("/", "-")
+    : name;
+  return `${normalizedName}-${version}.tgz`;
+}
+
 function createPackFile() {
-  const result = spawnSync("npm", ["pack", "--silent"], {
-    cwd: ROOT_DIR,
-    encoding: "utf8",
-    shell: process.platform === "win32"
-  });
+  const version = readPackageVersion();
+  const tarballName = expectedTarballName(packageName, version);
+  const tarballPath = path.join(ROOT_DIR, tarballName);
 
-  if (result.status !== 0) {
-    throw new Error(result.stderr || "npm pack failed.");
+  if (fs.existsSync(tarballPath)) {
+    fs.unlinkSync(tarballPath);
   }
 
-  const filename = result.stdout.trim().split(/\r?\n/).filter(Boolean).pop();
-  if (!filename) {
-    throw new Error("Unable to detect packed tarball name.");
+  run("npm", ["pack", "--silent"], ROOT_DIR);
+
+  if (!fs.existsSync(tarballPath)) {
+    throw new Error(`npm pack succeeded but tarball was not found: ${tarballPath}`);
   }
-  return path.join(ROOT_DIR, filename);
+
+  return tarballPath;
 }
 
 const tarballPath = createPackFile();
