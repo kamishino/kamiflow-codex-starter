@@ -8,7 +8,7 @@ function printUsage() {
   console.log(`Kami Flow CLI
 
 Usage:
-  kamiflow <command> [options]
+  kfc <command> [options]
 
 Commands:
   init       Create kamiflow.config.json in current directory

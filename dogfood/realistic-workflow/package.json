@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "doctor": "kamiflow doctor",
-    "run": "kamiflow run"
+    "doctor": "kfc doctor",
+    "run": "kfc run"
   }
 }

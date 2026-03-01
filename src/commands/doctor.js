@@ -31,7 +31,7 @@ export async function runDoctor(options) {
     info(`Config found: ${configPath}`);
   } catch (readErr) {
     error(`Missing or unreadable config: ${readErr.message}`);
-    error("Run `kamiflow init` to create a default config.");
+    error("Run `kfc init` to create a default config.");
     return 1;
   }
 

@@ -31,8 +31,8 @@ try {
     const cwd = fixturePath(fixture);
     console.log(`[dogfood] Installing tarball into ${fixture}`);
     run("npm", ["install", "--no-save", tarballPath], cwd);
-    run("npx", ["--no-install", "kamiflow", "doctor"], cwd);
-    run("npx", ["--no-install", "kamiflow", "run"], cwd);
+    run("npx", ["--no-install", "kfc", "doctor"], cwd);
+    run("npx", ["--no-install", "kfc", "run"], cwd);
     run("npm", ["uninstall", "--no-save", packageName], cwd, true);
   }
 } finally {

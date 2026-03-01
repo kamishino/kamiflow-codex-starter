@@ -20,7 +20,7 @@ export async function runInit(options) {
 
   if (exists && !force) {
     info(`Config already exists: ${configPath}`);
-    info("Use `kamiflow init --force` to overwrite.");
+    info("Use `kfc init --force` to overwrite.");
     return 0;
   }
 

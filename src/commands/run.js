@@ -12,7 +12,7 @@ export async function runWorkflow(options) {
     raw = await readRawConfig(options.cwd);
   } catch (readErr) {
     error(`Cannot read config: ${readErr.message}`);
-    error("Run `kamiflow init` first.");
+    error("Run `kfc init` first.");
     return 1;
   }
 

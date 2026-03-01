@@ -18,9 +18,10 @@ This repository is the CLI source and the dogfooding environment.
 
 ## CLI Commands
 
-- `kamiflow init`
-- `kamiflow doctor`
-- `kamiflow run`
+- `kfc init`
+- `kfc doctor`
+- `kfc run`
+- `kf` is an optional shorthand alias for `kfc`
 
 Global option:
 

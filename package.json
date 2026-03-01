@@ -1,10 +1,11 @@
 {
-  "name": "kamiflow-cli",
+  "name": "@kamishino/kamiflow-codex",
   "version": "0.1.0",
   "description": "Kami Flow CLI with in-repo dogfooding fixtures.",
   "type": "module",
   "bin": {
-    "kamiflow": "bin/kamiflow.js"
+    "kfc": "bin/kamiflow.js",
+    "kf": "bin/kamiflow.js"
   },
   "engines": {
     "node": ">=20"
