@@ -7,6 +7,7 @@ Phase 2 includes:
 - `kfp serve`
 - private plan template in `.local/plans`
 - local API + SSE
+- replay-aware SSE stream (event IDs + heartbeat + resync signal)
 - read-only browser UI
 - guarded write actions for status/decision/task/gate
 - codex action bridge endpoint

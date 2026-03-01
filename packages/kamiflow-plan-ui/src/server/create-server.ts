@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import fs from "node:fs/promises";
 import { loadPlanByFilePath, loadPlanById, loadPlans } from "../lib/plan-store.js";
 import { watchPlans } from "./watch-plans.js";
+import { SSEStream } from "./sse-stream.js";
 import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
 import { serializePlan } from "../lib/plan-serializer.js";
@@ -26,26 +27,7 @@ function toDetail(plan: PlanRecord) {
 export async function createServer(options) {
   const { projectDir, withWatcher = true, runCodexAction = runCodexActionDefault } = options;
   const fastify = Fastify({ logger: false });
-  const sseClients = new Map<string, Set<any>>();
-
-  function addClient(planId: string, reply: any) {
-    const key = planId;
-    if (!sseClients.has(key)) {
-      sseClients.set(key, new Set());
-    }
-    sseClients.get(key).add(reply);
-  }
-
-  function removeClient(planId: string, reply: any) {
-    const set = sseClients.get(planId);
-    if (!set) {
-      return;
-    }
-    set.delete(reply);
-    if (set.size === 0) {
-      sseClients.delete(planId);
-    }
-  }
+  const stream = new SSEStream(500);
 
   async function broadcastPlanEvent(planId: string, type: string) {
     const plan = await loadPlanById(projectDir, planId);
@@ -57,18 +39,7 @@ export async function createServer(options) {
           updated_at: Date.now()
         }
       : { event_type: type, plan_id: planId, summary: null, updated_at: Date.now() };
-
-    const message = `event: ${type}\ndata: ${JSON.stringify(payload)}\n\n`;
-
-    for (const key of [planId, "*"]) {
-      const listeners = sseClients.get(key);
-      if (!listeners) {
-        continue;
-      }
-      for (const reply of listeners) {
-        reply.raw.write(message);
-      }
-    }
+    stream.publish(type, payload, planId);
   }
 
   async function persistMutation(
@@ -160,12 +131,13 @@ export async function createServer(options) {
     reply.raw.setHeader("Content-Type", "text/event-stream");
     reply.raw.setHeader("Cache-Control", "no-cache");
     reply.raw.setHeader("Connection", "keep-alive");
-    reply.raw.write("event: connected\ndata: {}\n\n");
-
-    addClient(id, reply);
+    reply.raw.setHeader("X-Accel-Buffering", "no");
+    const header = request.headers["last-event-id"];
+    const lastEventId = Array.isArray(header) ? header[0] : header;
+    stream.subscribe(id, reply, lastEventId);
 
     request.raw.on("close", () => {
-      removeClient(id, reply);
+      stream.unsubscribe(id, reply);
     });
 
     return reply;
@@ -412,11 +384,38 @@ function bindActions(id, data) {
 }
 
 let currentStream;
+let lastHeartbeatTs = 0;
+let staleTimer = null;
 function attachStream(id) {
   if (currentStream) {
     currentStream.close();
   }
   currentStream = new EventSource("/api/plans/" + encodeURIComponent(id) + "/events");
+  if (staleTimer) {
+    clearInterval(staleTimer);
+  }
+  staleTimer = setInterval(() => {
+    if (!lastHeartbeatTs) {
+      return;
+    }
+    if (Date.now() - lastHeartbeatTs > 60000) {
+      statusEl.textContent = "Connection stale. Resyncing...";
+      loadDetail();
+      loadList();
+    }
+  }, 5000);
+  currentStream.addEventListener("connected", () => {
+    statusEl.textContent = "Connected.";
+    lastHeartbeatTs = Date.now();
+  });
+  currentStream.addEventListener("heartbeat", () => {
+    lastHeartbeatTs = Date.now();
+  });
+  currentStream.addEventListener("resync_required", () => {
+    statusEl.textContent = "Stream replay unavailable. Full resync.";
+    loadDetail();
+    loadList();
+  });
   currentStream.addEventListener("plan_updated", () => {
     statusEl.textContent = "Live update received: plan_updated";
     loadDetail();
@@ -432,6 +431,9 @@ function attachStream(id) {
     loadDetail();
     loadList();
   });
+  currentStream.onerror = () => {
+    statusEl.textContent = "Disconnected. Reconnecting...";
+  };
 }
 
 async function loadList() {
@@ -485,17 +487,37 @@ loadList().then(() => loadDetail());
   });
 
   let watcher = null;
+  const pending = new Map<string, { type: string; timer: NodeJS.Timeout }>();
   if (withWatcher) {
     watcher = watchPlans(projectDir, async ({ type, filePath }) => {
       const existing = await loadPlanByFilePath(projectDir, filePath);
       const fallbackPlanId = filePath.split(/[\\/]/).pop().replace(/\.md$/i, "");
       const planId = existing?.summary.plan_id ?? fallbackPlanId;
       const eventType = existing && existing.errors.length > 0 ? "plan_invalid" : type;
-      await broadcastPlanEvent(planId, eventType);
+      const existingPending = pending.get(planId);
+      if (existingPending) {
+        clearTimeout(existingPending.timer);
+      }
+      const timer = setTimeout(async () => {
+        pending.delete(planId);
+        await broadcastPlanEvent(planId, eventType);
+      }, 150);
+      pending.set(planId, { type: eventType, timer });
     });
   }
 
+  const heartbeat = setInterval(() => {
+    if (stream.getSubscriberCount() > 0) {
+      stream.sendHeartbeat();
+    }
+  }, 20_000);
+
   fastify.addHook("onClose", async () => {
+    clearInterval(heartbeat);
+    for (const item of pending.values()) {
+      clearTimeout(item.timer);
+    }
+    pending.clear();
     if (watcher) {
       await watcher.close();
     }

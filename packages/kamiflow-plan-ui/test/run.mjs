@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { runCli } from "../dist/cli.js";
 import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
 import { validateParsedPlan } from "../dist/schema/validate-plan.js";
+import { SSEStream } from "../dist/server/sse-stream.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -196,6 +197,30 @@ updated_at: 2026-03-01
 
     await server.close();
   });
+});
+
+await runCase("sse stream supports replay and heartbeat", async () => {
+  const writes = [];
+  const reply = {
+    raw: {
+      write(chunk) {
+        writes.push(chunk);
+      }
+    }
+  };
+
+  const stream = new SSEStream(3);
+  const firstId = stream.publish("plan_updated", { n: 1 }, "P1");
+  stream.publish("plan_updated", { n: 2 }, "P1");
+  stream.publish("plan_updated", { n: 3 }, "P1");
+
+  stream.subscribe("P1", reply, String(firstId));
+  stream.sendHeartbeat();
+
+  const payload = writes.join("");
+  assert.ok(payload.includes("event: connected"));
+  assert.ok(payload.includes("event: plan_updated"));
+  assert.ok(payload.includes("event: heartbeat"));
 });
 
 if (failed > 0) {
