@@ -3,8 +3,9 @@ import path from "node:path";
 import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
 import { resolvePlansDir } from "./paths.js";
+import type { ParsedPlan, PlanRecord, PlanSummary } from "../types.js";
 
-function toSummary(parsed, errors) {
+function toSummary(parsed: ParsedPlan, errors: string[]): PlanSummary {
   return {
     plan_id: parsed.frontmatter.plan_id ?? parsed.fileName,
     title: parsed.frontmatter.title ?? parsed.fileName,
@@ -40,7 +41,7 @@ async function listMarkdownFiles(plansDir) {
 export async function loadPlans(projectDir) {
   const plansDir = resolvePlansDir(projectDir);
   const files = await listMarkdownFiles(plansDir);
-  const plans = [];
+  const plans: PlanRecord[] = [];
 
   for (const filePath of files) {
     const raw = await fs.readFile(filePath, "utf8");

@@ -1,4 +1,5 @@
 import path from "node:path";
+import type { ParsedPlan } from "../types.js";
 
 function parseSimpleFrontmatter(yamlBlock) {
   const data = {};
@@ -64,11 +65,12 @@ export function parseSections(body) {
 export function parsePlanFileContent(markdown, filePath = "<memory>") {
   const { frontmatter, body } = extractFrontmatter(markdown);
   const sections = parseSections(body);
-  return {
+  const parsed: ParsedPlan = {
     filePath,
     fileName: path.basename(filePath),
     frontmatter,
     body,
     sections
   };
+  return parsed;
 }

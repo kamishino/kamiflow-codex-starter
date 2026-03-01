@@ -1,6 +1,7 @@
 import { REQUIRED_FRONTMATTER_FIELDS, REQUIRED_SECTIONS } from "../constants.js";
+import type { ParsedPlan } from "../types.js";
 
-export function validateParsedPlan(plan) {
+export function validateParsedPlan(plan: ParsedPlan) {
   const errors = [];
 
   for (const key of REQUIRED_FRONTMATTER_FIELDS) {

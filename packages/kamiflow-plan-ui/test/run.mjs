@@ -3,9 +3,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { runCli } from "../src/cli.js";
-import { parsePlanFileContent } from "../src/parser/plan-parser.js";
-import { validateParsedPlan } from "../src/schema/validate-plan.js";
+import { runCli } from "../dist/cli.js";
+import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
+import { validateParsedPlan } from "../dist/schema/validate-plan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -63,7 +63,7 @@ await runCase("validate succeeds for generated template", async () => {
 await runCase("api returns plan list (when server deps are installed)", async () => {
   let createServer;
   try {
-    ({ createServer } = await import("../src/server/create-server.js"));
+    ({ createServer } = await import("../dist/server/create-server.js"));
   } catch (err) {
     if (err && typeof err === "object" && (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND")) {
       console.log("[test] SKIP server test: install package dependencies first.");

@@ -1,8 +1,9 @@
 import Fastify from "fastify";
 import { loadPlanByFilePath, loadPlanById, loadPlans } from "../lib/plan-store.js";
 import { watchPlans } from "./watch-plans.js";
+import type { PlanRecord } from "../types.js";
 
-function toDetail(plan) {
+function toDetail(plan: PlanRecord) {
   return {
     summary: plan.summary,
     frontmatter: plan.parsed?.frontmatter ?? {},
@@ -14,9 +15,9 @@ function toDetail(plan) {
 export async function createServer(options) {
   const { projectDir, withWatcher = true } = options;
   const fastify = Fastify({ logger: false });
-  const sseClients = new Map();
+  const sseClients = new Map<string, Set<any>>();
 
-  function addClient(planId, reply) {
+  function addClient(planId: string, reply: any) {
     const key = planId;
     if (!sseClients.has(key)) {
       sseClients.set(key, new Set());
@@ -24,7 +25,7 @@ export async function createServer(options) {
     sseClients.get(key).add(reply);
   }
 
-  function removeClient(planId, reply) {
+  function removeClient(planId: string, reply: any) {
     const set = sseClients.get(planId);
     if (!set) {
       return;
@@ -35,7 +36,7 @@ export async function createServer(options) {
     }
   }
 
-  async function broadcastPlanEvent(planId, type) {
+  async function broadcastPlanEvent(planId: string, type: string) {
     const plan = await loadPlanById(projectDir, planId);
     const payload = plan
       ? {
@@ -69,7 +70,7 @@ export async function createServer(options) {
   });
 
   fastify.get("/api/plans/:id", async (request, reply) => {
-    const { id } = request.params;
+    const { id } = request.params as { id: string };
     const plan = await loadPlanById(projectDir, id);
     if (!plan) {
       reply.code(404);
@@ -79,7 +80,7 @@ export async function createServer(options) {
   });
 
   fastify.get("/api/plans/:id/events", async (request, reply) => {
-    const { id } = request.params;
+    const { id } = request.params as { id: string };
     reply.raw.setHeader("Content-Type", "text/event-stream");
     reply.raw.setHeader("Cache-Control", "no-cache");
     reply.raw.setHeader("Connection", "keep-alive");

@@ -12,9 +12,9 @@ Phase 2 includes:
 ## Usage
 
 ```bash
-node bin/kfp.js init --project <path>
-node bin/kfp.js validate --project <path>
-node bin/kfp.js serve --project <path> --port 4310
+npm run kfp -- init --project <path>
+npm run kfp -- validate --project <path>
+npm run kfp -- serve --project <path> --port 4310
 ```
 
 Then open:
@@ -85,3 +85,9 @@ npm --prefix packages/kamiflow-plan-ui install
 ```
 
 If your environment blocks registry access, `serve` cannot start until dependencies are available locally.
+
+## Build Notes
+
+- Source files are TypeScript under `src/`.
+- `npm run build` compiles to `dist/`.
+- `bin/kfp.js` runs compiled output from `dist/`.
