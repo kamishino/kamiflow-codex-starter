@@ -4,3 +4,4 @@ dist/
 *.log
 *.tgz
 .npm-cache/
+.codex/config.toml

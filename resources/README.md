@@ -11,3 +11,9 @@ Generic, reusable container for future Kami Flow Codex assets.
 - `docs/`: guidance and rollout docs for this resource pack.
 
 This folder intentionally contains only placeholders right now.
+
+When template content is added later, sync it into `.codex/` for in-repo dogfooding:
+
+```bash
+npm run codex:sync
+```
