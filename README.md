@@ -74,6 +74,7 @@ npm run plan-ui:serve
 ```
 
 Then use `kamiflow-core` routes against `.local/plans/*.md`.
+These scripts target the invoking directory first (`INIT_CWD`), and you can override with `KAMIFLOW_PROJECT_DIR`.
 See:
 
 - `resources/docs/PLAN_CONTRACT_V1.md`
