@@ -1,0 +1,10 @@
+{
+  "version": "1",
+  "workflow": {
+    "defaultProvider": "codex",
+    "profile": "dogfood-js"
+  },
+  "paths": {
+    "resourcesDir": "../../resources"
+  }
+}

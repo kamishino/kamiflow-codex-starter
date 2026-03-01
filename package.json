@@ -1,0 +1,36 @@
+{
+  "name": "kamiflow-cli",
+  "version": "0.1.0",
+  "description": "Kami Flow CLI with in-repo dogfooding fixtures.",
+  "type": "module",
+  "bin": {
+    "kamiflow": "bin/kamiflow.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node bin/kamiflow.js",
+    "dev": "node bin/kamiflow.js",
+    "build": "node -e \"console.log('No build step. Running from source ESM.')\"",
+    "typecheck": "node -e \"console.log('TypeScript typecheck not configured yet.')\"",
+    "link:self": "npm link",
+    "pack:local": "npm pack",
+    "dogfood:link": "node scripts/dogfood/link-all.mjs",
+    "dogfood:unlink": "node scripts/dogfood/unlink-all.mjs",
+    "dogfood:smoke": "node scripts/dogfood/smoke.mjs",
+    "dogfood:pack-smoke": "node scripts/dogfood/pack-install-smoke.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "resources",
+    "README.md"
+  ],
+  "keywords": [
+    "kamiflow",
+    "cli",
+    "dogfooding"
+  ],
+  "license": "UNLICENSED"
+}

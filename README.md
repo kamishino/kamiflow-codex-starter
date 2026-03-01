@@ -1,17 +1,48 @@
-# Kami Flow Codex Starter
+# Kami Flow CLI
 
-This repository is currently a structure-only starter for reusable Codex assets.
+This repository is the CLI source and the dogfooding environment.
 
-No skills, prompts, or automation logic are implemented yet.
+## What Is In Scope
 
-## Active Structure
+- Build and evolve the publishable CLI package.
+- Dogfood the package in local in-repo fixtures.
+- Keep `resources/` as a portable placeholder layer for future Codex skills/prompts.
 
-- `resources/skills/`
-- `resources/prompts/`
-- `resources/scripts/`
-- `resources/templates/`
-- `resources/docs/`
+## Structure
 
-## Current Goal
+- `bin/`: CLI executable entrypoint.
+- `src/`: command and runtime source.
+- `dogfood/`: in-repo consumer fixtures.
+- `scripts/dogfood/`: link/unlink/smoke automation.
+- `resources/`: future reusable Codex assets (still placeholders).
 
-Prepare a clean scaffold now, then add actual Kami Flow content after documentation is provided.
+## CLI Commands
+
+- `kamiflow init`
+- `kamiflow doctor`
+- `kamiflow run`
+
+Global option:
+
+- `--cwd <path>`
+
+## Local Workflow
+
+1. Link package:
+```bash
+npm run dogfood:link
+```
+2. Run fixture smoke:
+```bash
+npm run dogfood:smoke
+```
+3. Validate publish-like install:
+```bash
+npm run dogfood:pack-smoke
+```
+
+To clean link state:
+
+```bash
+npm run dogfood:unlink
+```

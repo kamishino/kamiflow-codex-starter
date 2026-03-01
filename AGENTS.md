@@ -1,12 +1,17 @@
 # Agent Instructions
 
-This repository is in scaffold mode.
+This repository has two active scopes:
 
-## Scope
+1. CLI product development in `src/` and `bin/`.
+2. Dogfooding in `dogfood/` using linked or packed installs.
 
-- Keep only structure and placeholder documentation.
-- Do not add real skill or prompt behavior until Kami Flow documentation is provided.
-- Keep naming generic and reusable across projects.
+`resources/` remains a portable placeholder area until Kami Flow documentation is provided.
+
+## Boundaries
+
+- Do not implement real Codex skills/prompts in `resources/` yet.
+- Do not import `src/*` directly from dogfood fixtures.
+- Dogfood fixtures must consume the CLI as users do (`npm link` or tarball install).
 
 ## Safety
 

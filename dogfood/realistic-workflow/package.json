@@ -1,0 +1,9 @@
+{
+  "name": "kamiflow-dogfood-realistic-workflow",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "doctor": "kamiflow doctor",
+    "run": "kamiflow run"
+  }
+}

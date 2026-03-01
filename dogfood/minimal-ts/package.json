@@ -1,0 +1,10 @@
+{
+  "name": "kamiflow-dogfood-minimal-ts",
+  "private": true,
+  "version": "0.0.0",
+  "scripts": {
+    "doctor": "kamiflow doctor",
+    "run": "kamiflow run",
+    "init": "kamiflow init"
+  }
+}

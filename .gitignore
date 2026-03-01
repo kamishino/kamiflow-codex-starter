@@ -2,3 +2,5 @@ artifacts/
 node_modules/
 dist/
 *.log
+*.tgz
+.npm-cache/
