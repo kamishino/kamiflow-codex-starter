@@ -2,6 +2,11 @@
 
 Use this route to execute an approved plan.
 
+## Entry Gate
+
+- Required mode: `Build`.
+- If current mode is not `Build`, return `MODE_MISMATCH` and stop.
+
 ## Steps
 
 1. Confirm required plan or scope exists.
@@ -24,3 +29,4 @@ Provide:
 
 - Changes align with scope.
 - Validation commands are listed with outcomes.
+- Final footer includes selected mode and next mode.

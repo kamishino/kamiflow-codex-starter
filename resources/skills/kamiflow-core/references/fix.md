@@ -2,6 +2,11 @@
 
 Use this route for focused issue resolution.
 
+## Entry Gate
+
+- Required mode: `Build`.
+- If current mode is not `Build`, return `MODE_MISMATCH` and stop.
+
 ## Steps
 
 1. Restate the issue and expected behavior.
@@ -23,3 +28,4 @@ Provide:
 ## Exit Criteria
 
 - Issue is addressed with minimal scope and verified.
+- Final footer includes selected mode and next mode.

@@ -2,6 +2,11 @@
 
 Use this route when key facts are missing or risk is high.
 
+## Entry Gate
+
+- Required mode: `Plan`.
+- If current mode is not `Plan`, return `MODE_MISMATCH` and stop.
+
 ## Steps
 
 1. State open questions that block implementation.
@@ -22,3 +27,4 @@ Provide:
 ## Exit Criteria
 
 - Unknowns are reduced enough to continue with plan.
+- Final footer includes selected mode and next mode.

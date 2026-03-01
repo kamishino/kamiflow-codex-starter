@@ -2,6 +2,11 @@
 
 Use this route to convert a vague idea into a ranked shortlist.
 
+## Entry Gate
+
+- Required mode: `Plan`.
+- If current mode is not `Plan`, return `MODE_MISMATCH` and stop.
+
 ## Steps
 
 1. Ask 3-5 clarifying questions and wait for answers.
@@ -32,3 +37,4 @@ Use `../templates/start-report.md` shape.
 
 - Top 5 scoring table present.
 - One clear handoff route selected.
+- Final footer includes selected mode and next mode.

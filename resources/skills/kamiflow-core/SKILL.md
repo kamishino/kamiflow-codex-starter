@@ -7,13 +7,26 @@ description: Core Kami Flow workflow router for start, plan, build, check, resea
 
 Use this skill as the single workflow entrypoint.
 
+## Mode Selector
+
+Select mode before executing route logic:
+
+- `start` -> `Plan`
+- `plan` -> `Plan`
+- `research` -> `Plan`
+- `build` -> `Build`
+- `fix` -> `Build`
+- `check` -> `Plan` by default; use `Build` only when running commands/tests or proposing file edits.
+
 ## Routing
 
 1. Read `references/command-map.md`.
 2. Classify the request into one command route.
-3. Load only the matched reference file.
-4. Produce output using that command's required format.
-5. End with one explicit next command.
+3. Resolve required mode from route.
+4. If mode mismatch, return `MODE_MISMATCH` and stop.
+5. Load only the matched reference file.
+6. Produce output using that command's required format.
+7. End with one explicit next command and next mode.
 
 ## Command Routes
 
@@ -30,3 +43,23 @@ Use this skill as the single workflow entrypoint.
 - No emoji in default output.
 - Do not skip required gates from the selected command reference.
 - If scope or risk increases mid-task, route back to `research` or `plan`.
+- If current mode does not meet route mode requirements, do not continue until mode is switched.
+
+## Mode Mismatch Policy
+
+When current mode is incompatible, output:
+
+- `Status: MODE_MISMATCH`
+- `Required Mode: Plan|Build`
+- `Current Mode: Plan|Build`
+- `Reason: <one line>`
+- `Instruction: Switch mode and rerun the same command.`
+
+## Output Footer Contract
+
+Every route output must end with:
+
+- `Selected Mode: Plan|Build`
+- `Mode Reason: <one line>`
+- `Next Command: <start|plan|build|check|research|fix|done>`
+- `Next Mode: Plan|Build|done`

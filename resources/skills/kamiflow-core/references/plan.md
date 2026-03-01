@@ -2,6 +2,11 @@
 
 Use this route for non-trivial implementation planning.
 
+## Entry Gate
+
+- Required mode: `Plan`.
+- If current mode is not `Plan`, return `MODE_MISMATCH` and stop.
+
 ## Steps
 
 1. Define problem and scope boundaries.
@@ -19,3 +24,4 @@ Use `../templates/plan-spec.md` shape.
 ## Exit Criteria
 
 - Scope, tasks, and acceptance criteria are concrete and testable.
+- Final footer includes selected mode and next mode.

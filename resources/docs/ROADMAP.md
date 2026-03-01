@@ -4,6 +4,7 @@ Current phase:
 
 - `kamiflow-core` skill pilot in progress
 - first implemented skill: `kamiflow-core`
+- mode-aware route policy added for Plan/Build
 - `resources/` is SSOT for skill definitions and templates
 - `.agents/skills` is runtime working surface
 

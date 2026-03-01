@@ -53,3 +53,9 @@
 - Route: plan | build | research
 - Reason:
 - Immediate next command:
+
+## 8) Mode
+- Selected Mode: Plan
+- Mode Reason:
+- Next Command:
+- Next Mode: Plan | Build

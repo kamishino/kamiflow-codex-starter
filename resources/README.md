@@ -12,6 +12,7 @@ Generic, reusable container for portable Kami Flow Codex assets.
 Current pilot includes one real skill:
 
 - `skills/kamiflow-core/`
+- includes mode-aware routing for Codex Plan/Build workflows.
 
 Sync SSOT skills into runtime for in-repo dogfooding:
 

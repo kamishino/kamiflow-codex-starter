@@ -2,6 +2,12 @@
 
 Use this route for quality verification and review gates.
 
+## Entry Gate
+
+- Required mode: `Plan` by default.
+- Use `Build` only when running commands/tests or proposing file edits.
+- If current mode is incompatible with intended check actions, return `MODE_MISMATCH` and stop.
+
 ## Steps
 
 1. Inspect changes against acceptance criteria.
@@ -18,3 +24,4 @@ Use `../templates/check-report.md` shape.
 
 - Findings are actionable and prioritized.
 - Decision is explicit: pass or block.
+- Final footer includes selected mode and next mode.
