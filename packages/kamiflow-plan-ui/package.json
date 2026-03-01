@@ -1,0 +1,23 @@
+{
+  "name": "@kamishino/kamiflow-plan-ui",
+  "version": "0.1.0",
+  "description": "Standalone private plan UI CLI for Kami Flow projects.",
+  "type": "module",
+  "bin": {
+    "kfp": "bin/kfp.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node bin/kfp.js",
+    "test": "node test/run.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "README.md"
+  ],
+  "license": "UNLICENSED"
+}
