@@ -12,6 +12,7 @@ import {
   applyDecisionMutation,
   applyGateMutation,
   applyHandoffMutation,
+  applyStartSummaryMutation,
   applyStatusMutation,
   applyTaskMutation,
   applyWipMutation
@@ -210,6 +211,7 @@ export async function createServer(options) {
     applyDecisionMutation,
     applyGateMutation,
     applyHandoffMutation,
+    applyStartSummaryMutation,
     applyStatusMutation,
     applyTaskMutation,
     applyWipMutation
@@ -260,4 +262,3 @@ export async function createServer(options) {
 
   return fastify;
 }
-

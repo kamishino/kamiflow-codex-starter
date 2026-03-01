@@ -1,6 +1,6 @@
 # Start
 
-Use this route to convert a vague idea into a ranked shortlist.
+Use this route to convert a vague idea into a ranked shortlist and produce a Start Summary for the plan file.
 
 ## Entry Gate
 
@@ -27,7 +27,14 @@ Use this route to convert a vague idea into a ranked shortlist.
 - Dark Horse
 - Quick Win
 6. Add pre-mortem for Best Bet.
-7. End with one handoff route: `plan`, `build`, or `research`.
+7. Produce `Start Summary` fields for plan persistence:
+- `Required: yes|no`
+- `Reason`
+- `Selected Idea`
+- `Alternatives Considered`
+- `Pre-mortem Risk`
+- `Handoff Confidence`
+8. End with one handoff route: `plan`, `build`, or `research`.
 
 ## Output
 
@@ -36,5 +43,6 @@ Use `../templates/start-report.md` shape.
 ## Exit Criteria
 
 - Top 5 scoring table present.
+- Start Summary payload is complete and non-placeholder.
 - One clear handoff route selected.
 - Final footer includes selected mode and next mode.

@@ -43,6 +43,85 @@ await runCase("parse and validate template plan", async () => {
   assert.equal(errors.length, 0);
 });
 
+await runCase("validate fails when Start Summary required fields are placeholder", async () => {
+  const markdown = `---
+plan_id: PLAN-2026-03-02-001
+title: Invalid Start Summary
+status: draft
+decision: NO_GO
+selected_mode: Plan
+next_mode: Plan
+next_command: plan
+updated_at: 2026-03-02
+---
+
+## Start Summary
+- Required: yes
+- Reason: TBD
+- Selected Idea: TBD
+- Alternatives Considered: TBD
+- Pre-mortem Risk: TBD
+- Handoff Confidence: 1
+
+## Goal
+- Define the desired outcome.
+
+## Scope (In/Out)
+- In:
+- Out:
+
+## Constraints
+- Technical:
+- Time:
+- Risk:
+
+## Assumptions
+- A1:
+- A2:
+
+## Open Decisions
+- [ ] D1:
+- Remaining Count: 1
+
+## Implementation Tasks
+- [ ] Task 1
+- [ ] Task 2
+
+## Acceptance Criteria
+- [ ] Criterion 1
+- [ ] Criterion 2
+
+## Validation Commands
+- command 1
+- command 2
+
+## Risks & Rollback
+- Risk:
+- Mitigation:
+- Rollback:
+
+## Go/No-Go Checklist
+- [ ] Goal is explicit
+- [ ] Scope in/out is explicit
+- [ ] No unresolved high-impact decisions
+- [ ] Feasibility is validated
+- [ ] Acceptance criteria are testable
+- [ ] Tasks are implementation-ready
+- [ ] Risks and rollback are defined
+- [ ] Validation commands are concrete
+- [ ] Dependencies/access are ready
+- [ ] First build step is explicit
+
+## WIP Log
+- Status:
+- Blockers:
+- Next step:
+`;
+  const parsed = parsePlanFileContent(markdown, "<memory>");
+  const errors = validateParsedPlan(parsed);
+  assert.ok(errors.some((item) => item.includes("Start Summary")));
+});
+
 await runCase("init creates plan template", async () => {
   await withTempDir(async (tempDir) => {
     const exitCode = await runCli(["init", "--project", tempDir]);

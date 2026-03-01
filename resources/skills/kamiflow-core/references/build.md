@@ -10,8 +10,9 @@ Use this route to execute an approved plan.
   - `decision: GO`
   - `next_command: build`
   - `next_mode: Build`
+  - Start Summary gate is satisfied
   - no unresolved high-impact open decisions
-- If approval gates fail, stop and reroute to `plan` (or `research` when scope/risk is unclear).
+- If approval gates fail, stop and reroute to `plan` (or `start` when clarity is insufficient, or `research` when scope/risk is unclear).
 
 ## Steps
 
@@ -46,4 +47,5 @@ Provide:
 - Changes align with scope.
 - Validation commands are listed with outcomes.
 - Work done maps to explicit task(s) in the plan.
+- Build action is blocked when Start Summary gate is not satisfied.
 - Final footer includes selected mode and next mode.

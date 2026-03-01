@@ -132,7 +132,7 @@ If global home path is restricted, set `KAMIFLOW_HOME` to override workspace con
 
 The browser UI provides:
 
-- workflow rail (`Plan -> Build -> Check -> Done`)
+- workflow rail (`Start -> Plan -> Build -> Check -> Done`)
 - plan health summary
 - action console for Codex actions (`plan|build|check|fix`)
 - automation apply shortcuts (`build_result`, `check_result`)

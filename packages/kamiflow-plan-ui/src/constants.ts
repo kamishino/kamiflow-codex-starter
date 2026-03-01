@@ -12,6 +12,7 @@ export const REQUIRED_FRONTMATTER_FIELDS = [
 ];
 
 export const REQUIRED_SECTIONS = [
+  "Start Summary",
   "Goal",
   "Scope (In/Out)",
   "Constraints",

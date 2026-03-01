@@ -184,9 +184,48 @@ function collectChecklist(containerSelector) {
     .filter((item) => Number.isInteger(item.index));
 }
 
+function parseSummarySection(sectionText) {
+  const out = {};
+  for (const line of String(sectionText || "").split(/\r?\n/)) {
+    const match = line.match(/^- ([^:]+):\s*(.*)$/);
+    if (!match) {
+      continue;
+    }
+    out[match[1].trim().toLowerCase()] = match[2].trim();
+  }
+  return out;
+}
+
+function isPlaceholder(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  return !normalized || normalized === "tbd" || normalized === "n/a" || normalized === "-";
+}
+
+function evaluateStartGate(detail) {
+  const start = parseSummarySection(detail.sections["Start Summary"] || "");
+  const required = (start.required || "").toLowerCase();
+  if (required !== "yes" && required !== "no") {
+    return { ok: false, required: "yes", reason: "Start Summary.Required must be yes or no." };
+  }
+  if (isPlaceholder(start.reason)) {
+    return { ok: false, required, reason: "Start Summary.Reason must be non-placeholder." };
+  }
+  if (required === "yes" && isPlaceholder(start["selected idea"])) {
+    return { ok: false, required, reason: "Start required: Selected Idea must be set." };
+  }
+  if (required === "yes" && isPlaceholder(start["handoff confidence"])) {
+    return { ok: false, required, reason: "Start required: Handoff Confidence must be set." };
+  }
+  return { ok: true, required, reason: "ok" };
+}
+
 function deriveStage(summary) {
-  if (!summary) {
+  if (!summary || !currentDetail) {
     return "Plan";
+  }
+  const startGate = evaluateStartGate(currentDetail);
+  if (!startGate.ok) {
+    return "Start";
   }
   if (summary.is_archived || summary.status === "done" || summary.next_command === "done") {
     return "Done";
@@ -204,6 +243,7 @@ function buildActionGuardrails(detail) {
   const summary = detail.summary || {};
   const isArchived = !!summary.is_archived;
   const isDone = summary.status === "done" || summary.next_command === "done";
+  const startGate = evaluateStartGate(detail);
   const acItems = parseChecklist(detail.sections["Acceptance Criteria"] || "");
   const allAcChecked = acItems.length > 0 && acItems.every((item) => item.checked);
 
@@ -242,6 +282,12 @@ function buildActionGuardrails(detail) {
     reasons.push("Plan is already done.");
   }
 
+  if (!startGate.ok) {
+    flags.codexBuild = true;
+    flags.applyBuild = true;
+    reasons.push("Start gate: " + startGate.reason);
+  }
+
   if (summary.decision !== "GO") {
     flags.codexBuild = true;
     flags.applyBuild = true;
@@ -266,7 +312,7 @@ function buildActionGuardrails(detail) {
 }
 
 function renderWorkflow(summary) {
-  const stages = ["Plan", "Build", "Check", "Done"];
+  const stages = ["Start", "Plan", "Build", "Check", "Done"];
   const current = deriveStage(summary);
   const index = stages.indexOf(current);
   workflowEl.innerHTML = stages
@@ -279,7 +325,9 @@ function renderWorkflow(summary) {
         classes.push("stage-active");
       }
       const hint =
-        stage === "Plan"
+        stage === "Start"
+          ? "clarify and score"
+          : stage === "Plan"
           ? "decision complete"
           : stage === "Build"
             ? "execute scoped tasks"
@@ -341,6 +389,7 @@ function renderWorkSurface(detail) {
   const tasks = parseChecklist(detail.sections["Implementation Tasks"]);
   const acs = parseChecklist(detail.sections["Acceptance Criteria"]);
   const wip = detail.sections["WIP Log"] || "";
+  const startSummary = parseSummarySection(detail.sections["Start Summary"] || "");
 
   const wipStatus = (wip.match(/^- Status:\s*(.*)$/m) || ["", ""])[1];
   const wipBlockers = (wip.match(/^- Blockers:\s*(.*)$/m) || ["", ""])[1];
@@ -348,6 +397,24 @@ function renderWorkSurface(detail) {
   const wipEvidence = (wip.match(/^- Evidence:\s*(.*)$/m) || ["", ""])[1];
 
   workEl.innerHTML = `
+    <div>
+      <h3>Start Summary</h3>
+      <label for="start-required">Required</label>
+      <select id="start-required">
+        <option value="yes" ${(startSummary.required || "yes") === "yes" ? "selected" : ""}>yes</option>
+        <option value="no" ${(startSummary.required || "yes") === "no" ? "selected" : ""}>no</option>
+      </select>
+      <label for="start-reason">Reason</label>
+      <input id="start-reason" value="${escapeHtml(startSummary.reason || "")}" />
+      <label for="start-selected-idea">Selected Idea</label>
+      <input id="start-selected-idea" value="${escapeHtml(startSummary["selected idea"] || "")}" />
+      <label for="start-alternatives">Alternatives Considered</label>
+      <input id="start-alternatives" value="${escapeHtml(startSummary["alternatives considered"] || "")}" />
+      <label for="start-premortem">Pre-mortem Risk</label>
+      <input id="start-premortem" value="${escapeHtml(startSummary["pre-mortem risk"] || "")}" />
+      <label for="start-confidence">Handoff Confidence</label>
+      <input id="start-confidence" value="${escapeHtml(startSummary["handoff confidence"] || "")}" />
+    </div>
     <div class="split-2">
       <div>
         <h3>Implementation Tasks</h3>
@@ -403,6 +470,14 @@ function renderWorkSurface(detail) {
     const planId = detail.summary.plan_id;
     const base = projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId);
     const payload = {
+      start_summary: {
+        required: document.querySelector("#start-required")?.value || "yes",
+        reason: document.querySelector("#start-reason")?.value || "",
+        selected_idea: document.querySelector("#start-selected-idea")?.value || "",
+        alternatives: document.querySelector("#start-alternatives")?.value || "",
+        pre_mortem_risk: document.querySelector("#start-premortem")?.value || "",
+        handoff_confidence: document.querySelector("#start-confidence")?.value || ""
+      },
       wip: {
         status: document.querySelector("#wip-status")?.value || "",
         blockers: document.querySelector("#wip-blockers")?.value || "",

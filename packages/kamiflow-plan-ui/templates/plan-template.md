@@ -9,6 +9,14 @@ next_command: plan
 updated_at: 2026-03-01
 ---
 
+## Start Summary
+- Required: yes
+- Reason: Missing 2+ core planning fields.
+- Selected Idea: Initial draft candidate
+- Alternatives Considered: Safe option | Dark horse option
+- Pre-mortem Risk: Weak clarity can cause rework.
+- Handoff Confidence: 1
+
 ## Goal
 - Define the desired outcome.
 

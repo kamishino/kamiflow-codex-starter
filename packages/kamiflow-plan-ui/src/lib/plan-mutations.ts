@@ -128,6 +128,50 @@ export function applyWipMutation(
   };
 }
 
+export function applyStartSummaryMutation(
+  parsed: ParsedPlan,
+  start: {
+    required?: "yes" | "no";
+    reason?: string;
+    selected_idea?: string;
+    alternatives?: string;
+    pre_mortem_risk?: string;
+    handoff_confidence?: string;
+  }
+): ParsedPlan {
+  const sectionName = "Start Summary";
+  const current = parsed.sections[sectionName];
+  if (typeof current !== "string") {
+    throw new Error(`Missing section: ${sectionName}`);
+  }
+  let next = current;
+  if (typeof start.required === "string") {
+    next = replaceWipLine(next, "Required", start.required);
+  }
+  if (typeof start.reason === "string") {
+    next = replaceWipLine(next, "Reason", start.reason);
+  }
+  if (typeof start.selected_idea === "string") {
+    next = replaceWipLine(next, "Selected Idea", start.selected_idea);
+  }
+  if (typeof start.alternatives === "string") {
+    next = replaceWipLine(next, "Alternatives Considered", start.alternatives);
+  }
+  if (typeof start.pre_mortem_risk === "string") {
+    next = replaceWipLine(next, "Pre-mortem Risk", start.pre_mortem_risk);
+  }
+  if (typeof start.handoff_confidence === "string") {
+    next = replaceWipLine(next, "Handoff Confidence", start.handoff_confidence);
+  }
+  return {
+    ...parsed,
+    sections: {
+      ...parsed.sections,
+      [sectionName]: next
+    }
+  };
+}
+
 export function applyHandoffMutation(
   parsed: ParsedPlan,
   handoff: { selected_mode?: string; next_command?: string; next_mode?: string; status?: string }

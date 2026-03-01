@@ -28,10 +28,14 @@ A plan is build-ready only when all are true:
 1. `decision: GO`
 2. `next_command: build`
 3. `next_mode: Build`
-4. `Open Decisions` has zero unresolved items.
-5. `Implementation Tasks` are concrete and file-level.
-6. `Acceptance Criteria` are testable.
-7. `Validation Commands` are runnable in the current repo.
+4. `Start Summary` gate is satisfied:
+   - includes `Required: yes|no`
+   - includes non-placeholder `Reason`
+   - if `Required: yes`, `Selected Idea` and `Handoff Confidence` are non-placeholder
+5. `Open Decisions` has zero unresolved items.
+6. `Implementation Tasks` are concrete and file-level.
+7. `Acceptance Criteria` are testable.
+8. `Validation Commands` are runnable in the current repo.
 
 If any gate fails, do not run `build`; reroute to `plan` or `research`.
 
@@ -62,6 +66,7 @@ Use this transition order:
 
 ## Route-to-Plan Alignment
 
+- `start` route resolves vague requests and produces Start Summary.
 - `plan` route updates plan to decision-complete and build-ready.
 - `build` route executes only explicitly listed tasks.
 - `check` route verifies findings and pass/block against acceptance criteria.

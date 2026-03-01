@@ -11,7 +11,9 @@ $kamiflow-core plan check the .local/plans/<file>.md and produce a decision-comp
 Expected:
 
 - concrete scope
+- if request is vague (missing 2+ core fields), reroute to `start` first
 - zero unresolved high-impact decisions
+- Start Summary is present and non-placeholder
 - explicit `Next Command: build`
 - explicit `Next Mode: Build`
 

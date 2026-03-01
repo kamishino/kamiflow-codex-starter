@@ -17,6 +17,54 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     runCodexAction
   } = deps;
 
+  function parseSummarySection(sectionText: string | undefined): Record<string, string> {
+    const out: Record<string, string> = {};
+    if (!sectionText) {
+      return out;
+    }
+    const lines = sectionText.split(/\r?\n/);
+    for (const line of lines) {
+      const match = line.match(/^- ([^:]+):\s*(.*)$/);
+      if (!match) {
+        continue;
+      }
+      out[match[1].trim().toLowerCase()] = match[2].trim();
+    }
+    return out;
+  }
+
+  function isPlaceholder(value: string | undefined): boolean {
+    if (!value) {
+      return true;
+    }
+    const normalized = value.trim().toLowerCase();
+    return normalized.length === 0 || normalized === "tbd" || normalized === "n/a" || normalized === "-";
+  }
+
+  function evaluateStartGate(parsed: any): { ok: boolean; reason: string } {
+    const start = parseSummarySection(parsed?.sections?.["Start Summary"]);
+    const required = (start.required || "").toLowerCase();
+    const reason = start.reason || "";
+    const selectedIdea = start["selected idea"] || "";
+    const confidence = start["handoff confidence"] || "";
+
+    if (required !== "yes" && required !== "no") {
+      return { ok: false, reason: "Start Summary.Required must be yes or no." };
+    }
+    if (isPlaceholder(reason)) {
+      return { ok: false, reason: "Start Summary.Reason must be non-placeholder." };
+    }
+    if (required === "yes") {
+      if (isPlaceholder(selectedIdea)) {
+        return { ok: false, reason: "Start is required; Selected Idea must be set." };
+      }
+      if (isPlaceholder(confidence)) {
+        return { ok: false, reason: "Start is required; Handoff Confidence must be set." };
+      }
+    }
+    return { ok: true, reason: "ok" };
+  }
+
   function validateChecklistUpdates(items: any, fieldName: string): void {
     if (!Array.isArray(items)) {
       throw new Error(`Invalid ${fieldName} payload.`);
@@ -104,6 +152,12 @@ export function registerApiRoutes(fastify: any, deps: any): void {
 
     const applied: string[] = [];
     const result = await persistMutation(projectId, planId, body.expected_updated_at, (parsed) => {
+      if (body.action_type === "build_result") {
+        const startGate = evaluateStartGate(parsed);
+        if (!startGate.ok) {
+          throw new Error(`Start gate failed: ${startGate.reason}`);
+        }
+      }
       let next = parsed;
       for (const item of body.task_updates ?? []) {
         next = deps.applyTaskMutation(next, item.index, item.checked);
@@ -352,6 +406,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       if (body.wip) {
         next = deps.applyWipMutation(next, body.wip);
       }
+      if (body.start_summary) {
+        next = deps.applyStartSummaryMutation(next, body.start_summary);
+      }
       if (body.handoff) {
         next = deps.applyHandoffMutation(next, body.handoff);
       }
@@ -386,6 +443,19 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     if (!body.plan_id || !body.action_type) {
       reply.code(400);
       return { error: "Missing plan_id or action_type", error_code: "BAD_REQUEST" };
+    }
+    if (body.action_type === "build") {
+      const project = getProject(defaultProjectId)!;
+      const existing = await loadPlanById(project.project_dir, body.plan_id);
+      if (!existing?.parsed) {
+        reply.code(404);
+        return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: body.plan_id };
+      }
+      const startGate = evaluateStartGate(existing.parsed);
+      if (!startGate.ok) {
+        reply.code(400);
+        return { error: "Start gate failed", error_code: "START_GATE_FAILED", reason: startGate.reason };
+      }
     }
     const startedAt = new Date().toISOString();
     publishCodexRunEvent(defaultProjectId, body.plan_id, "codex_run_started", {
@@ -555,6 +625,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       if (body.wip) {
         next = deps.applyWipMutation(next, body.wip);
       }
+      if (body.start_summary) {
+        next = deps.applyStartSummaryMutation(next, body.start_summary);
+      }
       if (body.handoff) {
         next = deps.applyHandoffMutation(next, body.handoff);
       }
@@ -594,6 +667,19 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     if (!body.plan_id || !body.action_type) {
       reply.code(400);
       return { error: "Missing plan_id or action_type", error_code: "BAD_REQUEST" };
+    }
+    if (body.action_type === "build") {
+      const project = getProject(project_id)!;
+      const existing = await loadPlanById(project.project_dir, body.plan_id);
+      if (!existing?.parsed) {
+        reply.code(404);
+        return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: body.plan_id };
+      }
+      const startGate = evaluateStartGate(existing.parsed);
+      if (!startGate.ok) {
+        reply.code(400);
+        return { error: "Start gate failed", error_code: "START_GATE_FAILED", reason: startGate.reason };
+      }
     }
     const startedAt = new Date().toISOString();
     publishCodexRunEvent(project_id, body.plan_id, "codex_run_started", {
