@@ -278,6 +278,20 @@ updated_at: 2026-03-01
     assert.equal(codexAction.statusCode, 200);
     const codexPayload = JSON.parse(codexAction.payload);
     assert.equal(codexPayload.status, "completed");
+    assert.equal(codexPayload.action_type, "plan");
+    assert.equal(codexPayload.plan_id, planId);
+    assert.equal(codexPayload.project_id, "default");
+    assert.equal(typeof codexPayload.started_at, "string");
+    assert.equal(typeof codexPayload.ended_at, "string");
+
+    const indexResponse = await server.inject({
+      method: "GET",
+      url: "/"
+    });
+    assert.equal(indexResponse.statusCode, 200);
+    assert.ok(indexResponse.payload.includes("Workflow Rail"));
+    assert.ok(indexResponse.payload.includes("Action Console"));
+    assert.ok(indexResponse.payload.includes("Activity"));
 
     await server.close();
   });

@@ -4,27 +4,70 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= it.title %></title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
   <link rel="stylesheet" href="/assets/styles.css" />
 </head>
 <body>
-  <div class="wrap">
-    <aside>
-      <h1>Plans</h1>
-      <label for="project-filter">Project</label>
-      <select id="project-filter"></select>
-      <label for="plan-filter">View</label>
-      <select id="plan-filter">
-        <option value="active">Active</option>
-        <option value="done">Done</option>
-        <option value="all">All</option>
-      </select>
-      <ul id="plan-list"></ul>
-    </aside>
-    <main>
-      <h2>Plan Detail</h2>
-      <div id="status">Waiting for updates...</div>
-      <div id="plan-detail"><p>Select a plan.</p></div>
-    </main>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>KamiFlow Plan Command Center</h1>
+        <p id="status">Waiting for updates...</p>
+      </div>
+      <div class="topbar-right">
+        <span id="workspace-badge" class="chip">workspace: -</span>
+        <span id="project-badge" class="chip">project: -</span>
+        <span id="api-badge" class="chip">api: /api</span>
+        <span id="connection-badge" class="chip chip-muted">disconnected</span>
+      </div>
+    </header>
+
+    <div class="content-grid">
+      <aside class="sidebar">
+        <h2>Plans</h2>
+        <label for="project-filter">Project</label>
+        <select id="project-filter"></select>
+        <label for="plan-filter">View</label>
+        <select id="plan-filter">
+          <option value="active">Active</option>
+          <option value="done">Done</option>
+          <option value="all">All</option>
+        </select>
+        <ul id="plan-list"></ul>
+      </aside>
+
+      <main class="main">
+        <section class="panel" id="workflow-panel">
+          <h2>Workflow Rail</h2>
+          <div id="workflow-rail" class="workflow-rail"></div>
+        </section>
+
+        <section class="panel" id="health-panel">
+          <h2>Plan Health</h2>
+          <div id="plan-health"></div>
+        </section>
+
+        <section class="panel" id="action-panel">
+          <h2>Action Console</h2>
+          <div id="action-console"></div>
+        </section>
+
+        <section class="panel" id="work-panel">
+          <h2>Work Panel</h2>
+          <div id="work-surface"></div>
+        </section>
+      </main>
+
+      <section class="activity panel">
+        <h2>Activity</h2>
+        <ul id="activity-feed"></ul>
+      </section>
+    </div>
   </div>
   <script src="/assets/app.js" type="module"></script>
 </body>

@@ -1,13 +1,28 @@
-const projectEl = document.querySelector("#project-filter");
+﻿const projectEl = document.querySelector("#project-filter");
 const planListEl = document.querySelector("#plan-list");
-const detailEl = document.querySelector("#plan-detail");
-const statusEl = document.querySelector("#status");
 const filterEl = document.querySelector("#plan-filter");
+
+const statusEl = document.querySelector("#status");
+const workflowEl = document.querySelector("#workflow-rail");
+const healthEl = document.querySelector("#plan-health");
+const actionEl = document.querySelector("#action-console");
+const workEl = document.querySelector("#work-surface");
+const activityEl = document.querySelector("#activity-feed");
+const workspaceBadgeEl = document.querySelector("#workspace-badge");
+const projectBadgeEl = document.querySelector("#project-badge");
+const connectionBadgeEl = document.querySelector("#connection-badge");
 
 let currentStream;
 let lastHeartbeatTs = 0;
 let staleTimer = null;
 let pollTimer = null;
+let currentDetail = null;
+let currentPlans = [];
+let activityItems = [];
+
+function nowIso() {
+  return new Date().toISOString();
+}
 
 function currentFilter() {
   return filterEl?.value || "active";
@@ -21,14 +36,70 @@ function projectApiBase(projectId) {
   return "/api/projects/" + encodeURIComponent(projectId);
 }
 
+function setConnectionState(state) {
+  connectionBadgeEl.className = "chip";
+  if (state === "connected") {
+    connectionBadgeEl.classList.add("chip-ok");
+    connectionBadgeEl.textContent = "connected";
+    return;
+  }
+  if (state === "stale") {
+    connectionBadgeEl.classList.add("chip-warn");
+    connectionBadgeEl.textContent = "stale";
+    return;
+  }
+  if (state === "offline") {
+    connectionBadgeEl.classList.add("chip-danger");
+    connectionBadgeEl.textContent = "offline";
+    return;
+  }
+  connectionBadgeEl.classList.add("chip-muted");
+  connectionBadgeEl.textContent = "disconnected";
+}
+
+function addActivity(eventType, message, detail) {
+  const entry = {
+    eventType,
+    message,
+    detail: detail || "",
+    ts: nowIso()
+  };
+  activityItems = [entry, ...activityItems].slice(0, 60);
+  activityEl.innerHTML = activityItems
+    .map(
+      (item) =>
+        '<li class="activity-item">' +
+        "<time>" + item.ts + "</time>" +
+        "<strong>" + item.eventType + "</strong>" +
+        "<div>" + item.message + "</div>" +
+        (item.detail ? "<pre>" + escapeHtml(item.detail) + "</pre>" : "") +
+        "</li>"
+    )
+    .join("");
+}
+
+function escapeHtml(input) {
+  return String(input)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
+
 async function fetchProjects() {
   const res = await fetch("/api/projects");
+  if (!res.ok) {
+    throw new Error("Failed to load projects.");
+  }
   const data = await res.json();
+  workspaceBadgeEl.textContent = "workspace: " + (data.workspace || "-default-");
   return data.projects ?? [];
 }
 
 async function fetchPlans(projectId, includeDone) {
   const res = await fetch(projectApiBase(projectId) + "/plans?include_done=" + (includeDone ? "true" : "false"));
+  if (!res.ok) {
+    throw new Error("Failed to load plans.");
+  }
   const data = await res.json();
   return data.plans ?? [];
 }
@@ -37,6 +108,7 @@ function renderProjects(projects) {
   projectEl.innerHTML = projects
     .map((p) => '<option value="' + p.project_id + '">' + p.project_id + " - " + p.project_dir + "</option>")
     .join("");
+  projectBadgeEl.textContent = "project: " + (currentProjectId() || "-");
 }
 
 function renderList(plans) {
@@ -55,13 +127,12 @@ function renderList(plans) {
     planListEl.innerHTML = "<li>No plans found in selected project</li>";
     return;
   }
+
   planListEl.innerHTML = filtered
     .map((p) => {
       const invalid = p.is_valid ? "" : " (invalid)";
       const archived = p.is_archived ? " [archived]" : "";
-      return (
-        '<li><button data-plan-id="' + p.plan_id + '">' + p.plan_id + " - " + p.title + archived + invalid + "</button></li>"
-      );
+      return '<li><button data-plan-id="' + p.plan_id + '">' + p.plan_id + " - " + p.title + archived + invalid + "</button></li>";
     })
     .join("");
 
@@ -77,151 +148,388 @@ function renderList(plans) {
 
 function parseRoute() {
   const hash = location.hash || "";
-  const m = hash.match(/^#\/projects\/([^/]+)\/plans\/(.+)$/);
-  if (!m) {
+  const match = hash.match(/^#\/projects\/([^/]+)\/plans\/(.+)$/);
+  if (!match) {
     return null;
   }
   return {
-    projectId: decodeURIComponent(m[1]),
-    planId: decodeURIComponent(m[2])
+    projectId: decodeURIComponent(match[1]),
+    planId: decodeURIComponent(match[2])
   };
+}
+
+function parseChecklist(sectionText) {
+  const lines = String(sectionText || "").split(/\r?\n/);
+  const items = [];
+  for (const line of lines) {
+    const match = line.match(/^- \[( |x|X)\]\s*(.+)$/);
+    if (!match) {
+      continue;
+    }
+    items.push({
+      index: items.length,
+      checked: match[1].toLowerCase() === "x",
+      text: match[2]
+    });
+  }
+  return items;
+}
+
+function collectChecklist(containerSelector) {
+  return Array.from(document.querySelectorAll(containerSelector))
+    .map((el) => ({
+      index: Number(el.getAttribute("data-index")),
+      checked: !!el.checked
+    }))
+    .filter((item) => Number.isInteger(item.index));
+}
+
+function deriveStage(summary) {
+  if (!summary) {
+    return "Plan";
+  }
+  if (summary.is_archived || summary.status === "done" || summary.next_command === "done") {
+    return "Done";
+  }
+  if (summary.next_command === "check") {
+    return "Check";
+  }
+  if (summary.next_command === "build" || summary.next_command === "fix" || summary.next_mode === "Build") {
+    return "Build";
+  }
+  return "Plan";
+}
+
+function renderWorkflow(summary) {
+  const stages = ["Plan", "Build", "Check", "Done"];
+  const current = deriveStage(summary);
+  const index = stages.indexOf(current);
+  workflowEl.innerHTML = stages
+    .map((stage, i) => {
+      const classes = ["stage"];
+      if (i < index) {
+        classes.push("stage-done");
+      }
+      if (i === index) {
+        classes.push("stage-active");
+      }
+      const hint =
+        stage === "Plan"
+          ? "decision complete"
+          : stage === "Build"
+            ? "execute scoped tasks"
+            : stage === "Check"
+              ? "evaluate PASS/BLOCK"
+              : "archive complete";
+      return '<div class="' + classes.join(" ") + '"><strong>' + stage + "</strong><small>" + hint + "</small></div>";
+    })
+    .join("");
+}
+
+function renderHealth(detail) {
+  const s = detail.summary;
+  healthEl.innerHTML =
+    '<div class="keyvals">' +
+    '<div class="kv"><span>Plan ID</span><strong>' + s.plan_id + "</strong></div>" +
+    '<div class="kv"><span>Status</span><strong>' + s.status + "</strong></div>" +
+    '<div class="kv"><span>Decision</span><strong>' + s.decision + "</strong></div>" +
+    '<div class="kv"><span>Mode</span><strong>' + s.selected_mode + " -> " + s.next_mode + "</strong></div>" +
+    '<div class="kv"><span>Next Command</span><strong>' + s.next_command + "</strong></div>" +
+    '<div class="kv"><span>Validation Errors</span><strong>' + String(detail.errors?.length || 0) + "</strong></div>" +
+    "</div>";
+}
+
+function renderActionConsole(detail) {
+  actionEl.innerHTML = `
+    <div class="action-grid">
+      <button class="btn-primary" id="codex-plan">Run Plan</button>
+      <button class="btn-primary" id="codex-build">Run Build</button>
+      <button class="btn-primary" id="codex-check">Run Check</button>
+      <button class="btn-primary" id="codex-fix">Run Fix</button>
+      <button id="apply-build-result">Apply Build Result</button>
+      <button class="btn-warn" id="apply-check-block">Apply Check BLOCK</button>
+      <button class="btn-primary" id="apply-check-pass">Apply Check PASS</button>
+      <button class="btn-danger" id="archive-plan">Archive Done</button>
+    </div>
+    <label for="findings-input">Check Findings (one line each)</label>
+    <textarea id="findings-input" placeholder="Missing test coverage\nNeeds rollback guard"></textarea>
+    <label for="evidence-input">Evidence (one line each)</label>
+    <textarea id="evidence-input" placeholder="npm run plan-ui:test -> pass"></textarea>
+  `;
+
+  bindActionConsole(detail);
+}
+
+function renderWorkSurface(detail) {
+  const tasks = parseChecklist(detail.sections["Implementation Tasks"]);
+  const acs = parseChecklist(detail.sections["Acceptance Criteria"]);
+  const wip = detail.sections["WIP Log"] || "";
+
+  const wipStatus = (wip.match(/^- Status:\s*(.*)$/m) || ["", ""])[1];
+  const wipBlockers = (wip.match(/^- Blockers:\s*(.*)$/m) || ["", ""])[1];
+  const wipNext = (wip.match(/^- Next step:\s*(.*)$/m) || ["", ""])[1];
+  const wipEvidence = (wip.match(/^- Evidence:\s*(.*)$/m) || ["", ""])[1];
+
+  workEl.innerHTML = `
+    <div class="split-2">
+      <div>
+        <h3>Implementation Tasks</h3>
+        <div class="checklist-box" id="task-box">
+          ${tasks
+            .map(
+              (item) =>
+                '<label><input type="checkbox" class="task-item" data-index="' +
+                item.index +
+                '" ' +
+                (item.checked ? "checked" : "") +
+                " />" +
+                escapeHtml(item.text) +
+                "</label>"
+            )
+            .join("")}
+        </div>
+      </div>
+      <div>
+        <h3>Acceptance Criteria</h3>
+        <div class="checklist-box" id="ac-box">
+          ${acs
+            .map(
+              (item) =>
+                '<label><input type="checkbox" class="ac-item" data-index="' +
+                item.index +
+                '" ' +
+                (item.checked ? "checked" : "") +
+                " />" +
+                escapeHtml(item.text) +
+                "</label>"
+            )
+            .join("")}
+        </div>
+      </div>
+    </div>
+    <div>
+      <h3>WIP Log</h3>
+      <label for="wip-status">Status</label>
+      <input id="wip-status" value="${escapeHtml(wipStatus)}" />
+      <label for="wip-blockers">Blockers</label>
+      <input id="wip-blockers" value="${escapeHtml(wipBlockers)}" />
+      <label for="wip-next">Next step</label>
+      <input id="wip-next" value="${escapeHtml(wipNext)}" />
+      <label for="wip-evidence">Evidence</label>
+      <input id="wip-evidence" value="${escapeHtml(wipEvidence)}" placeholder="item1 | item2" />
+      <button id="save-wip">Save WIP</button>
+    </div>
+  `;
+
+  document.querySelector("#save-wip")?.addEventListener("click", async () => {
+    const projectId = detail.summary.project_id;
+    const planId = detail.summary.plan_id;
+    const base = projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId);
+    const payload = {
+      wip: {
+        status: document.querySelector("#wip-status")?.value || "",
+        blockers: document.querySelector("#wip-blockers")?.value || "",
+        next_step: document.querySelector("#wip-next")?.value || "",
+        evidence: (document.querySelector("#wip-evidence")?.value || "")
+          .split("|")
+          .map((item) => item.trim())
+          .filter((item) => item.length > 0)
+      }
+    };
+    const res = await postJson(base + "/progress", payload);
+    if (!res.ok) {
+      setStatus("WIP save failed: " + (res.body.error || res.body.error_code || "unknown"));
+      return;
+    }
+    addActivity("wip_saved", "WIP log updated", "plan=" + planId);
+    setStatus("WIP updated.");
+    loadDetail();
+    loadList();
+  });
+}
+
+function getSharedWipPayload() {
+  const evidenceText = document.querySelector("#evidence-input")?.value || "";
+  const inlineEvidence = document.querySelector("#wip-evidence")?.value || "";
+  const evidence = [...evidenceText.split(/\r?\n/), ...inlineEvidence.split("|")]
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return {
+    status: document.querySelector("#wip-status")?.value || "",
+    blockers: document.querySelector("#wip-blockers")?.value || "",
+    next_step: document.querySelector("#wip-next")?.value || "",
+    evidence
+  };
+}
+
+function getFindings() {
+  return (document.querySelector("#findings-input")?.value || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function setStatus(message) {
+  statusEl.textContent = message;
+}
+
+async function postJson(url, payload) {
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+  const body = await res.json();
+  return { ok: res.ok, status: res.status, body };
+}
+
+async function triggerCodexAction(detail, actionType, modeHint) {
+  const projectId = detail.summary.project_id;
+  const planId = detail.summary.plan_id;
+  setStatus("Running Codex action: " + actionType + "...");
+  addActivity("codex_run_requested", "Requested " + actionType, "plan=" + planId);
+  const res = await postJson(projectApiBase(projectId) + "/codex/action", {
+    plan_id: planId,
+    action_type: actionType,
+    mode_hint: modeHint
+  });
+
+  if (!res.ok) {
+    setStatus("Codex action failed: " + (res.body.error_code || res.body.error || "unknown"));
+    addActivity("codex_run_failed", "Action failed", JSON.stringify(res.body, null, 2));
+    return;
+  }
+
+  setStatus("Codex action " + actionType + ": " + res.body.status);
+  addActivity(
+    res.body.status === "completed" ? "codex_run_completed" : "codex_run_failed",
+    "Action " + actionType + " -> " + res.body.status,
+    (res.body.stdout_tail || "") + (res.body.stderr_tail ? "\n" + res.body.stderr_tail : "")
+  );
+}
+
+function bindActionConsole(detail) {
+  document.querySelector("#codex-plan")?.addEventListener("click", () => triggerCodexAction(detail, "plan", "Plan"));
+  document.querySelector("#codex-build")?.addEventListener("click", () => triggerCodexAction(detail, "build", "Build"));
+  document.querySelector("#codex-check")?.addEventListener("click", () => triggerCodexAction(detail, "check", "Plan"));
+  document.querySelector("#codex-fix")?.addEventListener("click", () => triggerCodexAction(detail, "fix", "Build"));
+
+  document.querySelector("#apply-build-result")?.addEventListener("click", async () => {
+    const projectId = detail.summary.project_id;
+    const planId = detail.summary.plan_id;
+    const payload = {
+      action_type: "build_result",
+      mode_hint: "Build",
+      expected_updated_at: detail.summary.updated_at || "",
+      task_updates: collectChecklist(".task-item"),
+      wip: getSharedWipPayload()
+    };
+    const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/automation/apply", payload);
+    if (!res.ok) {
+      setStatus("Build apply failed: " + (res.body.error || res.body.error_code || "unknown"));
+      return;
+    }
+    setStatus("Build result applied.");
+    addActivity("build_applied", "Build result persisted", JSON.stringify(res.body, null, 2));
+    loadDetail();
+    loadList();
+  });
+
+  document.querySelector("#apply-check-block")?.addEventListener("click", async () => {
+    const projectId = detail.summary.project_id;
+    const planId = detail.summary.plan_id;
+    const payload = {
+      action_type: "check_result",
+      mode_hint: "Plan",
+      expected_updated_at: detail.summary.updated_at || "",
+      ac_updates: collectChecklist(".ac-item"),
+      wip: getSharedWipPayload(),
+      check: {
+        result: "BLOCK",
+        findings: getFindings()
+      }
+    };
+    const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/automation/apply", payload);
+    if (!res.ok) {
+      setStatus("Check BLOCK apply failed: " + (res.body.error || res.body.error_code || "unknown"));
+      return;
+    }
+    setStatus("Check BLOCK applied.");
+    addActivity("check_block_applied", "Check BLOCK persisted", JSON.stringify(res.body, null, 2));
+    loadDetail();
+    loadList();
+  });
+
+  document.querySelector("#apply-check-pass")?.addEventListener("click", async () => {
+    const projectId = detail.summary.project_id;
+    const planId = detail.summary.plan_id;
+    const payload = {
+      action_type: "check_result",
+      mode_hint: "Plan",
+      expected_updated_at: detail.summary.updated_at || "",
+      ac_updates: collectChecklist(".ac-item"),
+      wip: getSharedWipPayload(),
+      check: {
+        result: "PASS",
+        findings: getFindings()
+      }
+    };
+    const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/automation/apply", payload);
+    if (!res.ok) {
+      setStatus("Check PASS apply failed: " + (res.body.error || res.body.error_code || "unknown"));
+      return;
+    }
+    setStatus("Check PASS applied.");
+    addActivity("check_pass_applied", "Check PASS persisted", JSON.stringify(res.body, null, 2));
+    loadDetail();
+    loadList();
+  });
+
+  document.querySelector("#archive-plan")?.addEventListener("click", async () => {
+    const projectId = detail.summary.project_id;
+    const planId = detail.summary.plan_id;
+    const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/complete", {
+      check_passed: true
+    });
+    if (!res.ok) {
+      setStatus("Archive failed: " + (res.body.error || res.body.error_code || "unknown"));
+      return;
+    }
+    setStatus("Plan archived.");
+    addActivity("plan_archived", "Plan archived", JSON.stringify(res.body, null, 2));
+    loadDetail();
+    loadList();
+  });
 }
 
 async function loadDetail() {
   const route = parseRoute();
   if (!route) {
-    detailEl.innerHTML = "<p>Select a plan.</p>";
+    workflowEl.innerHTML = "<p>Select a plan to start.</p>";
+    healthEl.innerHTML = "<p>No plan selected.</p>";
+    actionEl.innerHTML = "<p>No actions available.</p>";
+    workEl.innerHTML = "<p>No work surface.</p>";
     return;
   }
 
-  const { projectId, planId } = route;
-  const res = await fetch(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "?include_done=true");
+  if (projectEl && projectEl.value !== route.projectId) {
+    projectEl.value = route.projectId;
+  }
+  projectBadgeEl.textContent = "project: " + route.projectId;
+
+  const res = await fetch(projectApiBase(route.projectId) + "/plans/" + encodeURIComponent(route.planId) + "?include_done=true");
   if (!res.ok) {
-    detailEl.innerHTML = "<p>Plan not found.</p>";
+    setStatus("Plan not found.");
     return;
   }
 
-  const data = await res.json();
-  const errors = (data.errors || []).map((e) => "<li>" + e + "</li>").join("");
-  const sections = Object.entries(data.sections || {})
-    .map(([name, content]) => "<section><h4>" + name + "</h4><pre>" + content + "</pre></section>")
-    .join("");
-
-  detailEl.innerHTML = `
-    <h3>${data.summary.plan_id} - ${data.summary.title}</h3>
-    <p>Status: ${data.summary.status} | Decision: ${data.summary.decision}</p>
-    <p>Mode: ${data.summary.selected_mode} -> ${data.summary.next_mode}</p>
-    <p>Next: ${data.summary.next_command}</p>
-    <p>Archived: ${data.summary.is_archived ? "yes" : "no"}</p>
-    <div>
-      <button id="set-status-active">Set Status Active</button>
-      <button id="toggle-decision">Toggle Decision</button>
-      <button id="toggle-task-0">Toggle Task 1</button>
-      <button id="toggle-gate-0">Toggle Gate 1</button>
-      <button id="complete-archive">Complete & Archive</button>
-      <button id="run-codex-plan">Send Plan Action to Codex</button>
-    </div>
-    <h4>Validation</h4>
-    <ul>${errors || "<li>No validation errors</li>"}</ul>
-    ${sections}
-  `;
-
-  bindActions(projectId, planId, data);
-  attachStream(projectId, planId);
-}
-
-async function patch(url, payload) {
-  const res = await fetch(url, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload)
-  });
-  return await res.json();
-}
-
-function parseFirstChecklistState(sectionText) {
-  const m = (sectionText || "").match(/^- \[( |x|X)\]/m);
-  return m ? m[1].toLowerCase() === "x" : false;
-}
-
-function bindActions(projectId, planId, data) {
-  const updatedAt = data.summary.updated_at || "";
-  const base = projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId);
-
-  document.querySelector("#set-status-active")?.addEventListener("click", async () => {
-    const out = await patch(base + "/status", {
-      status: "active",
-      expected_updated_at: updatedAt
-    });
-    statusEl.textContent = out.write_warning || "Status updated.";
-    loadDetail();
-    loadList();
-  });
-
-  document.querySelector("#toggle-decision")?.addEventListener("click", async () => {
-    const nextDecision = data.summary.decision === "GO" ? "NO_GO" : "GO";
-    const out = await patch(base + "/decision", {
-      decision: nextDecision,
-      expected_updated_at: updatedAt
-    });
-    statusEl.textContent = out.write_warning || "Decision updated.";
-    loadDetail();
-    loadList();
-  });
-
-  document.querySelector("#toggle-task-0")?.addEventListener("click", async () => {
-    const current = parseFirstChecklistState(data.sections["Implementation Tasks"]);
-    const out = await patch(base + "/task", {
-      task_index: 0,
-      checked: !current,
-      expected_updated_at: updatedAt
-    });
-    statusEl.textContent = out.write_warning || "Task updated.";
-    loadDetail();
-    loadList();
-  });
-
-  document.querySelector("#toggle-gate-0")?.addEventListener("click", async () => {
-    const current = parseFirstChecklistState(data.sections["Go/No-Go Checklist"]);
-    const out = await patch(base + "/gate", {
-      gate_index: 0,
-      checked: !current,
-      expected_updated_at: updatedAt
-    });
-    statusEl.textContent = out.write_warning || "Gate updated.";
-    loadDetail();
-    loadList();
-  });
-
-  document.querySelector("#complete-archive")?.addEventListener("click", async () => {
-    const res = await fetch(base + "/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ check_passed: true })
-    });
-    const out = await res.json();
-    if (!res.ok) {
-      statusEl.textContent = out.error || out.error_code || "Complete failed.";
-      return;
-    }
-    statusEl.textContent = "Plan archived: " + (out.archived_path || "done");
-    loadDetail();
-    loadList();
-  });
-
-  document.querySelector("#run-codex-plan")?.addEventListener("click", async () => {
-    const res = await fetch(projectApiBase(projectId) + "/codex/action", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        plan_id: planId,
-        action_type: "plan",
-        mode_hint: "Plan"
-      })
-    });
-    const out = await res.json();
-    statusEl.textContent = "Codex action: " + (out.status || out.error_code || "unknown");
-  });
+  const detail = await res.json();
+  currentDetail = detail;
+  renderWorkflow(detail.summary);
+  renderHealth(detail);
+  renderActionConsole(detail);
+  renderWorkSurface(detail);
+  attachStream(route.projectId, route.planId);
 }
 
 function startPollingFallback() {
@@ -246,16 +554,20 @@ function attachStream(projectId, planId) {
   if (currentStream) {
     currentStream.close();
   }
+
   currentStream = new EventSource(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/events");
+
   if (staleTimer) {
     clearInterval(staleTimer);
   }
+
   staleTimer = setInterval(() => {
     if (!lastHeartbeatTs) {
       return;
     }
     if (Date.now() - lastHeartbeatTs > 60000) {
-      statusEl.textContent = "Connection stale. Resyncing...";
+      setConnectionState("stale");
+      setStatus("Connection stale. Resyncing...");
       startPollingFallback();
       loadDetail();
       loadList();
@@ -263,53 +575,71 @@ function attachStream(projectId, planId) {
   }, 5000);
 
   currentStream.addEventListener("connected", () => {
-    statusEl.textContent = "Connected.";
+    setConnectionState("connected");
+    setStatus("Connected.");
     lastHeartbeatTs = Date.now();
     stopPollingFallback();
   });
+
   currentStream.addEventListener("heartbeat", () => {
     lastHeartbeatTs = Date.now();
   });
+
   currentStream.addEventListener("resync_required", () => {
-    statusEl.textContent = "Stream replay unavailable. Full resync.";
+    setStatus("Stream replay unavailable. Full resync.");
+    addActivity("resync_required", "SSE replay unavailable", "full resync triggered");
     loadDetail();
     loadList();
   });
-  currentStream.addEventListener("plan_updated", () => {
-    statusEl.textContent = "Live update received: plan_updated";
-    loadDetail();
-    loadList();
+
+  ["plan_updated", "plan_deleted", "plan_invalid", "plan_archived"].forEach((eventType) => {
+    currentStream.addEventListener(eventType, (evt) => {
+      const payload = evt?.data || "";
+      addActivity(eventType, "Plan event received", payload);
+      setStatus("Live update received: " + eventType);
+      loadDetail();
+      loadList();
+    });
   });
-  currentStream.addEventListener("plan_deleted", () => {
-    statusEl.textContent = "Live update received: plan_deleted";
-    loadDetail();
-    loadList();
+
+  ["codex_run_started", "codex_run_completed", "codex_run_failed"].forEach((eventType) => {
+    currentStream.addEventListener(eventType, (evt) => {
+      const payloadText = evt?.data || "{}";
+      let payload;
+      try {
+        payload = JSON.parse(payloadText);
+      } catch {
+        payload = {};
+      }
+      const summary = payload.action_type ? payload.action_type + " -> " + (payload.status || eventType) : eventType;
+      addActivity(eventType, summary, payload.stdout_tail || payload.stderr_tail || payloadText);
+      setStatus("Codex run event: " + summary);
+    });
   });
-  currentStream.addEventListener("plan_invalid", () => {
-    statusEl.textContent = "Live update received: plan_invalid";
-    loadDetail();
-    loadList();
-  });
-  currentStream.addEventListener("plan_archived", () => {
-    statusEl.textContent = "Live update received: plan_archived";
-    loadDetail();
-    loadList();
-  });
+
   currentStream.onerror = () => {
-    statusEl.textContent = "Disconnected. Reconnecting...";
+    setConnectionState("offline");
+    setStatus("Disconnected. Reconnecting...");
     startPollingFallback();
   };
 }
 
 async function loadList() {
   const projectId = currentProjectId();
+  projectBadgeEl.textContent = "project: " + (projectId || "-");
   if (!projectId) {
     planListEl.innerHTML = "<li>No projects configured</li>";
     return;
   }
   const includeDone = currentFilter() !== "active";
-  const plans = await fetchPlans(projectId, includeDone);
-  renderList(plans);
+  currentPlans = await fetchPlans(projectId, includeDone);
+  renderList(currentPlans);
+
+  const route = parseRoute();
+  if (!route && currentPlans.length > 0) {
+    const nextPlan = currentPlans[0];
+    location.hash = "#/projects/" + encodeURIComponent(projectId) + "/plans/" + encodeURIComponent(nextPlan.plan_id);
+  }
 }
 
 projectEl?.addEventListener("change", () => {
@@ -319,13 +649,19 @@ projectEl?.addEventListener("change", () => {
 
 filterEl?.addEventListener("change", () => {
   loadList();
+  loadDetail();
 });
 
 window.addEventListener("hashchange", () => loadDetail());
+
+setConnectionState("disconnected");
 fetchProjects()
   .then((projects) => {
     renderProjects(projects);
     return loadList();
   })
-  .then(() => loadDetail());
-
+  .then(() => loadDetail())
+  .catch((err) => {
+    setStatus("Failed to initialize UI: " + (err?.message || String(err)));
+    addActivity("ui_error", "Initialization failure", err?.stack || String(err));
+  });

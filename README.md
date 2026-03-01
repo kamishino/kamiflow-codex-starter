@@ -89,6 +89,8 @@ kfc plan validate --project .
 kfc plan serve --project . --port 4310
 ```
 
+KFP UI includes a workflow command center with Codex action buttons (`plan|build|check|fix`) and live activity updates.
+
 Internal package scripts still exist for repo maintenance:
 
 ```bash

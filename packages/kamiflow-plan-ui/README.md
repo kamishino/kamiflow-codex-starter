@@ -127,3 +127,18 @@ If global home path is restricted, set `KAMIFLOW_HOME` to override workspace con
 - `bin/kfp.js` runs compiled output from `dist/`.
 - UI shell template is Eta under `src/server/views`.
 - Browser assets are under `src/server/public`.
+
+## UI Command Center
+
+The browser UI provides:
+
+- workflow rail (`Plan -> Build -> Check -> Done`)
+- plan health summary
+- action console for Codex actions (`plan|build|check|fix`)
+- automation apply shortcuts (`build_result`, `check_result`)
+- compact activity feed for plan and codex run events
+
+Typography:
+
+- body/headings: `Work Sans`
+- `pre`/`code`: `JetBrains Mono`
