@@ -200,6 +200,71 @@ function deriveStage(summary) {
   return "Plan";
 }
 
+function buildActionGuardrails(detail) {
+  const summary = detail.summary || {};
+  const isArchived = !!summary.is_archived;
+  const isDone = summary.status === "done" || summary.next_command === "done";
+  const acItems = parseChecklist(detail.sections["Acceptance Criteria"] || "");
+  const allAcChecked = acItems.length > 0 && acItems.every((item) => item.checked);
+
+  const flags = {
+    codexPlan: false,
+    codexBuild: false,
+    codexCheck: false,
+    codexFix: false,
+    applyBuild: false,
+    applyCheckBlock: false,
+    applyCheckPass: false,
+    archive: false
+  };
+  const reasons = [];
+
+  if (isArchived) {
+    flags.codexPlan = true;
+    flags.codexBuild = true;
+    flags.codexCheck = true;
+    flags.codexFix = true;
+    flags.applyBuild = true;
+    flags.applyCheckBlock = true;
+    flags.applyCheckPass = true;
+    flags.archive = true;
+    reasons.push("Plan is archived.");
+    return { flags, reasons };
+  }
+
+  if (isDone) {
+    flags.codexBuild = true;
+    flags.codexCheck = true;
+    flags.codexFix = true;
+    flags.applyBuild = true;
+    flags.applyCheckBlock = true;
+    flags.applyCheckPass = true;
+    reasons.push("Plan is already done.");
+  }
+
+  if (summary.decision !== "GO") {
+    flags.codexBuild = true;
+    flags.applyBuild = true;
+    reasons.push("Build actions require decision GO.");
+  }
+
+  if (summary.next_mode !== "Build" && summary.next_command !== "build" && !isDone) {
+    flags.codexBuild = true;
+    reasons.push("Current handoff is not build-ready.");
+  }
+
+  if (!allAcChecked) {
+    flags.archive = true;
+    reasons.push("Archive requires all Acceptance Criteria checked.");
+  }
+
+  if (!isDone) {
+    flags.archive = true;
+  }
+
+  return { flags, reasons };
+}
+
 function renderWorkflow(summary) {
   const stages = ["Plan", "Build", "Check", "Done"];
   const current = deriveStage(summary);
@@ -240,16 +305,28 @@ function renderHealth(detail) {
 }
 
 function renderActionConsole(detail) {
+  const guardrails = buildActionGuardrails(detail);
+  const btnDisabled = (flag) => (flag ? "disabled" : "");
+  const reasonHtml = guardrails.reasons.length
+    ? '<ul class="guardrail-list">' +
+      guardrails.reasons.map((reason) => "<li>" + escapeHtml(reason) + "</li>").join("") +
+      "</ul>"
+    : '<p class="guardrail-ok">All action gates are satisfied.</p>';
+
   actionEl.innerHTML = `
     <div class="action-grid">
-      <button class="btn-primary" id="codex-plan">Run Plan</button>
-      <button class="btn-primary" id="codex-build">Run Build</button>
-      <button class="btn-primary" id="codex-check">Run Check</button>
-      <button class="btn-primary" id="codex-fix">Run Fix</button>
-      <button id="apply-build-result">Apply Build Result</button>
-      <button class="btn-warn" id="apply-check-block">Apply Check BLOCK</button>
-      <button class="btn-primary" id="apply-check-pass">Apply Check PASS</button>
-      <button class="btn-danger" id="archive-plan">Archive Done</button>
+      <button class="btn-primary" id="codex-plan" ${btnDisabled(guardrails.flags.codexPlan)}>Run Plan</button>
+      <button class="btn-primary" id="codex-build" ${btnDisabled(guardrails.flags.codexBuild)}>Run Build</button>
+      <button class="btn-primary" id="codex-check" ${btnDisabled(guardrails.flags.codexCheck)}>Run Check</button>
+      <button class="btn-primary" id="codex-fix" ${btnDisabled(guardrails.flags.codexFix)}>Run Fix</button>
+      <button id="apply-build-result" ${btnDisabled(guardrails.flags.applyBuild)}>Apply Build Result</button>
+      <button class="btn-warn" id="apply-check-block" ${btnDisabled(guardrails.flags.applyCheckBlock)}>Apply Check BLOCK</button>
+      <button class="btn-primary" id="apply-check-pass" ${btnDisabled(guardrails.flags.applyCheckPass)}>Apply Check PASS</button>
+      <button class="btn-danger" id="archive-plan" ${btnDisabled(guardrails.flags.archive)}>Archive Done</button>
+    </div>
+    <div class="guardrail-box">
+      <strong>Action Guards</strong>
+      ${reasonHtml}
     </div>
     <label for="findings-input">Check Findings (one line each)</label>
     <textarea id="findings-input" placeholder="Missing test coverage\nNeeds rollback guard"></textarea>

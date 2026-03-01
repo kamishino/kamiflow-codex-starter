@@ -293,6 +293,13 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("Action Console"));
     assert.ok(indexResponse.payload.includes("Activity"));
 
+    const appJsResponse = await server.inject({
+      method: "GET",
+      url: "/assets/app.js"
+    });
+    assert.equal(appJsResponse.statusCode, 200);
+    assert.ok(appJsResponse.payload.includes("Action Guards"));
+
     await server.close();
   });
 });

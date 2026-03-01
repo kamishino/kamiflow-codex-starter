@@ -259,6 +259,12 @@ button:hover {
   background: #eef3f8;
 }
 
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  background: #f0f2f5;
+}
+
 .btn-primary {
   background: #edf3ff;
   border-color: #8eb1f2;
@@ -331,6 +337,33 @@ button:hover {
   color: var(--muted);
   font-size: 11px;
   margin-bottom: 3px;
+}
+
+.guardrail-box {
+  margin: 10px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fafbfd;
+  padding: 8px 10px;
+}
+
+.guardrail-box strong {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.guardrail-list {
+  margin: 0;
+  padding-left: 16px;
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.guardrail-ok {
+  margin: 0;
+  color: var(--ok);
+  font-size: 12px;
 }
 
 pre {
