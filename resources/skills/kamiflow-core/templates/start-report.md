@@ -1,60 +1,139 @@
 # Start Report: <topic>
 
-## 1) Problem Frame
+## Turn A: Clarifying Questions (Ask Only)
+
+Q1. <question>
+- A) <suggested option 1>
+- B) <suggested option 2>
+- C) <suggested option 3>
+- Other: <free text>
+
+Q2. <question>
+- A) <suggested option 1>
+- B) <suggested option 2>
+- C) <suggested option 3>
+- Other: <free text>
+
+Q3. <question>
+- A) <suggested option 1>
+- B) <suggested option 2>
+- C) <suggested option 3>
+- Other: <free text>
+
+Q4. <question> (optional)
+- A) <suggested option 1>
+- B) <suggested option 2>
+- C) <suggested option 3>
+- Other: <free text>
+
+Q5. <question> (optional)
+- A) <suggested option 1>
+- B) <suggested option 2>
+- C) <suggested option 3>
+- Other: <free text>
+
+## Turn B: Decision Report (After Answers)
+
+### Problem Frame
 - Problem:
 - Target user:
 - Success in 30 days:
 - Constraints:
 - Deal-breakers:
 
-## 2) Clarifying Answers (Locked Context)
-- Q1 -> A1
-- Q2 -> A2
-- Q3 -> A3
-- Q4 -> A4
-- Q5 -> A5
-
-## 3) Idea Set (Generated)
+### Idea Set
 - Total ideas generated: <N>
 - Mix: Safe <n>, Lateral <n>, Moonshot <n>
 
-## 4) Scoring (Top 5)
-| Rank | Idea | Type | Impact (1-5) | Feasibility (1-5) | Effort (1-5) | Total (/15) | Verdict |
-|------|------|------|---------------|-------------------|--------------|-------------|---------|
-| 1    |      |      |               |                   |              |             |         |
-| 2    |      |      |               |                   |              |             |         |
-| 3    |      |      |               |                   |              |             |         |
-| 4    |      |      |               |                   |              |             |         |
-| 5    |      |      |               |                   |              |             |         |
+### Scored Ideas (Top 5, Numbered Cards)
+1) <idea name>
+- Type: Safe | Lateral | Moonshot
+- Impact: <1-5>
+- Feasibility: <1-5>
+- Effort: <1-5> (5 is fastest/easiest)
+- Total: </15>
+- Verdict: Go | Maybe | Kill
+- Why it matters:
 
-## 5) Recommendations
-### Best Bet
+2) <idea name>
+- Type:
+- Impact:
+- Feasibility:
+- Effort:
+- Total:
+- Verdict:
+- Why it matters:
+
+3) <idea name>
+- Type:
+- Impact:
+- Feasibility:
+- Effort:
+- Total:
+- Verdict:
+- Why it matters:
+
+4) <idea name>
+- Type:
+- Impact:
+- Feasibility:
+- Effort:
+- Total:
+- Verdict:
+- Why it matters:
+
+5) <idea name>
+- Type:
+- Impact:
+- Feasibility:
+- Effort:
+- Total:
+- Verdict:
+- Why it matters:
+
+### Recommendations
+Best Bet:
 - Why:
 - First step:
 - Main risk:
 
-### Dark Horse
+Dark Horse:
 - Why:
 - Trigger condition:
 - Main risk:
 
-### Quick Win
+Quick Win:
 - Why:
 - First step:
 - Main risk:
 
-## 6) Pre-Mortem (Best Bet)
+### Pre-Mortem (Best Bet)
 - If this fails in 30 days, most likely reason:
 - Early warning signal:
 - Mitigation now:
 
-## 7) Handoff Decision
+### START_CONTEXT
+START_CONTEXT
+- topic:
+- target_user:
+- success_30d:
+- constraints:
+- selected_idea:
+- alternatives:
+- pre_mortem_risk:
+- handoff_confidence: <1-5>
+- recommended_route: plan | build | research
+END_START_CONTEXT
+
+### Handoff Decision
 - Selected idea:
 - Route: plan | build | research
 - Reason:
 - Immediate next command:
 
-## 8) Mode
+Run next: $kamiflow-core plan use START_CONTEXT and update .local/plans/<file>.md to decision-complete build-ready spec.
+
+## Mode
 - Selected Mode: Plan
 - Mode Reason:
 - Next Command:

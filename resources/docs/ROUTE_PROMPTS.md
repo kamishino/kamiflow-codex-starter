@@ -12,10 +12,25 @@ Expected:
 
 - concrete scope
 - if request is vague (missing 2+ core fields), reroute to `start` first
+- if `START_CONTEXT` is provided, consume it directly
 - zero unresolved high-impact decisions
 - Start Summary is present and non-placeholder
 - explicit `Next Command: build`
 - explicit `Next Mode: Build`
+
+## Start Route
+
+```text
+$kamiflow-core start <topic>
+```
+
+Expected:
+
+- first turn asks 3-5 questions only
+- each question has 3 options + `Other`
+- second turn (after answers) returns numbered idea cards
+- includes `START_CONTEXT` block
+- ends with exact `Run next:` command for `plan`
 
 ## Build Route
 

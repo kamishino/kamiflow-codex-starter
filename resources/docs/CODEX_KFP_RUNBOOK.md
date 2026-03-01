@@ -42,6 +42,7 @@ kfc plan serve --project . --port 4310
 5. Run Codex routes against one plan file:
 
 - `start` route first when request is vague (missing 2+ core planning fields)
+- `start` final output must include `START_CONTEXT` + exact `Run next:` command
 - `plan` route to finalize scope and gates
 - `build` route only when plan is build-ready
 - `check` route after each build slice
