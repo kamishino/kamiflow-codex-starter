@@ -23,12 +23,20 @@ This repository is the CLI source and the dogfooding environment.
 
 - `kfc init`
 - `kfc doctor`
+- `kfc plan init|serve|validate`
 - `kfc run`
 - `kf` is an optional shorthand alias for `kfc`
 
 Global option:
 
 - `--cwd <path>`
+
+Plan command notes:
+
+- `kfc plan` delegates to `kfp` for visual plan workflow.
+- It looks for `kfp` in the target project's `node_modules/.bin` first.
+- If missing, install it in that project:
+  - `npm i -D @kamishino/kamiflow-plan-ui`
 
 ## Local Workflow
 
