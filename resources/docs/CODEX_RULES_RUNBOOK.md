@@ -70,6 +70,15 @@ npm run codex:sync:rules -- --scope project --project <path-to-project> --profil
 npm run codex:sync:rules -- --scope project --project <path-to-project> --profile client --force
 ```
 
+Client-project preferred path:
+
+```bash
+# In client project after linking kfc:
+npx --no-install kfc client bootstrap --project . --profile client
+```
+
+`client bootstrap` creates or validates config, ensures plan UI availability (project-local install or linked fallback), and syncs project rules.
+
 ## Verification
 
 After sync, validate policy decisions:

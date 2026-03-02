@@ -26,6 +26,7 @@ This repository is the CLI source and the dogfooding environment.
 - `kfc plan init|serve|validate`
 - `kfc plan workspace ...`
 - `kfc flow ensure-plan|apply|next`
+- `kfc client bootstrap|doctor`
 - `kfc run`
 - `kf` is an optional shorthand alias for `kfc`
 
@@ -55,6 +56,11 @@ Flow command notes:
 - `kfc flow apply` persists route phase updates (plan/build/check) into the plan record.
 - `kfc flow next --style narrative` prints the human next action plus machine next command/mode.
 
+Client command notes:
+
+- `kfc client bootstrap` prepares and verifies a client project (config, plan UI dependency, rules, health check).
+- `kfc client doctor` runs strict diagnostics without mutating project files.
+
 ## First Clone Setup
 
 Run this once after cloning:
@@ -70,6 +76,30 @@ If you are dogfooding the CLI in fixtures, then link it:
 
 ```bash
 npm run dogfood:link
+```
+
+## Client Project Setup (No Publish)
+
+This repository is the install source. You do not need public npm publishing.
+
+1. In this repo:
+
+```bash
+npm install
+npm run link:self
+```
+
+2. In the client project:
+
+```bash
+npm link @kamishino/kamiflow-codex
+npx --no-install kfc client bootstrap --project . --profile client
+```
+
+Maintainer convenience (run from this repo):
+
+```bash
+npm run client:link-bootstrap -- --project <path-to-client-project>
 ```
 
 ## Local Workflow
@@ -138,6 +168,9 @@ Run a baseline portability validation against another project:
 ```bash
 npm run portability:smoke -- --project <path-to-external-repo> --link
 ```
+
+`portability:smoke` now defaults to `kfc client bootstrap` checks.
+Use `--legacy-steps` to run the old granular `plan init/validate/serve` sequence.
 
 This writes a markdown report to `artifacts/portability/`.
 See `resources/docs/PORTABILITY_RUNBOOK.md` for the full flow and criteria.

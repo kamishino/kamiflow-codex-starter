@@ -30,13 +30,14 @@ function resolveNpmCli() {
 function printUsage() {
   console.log(
     [
-      "Usage: npm run portability:smoke -- --project <path> [--link] [--port <n>] [--out <path>]",
+      "Usage: npm run portability:smoke -- --project <path> [--link] [--port <n>] [--out <path>] [--legacy-steps]",
       "",
       "Options:",
       "  --project <path>   Target project path for portability validation (required).",
       "  --link             Run npm link from this repo and npm link <package> in target project.",
       "  --port <n>         Port for kfc plan serve health check (default: 4310).",
-      "  --out <path>       Output markdown report path (default: artifacts/portability/<timestamp>-<project>.md)"
+      "  --out <path>       Output markdown report path (default: artifacts/portability/<timestamp>-<project>.md)",
+      "  --legacy-steps     Use legacy granular checks instead of `kfc client bootstrap`."
     ].join("\n")
   );
 }
@@ -46,7 +47,8 @@ function parseArgs(argv) {
     project: "",
     port: 4310,
     link: false,
-    out: ""
+    out: "",
+    legacySteps: false
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -68,6 +70,10 @@ function parseArgs(argv) {
     }
     if (token === "--link") {
       out.link = true;
+      continue;
+    }
+    if (token === "--legacy-steps") {
+      out.legacySteps = true;
       continue;
     }
     if (token === "--help" || token === "-h") {
@@ -279,6 +285,7 @@ async function main() {
 
   console.log(`[portability] Target project: ${projectDir}`);
   console.log(`[portability] Link mode: ${args.link ? "on" : "off"}`);
+  console.log(`[portability] Step mode: ${args.legacySteps ? "legacy" : "bootstrap"}`);
 
   if (args.link) {
     steps.push(runStep("npm link (tool repo)", NODE, [NPM_CLI, "link"], ROOT_DIR));
@@ -297,6 +304,32 @@ async function main() {
     runStep("kfc help", NODE, [NPM_CLI, "exec", "--no-install", "--", "kfc", "--help"], projectDir)
   );
   if (!steps.at(-1).ok) {
+    return finalize(steps, outPath, projectDir, args.link);
+  }
+
+  if (!args.legacySteps) {
+    steps.push(
+      runStep(
+        "kfc client bootstrap",
+        NODE,
+        [
+          NPM_CLI,
+          "exec",
+          "--no-install",
+          "--",
+          "kfc",
+          "client",
+          "bootstrap",
+          "--project",
+          ".",
+          "--profile",
+          "client",
+          "--port",
+          String(args.port)
+        ],
+        projectDir
+      )
+    );
     return finalize(steps, outPath, projectDir, args.link);
   }
 

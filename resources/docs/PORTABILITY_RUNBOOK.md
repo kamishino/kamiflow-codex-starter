@@ -7,7 +7,7 @@ Use this runbook to validate that `kfc` + `kamiflow-core` work outside this dogf
 Prove one full project-scoped flow in an external repository:
 
 - install/link CLI
-- create/validate/serve plans
+- bootstrap and verify client project readiness
 - run route loop (`start -> plan -> build -> check -> done`)
 - confirm archive path
 
@@ -17,7 +17,7 @@ Prove one full project-scoped flow in an external repository:
 - npm in PATH
 - Codex CLI in PATH
 - Target repository is writable and uses project-local dependencies
-- `@kamishino/kamiflow-plan-ui` is available in target repo (`devDependency`)
+- `@kamishino/kamiflow-plan-ui` is available either in target repo (`devDependency`) or via linked KFC fallback
 
 ## Step 1: Link CLI into External Repo
 
@@ -43,23 +43,16 @@ npm i -D @kamishino/kamiflow-plan-ui
 
 ```bash
 npx --no-install kfc --help
-npx --no-install kfc plan init --project . --new
-npx --no-install kfc plan validate --project .
+npx --no-install kfc client bootstrap --project . --profile client
 ```
 
-Serve KFP API/UI and verify health:
+What bootstrap verifies:
 
-```bash
-npx --no-install kfc plan serve --project . --port 4310
-# in another terminal:
-curl http://127.0.0.1:4310/api/health
-```
-
-Expected health response:
-
-```json
-{ "ok": true }
-```
+- valid config (creates if missing)
+- plan UI dependency available
+- project rules synced to `.codex/rules/kamiflow.rules`
+- plan exists and validates
+- KFP health endpoint responds OK
 
 ## Step 3: Run Canonical Route Loop
 
@@ -93,6 +86,12 @@ This repo includes an executable smoke helper:
 npm run portability:smoke -- --project <path-to-external-repo> --link
 ```
 
+Legacy granular checks are still available:
+
+```bash
+npm run portability:smoke -- --project <path-to-external-repo> --link --legacy-steps
+```
+
 Outputs markdown log to:
 
 - `artifacts/portability/<timestamp>-<project>.md`
@@ -105,8 +104,8 @@ In that case, run the same command in a normal local terminal session.
 Validation is complete when all are true:
 
 1. `kfc` works in external repo context.
-2. plan file is created and validated in external repo.
-3. KFP server health check passes.
+2. `kfc client bootstrap` completes PASS in external repo.
+3. plan file is created and validated in external repo.
 4. route loop reaches `done`.
 5. plan is archived in `.local/plans/done/`.
 6. smoke log is captured and reviewable.
