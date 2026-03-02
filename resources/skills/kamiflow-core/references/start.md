@@ -44,7 +44,7 @@ The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
    - include explicit block markers: `START_CONTEXT` and `END_START_CONTEXT`
 9. Emit one exact `Run next:` command for `plan`.
    - include plan-file bootstrap instruction:
-     - ensure file exists via `kfc flow ensure-plan --project <path>` when no target file is provided.
+     - ensure file exists via `kfc flow ensure-plan --project .` when no target file is provided.
 10. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`
 - `Reason`

@@ -16,11 +16,11 @@ Expected:
 - resolve target plan file in this order:
   1. user-provided path
   2. active draft/ready plan
-  3. `kfc flow ensure-plan --project <path>`
+  3. `kfc flow ensure-plan --project .`
 - if plan file resolution fails, return BLOCK with:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc flow ensure-plan --project <path>`
+  - `Recovery: kfc flow ensure-plan --project .`
   - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 - zero unresolved high-impact decisions
 - Start Summary is present and non-placeholder
@@ -46,7 +46,7 @@ Plan output example (blocked):
 ```text
 Status: BLOCK
 Reason: No target plan file was resolved.
-Recovery: kfc flow ensure-plan --project <path>
+Recovery: kfc flow ensure-plan --project .
 Expected: {"ok":true,"plan_path":"<absolute-path>",...}
 ```
 

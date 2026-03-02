@@ -3,6 +3,7 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
+import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -103,9 +104,24 @@ export async function runPlan(options) {
   try {
     runner = await resolveKfpRunner(projectDir);
   } catch (err) {
+    if (subcommand === "init") {
+      await createLocalPlanTemplate(projectDir, {
+        forceNew: rest.includes("--new"),
+        log: info
+      });
+      return 0;
+    }
     error(err instanceof Error ? err.message : String(err));
     return 1;
   }
 
-  return await runProcess(runner.command, [...runner.args, ...forwarded], options.cwd);
+  const exitCode = await runProcess(runner.command, [...runner.args, ...forwarded], options.cwd);
+  if (subcommand === "init" && exitCode !== 0) {
+    await createLocalPlanTemplate(projectDir, {
+      forceNew: rest.includes("--new"),
+      log: info
+    });
+    return 0;
+  }
+  return exitCode;
 }

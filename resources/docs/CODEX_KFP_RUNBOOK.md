@@ -59,13 +59,13 @@ kfc plan validate --project .
 - `plan` route must resolve/create target plan file in this exact order:
   1. user-provided file path
   2. active draft/ready plan
-  3. `kfc flow ensure-plan --project <path>`
+  3. `kfc flow ensure-plan --project .`
 - if `START_CONTEXT` is present, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request remains vague, reroute to `start`
 - if plan file cannot be resolved, return BLOCK with:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc flow ensure-plan --project <path>`
+  - `Recovery: kfc flow ensure-plan --project .`
   - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 - then finalize scope and gates
 - `build` route only when plan is build-ready
@@ -104,9 +104,9 @@ $kamiflow-core check verify current changes against Acceptance Criteria in .loca
 Deterministic persistence (build/check):
 
 ```text
-kfc flow apply --project <path> --plan <id> --route build --result progress
-kfc flow apply --project <path> --plan <id> --route check --result block|pass
-kfc flow next --project <path> --plan <id> --style narrative
+kfc flow apply --project . --plan <id> --route build --result progress
+kfc flow apply --project . --plan <id> --route check --result block|pass
+kfc flow next --project . --plan <id> --style narrative
 ```
 
 Server resolution:
@@ -127,5 +127,7 @@ Server resolution:
 ### Run in KFC Repo
 
 - Missing `.local/`: run `kfc flow ensure-plan --project .`.
+- If plan bootstrap still fails: run `kfc plan init --project . --new`, then retry `kfc flow ensure-plan --project .`.
 - Skill/rules mismatch after edits: run `npm run codex:sync -- --profile dogfood --force` and restart Codex CLI.
+- Runtime skill still shows old commands: run `npm run codex:sync:skills -- --force` and restart Codex CLI.
 - Build route blocked: check `resources/docs/PLAN_CONTRACT_V1.md` build readiness gate.

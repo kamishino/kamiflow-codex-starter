@@ -44,6 +44,9 @@ try {
     console.log(`[dogfood] Installing tarball into ${fixture}`);
     run("npm", ["install", "--no-save", tarballPath], cwd);
     run("npx", ["--no-install", "kfc", "doctor"], cwd);
+    run("npx", ["--no-install", "kfc", "flow", "ensure-plan", "--project", "."], cwd);
+    run("npx", ["--no-install", "kfc", "plan", "init", "--project", ".", "--new"], cwd);
+    run("npx", ["--no-install", "kfc", "plan", "validate", "--project", "."], cwd);
     run("npx", ["--no-install", "kfc", "run"], cwd);
     run("npm", ["uninstall", "--no-save", packageName], cwd, true);
   }

@@ -3,92 +3,13 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
+import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const KFC_BIN = path.join(REPO_ROOT, "bin", "kamiflow.js");
-const REPO_KFP_TEMPLATE = path.join(
-  REPO_ROOT,
-  "packages",
-  "kamiflow-plan-ui",
-  "templates",
-  "plan-template.md"
-);
 const DEFAULT_BASE_URL = "http://127.0.0.1:4310";
-const FALLBACK_PLAN_TEMPLATE = `---
-plan_id: PLAN-YYYY-MM-DD-001
-title: New Plan
-status: draft
-decision: NO_GO
-selected_mode: Plan
-next_mode: Plan
-next_command: plan
-updated_at: 2026-03-01
----
-
-## Start Summary
-- Required: yes
-- Reason: Missing 2+ core planning fields.
-- Selected Idea: Initial draft candidate
-- Alternatives Considered: Safe option | Dark horse option
-- Pre-mortem Risk: Weak clarity can cause rework.
-- Handoff Confidence: 1
-
-## Goal
-- Define the desired outcome.
-
-## Scope (In/Out)
-- In:
-- Out:
-
-## Constraints
-- Technical:
-- Time:
-- Risk:
-
-## Assumptions
-- A1:
-- A2:
-
-## Open Decisions
-- [ ] D1:
-- Remaining Count: 1
-
-## Implementation Tasks
-- [ ] Task 1
-- [ ] Task 2
-
-## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-
-## Validation Commands
-- command 1
-- command 2
-
-## Risks & Rollback
-- Risk:
-- Mitigation:
-- Rollback:
-
-## Go/No-Go Checklist
-- [ ] Goal is explicit
-- [ ] Scope in/out is explicit
-- [ ] No unresolved high-impact decisions
-- [ ] Feasibility is validated
-- [ ] Acceptance criteria are testable
-- [ ] Tasks are implementation-ready
-- [ ] Risks and rollback are defined
-- [ ] Validation commands are concrete
-- [ ] Dependencies/access are ready
-- [ ] First build step is explicit
-
-## WIP Log
-- Status:
-- Blockers:
-- Next step:
-`;
 
 function usage() {
   info("Usage: kfc flow <ensure-plan|apply|next> [options]");
@@ -282,61 +203,23 @@ function runNode(commandArgs, cwd) {
 async function createPlanViaInit(projectDir, cwd) {
   try {
     const result = await runNode([KFC_BIN, "plan", "init", "--project", projectDir, "--new"], cwd);
-    if (result.code !== 0) {
-      throw new Error(
-        `Failed to create plan via kfc plan init.\nstdout:\n${result.stdout || "<empty>"}\nstderr:\n${result.stderr || "<empty>"}`
+    if (result.code === 0) {
+      const match = result.stdout.match(/\[kfp\] Created template:\s*(.+)/);
+      if (match) {
+        return path.resolve(match[1].trim());
+      }
+      info(
+        `kfc plan init output did not include created template path. Falling back to local bootstrap.\nstdout:\n${result.stdout || "<empty>"}`
+      );
+    } else {
+      info(
+        `kfc plan init failed with exit code ${result.code}. Falling back to local bootstrap.\nstdout:\n${result.stdout || "<empty>"}\nstderr:\n${result.stderr || "<empty>"}`
       );
     }
-
-    const match = result.stdout.match(/\[kfp\] Created template:\s*(.+)/);
-    if (!match) {
-      throw new Error(
-        `Could not determine created plan path from kfc output.\nstdout:\n${result.stdout || "<empty>"}`
-      );
-    }
-
-    return path.resolve(match[1].trim());
   } catch (err) {
-    const errCode = err && typeof err === "object" ? err.code : "";
-    if (errCode !== "EPERM" && errCode !== "ENOENT") {
-      throw err;
-    }
-    return await createPlanLocally(projectDir);
+    info(`kfc plan init invocation failed. Falling back to local bootstrap: ${err instanceof Error ? err.message : String(err)}`);
   }
-}
-
-async function createPlanLocally(projectDir) {
-  const plansDir = resolvePlansDir(projectDir);
-  await fs.mkdir(plansDir, { recursive: true });
-  const nowDate = new Date().toISOString().slice(0, 10);
-
-  let targetPath = "";
-  for (let i = 1; i <= 999; i += 1) {
-    const suffix = String(i).padStart(3, "0");
-    const candidate = path.join(plansDir, `${nowDate}-${suffix}-new-plan.md`);
-    try {
-      await fs.access(candidate);
-      continue;
-    } catch {
-      targetPath = candidate;
-      break;
-    }
-  }
-
-  if (!targetPath) {
-    throw new Error("Unable to allocate new plan filename in .local/plans.");
-  }
-
-  let template = FALLBACK_PLAN_TEMPLATE;
-  try {
-    template = await fs.readFile(REPO_KFP_TEMPLATE, "utf8");
-  } catch {
-    template = FALLBACK_PLAN_TEMPLATE;
-  }
-
-  await fs.writeFile(targetPath, template, "utf8");
-  info(`Plan bootstrap fallback used: ${targetPath}`);
-  return targetPath;
+  return await createLocalPlanTemplate(projectDir, { forceNew: true, log: info });
 }
 
 function ensureRoute(route) {

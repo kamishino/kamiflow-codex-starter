@@ -23,11 +23,11 @@ This route should leave no major ambiguity for the build phase.
 4. Resolve target plan file using this exact order:
    1. user-provided file path
    2. active draft/ready plan
-   3. `kfc flow ensure-plan --project <path>`, then capture `plan_path` from JSON output
+   3. `kfc flow ensure-plan --project .`, then capture `plan_path` from JSON output
 5. If no target file can be resolved, return `BLOCK` using this format:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
-   - `Recovery: kfc flow ensure-plan --project <path>`
+   - `Recovery: kfc flow ensure-plan --project .`
    - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 6. Define problem and scope boundaries.
 7. List constraints and assumptions.
@@ -51,9 +51,9 @@ This route should leave no major ambiguity for the build phase.
    - `next_command: build`
    - `next_mode: Build`
 16. Persist plan phase/handoff update via deterministic command:
-   - `kfc flow apply --project <path> --plan <plan_id> --route plan --result go`
+   - `kfc flow apply --project . --plan <plan_id> --route plan --result go`
 17. Resolve next-step narrative after persistence:
-   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+   - `kfc flow next --project . --plan <plan_id> --style narrative`
 18. End with narrative next action and machine footer (`Next Command: build`, `Next Mode: Build`).
 
 ## Output
