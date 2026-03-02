@@ -1,6 +1,7 @@
 # Codex + KFP Runbook
 
 Use this runbook to dogfood Kami Flow in this repo with predictable route behavior.
+Prompt wording refinement only in this phase: no route logic changes.
 
 ## Preconditions
 
@@ -43,9 +44,17 @@ kfc plan serve --project . --port 4310
 
 - `start` route first when request is vague (missing 2+ core planning fields)
 - `start` final output must include `START_CONTEXT` + exact `Run next:` command
-- `plan` route must resolve/create target plan file first:
-  - use provided/active plan file, or
-  - run `kfc plan init --project <path> --new` and use the created file
+- `plan` route must resolve/create target plan file in this exact order:
+  1. user-provided file path
+  2. active draft/ready plan
+  3. `kfc plan init --project <path> --new`
+- if `START_CONTEXT` is present, consume it directly and do not re-ask baseline clarification
+- if `START_CONTEXT` is absent and request remains vague, reroute to `start`
+- if plan file cannot be resolved, return BLOCK with:
+  - `Status: BLOCK`
+  - `Reason: <single concrete cause>`
+  - `Recovery: kfc plan init --project <path> --new`
+  - `Expected: [kfp] Created template: <absolute-path>`
 - then finalize scope and gates
 - `build` route only when plan is build-ready
 - `check` route after each build slice
@@ -57,6 +66,15 @@ Plan:
 
 ```text
 $kamiflow-core plan check the .local/plans/<file>.md and produce a decision-complete implementation plan.
+```
+
+Plan ready footer contract:
+
+```text
+Selected Mode: Plan
+Mode Reason: Planning is decision-complete and build-ready.
+Next Command: build
+Next Mode: Build
 ```
 
 Build:

@@ -11,14 +11,44 @@ $kamiflow-core plan check the .local/plans/<file>.md and produce a decision-comp
 Expected:
 
 - concrete scope
-- if request is vague (missing 2+ core fields), reroute to `start` first
-- if `START_CONTEXT` is provided, consume it directly
-- ensure target plan file exists before plan drafting:
-  - resolve provided/active plan, or run `kfc plan init --project <path> --new`
+- if `START_CONTEXT` is provided, consume it directly and do not re-ask baseline clarification
+- if `START_CONTEXT` is absent and request is vague (missing 2+ core fields), reroute to `start` first
+- resolve target plan file in this order:
+  1. user-provided path
+  2. active draft/ready plan
+  3. `kfc plan init --project <path> --new`
+- if plan file resolution fails, return BLOCK with:
+  - `Status: BLOCK`
+  - `Reason: <single concrete cause>`
+  - `Recovery: kfc plan init --project <path> --new`
+  - `Expected: [kfp] Created template: <absolute-path>`
 - zero unresolved high-impact decisions
 - Start Summary is present and non-placeholder
+- build-ready checklist is explicitly satisfied:
+  - explicit scope
+  - file-level tasks
+  - testable acceptance criteria
+  - runnable validation commands
 - explicit `Next Command: build`
 - explicit `Next Mode: Build`
+
+Plan output example (ready):
+
+```text
+Selected Mode: Plan
+Mode Reason: Planning is decision-complete and build-ready.
+Next Command: build
+Next Mode: Build
+```
+
+Plan output example (blocked):
+
+```text
+Status: BLOCK
+Reason: No target plan file was resolved.
+Recovery: kfc plan init --project <path> --new
+Expected: [kfp] Created template: <absolute-path>
+```
 
 ## Start Route
 
