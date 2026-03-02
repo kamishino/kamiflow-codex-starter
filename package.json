@@ -37,7 +37,11 @@
     "dogfood:smoke": "node scripts/dogfood/smoke.mjs",
     "dogfood:pack-smoke": "node scripts/dogfood/pack-install-smoke.mjs",
     "portability:smoke": "node scripts/portability/smoke-one-repo.mjs",
-    "client:link-bootstrap": "node scripts/client/link-bootstrap.mjs"
+    "client:link-bootstrap": "node scripts/client/link-bootstrap.mjs",
+    "version:next": "node scripts/release/semver-from-commits.mjs",
+    "release:plan": "node scripts/release/plan-release.mjs",
+    "release:cut": "node scripts/release/cut-release.mjs",
+    "pack:commit": "node scripts/release/pack-commit.mjs"
   },
   "files": [
     "bin",

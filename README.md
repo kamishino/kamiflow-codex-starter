@@ -102,6 +102,32 @@ Maintainer convenience (run from this repo):
 npm run client:link-bootstrap -- --project <path-to-client-project>
 ```
 
+## Versioning (No Publish)
+
+This repo uses hybrid versioning:
+
+- Stable SemVer (`x.y.z`) changes only when you cut a release.
+- Commit-level trace versions are used for artifacts: `x.y.z-dev.<shortsha>`.
+
+Release planning:
+
+```bash
+npm run version:next
+npm run release:plan
+```
+
+Cut a release (manual final bump choice):
+
+```bash
+npm run release:cut -- --bump <major|minor|patch>
+```
+
+Create commit-trace tarball without changing package version:
+
+```bash
+npm run pack:commit
+```
+
 ## Local Workflow
 
 1. Link package:
@@ -247,6 +273,7 @@ See:
 - `resources/docs/ROUTE_PROMPTS.md`
 - `resources/docs/CONTRIBUTOR_BOOTSTRAP.md`
 - `resources/docs/CODEX_COMMIT_FLOW.md`
+- `resources/docs/VERSIONING_RUNBOOK.md`
 
 ## `.codex` Policy
 
