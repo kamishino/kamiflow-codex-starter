@@ -42,7 +42,9 @@
     "release:plan": "node scripts/release/plan-release.mjs",
     "release:cut": "node scripts/release/cut-release.mjs",
     "pack:commit": "node scripts/release/pack-commit.mjs",
-    "docs:verify-command-boundary": "node scripts/policy/verify-command-boundary.mjs"
+    "docs:verify-command-boundary": "node scripts/policy/verify-command-boundary.mjs",
+    "docs:sync:quickstart": "node scripts/docs/sync-quickstart.mjs",
+    "docs:verify:quickstart": "node scripts/docs/sync-quickstart.mjs --verify"
   },
   "files": [
     "bin",

@@ -37,10 +37,12 @@ const PLAN_UI_PACKAGE = "@kamishino/kamiflow-plan-ui";
 const DEFAULT_PORT = 4310;
 const DEFAULT_HEALTH_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_POLL_MS = 500;
+const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
 
 function usage() {
   info("Usage: kfc client <bootstrap|doctor> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
+  info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
   info("Examples:");
   info("  kfc client bootstrap --project .");
   info("  kfc client bootstrap --project . --profile client --port 4310");
@@ -210,6 +212,19 @@ function loadPackageName() {
 function defaultClientResourcesDir() {
   const packageName = loadPackageName();
   return `./node_modules/${packageName}/resources`;
+}
+
+function resolveClientQuickstartPath(projectDir) {
+  return path.join(projectDir, "node_modules", loadPackageName(), QUICKSTART_FILE);
+}
+
+function printQuickstartHint(projectDir) {
+  const quickstartPath = resolveClientQuickstartPath(projectDir);
+  if (fs.existsSync(quickstartPath)) {
+    info(`Quickstart: ${quickstartPath}`);
+    return;
+  }
+  info(`Quickstart path (after install/link): ${quickstartPath}`);
 }
 
 async function writeConfigFile(configPath, configData) {
@@ -454,6 +469,7 @@ async function runBootstrap(options) {
   }
 
   info("Client bootstrap completed successfully.");
+  printQuickstartHint(options.project);
   info("Next steps in this client repo should use `kfc ...` commands.");
   return 0;
 }
@@ -517,6 +533,7 @@ async function runClientDoctorOnly(options) {
   }
 
   if (ok) {
+    printQuickstartHint(options.project);
     info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
 

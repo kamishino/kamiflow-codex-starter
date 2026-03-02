@@ -8,6 +8,8 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 
 const TARGET_FILES = [
   "README.md",
+  "QUICKSTART.md",
+  "resources/docs/QUICKSTART.md",
   "resources/docs/PORTABILITY_RUNBOOK.md",
   "resources/docs/CODEX_KFP_RUNBOOK.md",
   "resources/docs/CODEX_RULES_RUNBOOK.md"
