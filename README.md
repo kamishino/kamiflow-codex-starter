@@ -55,6 +55,23 @@ Flow command notes:
 - `kfc flow apply` persists route phase updates (plan/build/check) into the plan record.
 - `kfc flow next --style narrative` prints the human next action plus machine next command/mode.
 
+## First Clone Setup
+
+Run this once after cloning:
+
+```bash
+npm install
+npm run bootstrap
+```
+
+This initializes local Codex config, syncs repo-scope SSOT rules/skills, and enables Git commit hooks.
+
+If you are dogfooding the CLI in fixtures, then link it:
+
+```bash
+npm run dogfood:link
+```
+
 ## Local Workflow
 
 1. Link package:
@@ -78,10 +95,12 @@ npm run dogfood:unlink
 
 ## Clean Commit Setup
 
-Enable local Git hooks once per clone:
+`npm run bootstrap` is the recommended setup path and already enables hooks.
+If you need to repair local hook config manually:
 
 ```bash
 npm run hooks:enable
+npm run hooks:check
 ```
 
 Commit subject rule:
@@ -183,6 +202,7 @@ See:
 - `resources/docs/PLAN_CONTRACT_V1.md`
 - `resources/docs/CODEX_KFP_RUNBOOK.md`
 - `resources/docs/ROUTE_PROMPTS.md`
+- `resources/docs/CONTRIBUTOR_BOOTSTRAP.md`
 
 ## `.codex` Policy
 
