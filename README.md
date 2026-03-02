@@ -76,6 +76,32 @@ To clean link state:
 npm run dogfood:unlink
 ```
 
+## Clean Commit Setup
+
+Enable local Git hooks once per clone:
+
+```bash
+npm run hooks:enable
+```
+
+Commit subject rule:
+
+- `type(scope): summary`
+- Allowed `type`: `feat`, `fix`, `docs`, `refactor`, `test`, `chore`, `build`, `ci`, `perf`, `style`
+- Optional breaking marker: `type(scope)!: summary`
+- Merge, revert, fixup, and squash commit subjects are allowed without this format.
+
+Examples:
+
+- `feat(flow): persist phase progress into plan file`
+- `fix(dogfood): repair npm link smoke path handling`
+
+Validate the latest commit subject manually:
+
+```bash
+npm run commit:check
+```
+
 ## Portability Smoke (One External Repo)
 
 Run a baseline portability validation against another project:
