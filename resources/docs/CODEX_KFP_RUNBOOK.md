@@ -19,7 +19,7 @@ Prompt wording refinement only in this phase: no route logic changes.
 1. Sync runtime skills from SSOT:
 
 ```bash
-npm run codex:sync -- --force
+npm run codex:sync -- --profile dogfood --force
 ```
 
 2. Initialize private plans directory and template:
@@ -114,5 +114,5 @@ Server resolution:
 ## Fast Troubleshooting
 
 - Missing `.local/`: run `kfc plan init --project .`.
-- Skill mismatch after edits: run `npm run codex:sync -- --force` and restart Codex CLI.
+- Skill/rules mismatch after edits: run `npm run codex:sync -- --profile dogfood --force` and restart Codex CLI.
 - Build route blocked: check `resources/docs/PLAN_CONTRACT_V1.md` build readiness gate.

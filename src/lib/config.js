@@ -15,6 +15,9 @@ export function defaultConfig() {
       defaultProvider: "codex",
       profile: "default"
     },
+    codex: {
+      rulesProfile: "client"
+    },
     paths: {
       resourcesDir: "./resources"
     }
@@ -67,6 +70,17 @@ export function validateConfig(data) {
       typeof data.paths.resourcesDir !== "string"
     ) {
       errors.push("`paths.resourcesDir` must be a string when provided.");
+    }
+  }
+
+  if (data.codex !== undefined) {
+    if (typeof data.codex !== "object" || data.codex === null || Array.isArray(data.codex)) {
+      errors.push("`codex` must be an object when provided.");
+    } else if (
+      data.codex.rulesProfile !== undefined &&
+      !["dogfood", "client"].includes(data.codex.rulesProfile)
+    ) {
+      errors.push("`codex.rulesProfile` must be either `dogfood` or `client` when provided.");
     }
   }
 

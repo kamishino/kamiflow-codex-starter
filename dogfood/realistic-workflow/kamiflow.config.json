@@ -4,6 +4,9 @@
     "defaultProvider": "codex",
     "profile": "realistic"
   },
+  "codex": {
+    "rulesProfile": "dogfood"
+  },
   "paths": {
     "resourcesDir": "../../resources"
   }

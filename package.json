@@ -19,6 +19,8 @@
     "codex:sync": "node scripts/codex/sync-resources-to-agents.mjs",
     "codex:sync:skills": "node scripts/codex/sync-resources-to-agents.mjs --only skills",
     "codex:sync:rules": "node scripts/codex/sync-resources-to-agents.mjs --only rules",
+    "codex:sync:rules:dogfood": "node scripts/codex/sync-resources-to-agents.mjs --only rules --profile dogfood",
+    "codex:sync:rules:client": "node scripts/codex/sync-resources-to-agents.mjs --only rules --profile client",
     "plan-ui:init": "node scripts/plan-ui/run-kfp.mjs init",
     "plan-ui:serve": "node scripts/plan-ui/run-kfp.mjs serve",
     "plan-ui:validate": "node scripts/plan-ui/run-kfp.mjs validate",

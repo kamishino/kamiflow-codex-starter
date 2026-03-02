@@ -111,6 +111,10 @@ npm run codex:sync:rules -- --scope project --force
 
 # Rules only, home scope ($CODEX_HOME or ~/.codex)
 npm run codex:sync:rules -- --scope home --force
+
+# Rules profile override
+npm run codex:sync:rules -- --scope project --project <path-to-project> --profile dogfood --force
+npm run codex:sync:rules -- --scope project --project <path-to-project> --profile client --force
 ```
 
 KFP local loop (client-facing via `kfc`):
@@ -156,6 +160,10 @@ Skill policy:
 
 Rules policy:
 
-- Keep SSOT in `resources/rules`.
+- Keep SSOT in `resources/rules/base.rules` and `resources/rules/profiles/*.rules`.
 - Treat `.codex/rules/kamiflow.rules` as generated runtime output.
 - Keep `.codex/rules/default.rules` for Codex-managed approvals; do not overwrite it from SSOT.
+- Rules profile precedence:
+  - `--profile`
+  - `kamiflow.config.json` -> `codex.rulesProfile`
+  - default `client`

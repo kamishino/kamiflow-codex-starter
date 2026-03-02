@@ -1,0 +1,58 @@
+# Base Codex execution policy for all Kami Flow contexts.
+# Profile-specific files extend this baseline.
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:setup"],
+  match = ["npm run codex:setup"],
+  not_match = ["npm run codex:sync"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:sync"],
+  match = ["npm run codex:sync -- --scope project"],
+  not_match = ["pnpm run codex:sync"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:sync:rules"],
+  match = ["npm run codex:sync:rules -- --scope project --profile dogfood --force"],
+  not_match = ["npm run codex:sync:skills -- --force"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:sync:skills"],
+  match = ["npm run codex:sync:skills -- --force"],
+  not_match = ["npm run codex:sync:rules -- --scope repo --force"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "link"],
+  match = ["npm link"],
+  not_match = ["npm unlink"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "unlink"],
+  match = ["npm unlink"],
+  not_match = ["npm link"]
+)
+
+prefix_rule(
+  decision = "forbidden",
+  pattern = ["git", "reset", "--hard"],
+  match = ["git reset --hard"],
+  not_match = ["git reset --soft"]
+)
+
+prefix_rule(
+  decision = "forbidden",
+  pattern = ["rm", "-rf"],
+  match = ["rm -rf /"],
+  not_match = ["rm -r ./safe-temp"]
+)

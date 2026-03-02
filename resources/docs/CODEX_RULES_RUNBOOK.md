@@ -6,7 +6,9 @@ Use this runbook to manage Codex execution-policy rules from SSOT and sync them 
 
 Keep a single source of truth for rules in:
 
-- `resources/rules/kamiflow.rules`
+- `resources/rules/base.rules`
+- `resources/rules/profiles/dogfood.rules`
+- `resources/rules/profiles/client.rules`
 
 Then synchronize into runtime locations that Codex loads:
 
@@ -19,6 +21,29 @@ Then synchronize into runtime locations that Codex loads:
 - Edit SSOT only (`resources/rules/*`).
 - Do not edit generated runtime files.
 - Do not overwrite `.codex/rules/default.rules` from SSOT.
+
+## Profile Selection
+
+Profile is resolved in this order:
+
+1. `--profile <dogfood|client>`
+2. `<project>/kamiflow.config.json` -> `codex.rulesProfile`
+3. default: `client`
+
+Project config example:
+
+```json
+{
+  "version": "1",
+  "workflow": {
+    "defaultProvider": "codex",
+    "profile": "default"
+  },
+  "codex": {
+    "rulesProfile": "dogfood"
+  }
+}
+```
 
 ## Sync Commands
 
@@ -39,6 +64,10 @@ npm run codex:sync:rules -- --scope project --force
 
 # Rules only: home scope
 npm run codex:sync:rules -- --scope home --force
+
+# Rules only: explicit profile override
+npm run codex:sync:rules -- --scope project --project <path-to-project> --profile dogfood --force
+npm run codex:sync:rules -- --scope project --project <path-to-project> --profile client --force
 ```
 
 ## Verification
@@ -46,9 +75,9 @@ npm run codex:sync:rules -- --scope home --force
 After sync, validate policy decisions:
 
 ```bash
-codex execpolicy check --rules resources/rules/kamiflow.rules npm run dogfood:link
-codex execpolicy check --rules resources/rules/kamiflow.rules npm run codex:sync:rules -- --scope project --project . --force
-codex execpolicy check --rules resources/rules/kamiflow.rules git reset --hard
+codex execpolicy check --rules .codex/rules/kamiflow.rules npm run dogfood:link
+codex execpolicy check --rules .codex/rules/kamiflow.rules npm run codex:sync:rules -- --scope project --project . --force
+codex execpolicy check --rules .codex/rules/kamiflow.rules git reset --hard
 ```
 
 Expected pattern:
@@ -59,5 +88,5 @@ Expected pattern:
 ## Troubleshooting
 
 - `Permission denied writing ...`: rerun sync from an elevated terminal if destination is outside writable scope.
-- `Missing SSOT rules file`: ensure `resources/rules/kamiflow.rules` exists.
+- `Missing SSOT rules file`: ensure `resources/rules/base.rules` and `resources/rules/profiles/<profile>.rules` exist.
 - rule not matching: run `codex execpolicy check "<exact command>"` and adjust `pattern/match/not_match`.

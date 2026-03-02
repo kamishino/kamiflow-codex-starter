@@ -6,6 +6,9 @@ Generic, reusable container for portable Kami Flow Codex assets.
 
 - `skills/`: Codex skills (`SKILL.md`-based), SSOT.
 - `rules/`: Codex execution-policy rules (`.rules`), SSOT.
+  - `base.rules`: shared baseline safety and sync allowances.
+  - `profiles/dogfood.rules`: dogfood overlay.
+  - `profiles/client.rules`: client-project overlay.
 - `scripts/`: helper scripts (JS/TS planned).
 - `templates/`: reusable templates and assets.
 - `docs/`: guidance and rollout docs for this resource pack.
@@ -30,6 +33,8 @@ Rules sync examples:
 npm run codex:sync:rules -- --scope repo --force
 npm run codex:sync:rules -- --scope project --project <path-to-project> --force
 npm run codex:sync:rules -- --scope home --force
+npm run codex:sync:rules -- --scope project --project <path-to-project> --profile dogfood --force
+npm run codex:sync:rules -- --scope project --project <path-to-project> --profile client --force
 ```
 
 ## Core Docs

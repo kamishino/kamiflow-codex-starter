@@ -4,6 +4,9 @@
     "defaultProvider": "codex",
     "profile": "dogfood-js"
   },
+  "codex": {
+    "rulesProfile": "dogfood"
+  },
   "paths": {
     "resourcesDir": "../../resources"
   }

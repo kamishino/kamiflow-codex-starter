@@ -1,0 +1,50 @@
+# Client profile: safer defaults for external project collaboration.
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "run", "dogfood:link"],
+  match = ["npm run dogfood:link"],
+  not_match = ["npm run dogfood:smoke"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "run", "dogfood:smoke"],
+  match = ["npm run dogfood:smoke"],
+  not_match = ["npm run dogfood:link"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "run", "dogfood:pack-smoke"],
+  match = ["npm run dogfood:pack-smoke"],
+  not_match = ["npm run dogfood:smoke"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "run", "portability:smoke"],
+  match = ["npm run portability:smoke -- --project dogfood/realistic-workflow --link"],
+  not_match = ["npm run dogfood:smoke"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "install"],
+  match = ["npm --prefix packages/kamiflow-plan-ui install"],
+  not_match = ["npm --prefix packages/kamiflow-plan-ui run build"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "run", "build"],
+  match = ["npm --prefix packages/kamiflow-plan-ui run build"],
+  not_match = ["npm --prefix packages/kamiflow-plan-ui install"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "pack", "--silent"],
+  match = ["npm pack --silent"],
+  not_match = ["npm pack"]
+)
