@@ -25,7 +25,7 @@ npm run codex:sync -- --profile dogfood --force
 2. Initialize private plans directory and template:
 
 ```bash
-kfc plan init --project .
+kfc flow ensure-plan --project .
 ```
 
 3. Validate plans:
@@ -47,14 +47,14 @@ kfc plan serve --project . --port 4310
 - `plan` route must resolve/create target plan file in this exact order:
   1. user-provided file path
   2. active draft/ready plan
-  3. `kfc plan init --project <path> --new`
+  3. `kfc flow ensure-plan --project <path>`
 - if `START_CONTEXT` is present, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request remains vague, reroute to `start`
 - if plan file cannot be resolved, return BLOCK with:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc plan init --project <path> --new`
-  - `Expected: [kfp] Created template: <absolute-path>`
+  - `Recovery: kfc flow ensure-plan --project <path>`
+  - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 - then finalize scope and gates
 - `build` route only when plan is build-ready
 - `check` route after each build slice
@@ -89,13 +89,12 @@ Check:
 $kamiflow-core check verify current changes against Acceptance Criteria in .local/plans/<file>.md and return PASS or BLOCK.
 ```
 
-Automation apply (build/check persistence):
+Deterministic persistence (build/check):
 
 ```text
-POST /api/plans/<id>/automation/apply with:
-- build_result: task/ac updates + wip, then handoff to check
-- check_result BLOCK: decision NO_GO, handoff fix/Build
-- check_result PASS: decision GO, done + auto archive by default
+kfc flow apply --project <path> --plan <id> --route build --result progress
+kfc flow apply --project <path> --plan <id> --route check --result block|pass
+kfc flow next --project <path> --plan <id> --style narrative
 ```
 
 Server resolution:
@@ -113,6 +112,6 @@ Server resolution:
 
 ## Fast Troubleshooting
 
-- Missing `.local/`: run `kfc plan init --project .`.
+- Missing `.local/`: run `kfc flow ensure-plan --project .`.
 - Skill/rules mismatch after edits: run `npm run codex:sync -- --profile dogfood --force` and restart Codex CLI.
 - Build route blocked: check `resources/docs/PLAN_CONTRACT_V1.md` build readiness gate.

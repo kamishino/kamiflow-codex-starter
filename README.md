@@ -25,6 +25,7 @@ This repository is the CLI source and the dogfooding environment.
 - `kfc doctor`
 - `kfc plan init|serve|validate`
 - `kfc plan workspace ...`
+- `kfc flow ensure-plan|apply|next`
 - `kfc run`
 - `kf` is an optional shorthand alias for `kfc`
 
@@ -47,6 +48,12 @@ Plan command notes:
   - `POST /api/projects/:project_id/plans/:id/automation/apply`
 - Plan bootstrap:
   - `kfc plan init --project <path> --new` always creates a fresh plan file (`YYYY-MM-DD-00x-new-plan.md`).
+
+Flow command notes:
+
+- `kfc flow ensure-plan` resolves or auto-creates a plan file.
+- `kfc flow apply` persists route phase updates (plan/build/check) into the plan record.
+- `kfc flow next --style narrative` prints the human next action plus machine next command/mode.
 
 ## Local Workflow
 
@@ -123,6 +130,14 @@ KFP local loop (client-facing via `kfc`):
 kfc plan init --project .
 kfc plan validate --project .
 kfc plan serve --project . --port 4310
+```
+
+Deterministic CLI loop (simplified):
+
+```bash
+kfc flow ensure-plan --project .
+kfc flow apply --project . --plan <plan-id> --route plan --result go
+kfc flow next --project . --plan <plan-id> --style narrative
 ```
 
 KFP UI includes a workflow command center with Codex action buttons (`plan|build|check|fix`) and live activity updates.

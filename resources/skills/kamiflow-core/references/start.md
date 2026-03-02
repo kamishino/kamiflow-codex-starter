@@ -42,7 +42,7 @@ Use this route to convert a vague idea into a ranked shortlist and produce hando
 - `recommended_route`
 9. Emit one exact `Run next:` command that invokes `plan` with `START_CONTEXT`.
    - The command must include plan-file bootstrap instruction:
-     - ensure file exists via `kfc plan init --project <path> --new` when no target file is provided.
+     - ensure file exists via `kfc flow ensure-plan --project <path>` when no target file is provided.
 10. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`
 - `Reason`
@@ -51,6 +51,7 @@ Use this route to convert a vague idea into a ranked shortlist and produce hando
 - `Pre-mortem Risk`
 - `Handoff Confidence`
 11. End with one handoff route: `plan`, `build`, or `research`.
+12. Include narrative next action and machine footer fields at the end.
 
 ## Output
 

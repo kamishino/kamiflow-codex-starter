@@ -23,12 +23,12 @@ Wording refinement only: no route logic changes in this phase.
 4. Resolve target plan file using this exact order:
    1. user-provided file path
    2. active draft/ready plan
-   3. `kfc plan init --project <path> --new`, then capture created path from `[kfp] Created template:`
+   3. `kfc flow ensure-plan --project <path>`, then capture `plan_path` from JSON output
 5. If no target file can be resolved, return `BLOCK` using this format:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
-   - `Recovery: kfc plan init --project <path> --new`
-   - `Expected: [kfp] Created template: <absolute-path>`
+   - `Recovery: kfc flow ensure-plan --project <path>`
+   - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 6. Define problem and scope boundaries.
 7. List constraints and assumptions.
 8. Propose implementation approach and affected areas.
@@ -50,7 +50,11 @@ Wording refinement only: no route logic changes in this phase.
    - `decision: GO`
    - `next_command: build`
    - `next_mode: Build`
-16. End with next command: `build`.
+16. Persist plan phase/handoff update via deterministic command:
+   - `kfc flow apply --project <path> --plan <plan_id> --route plan --result go`
+17. Resolve next-step narrative after persistence:
+   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+18. End with narrative next action and machine footer (`Next Command: build`, `Next Mode: Build`).
 
 ## Output
 
@@ -61,6 +65,7 @@ When ready, final footer must include:
 - `Selected Mode: Plan`
 - `Next Command: build`
 - `Next Mode: Build`
+- include `Next Action: <narrative>` immediately before footer
 
 ## Exit Criteria
 

@@ -27,11 +27,11 @@ Use this route to execute an approved plan.
    - Health check: `GET <base>/api/health` expects `{ "ok": true }`
    - If unreachable, return `BLOCK` with exact recovery command:
      - `kfc plan serve --project <path> --port <n>`
-8. Apply build result via Plan UI automation API:
-   - `POST /api/plans/<id>/automation/apply`
-   - `action_type: build_result`
-   - include task-scoped checklist updates and WIP evidence
-9. End with next command: `check`.
+8. Persist build phase/progress via deterministic command:
+   - `kfc flow apply --project <path> --plan <plan_id> --route build --result progress [--payload <json-file>]`
+9. Resolve next-step narrative after persistence:
+   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+10. End with narrative next action and machine footer (`Next Command: check`, `Next Mode: Plan`).
 
 ## Output
 

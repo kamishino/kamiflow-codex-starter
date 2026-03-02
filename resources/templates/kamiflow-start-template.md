@@ -27,4 +27,4 @@ Output requirements:
   - `recommended_route`
 - End with exact next command for plan.
 - If target plan file is missing, include bootstrap command:
-  - `kfc plan init --project <path> --new`
+  - `kfc flow ensure-plan --project <path>`

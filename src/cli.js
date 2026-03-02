@@ -3,6 +3,7 @@ import { runInit } from "./commands/init.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runWorkflow } from "./commands/run.js";
 import { runPlan } from "./commands/plan.js";
+import { runFlow } from "./commands/flow.js";
 import { error } from "./lib/logger.js";
 
 function printUsage() {
@@ -15,6 +16,7 @@ Commands:
   init       Create kamiflow.config.json in current directory
   doctor     Validate environment, config, and resources directory
   plan       Run kfp plan workflow (init|serve|validate)
+  flow       Deterministic plan guardrails (ensure-plan|apply|next)
   run        Execute Kami Flow (placeholder)
   help       Show this usage
 
@@ -28,6 +30,11 @@ plan options:
   kfc plan init [--project <path>]
   kfc plan serve [--project <path>] [--port <n>]
   kfc plan validate [--project <path>]
+
+flow options:
+  kfc flow ensure-plan --project <path> [--plan <path|plan_id>] [--new]
+  kfc flow apply --project <path> --plan <path|plan_id> --route <plan|build|check|fix|research|start> --result <go|progress|pass|block>
+  kfc flow next --project <path> --plan <path|plan_id> --style narrative
 `);
 }
 
@@ -76,6 +83,10 @@ export async function runCli(argv) {
 
     if (command === "plan") {
       return await runPlan({ cwd: global.cwd, args: commandArgs });
+    }
+
+    if (command === "flow") {
+      return await runFlow({ cwd: global.cwd, args: commandArgs });
     }
 
     error(`Unknown command: ${command}`);

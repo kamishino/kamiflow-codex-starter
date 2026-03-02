@@ -20,13 +20,12 @@ Use this route for quality verification and review gates.
    - Health check: `GET <base>/api/health` expects `{ "ok": true }`
    - If unreachable, return `BLOCK` with exact recovery command:
      - `kfc plan serve --project <path> --port <n>`
-7. Apply check result via Plan UI automation API:
-   - `POST /api/plans/<id>/automation/apply`
-   - `action_type: check_result`
-   - `check.result: PASS | BLOCK`
-   - include findings in WIP evidence
-   - PASS auto-archives by default
-8. End with next command: `fix` or `done`.
+7. Persist check decision via deterministic command:
+   - PASS: `kfc flow apply --project <path> --plan <plan_id> --route check --result pass [--payload <json-file>]`
+   - BLOCK: `kfc flow apply --project <path> --plan <plan_id> --route check --result block [--payload <json-file>]`
+8. Resolve next-step narrative after persistence:
+   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+9. End with narrative next action and machine footer (`Next Command: fix|done`, `Next Mode: Build|done`).
 
 ## Output
 

@@ -13,7 +13,11 @@ Use this route when key facts are missing or risk is high.
 2. Gather evidence from repo and primary docs.
 3. Compare viable options with tradeoffs.
 4. Recommend one option with rationale.
-5. End with next command: `plan` or `start`.
+5. Persist handoff phase via deterministic command:
+   - `kfc flow apply --project <path> --plan <plan_id> --route research --result progress [--payload <json-file>]`
+6. Resolve next-step narrative after persistence:
+   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+7. End with narrative next action and machine footer (`Next Command: plan|start`, `Next Mode: Plan`).
 
 ## Output
 

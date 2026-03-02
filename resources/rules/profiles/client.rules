@@ -48,3 +48,10 @@ prefix_rule(
   match = ["npm pack --silent"],
   not_match = ["npm pack"]
 )
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["kfc", "flow", "apply"],
+  match = ["kfc flow apply --project . --plan PLAN-1 --route build --result progress"],
+  not_match = ["kfc flow next --project . --plan PLAN-1"]
+)

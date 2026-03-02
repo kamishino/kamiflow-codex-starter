@@ -19,7 +19,7 @@ Request:
 - Resolve target plan file in this order:
   1. user-provided file path
   2. active draft/ready plan
-  3. `kfc plan init --project <path> --new`
+  3. `kfc flow ensure-plan --project <path>`
 
 Output requirements:
 - Concrete file-level tasks.
@@ -35,5 +35,5 @@ Blocking behavior:
 - If plan file cannot be resolved, return:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc plan init --project <path> --new`
-  - `Expected: [kfp] Created template: <absolute-path>`
+  - `Recovery: kfc flow ensure-plan --project <path>`
+  - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`

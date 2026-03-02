@@ -15,9 +15,11 @@
 ## Decision
 - Result: PASS | BLOCK
 - Required next command: fix | done
+- Next action: <narrative next step>
 
 ## Mode
 - Selected Mode: Plan | Build
 - Mode Reason:
+- Next Action:
 - Next Command: fix | done
 - Next Mode: Build | done

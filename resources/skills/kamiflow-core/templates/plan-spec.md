@@ -34,9 +34,11 @@
 
 ## Handoff
 - Next command: build
+- Next action: Implement the next scoped task and record validation outcomes in the plan.
 
 ## Mode
 - Selected Mode: Plan
 - Mode Reason:
+- Next Action:
 - Next Command: build
 - Next Mode: Build

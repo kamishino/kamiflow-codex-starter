@@ -16,12 +16,12 @@ Expected:
 - resolve target plan file in this order:
   1. user-provided path
   2. active draft/ready plan
-  3. `kfc plan init --project <path> --new`
+  3. `kfc flow ensure-plan --project <path>`
 - if plan file resolution fails, return BLOCK with:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc plan init --project <path> --new`
-  - `Expected: [kfp] Created template: <absolute-path>`
+  - `Recovery: kfc flow ensure-plan --project <path>`
+  - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 - zero unresolved high-impact decisions
 - Start Summary is present and non-placeholder
 - build-ready checklist is explicitly satisfied:
@@ -46,8 +46,8 @@ Plan output example (blocked):
 ```text
 Status: BLOCK
 Reason: No target plan file was resolved.
-Recovery: kfc plan init --project <path> --new
-Expected: [kfp] Created template: <absolute-path>
+Recovery: kfc flow ensure-plan --project <path>
+Expected: {"ok":true,"plan_path":"<absolute-path>",...}
 ```
 
 ## Start Route
@@ -79,7 +79,8 @@ Expected:
 - if API is unreachable, return BLOCK with:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`
-- update plan via `POST /api/plans/<id>/automation/apply` with `action_type: build_result`
+- update plan via `kfc flow apply --project <path> --plan <id> --route build --result progress`
+- include `Next Action` narrative plus machine footer (`Next Command`, `Next Mode`)
 
 ## Check Route
 
@@ -96,6 +97,7 @@ Expected:
 - if API is unreachable, return BLOCK with:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`
-- apply decision via `POST /api/plans/<id>/automation/apply` with `action_type: check_result`
+- apply decision via `kfc flow apply --project <path> --plan <id> --route check --result pass|block`
+- include `Next Action` narrative plus machine footer (`Next Command`, `Next Mode`)
 
 When check result is `PASS`, automation apply auto-archives by default (`auto_archive_on_pass: true`).

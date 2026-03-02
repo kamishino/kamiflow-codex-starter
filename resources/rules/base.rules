@@ -30,6 +30,27 @@ prefix_rule(
 )
 
 prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "flow", "ensure-plan"],
+  match = ["kfc flow ensure-plan --project ."],
+  not_match = ["kfc flow next --project . --plan PLAN-1"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "flow", "next"],
+  match = ["kfc flow next --project . --plan PLAN-1 --style narrative"],
+  not_match = ["kfc flow ensure-plan --project ."]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "flow", "apply"],
+  match = ["kfc flow apply --project . --plan PLAN-1 --route build --result progress"],
+  not_match = ["kfc flow next --project . --plan PLAN-1"]
+)
+
+prefix_rule(
   decision = "prompt",
   pattern = ["npm", "link"],
   match = ["npm link"],
