@@ -9,3 +9,10 @@ Current Kami Flow templates are kept with the skill:
 Cross-project validation templates:
 
 - `resources/templates/portability-smoke-log.md`
+
+Kami Flow prompt templates:
+
+- `resources/templates/kamiflow-start-template.md`
+- `resources/templates/kamiflow-plan-template.md`
+- `resources/templates/kamiflow-build-template.md`
+- `resources/templates/kamiflow-check-template.md`
