@@ -12,6 +12,21 @@ const workspaceBadgeEl = document.querySelector("#workspace-badge");
 const projectBadgeEl = document.querySelector("#project-badge");
 const connectionBadgeEl = document.querySelector("#connection-badge");
 
+const PRIMARY_ACTION_META = {
+  "codex-plan": { label: "Run Plan", mode: "Plan" },
+  "codex-build": { label: "Run Build", mode: "Build" },
+  "codex-check": { label: "Run Check", mode: "Plan" },
+  "codex-fix": { label: "Run Fix", mode: "Build" }
+};
+
+const PRIMARY_ACTION_ORDER = ["codex-plan", "codex-build", "codex-check", "codex-fix"];
+const RECOMMENDED_BY_NEXT_COMMAND = {
+  plan: "codex-plan",
+  build: "codex-build",
+  check: "codex-check",
+  fix: "codex-fix"
+};
+
 let currentStream;
 let lastHeartbeatTs = 0;
 let staleTimer = null;
@@ -57,9 +72,49 @@ function setConnectionState(state) {
   connectionBadgeEl.textContent = "disconnected";
 }
 
+function formatClock(iso) {
+  const date = new Date(iso);
+  return date.toLocaleTimeString([], { hour12: false });
+}
+
+function formatEventLabel(eventType) {
+  return String(eventType || "event")
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function activityTone(eventType) {
+  const key = String(eventType || "").toLowerCase();
+  if (
+    key.includes("failed") ||
+    key.includes("error") ||
+    key.includes("invalid") ||
+    key.includes("block")
+  ) {
+    return "error";
+  }
+  if (key.includes("warn") || key.includes("stale") || key.includes("resync") || key.includes("deleted")) {
+    return "warn";
+  }
+  if (
+    key.includes("completed") ||
+    key.includes("applied") ||
+    key.includes("saved") ||
+    key.includes("archived") ||
+    key.includes("updated") ||
+    key.includes("connected")
+  ) {
+    return "ok";
+  }
+  return "info";
+}
+
 function addActivity(eventType, message, detail) {
+  const tone = activityTone(eventType);
   const entry = {
     eventType,
+    eventLabel: formatEventLabel(eventType),
+    tone,
     message,
     detail: detail || "",
     ts: nowIso()
@@ -68,10 +123,22 @@ function addActivity(eventType, message, detail) {
   activityEl.innerHTML = activityItems
     .map(
       (item) =>
-        '<li class="activity-item">' +
-        "<time>" + item.ts + "</time>" +
-        "<strong>" + item.eventType + "</strong>" +
-        "<div>" + item.message + "</div>" +
+        '<li class="activity-item activity-item-' +
+        item.tone +
+        '">' +
+        '<div class="activity-head">' +
+        "<time>" +
+        formatClock(item.ts) +
+        "</time>" +
+        '<span class="activity-tag activity-tag-' +
+        item.tone +
+        '">' +
+        item.eventLabel +
+        "</span>" +
+        "</div>" +
+        '<div class="activity-message">' +
+        escapeHtml(item.message) +
+        "</div>" +
         (item.detail ? "<pre>" + escapeHtml(item.detail) + "</pre>" : "") +
         "</li>"
     )
@@ -124,7 +191,19 @@ function renderList(plans) {
   });
 
   if (!filtered.length) {
-    planListEl.innerHTML = "<li>No plans found in selected project</li>";
+    const title =
+      mode === "done"
+        ? "No completed plans in this project."
+        : mode === "active"
+          ? "No active plans in this project."
+          : "No plans in this project.";
+    planListEl.innerHTML =
+      '<li class="empty-state">' +
+      "<strong>" +
+      title +
+      "</strong>" +
+      "<small>Next: run <code>kfc plan init --project . --new</code>, then run <code>$kamiflow-core plan</code>.</small>" +
+      "</li>";
     return;
   }
 
@@ -257,7 +336,10 @@ function buildActionGuardrails(detail) {
     applyCheckPass: false,
     archive: false
   };
-  const reasons = [];
+  const blockers = [];
+  const addBlocker = (reason, nextStep) => {
+    blockers.push({ reason, nextStep });
+  };
 
   if (isArchived) {
     flags.codexPlan = true;
@@ -268,8 +350,8 @@ function buildActionGuardrails(detail) {
     flags.applyCheckBlock = true;
     flags.applyCheckPass = true;
     flags.archive = true;
-    reasons.push("Plan is archived.");
-    return { flags, reasons };
+    addBlocker("Plan is archived.", "Switch to Done view for history, or start a new plan.");
+    return { flags, blockers };
   }
 
   if (isDone) {
@@ -279,36 +361,55 @@ function buildActionGuardrails(detail) {
     flags.applyBuild = true;
     flags.applyCheckBlock = true;
     flags.applyCheckPass = true;
-    reasons.push("Plan is already done.");
+    addBlocker("Plan is already done.", "Create a new plan for additional implementation work.");
   }
 
   if (!startGate.ok) {
     flags.codexBuild = true;
     flags.applyBuild = true;
-    reasons.push("Start gate: " + startGate.reason);
+    addBlocker("Start gate: " + startGate.reason, "Open Work Panel and complete Start Summary fields.");
   }
 
   if (summary.decision !== "GO") {
     flags.codexBuild = true;
     flags.applyBuild = true;
-    reasons.push("Build actions require decision GO.");
+    addBlocker("Build actions require decision GO.", "Run plan phase to resolve decisions and set GO.");
   }
 
   if (summary.next_mode !== "Build" && summary.next_command !== "build" && !isDone) {
     flags.codexBuild = true;
-    reasons.push("Current handoff is not build-ready.");
+    addBlocker(
+      "Current handoff is not build-ready.",
+      "Run the handoff command shown in Plan Health, then return to Build."
+    );
   }
 
   if (!allAcChecked) {
     flags.archive = true;
-    reasons.push("Archive requires all Acceptance Criteria checked.");
+    addBlocker(
+      "Archive requires all Acceptance Criteria checked.",
+      "Complete acceptance checklist in Work Panel and apply Check PASS."
+    );
   }
 
   if (!isDone) {
     flags.archive = true;
   }
 
-  return { flags, reasons };
+  return { flags, blockers };
+}
+
+function buildPrimaryActionOrder(summary) {
+  const recommended = RECOMMENDED_BY_NEXT_COMMAND[summary?.next_command] || "codex-plan";
+  return [recommended, ...PRIMARY_ACTION_ORDER.filter((id) => id !== recommended)];
+}
+
+function guardForAction(guardrails, actionId) {
+  if (actionId === "codex-plan") return guardrails.flags.codexPlan;
+  if (actionId === "codex-build") return guardrails.flags.codexBuild;
+  if (actionId === "codex-check") return guardrails.flags.codexCheck;
+  if (actionId === "codex-fix") return guardrails.flags.codexFix;
+  return false;
 }
 
 function renderWorkflow(summary) {
@@ -355,22 +456,70 @@ function renderHealth(detail) {
 function renderActionConsole(detail) {
   const guardrails = buildActionGuardrails(detail);
   const btnDisabled = (flag) => (flag ? "disabled" : "");
-  const reasonHtml = guardrails.reasons.length
+  const primaryOrder = buildPrimaryActionOrder(detail.summary);
+  const recommendedActionId = primaryOrder[0];
+  const primaryHtml = primaryOrder
+    .map((actionId) => {
+      const meta = PRIMARY_ACTION_META[actionId];
+      const isRecommended = actionId === recommendedActionId;
+      const classes = ["btn-primary"];
+      if (isRecommended) {
+        classes.push("btn-recommended");
+      }
+      return (
+        '<button class="' +
+        classes.join(" ") +
+        '" id="' +
+        actionId +
+        '" ' +
+        btnDisabled(guardForAction(guardrails, actionId)) +
+        ">" +
+        '<span class="btn-title">' +
+        meta.label +
+        "</span>" +
+        '<small class="btn-subtitle">Mode: ' +
+        meta.mode +
+        (isRecommended ? " | Recommended now" : "") +
+        "</small>" +
+        "</button>"
+      );
+    })
+    .join("");
+
+  const reasonHtml = guardrails.blockers.length
     ? '<ul class="guardrail-list">' +
-      guardrails.reasons.map((reason) => "<li>" + escapeHtml(reason) + "</li>").join("") +
+      guardrails.blockers
+        .map(
+          (item) =>
+            "<li>" +
+            '<span class="guardrail-reason">' +
+            escapeHtml(item.reason) +
+            "</span>" +
+            '<span class="guardrail-next">Next: ' +
+            escapeHtml(item.nextStep) +
+            "</span>" +
+            "</li>"
+        )
+        .join("") +
       "</ul>"
-    : '<p class="guardrail-ok">All action gates are satisfied.</p>';
+    : '<p class="guardrail-ok">All action gates are satisfied. Follow the recommended primary action.</p>';
 
   actionEl.innerHTML = `
-    <div class="action-grid">
-      <button class="btn-primary" id="codex-plan" ${btnDisabled(guardrails.flags.codexPlan)}>Run Plan</button>
-      <button class="btn-primary" id="codex-build" ${btnDisabled(guardrails.flags.codexBuild)}>Run Build</button>
-      <button class="btn-primary" id="codex-check" ${btnDisabled(guardrails.flags.codexCheck)}>Run Check</button>
-      <button class="btn-primary" id="codex-fix" ${btnDisabled(guardrails.flags.codexFix)}>Run Fix</button>
-      <button id="apply-build-result" ${btnDisabled(guardrails.flags.applyBuild)}>Apply Build Result</button>
-      <button class="btn-warn" id="apply-check-block" ${btnDisabled(guardrails.flags.applyCheckBlock)}>Apply Check BLOCK</button>
-      <button class="btn-primary" id="apply-check-pass" ${btnDisabled(guardrails.flags.applyCheckPass)}>Apply Check PASS</button>
-      <button class="btn-danger" id="archive-plan" ${btnDisabled(guardrails.flags.archive)}>Archive Done</button>
+    <div class="action-section">
+      <h3>Primary Workflow Action</h3>
+      <p class="action-hint">Use the recommended command first, then move to apply/finalize controls.</p>
+      <div class="action-grid action-grid-primary">
+        ${primaryHtml}
+      </div>
+    </div>
+    <div class="action-section">
+      <h3>Apply / Finalize (Advanced)</h3>
+      <div class="action-grid action-grid-secondary">
+        <button class="btn-quiet" id="apply-build-result" ${btnDisabled(guardrails.flags.applyBuild)}>Apply Build Result</button>
+        <button class="btn-warn btn-quiet" id="apply-check-block" ${btnDisabled(guardrails.flags.applyCheckBlock)}>Apply Check BLOCK</button>
+        <button class="btn-quiet" id="apply-check-pass" ${btnDisabled(guardrails.flags.applyCheckPass)}>Apply Check PASS</button>
+        <button class="btn-danger btn-quiet" id="archive-plan" ${btnDisabled(guardrails.flags.archive)}>Archive Done</button>
+      </div>
     </div>
     <div class="guardrail-box">
       <strong>Action Guards</strong>
@@ -525,6 +674,22 @@ function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function renderNoSelectionState(reason, nextStep) {
+  const card =
+    '<div class="empty-panel">' +
+    "<strong>" +
+    escapeHtml(reason) +
+    "</strong>" +
+    "<small>" +
+    escapeHtml(nextStep) +
+    "</small>" +
+    "</div>";
+  workflowEl.innerHTML = card;
+  healthEl.innerHTML = card;
+  actionEl.innerHTML = card;
+  workEl.innerHTML = card;
+}
+
 async function postJson(url, payload) {
   const res = await fetch(url, {
     method: "POST",
@@ -533,6 +698,22 @@ async function postJson(url, payload) {
   });
   const body = await res.json();
   return { ok: res.ok, status: res.status, body };
+}
+
+function resolveFailureHint(errorCode) {
+  if (errorCode === "START_GATE_FAILED") {
+    return "Complete Start Summary in Work Panel, then retry Build.";
+  }
+  if (errorCode === "PLAN_NOT_FOUND") {
+    return "Select a valid plan in sidebar and retry.";
+  }
+  if (errorCode === "VERSION_CONFLICT") {
+    return "Reload plan detail and retry action.";
+  }
+  if (errorCode === "COMPLETION_GATE_FAILED") {
+    return "Ensure all Acceptance Criteria are checked before archive.";
+  }
+  return "Check Action Guards and follow the recommended next step.";
 }
 
 async function triggerCodexAction(detail, actionType, modeHint) {
@@ -547,7 +728,13 @@ async function triggerCodexAction(detail, actionType, modeHint) {
   });
 
   if (!res.ok) {
-    setStatus("Codex action failed: " + (res.body.error_code || res.body.error || "unknown"));
+    const errorCode = res.body.error_code || "";
+    setStatus(
+      "Codex action failed: " +
+        (errorCode || res.body.error || "unknown") +
+        ". Next: " +
+        resolveFailureHint(errorCode)
+    );
     addActivity("codex_run_failed", "Action failed", JSON.stringify(res.body, null, 2));
     return;
   }
@@ -578,7 +765,13 @@ function bindActionConsole(detail) {
     };
     const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/automation/apply", payload);
     if (!res.ok) {
-      setStatus("Build apply failed: " + (res.body.error || res.body.error_code || "unknown"));
+      const errorCode = res.body.error_code || "";
+      setStatus(
+        "Build apply failed: " +
+          (res.body.error || errorCode || "unknown") +
+          ". Next: " +
+          resolveFailureHint(errorCode)
+      );
       return;
     }
     setStatus("Build result applied.");
@@ -603,7 +796,13 @@ function bindActionConsole(detail) {
     };
     const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/automation/apply", payload);
     if (!res.ok) {
-      setStatus("Check BLOCK apply failed: " + (res.body.error || res.body.error_code || "unknown"));
+      const errorCode = res.body.error_code || "";
+      setStatus(
+        "Check BLOCK apply failed: " +
+          (res.body.error || errorCode || "unknown") +
+          ". Next: " +
+          resolveFailureHint(errorCode)
+      );
       return;
     }
     setStatus("Check BLOCK applied.");
@@ -628,7 +827,13 @@ function bindActionConsole(detail) {
     };
     const res = await postJson(projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId) + "/automation/apply", payload);
     if (!res.ok) {
-      setStatus("Check PASS apply failed: " + (res.body.error || res.body.error_code || "unknown"));
+      const errorCode = res.body.error_code || "";
+      setStatus(
+        "Check PASS apply failed: " +
+          (res.body.error || errorCode || "unknown") +
+          ". Next: " +
+          resolveFailureHint(errorCode)
+      );
       return;
     }
     setStatus("Check PASS applied.");
@@ -644,7 +849,13 @@ function bindActionConsole(detail) {
       check_passed: true
     });
     if (!res.ok) {
-      setStatus("Archive failed: " + (res.body.error || res.body.error_code || "unknown"));
+      const errorCode = res.body.error_code || "";
+      setStatus(
+        "Archive failed: " +
+          (res.body.error || errorCode || "unknown") +
+          ". Next: " +
+          resolveFailureHint(errorCode)
+      );
       return;
     }
     setStatus("Plan archived.");
@@ -657,10 +868,10 @@ function bindActionConsole(detail) {
 async function loadDetail() {
   const route = parseRoute();
   if (!route) {
-    workflowEl.innerHTML = "<p>Select a plan to start.</p>";
-    healthEl.innerHTML = "<p>No plan selected.</p>";
-    actionEl.innerHTML = "<p>No actions available.</p>";
-    workEl.innerHTML = "<p>No work surface.</p>";
+    renderNoSelectionState(
+      "No plan selected.",
+      "Choose a plan from the left list. If none exists, run kfc plan init --project . --new."
+    );
     return;
   }
 
@@ -671,7 +882,8 @@ async function loadDetail() {
 
   const res = await fetch(projectApiBase(route.projectId) + "/plans/" + encodeURIComponent(route.planId) + "?include_done=true");
   if (!res.ok) {
-    setStatus("Plan not found.");
+    setStatus("Plan not found. Select another plan or refresh list.");
+    renderNoSelectionState("Selected plan is unavailable.", "Refresh list or pick another plan from sidebar.");
     return;
   }
 
@@ -780,7 +992,8 @@ async function loadList() {
   const projectId = currentProjectId();
   projectBadgeEl.textContent = "project: " + (projectId || "-");
   if (!projectId) {
-    planListEl.innerHTML = "<li>No projects configured</li>";
+    planListEl.innerHTML =
+      '<li class="empty-state"><strong>No projects configured.</strong><small>Run <code>kfc plan workspace add &lt;name&gt; --project &lt;path&gt;</code>.</small></li>';
     return;
   }
   const includeDone = currentFilter() !== "active";

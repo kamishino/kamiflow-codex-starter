@@ -394,6 +394,19 @@ updated_at: 2026-03-01
     });
     assert.equal(appJsResponse.statusCode, 200);
     assert.ok(appJsResponse.payload.includes("Action Guards"));
+    assert.ok(appJsResponse.payload.includes("Primary Workflow Action"));
+    assert.ok(appJsResponse.payload.includes("Recommended now"));
+    assert.ok(appJsResponse.payload.includes("No plan selected."));
+    assert.ok(appJsResponse.payload.includes("activity-tag"));
+
+    const stylesResponse = await server.inject({
+      method: "GET",
+      url: "/assets/styles.css"
+    });
+    assert.equal(stylesResponse.statusCode, 200);
+    assert.ok(stylesResponse.payload.includes(".btn-recommended"));
+    assert.ok(stylesResponse.payload.includes(".empty-state"));
+    assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
 
     await server.close();
   });

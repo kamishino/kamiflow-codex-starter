@@ -137,9 +137,11 @@ The browser UI provides:
 
 - workflow rail (`Start -> Plan -> Build -> Check -> Done`)
 - plan health summary
-- action console for Codex actions (`plan|build|check|fix`)
-- automation apply shortcuts (`build_result`, `check_result`)
-- compact activity feed for plan and codex run events
+- action console with recommended primary command first (`plan|build|check|fix`)
+- guarded blocked-state guidance with explicit `Next:` recovery steps
+- advanced apply/finalize shortcuts (`build_result`, `check_result`, archive)
+- compact activity feed with severity tags (`info|ok|warn|error`) for faster scan
+- actionable empty states (no project / no plan / missing selection)
 
 Typography:
 
