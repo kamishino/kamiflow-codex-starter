@@ -24,6 +24,7 @@
     "bootstrap": "npm run codex:setup && npm run codex:sync -- --scope repo --force && npm run hooks:enable",
     "hooks:enable": "node scripts/git-hooks/enable-hooks.mjs",
     "hooks:check": "node scripts/git-hooks/check-hooks.mjs",
+    "commit:codex": "pwsh -NoProfile -File scripts/git-hooks/commit-with-validation.ps1",
     "commit:check": "git log -1 --pretty=%B | node scripts/git-hooks/commit-msg.mjs --stdin",
     "plan-ui:init": "node scripts/plan-ui/run-kfp.mjs init",
     "plan-ui:serve": "node scripts/plan-ui/run-kfp.mjs serve",

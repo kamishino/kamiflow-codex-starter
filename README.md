@@ -121,6 +121,16 @@ Validate the latest commit subject manually:
 npm run commit:check
 ```
 
+Codex commit flow:
+
+```bash
+git add <files>
+npm run commit:codex -- --message "type(scope): summary"
+```
+
+`commit:codex` validates the commit subject first, then runs `git commit`.
+If the known Windows sandbox hook runtime error appears (`Win32 error 5` from Git shell tooling), it retries with `--no-verify` after validation.
+
 ## Portability Smoke (One External Repo)
 
 Run a baseline portability validation against another project:
@@ -203,6 +213,7 @@ See:
 - `resources/docs/CODEX_KFP_RUNBOOK.md`
 - `resources/docs/ROUTE_PROMPTS.md`
 - `resources/docs/CONTRIBUTOR_BOOTSTRAP.md`
+- `resources/docs/CODEX_COMMIT_FLOW.md`
 
 ## `.codex` Policy
 
