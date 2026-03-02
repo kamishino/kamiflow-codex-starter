@@ -61,7 +61,14 @@ Client command notes:
 - `kfc client bootstrap` prepares and verifies a client project (config, plan UI dependency, rules, health check).
 - `kfc client doctor` runs strict diagnostics without mutating project files.
 
+## Command Boundary
+
+- Run in KFC Repo (dogfooding/maintainer): use `npm run ...`
+- Run in Client Project: use `kfc ...` or `npx --no-install kfc ...`
+
 ## First Clone Setup
+
+### Run in KFC Repo
 
 Run this once after cloning:
 
@@ -82,27 +89,33 @@ npm run dogfood:link
 
 This repository is the install source. You do not need public npm publishing.
 
-1. In this repo:
+### Run in KFC Repo
+
+Prepare linked package once:
 
 ```bash
 npm install
 npm run link:self
 ```
 
-2. In the client project:
+Maintainer convenience:
+
+```bash
+npm run client:link-bootstrap -- --project <path-to-client-project>
+```
+
+### Run in Client Project
+
+Link and bootstrap:
 
 ```bash
 npm link @kamishino/kamiflow-codex
 npx --no-install kfc client bootstrap --project . --profile client
 ```
 
-Maintainer convenience (run from this repo):
-
-```bash
-npm run client:link-bootstrap -- --project <path-to-client-project>
-```
-
 ## Versioning (No Publish)
+
+### Run in KFC Repo
 
 This repo uses hybrid versioning:
 
@@ -130,6 +143,8 @@ npm run pack:commit
 
 ## Local Workflow
 
+### Run in KFC Repo
+
 1. Link package:
 ```bash
 npm run dogfood:link
@@ -150,6 +165,8 @@ npm run dogfood:unlink
 ```
 
 ## Clean Commit Setup
+
+### Run in KFC Repo
 
 `npm run bootstrap` is the recommended setup path and already enables hooks.
 If you need to repair local hook config manually:
@@ -189,6 +206,8 @@ If the known Windows sandbox hook runtime error appears (`Win32 error 5` from Gi
 
 ## Portability Smoke (One External Repo)
 
+### Run in KFC Repo
+
 Run a baseline portability validation against another project:
 
 ```bash
@@ -202,6 +221,8 @@ This writes a markdown report to `artifacts/portability/`.
 See `resources/docs/PORTABILITY_RUNBOOK.md` for the full flow and criteria.
 
 ## In-Repo Codex Dogfooding
+
+### Run in KFC Repo
 
 Create local `.codex/config.toml` from the committed example:
 
@@ -274,6 +295,7 @@ See:
 - `resources/docs/CONTRIBUTOR_BOOTSTRAP.md`
 - `resources/docs/CODEX_COMMIT_FLOW.md`
 - `resources/docs/VERSIONING_RUNBOOK.md`
+- `resources/docs/COMMAND_BOUNDARY_POLICY.md`
 
 ## `.codex` Policy
 

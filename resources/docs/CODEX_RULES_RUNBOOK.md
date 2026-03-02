@@ -47,6 +47,8 @@ Project config example:
 
 ## Sync Commands
 
+### Run in KFC Repo
+
 Run from repository root (`kamiflow-codex-starter`):
 
 ```bash
@@ -72,6 +74,8 @@ npm run codex:sync:rules -- --scope project --project <path-to-project> --profil
 
 Client-project preferred path:
 
+### Run in Client Project
+
 ```bash
 # In client project after linking kfc:
 npx --no-install kfc client bootstrap --project . --profile client
@@ -80,6 +84,8 @@ npx --no-install kfc client bootstrap --project . --profile client
 `client bootstrap` creates or validates config, ensures plan UI availability (project-local install or linked fallback), and syncs project rules.
 
 ## Verification
+
+### Run in KFC Repo
 
 After sync, validate policy decisions:
 

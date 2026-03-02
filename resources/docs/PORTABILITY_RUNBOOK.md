@@ -21,11 +21,15 @@ Prove one full project-scoped flow in an external repository:
 
 ## Step 1: Link CLI into External Repo
 
+### Run in KFC Repo
+
 From this repo (`kamiflow-codex-starter`):
 
 ```bash
 npm link
 ```
+
+### Run in Client Project
 
 From external repo:
 
@@ -40,6 +44,8 @@ npm i -D @kamishino/kamiflow-plan-ui
 ```
 
 ## Step 2: Baseline `kfc` Checks (External Repo)
+
+### Run in Client Project
 
 ```bash
 npx --no-install kfc --help
@@ -79,6 +85,8 @@ Minimum evidence:
 - blocking reason + recovery (if any)
 
 ## Optional Automation Script
+
+### Run in KFC Repo
 
 This repo includes an executable smoke helper:
 

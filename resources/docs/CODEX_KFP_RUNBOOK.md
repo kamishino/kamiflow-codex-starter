@@ -16,6 +16,8 @@ Prompt wording refinement only in this phase: no route logic changes.
 
 ## Canonical Local Flow
 
+### Run in KFC Repo
+
 1. Sync runtime skills from SSOT:
 
 ```bash
@@ -38,6 +40,16 @@ kfc plan validate --project .
 
 ```bash
 kfc plan serve --project . --port 4310
+```
+
+### Run in Client Project
+
+When KFC is linked into a client repo, use `kfc` commands there (not `npm run` from this repo):
+
+```bash
+npx --no-install kfc client bootstrap --project . --profile client
+kfc flow ensure-plan --project .
+kfc plan validate --project .
 ```
 
 5. Run Codex routes against one plan file:
@@ -111,6 +123,8 @@ Server resolution:
 - If scope/risk increases, reroute to `plan` or `research`.
 
 ## Fast Troubleshooting
+
+### Run in KFC Repo
 
 - Missing `.local/`: run `kfc flow ensure-plan --project .`.
 - Skill/rules mismatch after edits: run `npm run codex:sync -- --profile dogfood --force` and restart Codex CLI.

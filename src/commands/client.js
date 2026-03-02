@@ -40,6 +40,7 @@ const DEFAULT_HEALTH_POLL_MS = 500;
 
 function usage() {
   info("Usage: kfc client <bootstrap|doctor> [options]");
+  info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   info("Examples:");
   info("  kfc client bootstrap --project .");
   info("  kfc client bootstrap --project . --profile client --port 4310");
@@ -453,6 +454,7 @@ async function runBootstrap(options) {
   }
 
   info("Client bootstrap completed successfully.");
+  info("Next steps in this client repo should use `kfc ...` commands.");
   return 0;
 }
 
@@ -512,6 +514,10 @@ async function runClientDoctorOnly(options) {
     } else {
       warn("Rules profile header not found or invalid.");
     }
+  }
+
+  if (ok) {
+    info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
 
   return ok ? 0 : 1;

@@ -41,7 +41,8 @@
     "version:next": "node scripts/release/semver-from-commits.mjs",
     "release:plan": "node scripts/release/plan-release.mjs",
     "release:cut": "node scripts/release/cut-release.mjs",
-    "pack:commit": "node scripts/release/pack-commit.mjs"
+    "pack:commit": "node scripts/release/pack-commit.mjs",
+    "docs:verify-command-boundary": "node scripts/policy/verify-command-boundary.mjs"
   },
   "files": [
     "bin",
