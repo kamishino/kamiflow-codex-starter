@@ -3,6 +3,7 @@
 ## Purpose
 
 Prevent command confusion between maintainers of this repository and client-project users of `kfc`.
+For client onboarding, use `resources/docs/CLIENT_KICKOFF_PROMPT.md` as the standard first Codex prompt.
 
 ## Rule
 

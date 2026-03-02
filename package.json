@@ -44,7 +44,9 @@
     "pack:commit": "node scripts/release/pack-commit.mjs",
     "docs:verify-command-boundary": "node scripts/policy/verify-command-boundary.mjs",
     "docs:sync:quickstart": "node scripts/docs/sync-quickstart.mjs",
-    "docs:verify:quickstart": "node scripts/docs/sync-quickstart.mjs --verify"
+    "docs:verify:quickstart": "node scripts/docs/sync-quickstart.mjs --verify",
+    "docs:sync:client-kickoff": "node scripts/docs/sync-client-kickoff.mjs",
+    "docs:verify:client-kickoff": "node scripts/docs/sync-client-kickoff.mjs --verify"
   },
   "files": [
     "bin",

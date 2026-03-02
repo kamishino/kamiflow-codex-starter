@@ -5,7 +5,9 @@ This repository is the KFC CLI source plus dogfooding workspace.
 ## Start Here
 
 - [QUICKSTART.md](./QUICKSTART.md)
+- [CLIENT_KICKOFF_PROMPT.md](./CLIENT_KICKOFF_PROMPT.md)
 - [resources/docs/QUICKSTART.md](./resources/docs/QUICKSTART.md) (SSOT)
+- [resources/docs/CLIENT_KICKOFF_PROMPT.md](./resources/docs/CLIENT_KICKOFF_PROMPT.md) (SSOT)
 
 ## What Is In Scope
 
@@ -79,6 +81,10 @@ npm link @kamishino/kamiflow-codex
 npx --no-install kfc client bootstrap --project . --profile client
 ```
 
+Then use the kickoff prompt:
+
+- `CLIENT_KICKOFF_PROMPT.md`
+
 ## Versioning (No Publish)
 
 ### Run in KFC Repo
@@ -124,6 +130,8 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 ## Docs Index
 
 - `resources/docs/QUICKSTART.md`
+- `resources/docs/CLIENT_KICKOFF_PROMPT.md`
+- `resources/docs/CLIENT_A2Z_PLAYBOOK.md`
 - `resources/docs/COMMAND_BOUNDARY_POLICY.md`
 - `resources/docs/CODEX_KFP_RUNBOOK.md`
 - `resources/docs/CODEX_RULES_RUNBOOK.md`

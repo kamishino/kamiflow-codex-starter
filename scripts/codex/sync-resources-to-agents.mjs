@@ -269,8 +269,15 @@ function validateComposedRules(rulesText) {
     runPolicyCheck(
       tempRulesPath,
       ["npm", "run", "dogfood:smoke"],
-      rulesProfile === "dogfood" ? "allow" : "prompt"
+      rulesProfile === "dogfood" ? "allow" : "forbidden"
     );
+    if (rulesProfile === "client") {
+      runPolicyCheck(
+        tempRulesPath,
+        ["kfc", "client", "bootstrap", "--project", ".", "--profile", "client"],
+        "allow"
+      );
+    }
   } finally {
     if (fs.existsSync(tempDir)) {
       fs.rmSync(tempDir, { recursive: true, force: true });

@@ -38,11 +38,13 @@ const DEFAULT_PORT = 4310;
 const DEFAULT_HEALTH_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_POLL_MS = 500;
 const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
+const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOFF_PROMPT.md");
 
 function usage() {
   info("Usage: kfc client <bootstrap|doctor> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
+  info("Client kickoff prompt: ./node_modules/@kamishino/kamiflow-codex/resources/docs/CLIENT_KICKOFF_PROMPT.md");
   info("Examples:");
   info("  kfc client bootstrap --project .");
   info("  kfc client bootstrap --project . --profile client --port 4310");
@@ -218,13 +220,29 @@ function resolveClientQuickstartPath(projectDir) {
   return path.join(projectDir, "node_modules", loadPackageName(), QUICKSTART_FILE);
 }
 
-function printQuickstartHint(projectDir) {
+function resolveClientKickoffPromptPath(projectDir) {
+  return path.join(projectDir, "node_modules", loadPackageName(), CLIENT_KICKOFF_PROMPT_FILE);
+}
+
+function printClientDocsHints(projectDir) {
   const quickstartPath = resolveClientQuickstartPath(projectDir);
   if (fs.existsSync(quickstartPath)) {
     info(`Quickstart: ${quickstartPath}`);
-    return;
+  } else {
+    info(`Quickstart path (after install/link): ${quickstartPath}`);
   }
-  info(`Quickstart path (after install/link): ${quickstartPath}`);
+
+  const kickoffPath = resolveClientKickoffPromptPath(projectDir);
+  if (fs.existsSync(kickoffPath)) {
+    info(`Client kickoff prompt: ${kickoffPath}`);
+  } else {
+    info(`Client kickoff prompt path (after install/link): ${kickoffPath}`);
+  }
+}
+
+function printClientNextCommandHints() {
+  info("Next: kfc flow ensure-plan --project .");
+  info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
 }
 
 async function writeConfigFile(configPath, configData) {
@@ -469,7 +487,8 @@ async function runBootstrap(options) {
   }
 
   info("Client bootstrap completed successfully.");
-  printQuickstartHint(options.project);
+  printClientDocsHints(options.project);
+  printClientNextCommandHints();
   info("Next steps in this client repo should use `kfc ...` commands.");
   return 0;
 }
@@ -533,7 +552,8 @@ async function runClientDoctorOnly(options) {
   }
 
   if (ok) {
-    printQuickstartHint(options.project);
+    printClientDocsHints(options.project);
+    printClientNextCommandHints();
     info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
 

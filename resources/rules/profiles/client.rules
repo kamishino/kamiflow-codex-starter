@@ -1,56 +1,93 @@
-# Client profile: safer defaults for external project collaboration.
+# Client profile: enforce client-project command boundaries.
 
+# Wrong-context KFC repository scripts are forbidden in client projects.
 prefix_rule(
-  decision = "prompt",
+  decision = "forbidden",
   pattern = ["npm", "run", "dogfood:link"],
   match = ["npm run dogfood:link"],
   not_match = ["npm run dogfood:smoke"]
 )
 
 prefix_rule(
-  decision = "prompt",
+  decision = "forbidden",
   pattern = ["npm", "run", "dogfood:smoke"],
   match = ["npm run dogfood:smoke"],
   not_match = ["npm run dogfood:link"]
 )
 
 prefix_rule(
-  decision = "prompt",
+  decision = "forbidden",
   pattern = ["npm", "run", "dogfood:pack-smoke"],
   match = ["npm run dogfood:pack-smoke"],
   not_match = ["npm run dogfood:smoke"]
 )
 
 prefix_rule(
-  decision = "prompt",
+  decision = "forbidden",
   pattern = ["npm", "run", "portability:smoke"],
   match = ["npm run portability:smoke -- --project dogfood/realistic-workflow --link"],
   not_match = ["npm run dogfood:smoke"]
 )
 
 prefix_rule(
-  decision = "prompt",
-  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "install"],
-  match = ["npm --prefix packages/kamiflow-plan-ui install"],
-  not_match = ["npm --prefix packages/kamiflow-plan-ui run build"]
+  decision = "forbidden",
+  pattern = ["npm", "run", "codex:sync"],
+  match = ["npm run codex:sync -- --scope repo --force"],
+  not_match = ["npm run codex:setup"]
 )
 
 prefix_rule(
-  decision = "prompt",
-  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "run", "build"],
-  match = ["npm --prefix packages/kamiflow-plan-ui run build"],
-  not_match = ["npm --prefix packages/kamiflow-plan-ui install"]
+  decision = "forbidden",
+  pattern = ["npm", "run", "codex:sync:rules"],
+  match = ["npm run codex:sync:rules -- --scope project --force"],
+  not_match = ["npm run codex:sync:skills"]
 )
 
 prefix_rule(
-  decision = "prompt",
-  pattern = ["npm", "pack", "--silent"],
-  match = ["npm pack --silent"],
-  not_match = ["npm pack"]
+  decision = "forbidden",
+  pattern = ["npm", "run", "codex:sync:skills"],
+  match = ["npm run codex:sync:skills -- --force"],
+  not_match = ["npm run codex:sync:rules -- --scope project --force"]
 )
 
 prefix_rule(
-  decision = "prompt",
+  decision = "forbidden",
+  pattern = ["npm", "run", "release:plan"],
+  match = ["npm run release:plan"],
+  not_match = ["npm run release:cut -- --bump patch"]
+)
+
+prefix_rule(
+  decision = "forbidden",
+  pattern = ["npm", "run", "release:cut"],
+  match = ["npm run release:cut -- --bump patch"],
+  not_match = ["npm run release:plan"]
+)
+
+# Allow core client-project KFC workflow commands.
+prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "client", "bootstrap"],
+  match = ["kfc client bootstrap --project . --profile client"],
+  not_match = ["kfc client doctor --project ."]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "client", "doctor"],
+  match = ["kfc client doctor --project ."],
+  not_match = ["kfc client bootstrap --project . --profile client"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "plan", "validate"],
+  match = ["kfc plan validate --project ."],
+  not_match = ["kfc flow ensure-plan --project ."]
+)
+
+prefix_rule(
+  decision = "allow",
   pattern = ["kfc", "flow", "apply"],
   match = ["kfc flow apply --project . --plan PLAN-1 --route build --result progress"],
   not_match = ["kfc flow next --project . --plan PLAN-1"]
