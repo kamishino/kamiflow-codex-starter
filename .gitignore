@@ -10,3 +10,4 @@ dogfood/*/.codex/
 temp/
 .agents/
 .local/
+.kfc/

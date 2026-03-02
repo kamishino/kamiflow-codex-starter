@@ -18,7 +18,7 @@ Commands:
   doctor     Validate environment, config, and resources directory
   plan       Run kfp plan workflow (init|serve|validate)
   flow       Deterministic plan guardrails (ensure-plan|apply|next)
-  client     Client-project bootstrap and diagnostics
+  client     Client-project one-command setup, diagnostics, and cleanup
   run        Execute Kami Flow (placeholder)
   help       Show this usage
 
@@ -39,8 +39,10 @@ flow options:
   kfc flow next --project <path> --plan <path|plan_id> --style narrative
 
 client options:
+  kfc client [--goal <text>] [--project <path>] [--force] [--skip-serve-check]
   kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check]
   kfc client doctor [--project <path>]
+  kfc client done [--project <path>]
 `);
 }
 

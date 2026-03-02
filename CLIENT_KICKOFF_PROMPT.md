@@ -19,11 +19,10 @@ npm run link:self
 Install/link KFC into the target client repository:
 
 ```bash
-npm link @kamishino/kamiflow-codex
-npx --no-install kfc client bootstrap --project . --profile client
+kfc client
 ```
 
-Then paste this prompt into Codex:
+Then paste this prompt into Codex (or tell Codex to read `.kfc/CODEX_READY.md`):
 
 ```text
 You are my implementation copilot for this client repository using KFC.
@@ -33,21 +32,21 @@ Goal:
 
 Rules:
 1) Use only `kfc ...` commands in this client project.
-2) Start by confirming project readiness using:
-   - `kfc client doctor --project .`
-3) Ensure a plan exists using:
-   - `kfc flow ensure-plan --project .`
-4) Keep phase tracking updated after each meaningful step:
+2) Start from `.kfc/CODEX_READY.md` mission and plan context.
+3) Keep phase tracking updated after each meaningful step:
    - Build progress: `kfc flow apply --project . --plan <plan-id> --route build --result progress`
    - Check pass/block: `kfc flow apply --project . --plan <plan-id> --route check --result pass|block`
-5) After each response, always provide:
+4) After each response, always provide:
    - current phase,
    - what was completed,
    - the next 1-3 concrete actions (commands or file edits).
-6) If blocked, stop and output:
+5) If blocked, stop and output:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
    - `Recovery: <exact command>`
+6) Before declaring completion, always run cleanup:
+   - `kfc client done`
+   - confirm `.kfc/CODEX_READY.md` is removed.
 
 Deliverable expectations:
 - Keep tasks small and verifiable.

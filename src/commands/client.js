@@ -39,13 +39,19 @@ const DEFAULT_HEALTH_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_POLL_MS = 500;
 const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
 const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOFF_PROMPT.md");
+const CLIENT_READY_FILE = path.join(".kfc", "CODEX_READY.md");
+const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 
 function usage() {
-  info("Usage: kfc client <bootstrap|doctor> [options]");
+  info("Usage: kfc client [options]");
+  info("Usage: kfc client <bootstrap|doctor|done> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
   info("Client kickoff prompt: ./node_modules/@kamishino/kamiflow-codex/resources/docs/CLIENT_KICKOFF_PROMPT.md");
   info("Examples:");
+  info("  kfc client");
+  info("  kfc client --goal \"Implement X with tests\"");
+  info("  kfc client done");
   info("  kfc client bootstrap --project .");
   info("  kfc client bootstrap --project . --profile client --port 4310");
   info("  kfc client doctor --project .");
@@ -57,14 +63,21 @@ function parseMajorVersion(version) {
 }
 
 function parseArgs(baseCwd, args) {
-  const [subcommand, ...rest] = args;
+  let subcommand = "start";
+  let rest = args;
+  if (args.length > 0 && !String(args[0]).startsWith("-")) {
+    subcommand = args[0];
+    rest = args.slice(1);
+  }
+
   const parsed = {
-    subcommand: subcommand || "",
+    subcommand,
     project: baseCwd,
-    profile: "",
+    profile: "client",
     port: DEFAULT_PORT,
     force: false,
-    skipServeCheck: false
+    skipServeCheck: false,
+    goal: ""
   };
 
   for (let i = 0; i < rest.length; i += 1) {
@@ -104,8 +117,17 @@ function parseArgs(baseCwd, args) {
       parsed.skipServeCheck = true;
       continue;
     }
+    if (token === "--goal") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --goal.");
+      }
+      parsed.goal = String(value).trim();
+      i += 1;
+      continue;
+    }
     if (token === "--help" || token === "-h") {
-      parsed.subcommand = "";
+      parsed.subcommand = "help";
       return parsed;
     }
     throw new Error(`Unknown option: ${token}`);
@@ -243,6 +265,188 @@ function printClientDocsHints(projectDir) {
 function printClientNextCommandHints() {
   info("Next: kfc flow ensure-plan --project .");
   info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
+}
+
+function resolveClientReadyPath(projectDir) {
+  return path.join(projectDir, CLIENT_READY_FILE);
+}
+
+function resolveClientSessionPath(projectDir) {
+  return path.join(projectDir, CLIENT_SESSION_FILE);
+}
+
+function parseSimpleFrontmatter(markdown) {
+  if (!String(markdown).startsWith("---")) {
+    return {};
+  }
+  const lines = String(markdown).split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return {};
+  }
+  const frontmatter = {};
+  for (const line of lines.slice(1, endIdx)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const sep = trimmed.indexOf(":");
+    if (sep <= 0) {
+      continue;
+    }
+    const key = trimmed.slice(0, sep).trim();
+    const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
+    frontmatter[key] = value;
+  }
+  return frontmatter;
+}
+
+function toTimestamp(value, fallback) {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? fallback : parsed;
+}
+
+async function resolveActivePlan(projectDir) {
+  const plansDir = path.join(projectDir, ".local", "plans");
+  let entries = [];
+  try {
+    entries = await fsp.readdir(plansDir, { withFileTypes: true });
+  } catch (err) {
+    if (err && typeof err === "object" && err.code === "ENOENT") {
+      return null;
+    }
+    throw err;
+  }
+
+  const planCandidates = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
+      continue;
+    }
+    const filePath = path.join(plansDir, entry.name);
+    try {
+      const raw = await fsp.readFile(filePath, "utf8");
+      const stat = await fsp.stat(filePath);
+      const fm = parseSimpleFrontmatter(raw);
+      planCandidates.push({
+        filePath,
+        planId: fm.plan_id || path.basename(entry.name, ".md"),
+        status: fm.status || "",
+        updatedAtMs: toTimestamp(fm.updated_at, stat.mtimeMs)
+      });
+    } catch {
+      // Ignore unreadable files.
+    }
+  }
+
+  if (planCandidates.length === 0) {
+    return null;
+  }
+
+  const active = planCandidates.filter((item) => item.status === "draft" || item.status === "ready");
+  const source = active.length > 0 ? active : planCandidates;
+  source.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+  return source[0];
+}
+
+function buildReadyFileContent({ goal, planId, planPath }) {
+  const mission = goal && goal.trim().length > 0
+    ? goal.trim()
+    : "Define the mission for this client project before implementation.";
+
+  return [
+    "# CODEX READY",
+    "",
+    "## Mission",
+    `- ${mission}`,
+    "",
+    "## Plan Context",
+    `- plan_id: ${planId}`,
+    `- plan_path: ${planPath}`,
+    "",
+    "## Execution Rules",
+    "1. Use only `kfc ...` commands in this client project.",
+    "2. Keep changes scoped to the mission and acceptance criteria.",
+    "3. After each meaningful change, update phase and report next steps.",
+    "",
+    "## Phase Update Commands",
+    `- Build progress: \`kfc flow apply --project . --plan ${planId} --route build --result progress\``,
+    `- Check pass: \`kfc flow apply --project . --plan ${planId} --route check --result pass\``,
+    `- Check block: \`kfc flow apply --project . --plan ${planId} --route check --result block\``,
+    `- Next action: \`kfc flow next --project . --plan ${planId} --style narrative\``,
+    "",
+    "## Blocker Contract",
+    "- Return exactly:",
+    "  - `Status: BLOCK`",
+    "  - `Reason: <single concrete cause>`",
+    "  - `Recovery: <exact command>`",
+    "",
+    "## Finish Checklist (Required)",
+    "1. Run: `kfc client done`",
+    "2. Confirm `.kfc/CODEX_READY.md` is removed.",
+    "3. Do not mark task complete until cleanup command succeeds.",
+    ""
+  ].join("\n");
+}
+
+async function createClientReadyArtifacts({ projectDir, force, goal, profileName }) {
+  const plan = await resolveActivePlan(projectDir);
+  if (!plan) {
+    throw new Error("Cannot find an active plan in .local/plans. Run `kfc flow ensure-plan --project .` first.");
+  }
+
+  const readyPath = resolveClientReadyPath(projectDir);
+  if (fs.existsSync(readyPath) && !force) {
+    throw new Error(
+      `Ready file already exists: ${readyPath}. Use --force to regenerate or run \`kfc client done --project .\` first.`
+    );
+  }
+
+  await fsp.mkdir(path.dirname(readyPath), { recursive: true });
+  await fsp.writeFile(
+    readyPath,
+    buildReadyFileContent({
+      goal,
+      planId: plan.planId,
+      planPath: plan.filePath
+    }),
+    "utf8"
+  );
+
+  const sessionPath = resolveClientSessionPath(projectDir);
+  await fsp.writeFile(
+    sessionPath,
+    JSON.stringify(
+      {
+        generatedAt: new Date().toISOString(),
+        profile: profileName,
+        planId: plan.planId,
+        planPath: plan.filePath
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+
+  return { readyPath, sessionPath, planId: plan.planId };
+}
+
+async function removeIfExists(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return false;
+  }
+  await fsp.rm(filePath, { force: true });
+  return true;
 }
 
 async function writeConfigFile(configPath, configData) {
@@ -489,6 +693,7 @@ async function runBootstrap(options) {
   info("Client bootstrap completed successfully.");
   printClientDocsHints(options.project);
   printClientNextCommandHints();
+  info("Cleanup command after completion: kfc client done");
   info("Next steps in this client repo should use `kfc ...` commands.");
   return 0;
 }
@@ -554,23 +759,75 @@ async function runClientDoctorOnly(options) {
   if (ok) {
     printClientDocsHints(options.project);
     printClientNextCommandHints();
+    info("Cleanup command after completion: kfc client done");
     info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
 
   return ok ? 0 : 1;
 }
 
+async function runClientStart(options) {
+  const readyPath = resolveClientReadyPath(options.project);
+  if (fs.existsSync(readyPath) && !options.force) {
+    throw new Error(
+      `Ready file already exists: ${readyPath}. Use --force to regenerate or run \`kfc client done --project .\` first.`
+    );
+  }
+
+  const bootstrapCode = await runBootstrap(options);
+  if (bootstrapCode !== 0) {
+    return bootstrapCode;
+  }
+
+  const ready = await createClientReadyArtifacts({
+    projectDir: options.project,
+    force: options.force,
+    goal: options.goal,
+    profileName: options.profile || "client"
+  });
+
+  info(`Ready file: ${ready.readyPath}`);
+  info("Tell Codex: read .kfc/CODEX_READY.md and execute the mission.");
+  info("Finish cleanup: kfc client done");
+  return 0;
+}
+
+async function runClientDone(options) {
+  const readyPath = resolveClientReadyPath(options.project);
+  const sessionPath = resolveClientSessionPath(options.project);
+  const removedReady = await removeIfExists(readyPath);
+  const removedSession = await removeIfExists(sessionPath);
+
+  if (!removedReady && !removedSession) {
+    info("Client cleanup complete: nothing to clean.");
+    return 0;
+  }
+
+  if (removedReady) {
+    info(`Removed: ${readyPath}`);
+  }
+  if (removedSession) {
+    info(`Removed: ${sessionPath}`);
+  }
+  info("Client cleanup complete.");
+  return 0;
+}
+
 export async function runClient(options) {
   const parsed = parseArgs(options.cwd, options.args);
 
-  if (
-    !parsed.subcommand ||
-    parsed.subcommand === "help" ||
-    parsed.subcommand === "--help" ||
-    parsed.subcommand === "-h"
-  ) {
+  if (parsed.subcommand === "help" || parsed.subcommand === "--help" || parsed.subcommand === "-h") {
     usage();
     return 0;
+  }
+
+  if (parsed.subcommand === "start") {
+    try {
+      return await runClientStart(parsed);
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
   }
 
   if (parsed.subcommand === "doctor") {
@@ -580,6 +837,15 @@ export async function runClient(options) {
   if (parsed.subcommand === "bootstrap") {
     try {
       return await runBootstrap(parsed);
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
+  }
+
+  if (parsed.subcommand === "done") {
+    try {
+      return await runClientDone(parsed);
     } catch (err) {
       error(err instanceof Error ? err.message : String(err));
       return 1;

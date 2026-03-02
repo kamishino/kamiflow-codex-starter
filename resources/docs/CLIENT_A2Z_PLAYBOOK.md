@@ -16,9 +16,10 @@ npm run link:self
 Client setup and execution:
 
 ```bash
-npm link @kamishino/kamiflow-codex
-npx --no-install kfc client bootstrap --project . --profile client
+kfc client
 ```
+
+This generates `.kfc/CODEX_READY.md` for Codex handoff.
 
 ## Workflow Contract
 
@@ -27,9 +28,8 @@ npx --no-install kfc client bootstrap --project . --profile client
 - If unclear, require clarification before implementation.
 
 2. Environment and Plan Readiness
-- Run `kfc client doctor --project .`.
-- Run `kfc flow ensure-plan --project .`.
-- Run `kfc plan validate --project .`.
+- Use `.kfc/CODEX_READY.md` as mission + plan contract.
+- If needed, rerun `kfc client --force`.
 
 3. Build Slice Loop
 - Execute one task slice at a time.
@@ -52,6 +52,11 @@ npx --no-install kfc client bootstrap --project . --profile client
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
   - `Recovery: <exact command>`
+
+7. Finish Policy (Required)
+- Run `kfc client done`.
+- Confirm `.kfc/CODEX_READY.md` was removed.
+- Do not mark complete before cleanup succeeds.
 
 ## Standard Client Entry
 

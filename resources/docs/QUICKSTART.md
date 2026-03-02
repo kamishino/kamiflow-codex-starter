@@ -31,23 +31,24 @@ Do not use `npm run ...` from this repo in client projects.
 In the client project:
 
 ```bash
-cd <path-to-client-project>
-npm link @kamishino/kamiflow-codex
-npx --no-install kfc client bootstrap --project . --profile client
+kfc client
 ```
 
-After bootstrap, continue with:
+Then tell Codex:
+
+- Read `.kfc/CODEX_READY.md` and execute the mission.
+
+After work is complete, cleanup is required:
 
 ```bash
-kfc flow ensure-plan --project .
-kfc flow next --project . --plan <plan-id> --style narrative
+kfc client done
 ```
 
 ## Troubleshooting
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
-- Missing plan UI: rerun `kfc client bootstrap --project . --profile client`.
-- Rules mismatch: rerun `kfc client bootstrap --project . --profile client --force`.
+- Missing plan UI: rerun `kfc client --force`.
+- Rules mismatch: rerun `kfc client --force`.
 
 ## Next Docs
 

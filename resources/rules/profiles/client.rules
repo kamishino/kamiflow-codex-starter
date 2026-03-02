@@ -67,6 +67,12 @@ prefix_rule(
 # Allow core client-project KFC workflow commands.
 prefix_rule(
   decision = "allow",
+  pattern = ["kfc", "client"],
+  match = ["kfc client"]
+)
+
+prefix_rule(
+  decision = "allow",
   pattern = ["kfc", "client", "bootstrap"],
   match = ["kfc client bootstrap --project . --profile client"],
   not_match = ["kfc client doctor --project ."]
@@ -76,6 +82,13 @@ prefix_rule(
   decision = "allow",
   pattern = ["kfc", "client", "doctor"],
   match = ["kfc client doctor --project ."],
+  not_match = ["kfc client bootstrap --project . --profile client"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["kfc", "client", "done"],
+  match = ["kfc client done --project ."],
   not_match = ["kfc client bootstrap --project . --profile client"]
 )
 

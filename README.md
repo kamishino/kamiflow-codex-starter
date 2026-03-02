@@ -29,7 +29,9 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc doctor`
 - `kfc plan init|serve|validate`
 - `kfc flow ensure-plan|apply|next`
-- `kfc client bootstrap|doctor`
+- `kfc client` (default client setup + Codex-ready handoff)
+- `kfc client done` (cleanup)
+- `kfc client bootstrap|doctor` (advanced/manual)
 - `kfc run`
 - `kf` is an alias for `kfc`
 
@@ -78,12 +80,18 @@ npm run client:link-bootstrap -- --project <path-to-client-project>
 
 ```bash
 npm link @kamishino/kamiflow-codex
-npx --no-install kfc client bootstrap --project . --profile client
+kfc client
 ```
 
-Then use the kickoff prompt:
+Then tell Codex:
 
-- `CLIENT_KICKOFF_PROMPT.md`
+- Read `.kfc/CODEX_READY.md` and execute the mission.
+
+After Codex finishes:
+
+```bash
+kfc client done
+```
 
 ## Versioning (No Publish)
 
