@@ -1,0 +1,107 @@
+# Kami Flow managed Codex execution policy.
+# This file is SSOT and synchronized into runtime rules directories.
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:setup"],
+  match = ["npm run codex:setup"],
+  not_match = ["npm run codex:sync"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:sync"],
+  match = ["npm run codex:sync"],
+  not_match = ["pnpm run codex:sync"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:sync:rules"],
+  match = ["npm run codex:sync:rules -- --scope repo --force"],
+  not_match = ["npm run codex:sync:skills -- --force"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "codex:sync:skills"],
+  match = ["npm run codex:sync:skills -- --force"],
+  not_match = ["npm run codex:sync:rules -- --scope repo --force"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "dogfood:link"],
+  match = ["npm run dogfood:link"],
+  not_match = ["npm run dogfood:smoke"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "dogfood:smoke"],
+  match = ["npm run dogfood:smoke"],
+  not_match = ["npm run dogfood:link"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "dogfood:pack-smoke"],
+  match = ["npm run dogfood:pack-smoke"],
+  not_match = ["npm run dogfood:smoke"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "run", "portability:smoke"],
+  match = ["npm run portability:smoke -- --project <path> --link"],
+  not_match = ["npm run dogfood:smoke"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "install"],
+  match = ["npm --prefix packages/kamiflow-plan-ui install"],
+  not_match = ["npm --prefix packages/kamiflow-plan-ui run build"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "run", "build"],
+  match = ["npm --prefix packages/kamiflow-plan-ui run build"],
+  not_match = ["npm --prefix packages/kamiflow-plan-ui install"]
+)
+
+prefix_rule(
+  decision = "allow",
+  pattern = ["npm", "pack", "--silent"],
+  match = ["npm pack --silent"],
+  not_match = ["npm pack"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "link"],
+  match = ["npm link"],
+  not_match = ["npm unlink"]
+)
+
+prefix_rule(
+  decision = "prompt",
+  pattern = ["npm", "unlink"],
+  match = ["npm unlink"],
+  not_match = ["npm link"]
+)
+
+prefix_rule(
+  decision = "forbidden",
+  pattern = ["git", "reset", "--hard"],
+  match = ["git reset --hard"],
+  not_match = ["git reset --soft"]
+)
+
+prefix_rule(
+  decision = "forbidden",
+  pattern = ["rm", "-rf"],
+  match = ["rm -rf /"],
+  not_match = ["rm -r ./safe-temp"]
+)

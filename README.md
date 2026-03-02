@@ -6,7 +6,7 @@ This repository is the CLI source and the dogfooding environment.
 
 - Build and evolve the publishable CLI package.
 - Dogfood the package in local in-repo fixtures.
-- Keep `resources/` as SSOT for portable Codex skills content.
+- Keep `resources/` as SSOT for portable Codex skills and rules content.
 
 ## Structure
 
@@ -88,10 +88,29 @@ Create local `.codex/config.toml` from the committed example:
 npm run codex:setup
 ```
 
-Sync `resources/skills` into `.agents/skills` runtime:
+Sync SSOT assets:
 
 ```bash
 npm run codex:sync
+```
+
+By default, `codex:sync` syncs skills plus rules for `repo`, `project` (cwd fallback), and `home` scopes.
+If home scope requires elevated access in your environment, use scoped rules sync commands.
+
+Scope examples:
+
+```bash
+# Rules only, repo scope
+npm run codex:sync:rules -- --scope repo --force
+
+# Rules only, project scope (explicit path)
+npm run codex:sync:rules -- --scope project --project <path-to-project> --force
+
+# Rules only, project scope (current working directory fallback)
+npm run codex:sync:rules -- --scope project --force
+
+# Rules only, home scope ($CODEX_HOME or ~/.codex)
+npm run codex:sync:rules -- --scope home --force
 ```
 
 KFP local loop (client-facing via `kfc`):
@@ -134,3 +153,9 @@ Skill policy:
 
 - Keep SSOT in `resources/skills`.
 - Treat `.agents/skills` as generated runtime output.
+
+Rules policy:
+
+- Keep SSOT in `resources/rules`.
+- Treat `.codex/rules/kamiflow.rules` as generated runtime output.
+- Keep `.codex/rules/default.rules` for Codex-managed approvals; do not overwrite it from SSOT.

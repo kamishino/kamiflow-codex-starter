@@ -5,6 +5,8 @@ dist/
 *.tgz
 .npm-cache/
 .codex/config.toml
+.codex/rules/
+dogfood/*/.codex/
 temp/
 .agents/
 .local/

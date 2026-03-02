@@ -1,4 +1,5 @@
 import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -6,20 +7,68 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../..");
 
-const MAPPINGS = [
-  {
-    from: path.join(ROOT_DIR, "resources", "skills"),
-    to: path.join(ROOT_DIR, ".agents", "skills")
-  }
-];
+const RULES_FILE_NAME = "kamiflow.rules";
+const SKILLS_SOURCE = path.join(ROOT_DIR, "resources", "skills");
+const SKILLS_TARGET = path.join(ROOT_DIR, ".agents", "skills");
+const RULES_SOURCE = path.join(ROOT_DIR, "resources", "rules", RULES_FILE_NAME);
 
+const args = process.argv.slice(2);
 const force = process.argv.includes("--force");
-let copied = 0;
-let skipped = 0;
+const only = readFlag("--only", "all");
+const scope = readFlag("--scope", "all");
+const projectArg = readFlag("--project", "");
+const total = { copied: 0, skipped: 0 };
+const stats = {
+  skills: { copied: 0, skipped: 0 },
+  rules: { copied: 0, skipped: 0 }
+};
+
+if (!["all", "skills", "rules"].includes(only)) {
+  throw new Error(`Invalid --only value: ${only}. Use one of: all, skills, rules.`);
+}
+
+if (!["all", "repo", "project", "home"].includes(scope)) {
+  throw new Error(`Invalid --scope value: ${scope}. Use one of: all, repo, project, home.`);
+}
+
+console.log(
+  `[codex-sync] Starting sync (only=${only}, scope=${scope}, force=${force ? "on" : "off"})`
+);
+
+if (only === "all" || only === "skills") {
+  syncSkills();
+}
+
+if (only === "all" || only === "rules") {
+  syncRules();
+}
+
+console.log(`[codex-sync] Skills copied: ${stats.skills.copied}`);
+console.log(`[codex-sync] Skills skipped: ${stats.skills.skipped}`);
+console.log(`[codex-sync] Rules copied: ${stats.rules.copied}`);
+console.log(`[codex-sync] Rules skipped: ${stats.rules.skipped}`);
+console.log(`[codex-sync] Copied files: ${total.copied}`);
+console.log(`[codex-sync] Skipped files: ${total.skipped}`);
+
+function readFlag(flag, fallback) {
+  const idx = args.indexOf(flag);
+  if (idx === -1) {
+    return fallback;
+  }
+  const value = args[idx + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`Missing value for ${flag}.`);
+  }
+  return value;
+}
 
 function ensureDir(dirPath) {
   if (!fs.existsSync(dirPath)) {
-    fs.mkdirSync(dirPath, { recursive: true });
+    try {
+      fs.mkdirSync(dirPath, { recursive: true });
+    } catch (err) {
+      throw onEperm(err, dirPath);
+    }
   }
 }
 
@@ -27,7 +76,7 @@ function shouldSkipFile(name) {
   return name === ".gitkeep" || name === "README.md";
 }
 
-function copyRecursive(fromDir, toDir) {
+function copyRecursiveSkills(fromDir, toDir) {
   ensureDir(toDir);
   const entries = fs.readdirSync(fromDir, { withFileTypes: true });
 
@@ -40,12 +89,13 @@ function copyRecursive(fromDir, toDir) {
     const toPath = path.join(toDir, entry.name);
 
     if (entry.isDirectory()) {
-      copyRecursive(fromPath, toPath);
+      copyRecursiveSkills(fromPath, toPath);
       continue;
     }
 
     if (fs.existsSync(toPath) && !force) {
-      skipped += 1;
+      total.skipped += 1;
+      stats.skills.skipped += 1;
       continue;
     }
 
@@ -53,27 +103,115 @@ function copyRecursive(fromDir, toDir) {
     try {
       fs.copyFileSync(fromPath, toPath);
     } catch (err) {
-      if (err && typeof err === "object" && err.code === "EPERM") {
-        throw new Error(
-          `Permission denied writing ${toPath}. Run this command in an elevated terminal.`
-        );
-      }
-      throw err;
+      throw onEperm(err, toPath);
     }
-    copied += 1;
+    total.copied += 1;
+    stats.skills.copied += 1;
   }
 }
 
-for (const mapping of MAPPINGS) {
-  if (!fs.existsSync(mapping.from)) {
-    console.log(`[codex-sync] Skip missing source: ${mapping.from}`);
-    continue;
+function syncSkills() {
+  if (!fs.existsSync(SKILLS_SOURCE)) {
+    console.log(`[codex-sync] Skip missing source: ${SKILLS_SOURCE}`);
+    return;
   }
-  if (force && fs.existsSync(mapping.to)) {
-    fs.rmSync(mapping.to, { recursive: true, force: true });
-  }
-  copyRecursive(mapping.from, mapping.to);
+
+  copyRecursiveSkills(SKILLS_SOURCE, SKILLS_TARGET);
 }
 
-console.log(`[codex-sync] Copied files: ${copied}`);
-console.log(`[codex-sync] Skipped files: ${skipped}`);
+function resolveCodexHome() {
+  if (process.env.CODEX_HOME && process.env.CODEX_HOME.trim().length > 0) {
+    return path.resolve(process.env.CODEX_HOME.trim());
+  }
+  return path.join(os.homedir(), ".codex");
+}
+
+function resolveProjectDir() {
+  const projectDir = projectArg ? path.resolve(process.cwd(), projectArg) : process.cwd();
+  if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
+    throw new Error(`Project directory does not exist or is not a directory: ${projectDir}`);
+  }
+  return projectDir;
+}
+
+function buildRuleTargets() {
+  const scopes = scope === "all" ? ["repo", "project", "home"] : [scope];
+  const targets = new Set();
+
+  for (const selectedScope of scopes) {
+    if (selectedScope === "repo") {
+      targets.add(path.join(ROOT_DIR, ".codex", "rules", RULES_FILE_NAME));
+      continue;
+    }
+
+    if (selectedScope === "project") {
+      targets.add(path.join(resolveProjectDir(), ".codex", "rules", RULES_FILE_NAME));
+      continue;
+    }
+
+    if (selectedScope === "home") {
+      targets.add(path.join(resolveCodexHome(), "rules", RULES_FILE_NAME));
+      continue;
+    }
+  }
+
+  return [...targets];
+}
+
+function buildManagedRulesContent(sourceText) {
+  const sourcePath = path
+    .relative(ROOT_DIR, RULES_SOURCE)
+    .split(path.sep)
+    .join("/");
+
+  const header = [
+    "# Generated by scripts/codex/sync-resources-to-agents.mjs",
+    `# Source: ${sourcePath}`,
+    `# Generated at (UTC): ${new Date().toISOString()}`,
+    "# DO NOT EDIT THIS FILE DIRECTLY.",
+    "# Edit resources/rules/kamiflow.rules and run npm run codex:sync -- --only rules --force.",
+    ""
+  ].join("\n");
+
+  return `${header}\n${sourceText.replace(/^\uFEFF/, "")}`;
+}
+
+function copyManagedRules(toPath) {
+  if (fs.existsSync(toPath) && !force) {
+    total.skipped += 1;
+    stats.rules.skipped += 1;
+    return;
+  }
+
+  const sourceText = fs.readFileSync(RULES_SOURCE, "utf8");
+  const output = buildManagedRulesContent(sourceText);
+  ensureDir(path.dirname(toPath));
+
+  try {
+    fs.writeFileSync(toPath, output, "utf8");
+  } catch (err) {
+    throw onEperm(err, toPath);
+  }
+
+  total.copied += 1;
+  stats.rules.copied += 1;
+}
+
+function syncRules() {
+  if (!fs.existsSync(RULES_SOURCE)) {
+    throw new Error(`Missing SSOT rules file: ${RULES_SOURCE}`);
+  }
+
+  for (const target of buildRuleTargets()) {
+    copyManagedRules(target);
+  }
+}
+
+function onEperm(err, targetPath) {
+  if (err && typeof err === "object" && err.code === "EPERM") {
+    return new Error(
+      `Permission denied writing ${targetPath}. Run this command in an elevated terminal.`
+    );
+  }
+  return err;
+}
