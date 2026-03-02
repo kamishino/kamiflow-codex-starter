@@ -26,7 +26,8 @@
     "dogfood:link": "node scripts/dogfood/link-all.mjs",
     "dogfood:unlink": "node scripts/dogfood/unlink-all.mjs",
     "dogfood:smoke": "node scripts/dogfood/smoke.mjs",
-    "dogfood:pack-smoke": "node scripts/dogfood/pack-install-smoke.mjs"
+    "dogfood:pack-smoke": "node scripts/dogfood/pack-install-smoke.mjs",
+    "portability:smoke": "node scripts/portability/smoke-one-repo.mjs"
   },
   "files": [
     "bin",

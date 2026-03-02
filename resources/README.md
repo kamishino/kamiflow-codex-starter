@@ -25,3 +25,4 @@ npm run codex:sync
 - `docs/PLAN_CONTRACT_V1.md`: plan readiness and gate rules.
 - `docs/CODEX_KFP_RUNBOOK.md`: canonical local dogfood flow.
 - `docs/ROUTE_PROMPTS.md`: copy/paste prompts for `kamiflow-core`.
+- `docs/PORTABILITY_RUNBOOK.md`: one-external-repo portability validation flow.

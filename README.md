@@ -69,6 +69,17 @@ To clean link state:
 npm run dogfood:unlink
 ```
 
+## Portability Smoke (One External Repo)
+
+Run a baseline portability validation against another project:
+
+```bash
+npm run portability:smoke -- --project <path-to-external-repo> --link
+```
+
+This writes a markdown report to `artifacts/portability/`.
+See `resources/docs/PORTABILITY_RUNBOOK.md` for the full flow and criteria.
+
 ## In-Repo Codex Dogfooding
 
 Create local `.codex/config.toml` from the committed example:
