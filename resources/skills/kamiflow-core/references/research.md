@@ -1,6 +1,6 @@
 # Research
 
-Use this route when key facts are missing or risk is high.
+Use this route when missing facts or high risk would make execution unsafe.
 
 ## Entry Gate
 
@@ -9,8 +9,8 @@ Use this route when key facts are missing or risk is high.
 
 ## Steps
 
-1. State open questions that block implementation.
-2. Gather evidence from repo and primary docs.
+1. State the open questions blocking implementation.
+2. Gather evidence from repo and primary documentation.
 3. Compare viable options with tradeoffs.
 4. Recommend one option with rationale.
 5. Persist handoff phase via deterministic command:

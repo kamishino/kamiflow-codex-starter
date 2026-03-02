@@ -1,6 +1,6 @@
 # Fix
 
-Use this route for focused issue resolution.
+Use this route for focused issue resolution with minimal scope.
 
 ## Entry Gate
 
@@ -10,8 +10,8 @@ Use this route for focused issue resolution.
 ## Steps
 
 1. Restate the issue and expected behavior.
-2. Reproduce or identify evidence of failure.
-3. Propose minimal-scope fix.
+2. Reproduce or identify concrete evidence of failure.
+3. Propose the smallest safe fix.
 4. Validate fix with targeted checks.
 5. Note regression risk.
 6. Persist fix/build progress via deterministic command:

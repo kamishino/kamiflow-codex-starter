@@ -5,11 +5,12 @@ description: Core Kami Flow workflow router for start, plan, build, check, resea
 
 # Kami Flow Core
 
-Use this skill as the single workflow entrypoint.
+Use this as the default workflow router for non-trivial work.
+It helps you choose the right route, enforce mode discipline, and finish with a clear next step.
 
 ## Mode Selector
 
-Select mode before executing route logic:
+Pick mode before executing route logic:
 
 - `start` -> `Plan`
 - `plan` -> `Plan`
@@ -18,14 +19,14 @@ Select mode before executing route logic:
 - `fix` -> `Build`
 - `check` -> `Plan` by default; use `Build` only when running commands/tests or proposing file edits.
 
-## Routing
+## Routing Workflow
 
 1. Read `references/command-map.md`.
-2. Classify the request into one command route.
-3. Resolve required mode from route.
-4. If mode mismatch, return `MODE_MISMATCH` and stop.
-5. Load only the matched reference file.
-6. Produce output using that command's required format.
+2. Classify the request into exactly one route.
+3. Resolve the required mode from that route.
+4. If mode is incompatible, return `MODE_MISMATCH` and stop.
+5. Load only the matched route reference file.
+6. Produce output in that route's required shape.
 7. End with one explicit next command and next mode.
 
 ## Command Routes
@@ -39,12 +40,12 @@ Select mode before executing route logic:
 
 ## Global Rules
 
-- Keep output concise and structured.
+- Keep output concise, structured, and human-readable.
 - No emoji in default output.
-- Do not skip required gates from the selected command reference.
-- If scope or risk increases mid-task, route back to `research` or `plan`.
-- If current mode does not meet route mode requirements, do not continue until mode is switched.
-- For plan persistence in `build`/`check`, treat KFP API as required after health preflight.
+- Do not skip required gates in the selected route reference.
+- If scope or risk increases, route back to `research` or `plan`.
+- If mode does not satisfy route requirements, do not continue.
+- For plan persistence in `build`/`check`, treat KFP API checks as required after health preflight.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 
 ## Mode Mismatch Policy
@@ -63,5 +64,6 @@ Every route output must end with:
 
 - `Selected Mode: Plan|Build`
 - `Mode Reason: <one line>`
+- `Next Action: <one narrative line>`
 - `Next Command: <start|plan|build|check|research|fix|done>`
 - `Next Mode: Plan|Build|done`

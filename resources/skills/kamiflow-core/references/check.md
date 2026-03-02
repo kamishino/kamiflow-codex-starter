@@ -1,6 +1,6 @@
 # Check
 
-Use this route for quality verification and review gates.
+Use this route for quality verification and release-readiness decisions.
 
 ## Entry Gate
 

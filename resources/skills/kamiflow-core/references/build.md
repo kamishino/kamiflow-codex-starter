@@ -1,6 +1,6 @@
 # Build
 
-Use this route to execute an approved plan.
+Use this route to execute an approved plan in small, verifiable slices.
 
 ## Entry Gate
 

@@ -1,9 +1,18 @@
 # Skills (SSOT)
 
-Canonical source for Codex skills lives here.
+This folder is the source of truth for Codex skills used by Kami Flow.
 
-Current skill set:
+## What lives here
 
-- `kamiflow-core/`: single-skill Kami Flow workflow router with Plan/Build mode gates.
+- `kamiflow-core/`: the main workflow router skill with Plan/Build mode gates.
 
-Do not edit runtime output in `.agents/skills` directly.
+## Why this matters
+
+Codex loads generated runtime skills from `.agents/skills`, but those are build artifacts.
+Edit skill content only in `resources/skills`.
+
+## Editing rules
+
+- Keep machine-critical contracts intact (mode mismatch fields, START_CONTEXT markers, route footer fields).
+- You can improve tone and readability, but do not change route behavior.
+- After edits, sync runtime skills from SSOT and run validation checks.

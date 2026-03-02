@@ -1,6 +1,7 @@
 # Start
 
-Use this route to convert a vague idea into a ranked shortlist and produce handoff-ready Start Context for `plan`.
+Use this route when the request is still fuzzy and needs direction.
+The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 
 ## Entry Gate
 
@@ -9,11 +10,11 @@ Use this route to convert a vague idea into a ranked shortlist and produce hando
 
 ## Steps
 
-1. First turn must ask 3-5 clarifying questions only and wait for user answers.
-2. Each question must provide:
+1. First turn asks 3-5 clarifying questions only, then wait for answers.
+2. Each question must include:
 - 3 suggested answers
 - 1 free-form `Other` option
-3. After answers are provided, generate 7-10 ideas:
+3. After answers, generate 7-10 ideas:
 - 2-3 safe
 - 2-3 lateral
 - 2-3 moonshot
@@ -29,8 +30,8 @@ Use this route to convert a vague idea into a ranked shortlist and produce hando
 - Best Bet
 - Dark Horse
 - Quick Win
-7. Add pre-mortem for Best Bet.
-8. Produce `START_CONTEXT` block for plan handoff:
+7. Add a pre-mortem for Best Bet.
+8. Produce `START_CONTEXT` block for `plan` handoff:
 - `topic`
 - `target_user`
 - `success_30d`
@@ -40,8 +41,9 @@ Use this route to convert a vague idea into a ranked shortlist and produce hando
 - `pre_mortem_risk`
 - `handoff_confidence`
 - `recommended_route`
-9. Emit one exact `Run next:` command that invokes `plan` with `START_CONTEXT`.
-   - The command must include plan-file bootstrap instruction:
+   - include explicit block markers: `START_CONTEXT` and `END_START_CONTEXT`
+9. Emit one exact `Run next:` command for `plan`.
+   - include plan-file bootstrap instruction:
      - ensure file exists via `kfc flow ensure-plan --project <path>` when no target file is provided.
 10. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`

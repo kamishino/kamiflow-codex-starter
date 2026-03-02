@@ -1,8 +1,10 @@
 # Command Map
 
+Use this map to choose one route, one mode, and one next step.
+
 ## Route Selection
 
-Select exactly one route.
+Select exactly one route:
 
 1. `start`
 - Triggers: new idea, vague concept, "thinking about building", "what should we build".
@@ -43,5 +45,5 @@ Select exactly one route.
 ## Escalation Rules
 
 - If risk includes auth, billing, data migration, or permissions, prefer `research` then `plan`.
-- If change scope grows beyond initial assumptions, pause and reroute to `plan`.
-- If current mode mismatches route mode requirements, return `MODE_MISMATCH` and stop.
+- If scope grows beyond original assumptions, pause and reroute to `plan`.
+- If current mode mismatches route requirements, return `MODE_MISMATCH` and stop.

@@ -1,7 +1,7 @@
 # Plan
 
-Use this route for non-trivial implementation planning.
-Wording refinement only: no route logic changes in this phase.
+Use this route for non-trivial planning before implementation.
+This route should leave no major ambiguity for the build phase.
 
 ## Entry Gate
 

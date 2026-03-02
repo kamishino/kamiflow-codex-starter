@@ -125,6 +125,14 @@ START_CONTEXT
 - recommended_route: plan | build | research
 END_START_CONTEXT
 
+### Start Summary
+- Required: yes|no
+- Reason:
+- Selected Idea:
+- Alternatives Considered:
+- Pre-mortem Risk:
+- Handoff Confidence:
+
 ### Handoff Decision
 - Selected idea:
 - Route: plan | build | research
