@@ -20,7 +20,7 @@ Install/link KFC into the target client repository:
 
 ```bash
 kfc client --force
-kfc client doctor --project .
+kfc client doctor --project . --fix
 ```
 
 Then paste this prompt into Codex (or tell Codex to read `.kfc/CODEX_READY.md`):
@@ -34,8 +34,8 @@ Goal:
 Rules:
 1) Use only `kfc ...` commands in this client project.
 2) Start from `.kfc/CODEX_READY.md` mission and plan context.
-3) Before any implementation route (`build`/`fix`), always run `kfc flow ensure-plan --project .`.
-4) If plan resolution fails or route behavior is inconsistent, run `kfc client doctor --project .` and return BLOCK with exact recovery.
+3) Before any implementation route (`build`/`fix`), always run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.
+4) If plan resolution fails or route behavior is inconsistent, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.
 5) Keep phase tracking updated after each meaningful step:
    - Build progress: `kfc flow apply --project . --plan <plan-id> --route build --result progress`
    - Check pass/block: `kfc flow apply --project . --plan <plan-id> --route check --result pass|block`

@@ -55,6 +55,7 @@ function usage() {
   info("  kfc client bootstrap --project .");
   info("  kfc client bootstrap --project . --profile client --port 4310");
   info("  kfc client doctor --project .");
+  info("  kfc client doctor --project . --fix");
 }
 
 function parseMajorVersion(version) {
@@ -76,6 +77,7 @@ function parseArgs(baseCwd, args) {
     profile: "client",
     port: DEFAULT_PORT,
     force: false,
+    fix: false,
     skipServeCheck: false,
     goal: ""
   };
@@ -111,6 +113,10 @@ function parseArgs(baseCwd, args) {
     }
     if (token === "--force") {
       parsed.force = true;
+      continue;
+    }
+    if (token === "--fix") {
+      parsed.fix = true;
       continue;
     }
     if (token === "--skip-serve-check") {
@@ -264,6 +270,7 @@ function printClientDocsHints(projectDir) {
 
 function printClientNextCommandHints() {
   info("Next: kfc flow ensure-plan --project .");
+  info("Then: kfc flow ready --project .");
   info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
 }
 
@@ -376,9 +383,11 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     "## Execution Rules",
     "1. Use only `kfc ...` commands in this client project.",
     "2. Keep changes scoped to the mission and acceptance criteria.",
-    "3. After each meaningful change, update phase and report next steps.",
+    "3. Before build/fix, run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
+    "4. After each meaningful change, update phase and report next steps.",
     "",
     "## Phase Update Commands",
+    "- Readiness gate: `kfc flow ready --project .`",
     `- Build progress: \`kfc flow apply --project . --plan ${planId} --route build --result progress\``,
     `- Check pass: \`kfc flow apply --project . --plan ${planId} --route check --result pass\``,
     `- Check block: \`kfc flow apply --project . --plan ${planId} --route check --result block\``,
@@ -699,9 +708,36 @@ async function runBootstrap(options) {
 }
 
 async function runClientDoctorOnly(options) {
+  const initialOk = await runClientDoctorChecks(options);
+  if (initialOk) {
+    if (options.fix) {
+      info("No remediation needed: client diagnostics already pass.");
+    }
+    return 0;
+  }
+
+  if (!options.fix) {
+    return 1;
+  }
+
+  warn("Client diagnostics reported failures. Applying `kfc client bootstrap --force` remediation.");
+  const bootstrapCode = await runBootstrap({
+    ...options,
+    force: true
+  });
+  if (bootstrapCode !== 0) {
+    return bootstrapCode;
+  }
+
+  info("Re-running client diagnostics after remediation.");
+  const postFixOk = await runClientDoctorChecks(options);
+  return postFixOk ? 0 : 1;
+}
+
+async function runClientDoctorChecks(options) {
   let ok = await assertProjectPreflight(options.project);
   if (!ok) {
-    return 1;
+    return false;
   }
 
   try {
@@ -763,7 +799,7 @@ async function runClientDoctorOnly(options) {
     info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
 
-  return ok ? 0 : 1;
+  return ok;
 }
 
 async function runClientStart(options) {

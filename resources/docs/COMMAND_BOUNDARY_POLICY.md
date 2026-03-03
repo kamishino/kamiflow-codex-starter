@@ -26,6 +26,7 @@ Run in Client Project:
 ```bash
 npx --no-install kfc client bootstrap --project . --profile client
 kfc flow ensure-plan --project .
+kfc flow ready --project .
 kfc plan validate --project .
 ```
 

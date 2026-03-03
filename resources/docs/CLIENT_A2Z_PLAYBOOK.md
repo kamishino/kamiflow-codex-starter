@@ -17,7 +17,7 @@ Client setup and execution:
 
 ```bash
 kfc client --force
-kfc client doctor --project .
+kfc client doctor --project . --fix
 ```
 
 This generates `.kfc/CODEX_READY.md` for Codex handoff.
@@ -30,8 +30,8 @@ This generates `.kfc/CODEX_READY.md` for Codex handoff.
 
 2. Environment and Plan Readiness
 - Use `.kfc/CODEX_READY.md` as mission + plan contract.
-- Before any implementation route (`build`/`fix`), run `kfc flow ensure-plan --project .`.
-- If route behavior looks inconsistent, run `kfc client doctor --project .`.
+- Before any implementation route (`build`/`fix`), run `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.
+- If route behavior looks inconsistent, run `kfc client doctor --project . --fix`.
 - If needed, rerun `kfc client --force`.
 
 3. Build Slice Loop

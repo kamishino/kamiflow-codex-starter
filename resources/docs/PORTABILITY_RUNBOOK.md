@@ -4,12 +4,11 @@ Use this runbook to validate that `kfc` + `kamiflow-core` work outside this dogf
 
 ## Goal
 
-Prove one full project-scoped flow in an external repository:
+Prove external-repo portability baseline in an external repository:
 
 - install/link CLI
 - bootstrap and verify client project readiness
-- run route loop (`start -> plan -> build -> check -> done`)
-- confirm archive path
+- confirm plan bootstrap, validation, and health checks work outside this repo
 
 ## Preconditions
 
@@ -60,7 +59,7 @@ What bootstrap verifies:
 - plan exists and validates
 - KFP health endpoint responds OK
 
-## Step 3: Run Canonical Route Loop
+## Step 3 (Optional): Run Canonical Route Loop
 
 Use `kamiflow-core` command flow against the new plan file:
 
@@ -69,6 +68,8 @@ Use `kamiflow-core` command flow against the new plan file:
 3. `build` for scoped implementation
 4. `check` for PASS/BLOCK with acceptance criteria
 5. `done` after PASS and archive
+
+This step is optional in the baseline portability smoke and can be run manually per project.
 
 ## Step 4: Record Smoke Evidence
 
@@ -114,9 +115,12 @@ Validation is complete when all are true:
 1. `kfc` works in external repo context.
 2. `kfc client bootstrap` completes PASS in external repo.
 3. plan file is created and validated in external repo.
-4. route loop reaches `done`.
-5. plan is archived in `.local/plans/done/`.
-6. smoke log is captured and reviewable.
+4. smoke log is captured and reviewable.
+
+Optional extended criteria:
+
+1. route loop reaches `done`.
+2. plan is archived in `.local/plans/done/`.
 
 ## Known Limits
 

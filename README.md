@@ -28,11 +28,11 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc init`
 - `kfc doctor`
 - `kfc plan init|serve|validate`
-- `kfc flow ensure-plan|apply|next`
+- `kfc flow ensure-plan|ready|apply|next`
 - `kfc client` (default client setup + Codex-ready handoff)
 - `kfc client done` (cleanup)
-- `kfc client bootstrap|doctor` (advanced/manual)
-- `kfc run`
+- `kfc client bootstrap|doctor [--fix]` (advanced/manual)
+- `kfc run` (auto-runs `flow ensure-plan`, then `flow ready`)
 - `kf` is an alias for `kfc`
 
 Global option: `--cwd <path>`

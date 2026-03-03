@@ -110,6 +110,13 @@ prefix_rule(
 
 prefix_rule(
   decision = "allow",
+  pattern = ["kfc", "flow", "ready"],
+  match = ["kfc flow ready --project ."],
+  not_match = ["kfc flow apply --project . --plan PLAN-1 --route build --result progress"]
+)
+
+prefix_rule(
+  decision = "allow",
   pattern = ["kfc", "flow", "apply"],
   match = ["kfc flow apply --project . --plan PLAN-1 --route build --result progress"],
   not_match = ["kfc flow next --project . --plan PLAN-1"]

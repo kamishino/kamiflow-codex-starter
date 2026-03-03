@@ -93,6 +93,7 @@ After sync, validate policy decisions:
 codex execpolicy check --rules .codex/rules/kamiflow.rules npm run dogfood:link
 codex execpolicy check --rules .codex/rules/kamiflow.rules npm run codex:sync:rules -- --scope project --project . --force
 codex execpolicy check --rules .codex/rules/kamiflow.rules kfc flow ensure-plan --project .
+codex execpolicy check --rules .codex/rules/kamiflow.rules kfc flow ready --project .
 codex execpolicy check --rules .codex/rules/kamiflow.rules kfc flow apply --project . --plan PLAN-1 --route build --result progress
 codex execpolicy check --rules .codex/rules/kamiflow.rules git reset --hard
 ```

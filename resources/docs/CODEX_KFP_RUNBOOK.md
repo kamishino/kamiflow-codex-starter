@@ -49,6 +49,7 @@ When KFC is linked into a client repo, use `kfc` commands there (not `npm run` f
 ```bash
 npx --no-install kfc client bootstrap --project . --profile client
 kfc flow ensure-plan --project .
+kfc flow ready --project .
 kfc plan validate --project .
 ```
 
@@ -69,6 +70,7 @@ kfc plan validate --project .
   - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
 - then finalize scope and gates
 - `build` route only when plan is build-ready
+- recommended preflight for build/fix route: `kfc flow ready --project .`
 - `check` route after each build slice
 - after PASS + done handoff, use complete/archive flow
 

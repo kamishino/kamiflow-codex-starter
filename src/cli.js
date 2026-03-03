@@ -17,9 +17,9 @@ Commands:
   init       Create kamiflow.config.json in current directory
   doctor     Validate environment, config, and resources directory
   plan       Run kfp plan workflow (init|serve|validate)
-  flow       Deterministic plan guardrails (ensure-plan|apply|next)
+  flow       Deterministic plan guardrails (ensure-plan|ready|apply|next)
   client     Client-project one-command setup, diagnostics, and cleanup
-  run        Execute Kami Flow (placeholder)
+  run        Execute Kami Flow with plan guardrails
   help       Show this usage
 
 Global options:
@@ -35,13 +35,17 @@ plan options:
 
 flow options:
   kfc flow ensure-plan --project <path> [--plan <path|plan_id>] [--new]
+  kfc flow ready --project <path> [--plan <path|plan_id>] [--new]
   kfc flow apply --project <path> --plan <path|plan_id> --route <plan|build|check|fix|research|start> --result <go|progress|pass|block>
   kfc flow next --project <path> --plan <path|plan_id> --style narrative
+
+run options:
+  kfc run [--project <path>] [--skip-ready]
 
 client options:
   kfc client [--goal <text>] [--project <path>] [--force] [--skip-serve-check]
   kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check]
-  kfc client doctor [--project <path>]
+  kfc client doctor [--project <path>] [--fix]
   kfc client done [--project <path>]
 `);
 }

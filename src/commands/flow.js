@@ -12,9 +12,10 @@ const KFC_BIN = path.join(REPO_ROOT, "bin", "kamiflow.js");
 const DEFAULT_BASE_URL = "http://127.0.0.1:4310";
 
 function usage() {
-  info("Usage: kfc flow <ensure-plan|apply|next> [options]");
+  info("Usage: kfc flow <ensure-plan|ready|apply|next> [options]");
   info("Examples:");
   info("  kfc flow ensure-plan --project .");
+  info("  kfc flow ready --project .");
   info("  kfc flow apply --project . --plan PLAN-YYYY-MM-DD-001 --route build --result progress");
   info("  kfc flow next --project . --plan PLAN-YYYY-MM-DD-001 --style narrative");
 }
@@ -113,7 +114,8 @@ async function readPlanRecord(filePath) {
     status: fm.status || "unknown",
     updatedAt: fm.updated_at || "",
     updatedAtMs: toTimestamp(fm.updated_at, stat.mtimeMs),
-    mtimeMs: stat.mtimeMs
+    mtimeMs: stat.mtimeMs,
+    raw
   };
 }
 
@@ -261,6 +263,181 @@ function toNextAction(summary) {
     return "Refine plan scope, tasks, and acceptance criteria until decision is GO.";
   }
   return "Continue the workflow using the plan's next command.";
+}
+
+function parseBulletLines(sectionMarkdown) {
+  return String(sectionMarkdown || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line.startsWith("- "))
+    .map((line) => line.slice(2).trim())
+    .filter(Boolean);
+}
+
+function parseChecklistItems(sectionMarkdown) {
+  return String(sectionMarkdown || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .map((line) => line.match(/^- \[(?<state>[ xX])\]\s*(?<text>.+)$/))
+    .filter(Boolean)
+    .map((match) => ({
+      checked: String(match.groups?.state || " ").toLowerCase() === "x",
+      text: String(match.groups?.text || "").trim()
+    }));
+}
+
+function markdownEscapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function extractSection(markdown, heading) {
+  const escaped = markdownEscapeRegExp(heading);
+  const re = new RegExp(`(^|\\r?\\n)##\\s+${escaped}\\s*\\r?\\n([\\s\\S]*?)(?=\\r?\\n##\\s+|$)`, "i");
+  const match = String(markdown || "").match(re);
+  return match ? match[2].trim() : "";
+}
+
+function parseStartSummary(sectionMarkdown) {
+  const summary = {};
+  for (const line of String(sectionMarkdown || "").split(/\r?\n/)) {
+    const match = line.trim().match(/^- (?<key>[^:]+):\s*(?<value>.*)$/);
+    if (!match) {
+      continue;
+    }
+    const key = String(match.groups?.key || "").trim().toLowerCase();
+    const value = String(match.groups?.value || "").trim();
+    summary[key] = value;
+  }
+  return summary;
+}
+
+function isPlaceholder(value) {
+  const normalized = String(value || "").trim();
+  if (!normalized) {
+    return true;
+  }
+  if (/^(tbd|todo|n\/a|na|unknown|none)$/i.test(normalized)) {
+    return true;
+  }
+  if (/^(task|criterion|command)\s+\d+$/i.test(normalized)) {
+    return true;
+  }
+  return false;
+}
+
+function hasFileLevelHint(text) {
+  const value = String(text || "");
+  return (
+    /[a-zA-Z]:\\|\/|\\/.test(value) ||
+    /\.[a-z0-9]{1,8}\b/i.test(value) ||
+    /`[^`]+\.[a-z0-9]{1,8}`/i.test(value)
+  );
+}
+
+function looksRunnableCommand(text) {
+  const value = String(text || "").trim();
+  if (!value || isPlaceholder(value)) {
+    return false;
+  }
+  return /^(npm|npx|node|kfc|kf|git|pnpm|yarn|python|pytest|cargo|go)\b/i.test(value);
+}
+
+function evaluateBuildReadiness(planRecord) {
+  const findings = [];
+  const fm = planRecord.frontmatter || {};
+  const markdown = planRecord.raw || "";
+
+  if (String(fm.decision || "").toUpperCase() !== "GO") {
+    findings.push("decision must be GO.");
+  }
+  if (String(fm.next_command || "").toLowerCase() !== "build") {
+    findings.push("next_command must be build.");
+  }
+  if (String(fm.next_mode || "") !== "Build") {
+    findings.push("next_mode must be Build.");
+  }
+
+  const startSummarySection = extractSection(markdown, "Start Summary");
+  if (!startSummarySection) {
+    findings.push("Start Summary section is missing.");
+  } else {
+    const startSummary = parseStartSummary(startSummarySection);
+    const required = String(startSummary.required || "").toLowerCase();
+    const reason = startSummary.reason || "";
+    if (required !== "yes" && required !== "no") {
+      findings.push("Start Summary Required must be yes|no.");
+    }
+    if (isPlaceholder(reason)) {
+      findings.push("Start Summary Reason is placeholder.");
+    }
+    if (required === "yes") {
+      if (isPlaceholder(startSummary["selected idea"] || "")) {
+        findings.push("Start Summary Selected Idea is placeholder.");
+      }
+      if (isPlaceholder(startSummary["handoff confidence"] || "")) {
+        findings.push("Start Summary Handoff Confidence is placeholder.");
+      }
+    }
+  }
+
+  const openDecisionsSection = extractSection(markdown, "Open Decisions");
+  if (!openDecisionsSection) {
+    findings.push("Open Decisions section is missing.");
+  } else {
+    const unresolvedItems = parseChecklistItems(openDecisionsSection).filter((item) => !item.checked);
+    const remainingCountMatch = openDecisionsSection.match(/Remaining Count:\s*(\d+)/i);
+    const remainingCount = remainingCountMatch ? Number(remainingCountMatch[1]) : unresolvedItems.length;
+    if (remainingCount > 0 || unresolvedItems.length > 0) {
+      findings.push("Open Decisions has unresolved items.");
+    }
+  }
+
+  const tasksSection = extractSection(markdown, "Implementation Tasks");
+  const taskItems = parseChecklistItems(tasksSection);
+  if (taskItems.length === 0) {
+    findings.push("Implementation Tasks must contain checklist items.");
+  } else {
+    const invalidTasks = taskItems.filter(
+      (item) => isPlaceholder(item.text) || !hasFileLevelHint(item.text)
+    );
+    if (invalidTasks.length > 0) {
+      findings.push("Implementation Tasks must be concrete and file-level.");
+    }
+  }
+
+  const acSection = extractSection(markdown, "Acceptance Criteria");
+  const acItems = parseChecklistItems(acSection);
+  if (acItems.length === 0) {
+    findings.push("Acceptance Criteria must contain checklist items.");
+  } else if (acItems.some((item) => isPlaceholder(item.text))) {
+    findings.push("Acceptance Criteria includes placeholder entries.");
+  }
+
+  const validationSection = extractSection(markdown, "Validation Commands");
+  const validationCommands = parseBulletLines(validationSection);
+  if (validationCommands.length === 0) {
+    findings.push("Validation Commands section is empty.");
+  } else if (validationCommands.some((command) => !looksRunnableCommand(command))) {
+    findings.push("Validation Commands must be runnable commands in this repo.");
+  }
+
+  return {
+    ready: findings.length === 0,
+    findings
+  };
+}
+
+function printReadinessBlock(projectDir, reason, extraFindings = []) {
+  const lines = [
+    "Status: BLOCK",
+    `Reason: ${reason}`,
+    `Recovery: kfc flow ensure-plan --project ${projectDir}`,
+    'Expected: {"ok":true,"plan_path":"<absolute-path>",...}'
+  ];
+  for (const finding of extraFindings) {
+    lines.push(`- ${finding}`);
+  }
+  console.error(lines.join("\n"));
 }
 
 async function requestJson(method, url, body) {
@@ -415,6 +592,9 @@ export async function runFlow(options) {
   if (subcommand === "ensure-plan") {
     return await runEnsurePlan(options, args);
   }
+  if (subcommand === "ready") {
+    return await runReady(options, args);
+  }
   if (subcommand === "apply") {
     return await runApply(options, args);
   }
@@ -427,10 +607,7 @@ export async function runFlow(options) {
   return 1;
 }
 
-async function runEnsurePlan(options, args) {
-  const projectDir = resolveProjectDir(options.cwd, args);
-  const planRef = readOption(args, "--plan", "");
-  const forceNew = readFlag(args, "--new");
+async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd }) {
   let selected = null;
   let created = false;
   let source = "existing";
@@ -447,24 +624,86 @@ async function runEnsurePlan(options, args) {
   }
 
   if (!selected || forceNew) {
-    const createdPath = await createPlanViaInit(projectDir, options.cwd);
+    const createdPath = await createPlanViaInit(projectDir, cwd);
     selected = await readPlanRecord(createdPath);
     created = true;
     source = "created";
   }
 
+  return { selected, created, source };
+}
+
+async function runEnsurePlan(options, args) {
+  const projectDir = resolveProjectDir(options.cwd, args);
+  const planRef = readOption(args, "--plan", "");
+  const forceNew = readFlag(args, "--new");
+  const resolved = await resolveOrCreatePlan({
+    projectDir,
+    planRef,
+    forceNew,
+    cwd: options.cwd
+  });
+
   const payload = {
     ok: true,
-    created,
-    source,
+    created: resolved.created,
+    source: resolved.source,
     project_dir: projectDir,
-    plan_path: selected.filePath,
-    plan_id: selected.planId,
-    status: selected.status,
-    updated_at: selected.updatedAt
+    plan_path: resolved.selected.filePath,
+    plan_id: resolved.selected.planId,
+    status: resolved.selected.status,
+    updated_at: resolved.selected.updatedAt
   };
 
   info(`Plan resolved: ${payload.plan_path}`);
+  console.log(JSON.stringify(payload, null, 2));
+  return 0;
+}
+
+async function runReady(options, args) {
+  const projectDir = resolveProjectDir(options.cwd, args);
+  const planRef = readOption(args, "--plan", "");
+  const forceNew = readFlag(args, "--new");
+  const resolved = await resolveOrCreatePlan({
+    projectDir,
+    planRef,
+    forceNew,
+    cwd: options.cwd
+  });
+
+  let validateResult;
+  try {
+    validateResult = await runNode([KFC_BIN, "plan", "validate", "--project", projectDir], options.cwd);
+  } catch (err) {
+    printReadinessBlock(projectDir, "kfc plan validate failed to run.", [
+      err instanceof Error ? err.message : String(err)
+    ]);
+    return 1;
+  }
+  if (validateResult.code !== 0) {
+    printReadinessBlock(projectDir, "kfc plan validate failed.", [
+      "Run `kfc plan validate --project .` and fix validation errors before build."
+    ]);
+    return 1;
+  }
+
+  const readiness = evaluateBuildReadiness(resolved.selected);
+  if (!readiness.ready) {
+    printReadinessBlock(projectDir, "Plan is not build-ready.", readiness.findings);
+    return 1;
+  }
+
+  const payload = {
+    ok: true,
+    ready: true,
+    project_dir: projectDir,
+    plan_path: resolved.selected.filePath,
+    plan_id: resolved.selected.planId,
+    decision: resolved.selected.frontmatter.decision || "",
+    next_command: resolved.selected.frontmatter.next_command || "",
+    next_mode: resolved.selected.frontmatter.next_mode || ""
+  };
+  info(`Build-ready plan confirmed: ${payload.plan_path}`);
   console.log(JSON.stringify(payload, null, 2));
   return 0;
 }

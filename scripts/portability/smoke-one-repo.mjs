@@ -37,7 +37,7 @@ function printUsage() {
       "  --link             Run npm link from this repo and npm link <package> in target project.",
       "  --port <n>         Port for kfc plan serve health check (default: 4310).",
       "  --out <path>       Output markdown report path (default: artifacts/portability/<timestamp>-<project>.md)",
-      "  --legacy-steps     Use legacy granular checks instead of `kfc client bootstrap`."
+      "  --legacy-steps     Use legacy granular checks instead of baseline `kfc client bootstrap` smoke."
     ].join("\n")
   );
 }
@@ -285,7 +285,7 @@ async function main() {
 
   console.log(`[portability] Target project: ${projectDir}`);
   console.log(`[portability] Link mode: ${args.link ? "on" : "off"}`);
-  console.log(`[portability] Step mode: ${args.legacySteps ? "legacy" : "bootstrap"}`);
+  console.log(`[portability] Step mode: ${args.legacySteps ? "legacy" : "baseline-bootstrap"}`);
 
   if (args.link) {
     steps.push(runStep("npm link (tool repo)", NODE, [NPM_CLI, "link"], ROOT_DIR));

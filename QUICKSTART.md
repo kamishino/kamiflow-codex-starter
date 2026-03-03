@@ -44,12 +44,13 @@ For each task, use this KISS loop:
 
 ```bash
 kfc flow ensure-plan --project .
+kfc flow ready --project .
 ```
 
 3. If behavior looks off, run:
 
 ```bash
-kfc client doctor --project .
+kfc client doctor --project . --fix
 ```
 
 After work is complete, cleanup is required:
@@ -63,7 +64,7 @@ kfc client done
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
 - Missing plan UI: rerun `kfc client --force`.
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
-- Flow behavior mismatch: run `kfc client doctor --project .`.
+- Flow behavior mismatch: run `kfc client doctor --project . --fix`.
 - Rules mismatch: rerun `kfc client --force`.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
