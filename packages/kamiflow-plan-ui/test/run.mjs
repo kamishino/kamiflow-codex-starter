@@ -182,11 +182,18 @@ await runCase("detectProjectRoot prefers git root then package then cwd", async 
   });
 });
 
-await runCase("timeline contrast policy check passes", async () => {
-  const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfp-timeline-contrast.mjs");
+await runCase("global KFP contrast policy check passes", async () => {
+  const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfp-contrast.mjs");
   const policyModule = await import(pathToFileURL(policyPath).href);
-  const result = await policyModule.verifyKfpTimelineContrast();
+  const result = await policyModule.verifyKfpContrast();
   assert.equal(result.failures.length, 0, result.failures.join("\n"));
+});
+
+await runCase("KFP spacing grid policy check passes", async () => {
+  const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfp-spacing-grid.mjs");
+  const policyModule = await import(pathToFileURL(policyPath).href);
+  const result = await policyModule.verifyKfpSpacingGrid();
+  assert.equal(result.violations.length, 0, result.violations.join("\n"));
 });
 
 await runCase("codex runner does not throw on spawn failures", async () => {
@@ -446,6 +453,8 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
     assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
+    assert.ok(stylesResponse.payload.includes("--space-4"));
+    assert.ok(stylesResponse.payload.includes("@supports (color: oklch"));
     assert.ok(stylesResponse.payload.includes("@media (prefers-reduced-motion: reduce)"));
 
     await server.close();

@@ -147,11 +147,7 @@ If global home path is restricted, set `KAMIFLOW_HOME` to override workspace con
 The browser UI provides:
 
 - phase timeline (`Start -> Plan -> Build -> Check -> Done`)
-- plan health summary
-- next-step panel with terminal command hints (`kfc flow next` + `kfc flow apply`)
-- read-only progress-first snapshot:
-  - `Progress` tab shows done summary + single-column Tasks and Acceptance Criteria
-  - `Context` tab contains Start Summary and WIP Log details
+- implementation plan status snapshot with Tasks and Acceptance Criteria checklists
 - activity journal with severity tags (`info|ok|warn|error`) and filter (`all|plan|codex|system`)
 - actionable empty states (no project / no plan / missing selection)
 - responsive tablet mode: at `<=1366px`, layout becomes `Sidebar + Main`, and Activity moves below main content
@@ -160,3 +156,14 @@ Typography:
 
 - body/headings: `Work Sans`
 - `pre`/`code`: `JetBrains Mono`
+- compact scale: `12 / 14 / 16 / 20 / 24`
+
+Design system guardrails:
+
+- dual color tokens with sRGB fallback + OKLCH harmonies (`@supports (color: oklch(...))`)
+- 4px layout spacing rhythm for margin/padding/gap/position offsets
+- semantic color usage for surface/text/state tokens across KFP components
+- accessibility verification gates:
+  - `npm run docs:verify:kfp-contrast` (WCAG 2.1 ratio + APCA-oriented thresholds)
+  - `npm run docs:verify:kfp-spacing-grid` (4px grid policy)
+  - `npm run docs:verify:kfp-design-system` (combined)
