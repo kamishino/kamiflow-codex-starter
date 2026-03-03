@@ -3,8 +3,6 @@ import { render } from "preact";
 import { fetchPlanDetail, fetchPlans, fetchProjects } from "./api";
 import { ActivityJournal } from "./components/ActivityJournal";
 import { EmptyPanelCard } from "./components/EmptyPanelCard";
-import { NextStepCard } from "./components/NextStepCard";
-import { PlanHealth } from "./components/PlanHealth";
 import { PlanSnapshot } from "./components/PlanSnapshot";
 import { WorkflowTimeline } from "./components/WorkflowTimeline";
 import { activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
@@ -21,8 +19,6 @@ const activityFilterEl = document.querySelector<HTMLSelectElement>("#activity-fi
 
 const statusEl = document.querySelector<HTMLElement>("#status");
 const workflowEl = document.querySelector<HTMLElement>("#workflow-rail");
-const healthEl = document.querySelector<HTMLElement>("#plan-health");
-const nextStepEl = document.querySelector<HTMLElement>("#next-step-card");
 const workEl = document.querySelector<HTMLElement>("#work-surface");
 const activityEl = document.querySelector<HTMLElement>("#activity-feed");
 const connectionBadgeEl = document.querySelector<HTMLElement>("#connection-badge");
@@ -37,8 +33,6 @@ if (
   !activityFilterEl ||
   !statusEl ||
   !workflowEl ||
-  !healthEl ||
-  !nextStepEl ||
   !workEl ||
   !activityEl ||
   !connectionBadgeEl
@@ -46,7 +40,6 @@ if (
   throw new Error("KFP UI bootstrap failed: required DOM nodes are missing.");
 }
 
-const UI_MODE = (document.body?.dataset?.uiMode || "observer").toLowerCase() === "operator" ? "operator" : "observer";
 const ACTIVITY_STORAGE_PREFIX = "kfp.activity.v2";
 const ACTIVITY_MAX_ITEMS = 120;
 const PLAN_PICKER_MAX_RESULTS = 50;
@@ -593,8 +586,6 @@ effect(() => {
   const activeDetail = detail.value;
   if (state) {
     render(<EmptyPanelCard reason={state.reason} nextStep={state.nextStep} />, workflowEl);
-    render(<EmptyPanelCard reason={state.reason} nextStep={state.nextStep} />, healthEl);
-    render(<EmptyPanelCard reason={state.reason} nextStep={state.nextStep} />, nextStepEl);
     render(<EmptyPanelCard reason={state.reason} nextStep={state.nextStep} />, workEl);
     return;
   }
@@ -603,8 +594,6 @@ effect(() => {
   }
 
   render(<WorkflowTimeline detail={activeDetail} />, workflowEl);
-  render(<PlanHealth detail={activeDetail} />, healthEl);
-  render(<NextStepCard detail={activeDetail} uiMode={UI_MODE} />, nextStepEl);
   render(<PlanSnapshot detail={activeDetail} />, workEl);
 });
 

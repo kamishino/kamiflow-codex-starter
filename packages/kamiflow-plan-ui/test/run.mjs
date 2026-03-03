@@ -411,8 +411,9 @@ updated_at: 2026-03-01
     assert.ok(!indexResponse.payload.includes("api-badge"));
     assert.ok(!indexResponse.payload.includes("plan-selected-pill"));
     assert.ok(indexResponse.payload.includes("Phase Timeline"));
-    assert.ok(indexResponse.payload.includes("Next Step"));
-    assert.ok(indexResponse.payload.includes("Plan Snapshot"));
+    assert.ok(indexResponse.payload.includes("Implementation Plan Status"));
+    assert.ok(!indexResponse.payload.includes("Next Step"));
+    assert.ok(!indexResponse.payload.includes("Plan Health"));
     assert.ok(indexResponse.payload.includes("Activity"));
 
     const appJsResponse = await server.inject({
@@ -420,9 +421,6 @@ updated_at: 2026-03-01
       url: "/assets/app.js"
     });
     assert.equal(appJsResponse.statusCode, 200);
-    assert.ok(appJsResponse.payload.includes("Observer Mode"));
-    assert.ok(appJsResponse.payload.includes("Terminal Commands"));
-    assert.ok(appJsResponse.payload.includes("This UI is read-only for safety"));
     assert.ok(appJsResponse.payload.includes("No plan selected."));
     assert.ok(appJsResponse.payload.includes("toolbar plan picker"));
     assert.ok(appJsResponse.payload.includes("activity-tag"));

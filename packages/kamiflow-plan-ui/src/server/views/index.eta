@@ -57,18 +57,8 @@
           <div id="workflow-rail" class="workflow-rail"></div>
         </section>
 
-        <section class="panel" id="health-panel">
-          <h2>Plan Health</h2>
-          <div id="plan-health"></div>
-        </section>
-
-        <section class="panel" id="next-step-panel">
-          <h2>Next Step</h2>
-          <div id="next-step-card"></div>
-        </section>
-
         <section class="panel" id="snapshot-panel">
-          <h2>Plan Snapshot</h2>
+          <h2>Implementation Plan Status</h2>
           <div id="work-surface"></div>
         </section>
       </main>
