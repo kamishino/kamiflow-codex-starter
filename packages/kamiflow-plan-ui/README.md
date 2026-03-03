@@ -152,6 +152,7 @@ The browser UI provides:
 - read-only plan snapshot (start summary, tasks, acceptance criteria, WIP)
 - activity journal with severity tags (`info|ok|warn|error`) and filter (`all|plan|codex|system`)
 - actionable empty states (no project / no plan / missing selection)
+- responsive tablet mode: at `<=1366px`, layout becomes `Sidebar + Main`, and Activity moves below main content
 
 Typography:
 

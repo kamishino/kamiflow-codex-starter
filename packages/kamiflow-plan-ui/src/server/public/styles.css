@@ -638,15 +638,22 @@ pre {
   color: var(--danger);
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1366px) {
   .content-grid {
-    grid-template-columns: 280px minmax(0, 1fr);
+    grid-template-columns: 300px minmax(0, 1fr);
   }
 
   .journal {
     grid-column: 1 / -1;
     position: static;
     max-height: none;
+  }
+
+  .sidebar,
+  .panel,
+  .activity {
+    padding-left: 14px;
+    padding-right: 14px;
   }
 
   #health-panel,
