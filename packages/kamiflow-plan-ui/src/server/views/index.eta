@@ -42,8 +42,8 @@
       </aside>
 
       <main class="main">
-        <section class="panel" id="workflow-panel">
-          <h2>Workflow Rail</h2>
+        <section class="panel" id="timeline-panel">
+          <h2>Phase Timeline</h2>
           <div id="workflow-rail" class="workflow-rail"></div>
         </section>
 
@@ -52,19 +52,28 @@
           <div id="plan-health"></div>
         </section>
 
-        <section class="panel" id="action-panel">
-          <h2>Operator Guidance</h2>
-          <div id="action-console"></div>
+        <section class="panel" id="next-step-panel">
+          <h2>Next Step</h2>
+          <div id="next-step-card"></div>
         </section>
 
-        <section class="panel" id="work-panel">
+        <section class="panel" id="snapshot-panel">
           <h2>Plan Snapshot</h2>
           <div id="work-surface"></div>
         </section>
       </main>
 
-      <section class="activity panel">
-        <h2>Activity</h2>
+      <section class="activity panel journal">
+        <div class="journal-header">
+          <h2>Activity</h2>
+          <label for="activity-filter" class="journal-filter-label">Filter</label>
+          <select id="activity-filter">
+            <option value="all">All</option>
+            <option value="plan">Plan</option>
+            <option value="codex">Codex</option>
+            <option value="system">System</option>
+          </select>
+        </div>
         <ul id="activity-feed"></ul>
       </section>
     </div>

@@ -143,11 +143,11 @@ If global home path is restricted, set `KAMIFLOW_HOME` to override workspace con
 
 The browser UI provides:
 
-- workflow rail (`Start -> Plan -> Build -> Check -> Done`)
+- phase timeline (`Start -> Plan -> Build -> Check -> Done`)
 - plan health summary
-- operator guidance panel with stage-aware external `kfc` command hints
+- next-step panel with terminal command hints (`kfc flow next` + `kfc flow apply`)
 - read-only plan snapshot (start summary, tasks, acceptance criteria, WIP)
-- compact activity feed with severity tags (`info|ok|warn|error`) for faster scan
+- activity journal with severity tags (`info|ok|warn|error`) and filter (`all|plan|codex|system`)
 - actionable empty states (no project / no plan / missing selection)
 
 Typography:

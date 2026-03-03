@@ -398,8 +398,8 @@ updated_at: 2026-03-01
       url: "/"
     });
     assert.equal(indexResponse.statusCode, 200);
-    assert.ok(indexResponse.payload.includes("Workflow Rail"));
-    assert.ok(indexResponse.payload.includes("Operator Guidance"));
+    assert.ok(indexResponse.payload.includes("Phase Timeline"));
+    assert.ok(indexResponse.payload.includes("Next Step"));
     assert.ok(indexResponse.payload.includes("Plan Snapshot"));
     assert.ok(indexResponse.payload.includes("Activity"));
 
@@ -419,7 +419,7 @@ updated_at: 2026-03-01
       url: "/assets/styles.css"
     });
     assert.equal(stylesResponse.statusCode, 200);
-    assert.ok(stylesResponse.payload.includes(".btn-recommended"));
+    assert.ok(stylesResponse.payload.includes(".journal-header"));
     assert.ok(stylesResponse.payload.includes(".empty-state"));
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
 
