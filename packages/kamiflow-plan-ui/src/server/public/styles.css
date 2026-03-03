@@ -67,10 +67,8 @@ samp,
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
+  display: grid;
+  gap: 12px;
   margin-bottom: 14px;
   padding: 16px 18px;
   border: 1px solid var(--border);
@@ -85,6 +83,13 @@ samp,
   letter-spacing: -0.02em;
 }
 
+.topbar-row-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
 #status {
   margin: 7px 0 0;
   color: var(--muted-foreground);
@@ -97,31 +102,145 @@ samp,
   gap: 8px;
 }
 
+.topbar-controls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.1fr) 140px minmax(420px, 2fr);
+  gap: 10px;
+  align-items: end;
+}
+
+.toolbar-field {
+  min-width: 0;
+}
+
+.toolbar-field label {
+  margin-bottom: 5px;
+}
+
+.toolbar-field-compact {
+  max-width: 200px;
+}
+
+.toolbar-field-plan {
+  position: relative;
+}
+
+.plan-search-wrap {
+  display: block;
+}
+
+#plan-search-input,
+#project-filter,
+#plan-filter {
+  margin-bottom: 0;
+}
+
+#plan-selected-pill {
+  display: inline-flex;
+  margin-top: 8px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.plan-picker-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.plan-search-results {
+  position: absolute;
+  top: calc(100% + 7px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 300px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  background: #fff;
+  padding: 8px;
+  display: grid;
+  gap: 7px;
+}
+
+.plan-search-results[hidden] {
+  display: none !important;
+}
+
+.plan-result-item {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+  text-align: left;
+  padding: 9px 10px;
+  cursor: pointer;
+  display: grid;
+  gap: 2px;
+}
+
+.plan-result-item:hover {
+  border-color: #9dbcf8;
+  background: #f3f7ff;
+}
+
+.plan-result-item strong {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.plan-result-item span {
+  font-size: 12px;
+  color: #273244;
+}
+
+.plan-result-meta {
+  min-height: 14px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+}
+
+.plan-result-selected {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.14);
+}
+
+.plan-result-empty {
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+  padding: 10px;
+  display: grid;
+  gap: 6px;
+}
+
+.plan-result-empty strong {
+  font-size: 13px;
+}
+
+.plan-result-empty small {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
 .content-grid {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   gap: 14px;
   align-items: start;
 }
 
-.sidebar,
 .panel,
 .activity {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   background: var(--card);
-}
-
-.sidebar {
-  padding: 16px;
-  max-height: calc(100vh - 120px);
-  overflow: auto;
-}
-
-.sidebar h2 {
-  margin-bottom: 12px;
-  font-size: 16px;
 }
 
 label {
@@ -142,21 +261,6 @@ textarea {
   background: #fff;
   color: var(--foreground);
   font-family: "Work Sans", sans-serif;
-}
-
-#plan-list {
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.plan-list-button {
-  width: 100%;
-  justify-content: flex-start;
-  text-align: left;
-  line-height: 1.35;
 }
 
 .main {
@@ -775,7 +879,7 @@ pre {
 
 @media (max-width: 1366px) {
   .content-grid {
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: 1fr;
   }
 
   .journal {
@@ -784,11 +888,18 @@ pre {
     max-height: none;
   }
 
-  .sidebar,
   .panel,
   .activity {
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .topbar-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .toolbar-field-plan {
+    grid-column: 1 / -1;
   }
 
   #health-panel,
@@ -810,7 +921,6 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .sidebar,
   .journal {
     max-height: none;
     position: static;
@@ -830,9 +940,25 @@ pre {
     grid-template-columns: 1fr;
   }
 
-  .topbar {
+  .topbar-row-main {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .topbar-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .toolbar-field-compact {
+    max-width: none;
+  }
+
+  .plan-search-wrap {
+    display: block;
+  }
+
+  #plan-selected-pill {
+    max-width: none;
   }
 
   .journal-header {

@@ -402,6 +402,9 @@ updated_at: 2026-03-01
       url: "/"
     });
     assert.equal(indexResponse.statusCode, 200);
+    assert.ok(indexResponse.payload.includes("toolbar-controls"));
+    assert.ok(indexResponse.payload.includes("plan-search-input"));
+    assert.ok(indexResponse.payload.includes("plan-search-results"));
     assert.ok(indexResponse.payload.includes("Phase Timeline"));
     assert.ok(indexResponse.payload.includes("Next Step"));
     assert.ok(indexResponse.payload.includes("Plan Snapshot"));
@@ -416,6 +419,7 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("Terminal Commands"));
     assert.ok(appJsResponse.payload.includes("This UI is read-only for safety"));
     assert.ok(appJsResponse.payload.includes("No plan selected."));
+    assert.ok(appJsResponse.payload.includes("toolbar plan picker"));
     assert.ok(appJsResponse.payload.includes("activity-tag"));
 
     const stylesResponse = await server.inject({

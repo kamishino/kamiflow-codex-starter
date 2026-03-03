@@ -12,8 +12,11 @@ import type { ActivityItem, PlanSummary } from "./types";
 import { activityTone, formatEventLabel, nowIso, parseRoute } from "./utils";
 
 const projectEl = document.querySelector<HTMLSelectElement>("#project-filter");
-const planListEl = document.querySelector<HTMLUListElement>("#plan-list");
 const filterEl = document.querySelector<HTMLSelectElement>("#plan-filter");
+const planSearchInputEl = document.querySelector<HTMLInputElement>("#plan-search-input");
+const planSearchResultsEl = document.querySelector<HTMLElement>("#plan-search-results");
+const planSelectedPillEl = document.querySelector<HTMLElement>("#plan-selected-pill");
+const planPickerWrapEl = document.querySelector<HTMLElement>("#plan-picker-wrap");
 const activityFilterEl = document.querySelector<HTMLSelectElement>("#activity-filter");
 
 const statusEl = document.querySelector<HTMLElement>("#status");
@@ -28,8 +31,11 @@ const connectionBadgeEl = document.querySelector<HTMLElement>("#connection-badge
 
 if (
   !projectEl ||
-  !planListEl ||
   !filterEl ||
+  !planSearchInputEl ||
+  !planSearchResultsEl ||
+  !planSelectedPillEl ||
+  !planPickerWrapEl ||
   !activityFilterEl ||
   !statusEl ||
   !workflowEl ||
@@ -47,12 +53,16 @@ if (
 const UI_MODE = (document.body?.dataset?.uiMode || "observer").toLowerCase() === "operator" ? "operator" : "observer";
 const ACTIVITY_STORAGE_PREFIX = "kfp.activity.v2";
 const ACTIVITY_MAX_ITEMS = 120;
+const PLAN_PICKER_MAX_RESULTS = 50;
 
 let currentStream: EventSource | null = null;
 let lastHeartbeatTs = 0;
 let staleTimer: number | null = null;
 let pollTimer: number | null = null;
 let currentPlans: PlanSummary[] = [];
+let planSearchQuery = "";
+let projectsLoaded = false;
+let suppressHashChange = false;
 
 function currentPlanFilter(): string {
   return filterEl.value || "active";
@@ -64,6 +74,92 @@ function currentProjectId(): string {
 
 function setStatus(message: string): void {
   statusMessage.value = message;
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function filterPlansByMode(plans: PlanSummary[], mode: string): PlanSummary[] {
+  return plans.filter((item) => {
+    if (mode === "done") {
+      return Boolean(item.is_done || item.is_archived);
+    }
+    if (mode === "active") {
+      return !item.is_done && !item.is_archived;
+    }
+    return true;
+  });
+}
+
+function filterPlansByQuery(plans: PlanSummary[], query: string): PlanSummary[] {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) {
+    return plans;
+  }
+  return plans.filter((item) => {
+    return item.plan_id.toLowerCase().includes(normalized) || item.title.toLowerCase().includes(normalized);
+  });
+}
+
+function selectedRoutePlanId(): string {
+  return route.value?.planId || parseRoute(location.hash || "")?.planId || "";
+}
+
+function syncSelectedPlanPill(): void {
+  const routeFromHash = parseRoute(location.hash || "");
+  const selectedPlanId = routeFromHash?.planId || "";
+
+  if (!selectedPlanId) {
+    planSelectedPillEl.className = "chip chip-muted";
+    planSelectedPillEl.textContent = "No plan selected";
+    return;
+  }
+
+  const fromList = currentPlans.find((item) => item.plan_id === selectedPlanId);
+  const fromDetail = detail.value?.summary?.plan_id === selectedPlanId ? detail.value.summary : null;
+  const label = fromList || fromDetail;
+  const title = label?.title ? ` - ${label.title}` : "";
+
+  planSelectedPillEl.className = "chip";
+  planSelectedPillEl.textContent = `selected: ${selectedPlanId}${title}`;
+}
+
+function openPlanPicker(): void {
+  planSearchResultsEl.hidden = false;
+  renderPlanSearchResults();
+}
+
+function closePlanPicker(): void {
+  planSearchResultsEl.hidden = true;
+}
+
+function isInsidePlanPicker(target: EventTarget | null): boolean {
+  return target instanceof Node && planPickerWrapEl.contains(target);
+}
+
+function navigateToPlan(projectId: string, planId: string | null, mode: "push" | "replace"): void {
+  const nextHash =
+    planId && projectId
+      ? "#/projects/" + encodeURIComponent(projectId) + "/plans/" + encodeURIComponent(planId)
+      : "";
+  if (location.hash === nextHash) {
+    return;
+  }
+  suppressHashChange = true;
+  if (mode === "replace") {
+    history.replaceState(null, "", nextHash || location.pathname + location.search);
+  } else {
+    location.hash = nextHash;
+  }
+  window.setTimeout(() => {
+    suppressHashChange = false;
+  }, 0);
 }
 
 function setConnectionState(state: "connected" | "stale" | "offline" | "disconnected"): void {
@@ -152,50 +248,71 @@ function renderProjectsList(projects: Array<{ project_id: string; project_dir: s
   }
 }
 
-function renderPlanList(plans: PlanSummary[]): void {
-  const mode = currentPlanFilter();
-  const filtered = plans.filter((item) => {
-    if (mode === "done") {
-      return Boolean(item.is_done || item.is_archived);
-    }
-    if (mode === "active") {
-      return !item.is_done && !item.is_archived;
-    }
-    return true;
-  });
+function firstVisiblePlanId(plans: PlanSummary[]): string | null {
+  const visiblePlans = filterPlansByMode(plans, currentPlanFilter());
+  return visiblePlans.length ? visiblePlans[0].plan_id : null;
+}
 
-  if (!filtered.length) {
+function clearPlanSearch(): void {
+  planSearchQuery = "";
+  planSearchInputEl.value = "";
+}
+
+function selectPlan(planId: string): void {
+  clearPlanSearch();
+  closePlanPicker();
+  navigateToPlan(currentProjectId(), planId, "push");
+  void refreshFromRoute();
+}
+
+function renderPlanSearchResults(): void {
+  const projectId = currentProjectId();
+  if (!projectId) {
+    planSearchResultsEl.innerHTML =
+      '<div class="plan-result-empty"><strong>No projects configured.</strong><small>Run <code>kfc plan workspace add &lt;name&gt; --project &lt;path&gt;</code>.</small></div>';
+    return;
+  }
+
+  const mode = currentPlanFilter();
+  const visiblePlans = filterPlansByMode(currentPlans, mode);
+  const filtered = filterPlansByQuery(visiblePlans, planSearchQuery);
+  const selectedPlanId = selectedRoutePlanId();
+
+  if (!visiblePlans.length) {
     const title =
       mode === "done"
         ? "No completed plans in this project."
         : mode === "active"
           ? "No active plans in this project."
           : "No plans in this project.";
-    planListEl.innerHTML =
-      '<li class="empty-state"><strong>' +
-      title +
-      "</strong><small>Next: run <code>kfc plan init --project . --new</code>, then run <code>$kamiflow-core plan</code>.</small></li>";
+    planSearchResultsEl.innerHTML =
+      '<div class="plan-result-empty"><strong>' +
+      escapeHtml(title) +
+      "</strong><small>Next: run <code>kfc plan init --project . --new</code>, then run <code>$kamiflow-core plan</code>.</small></div>";
     return;
   }
 
-  planListEl.innerHTML = filtered
+  if (!filtered.length) {
+    planSearchResultsEl.innerHTML =
+      '<div class="plan-result-empty"><strong>No plans matched your search.</strong><small>Try another keyword or clear the search input.</small></div>';
+    return;
+  }
+
+  planSearchResultsEl.innerHTML = filtered
+    .slice(0, PLAN_PICKER_MAX_RESULTS)
     .map((item) => {
-      const invalid = item.is_valid ? "" : " (invalid)";
-      const archived = item.is_archived ? " [archived]" : "";
-      return `<li><button class="ui-button ui-button-ghost plan-list-button" data-plan-id="${item.plan_id}">${item.plan_id} - ${item.title}${archived}${invalid}</button></li>`;
+      const archived = item.is_archived ? "[archived]" : "";
+      const invalid = item.is_valid ? "" : "(invalid)";
+      const selectedClass = item.plan_id === selectedPlanId ? " plan-result-selected" : "";
+      return (
+        `<button type="button" class="plan-result-item${selectedClass}" data-plan-id="${escapeHtml(item.plan_id)}">` +
+        `<strong>${escapeHtml(item.plan_id)}</strong>` +
+        `<span>${escapeHtml(item.title)}</span>` +
+        `<small class="plan-result-meta">${escapeHtml([archived, invalid].filter(Boolean).join(" "))}</small>` +
+        "</button>"
+      );
     })
     .join("");
-
-  for (const button of planListEl.querySelectorAll<HTMLButtonElement>("button[data-plan-id]")) {
-    button.addEventListener("click", () => {
-      const planId = button.getAttribute("data-plan-id");
-      if (!planId) {
-        return;
-      }
-      location.hash = "#/projects/" + encodeURIComponent(currentProjectId()) + "/plans/" + encodeURIComponent(planId);
-      void loadDetail();
-    });
-  }
 }
 
 function renderNoSelectionState(reason: string, nextStep: string): void {
@@ -208,20 +325,17 @@ async function loadList(): Promise<void> {
   selectedProjectId.value = projectId;
 
   if (!projectId) {
-    planListEl.innerHTML =
-      '<li class="empty-state"><strong>No projects configured.</strong><small>Run <code>kfc plan workspace add &lt;name&gt; --project &lt;path&gt;</code>.</small></li>';
+    currentPlans = [];
+    renderPlanSearchResults();
+    syncSelectedPlanPill();
+    setStatus("No project selected.");
     return;
   }
 
   const includeDone = currentPlanFilter() !== "active";
   currentPlans = await fetchPlans(projectId, includeDone);
-  renderPlanList(currentPlans);
-
-  const routeFromHash = parseRoute(location.hash || "");
-  if (!routeFromHash && currentPlans.length > 0) {
-    const nextPlan = currentPlans[0];
-    location.hash = "#/projects/" + encodeURIComponent(projectId) + "/plans/" + encodeURIComponent(nextPlan.plan_id);
-  }
+  renderPlanSearchResults();
+  syncSelectedPlanPill();
 }
 
 async function loadDetail(): Promise<void> {
@@ -232,26 +346,71 @@ async function loadDetail(): Promise<void> {
   if (!routeFromHash) {
     renderNoSelectionState(
       "No plan selected.",
-      "Choose a plan from the left list. If none exists, run kfc plan init --project . --new."
+      "Choose a plan from the toolbar plan picker. If none exists, run kfc plan init --project . --new."
     );
+    syncSelectedPlanPill();
     return;
   }
 
-  if (projectEl.value !== routeFromHash.projectId) {
+  if (routeFromHash.projectId !== currentProjectId()) {
+    if (projectsLoaded) {
+      renderNoSelectionState(
+        "Selected plan belongs to another project.",
+        "Choose a plan from the current project using the toolbar plan picker."
+      );
+      syncSelectedPlanPill();
+      return;
+    }
     projectEl.value = routeFromHash.projectId;
   }
-  selectedProjectId.value = routeFromHash.projectId;
 
-  const fetchedDetail = await fetchPlanDetail(routeFromHash.projectId, routeFromHash.planId);
+  selectedProjectId.value = currentProjectId();
+
+  const fetchedDetail = await fetchPlanDetail(currentProjectId(), routeFromHash.planId);
   if (!fetchedDetail) {
     setStatus("Plan not found. Select another plan or refresh list.");
-    renderNoSelectionState("Selected plan is unavailable.", "Refresh list or pick another plan from sidebar.");
+    renderNoSelectionState("Selected plan is unavailable.", "Refresh list or pick another plan from the toolbar picker.");
+    syncSelectedPlanPill();
     return;
   }
 
   detail.value = fetchedDetail;
   emptyPanelState.value = null;
-  attachStream(routeFromHash.projectId, routeFromHash.planId);
+  syncSelectedPlanPill();
+  renderPlanSearchResults();
+  attachStream(currentProjectId(), routeFromHash.planId);
+}
+
+async function refreshFromRoute(): Promise<void> {
+  await loadList();
+  const routeFromHash = parseRoute(location.hash || "");
+  const projectId = currentProjectId();
+  const visiblePlanId = firstVisiblePlanId(currentPlans);
+
+  if (!projectId) {
+    navigateToPlan("", null, "replace");
+    await loadDetail();
+    return;
+  }
+
+  if (!routeFromHash || routeFromHash.projectId !== projectId) {
+    if (visiblePlanId) {
+      navigateToPlan(projectId, visiblePlanId, "replace");
+    } else {
+      navigateToPlan("", null, "replace");
+    }
+  } else {
+    const exists = currentPlans.some((item) => item.plan_id === routeFromHash.planId);
+    if (!exists) {
+      if (visiblePlanId) {
+        navigateToPlan(projectId, visiblePlanId, "replace");
+      } else {
+        navigateToPlan("", null, "replace");
+      }
+    }
+  }
+
+  await loadDetail();
 }
 
 function startPollingFallback(): void {
@@ -259,8 +418,7 @@ function startPollingFallback(): void {
     return;
   }
   pollTimer = window.setInterval(() => {
-    void loadDetail();
-    void loadList();
+    void refreshFromRoute();
   }, 15_000);
 }
 
@@ -294,8 +452,7 @@ function attachStream(projectId: string, planId: string): void {
       setConnectionState("stale");
       setStatus("Connection stale. Resyncing...");
       startPollingFallback();
-      void loadDetail();
-      void loadList();
+      void refreshFromRoute();
     }
   }, 5_000);
 
@@ -313,8 +470,7 @@ function attachStream(projectId: string, planId: string): void {
   currentStream.addEventListener("resync_required", () => {
     setStatus("Stream replay unavailable. Full resync.");
     addActivity("resync_required", "SSE replay unavailable", "full resync triggered");
-    void loadDetail();
-    void loadList();
+    void refreshFromRoute();
   });
 
   for (const eventType of ["plan_updated", "plan_deleted", "plan_invalid", "plan_archived"]) {
@@ -322,8 +478,7 @@ function attachStream(projectId: string, planId: string): void {
       const payload = (evt as MessageEvent).data || "";
       addActivity(eventType, "Plan event received", payload);
       setStatus("Live update received: " + eventType);
-      void loadDetail();
-      void loadList();
+      void refreshFromRoute();
     });
   }
 
@@ -351,13 +506,74 @@ function attachStream(projectId: string, planId: string): void {
 
 projectEl.addEventListener("change", () => {
   selectedProjectId.value = projectEl.value || "";
-  void loadList();
-  void loadDetail();
+  clearPlanSearch();
+  closePlanPicker();
+  void refreshFromRoute();
 });
 
 filterEl.addEventListener("change", () => {
-  void loadList();
-  void loadDetail();
+  clearPlanSearch();
+  closePlanPicker();
+  void refreshFromRoute();
+});
+
+planSearchInputEl.addEventListener("focus", () => {
+  openPlanPicker();
+});
+
+planSearchInputEl.addEventListener("click", () => {
+  openPlanPicker();
+});
+
+planSearchInputEl.addEventListener("input", () => {
+  planSearchQuery = planSearchInputEl.value || "";
+  openPlanPicker();
+});
+
+planSearchInputEl.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closePlanPicker();
+    return;
+  }
+  if (event.key === "Enter") {
+    const first = planSearchResultsEl.querySelector<HTMLButtonElement>("button[data-plan-id]");
+    if (!first) {
+      return;
+    }
+    const planId = first.getAttribute("data-plan-id");
+    if (planId) {
+      event.preventDefault();
+      selectPlan(planId);
+    }
+  }
+});
+
+planSearchResultsEl.addEventListener("click", (event) => {
+  const target = event.target as HTMLElement | null;
+  const button = target?.closest<HTMLButtonElement>("button[data-plan-id]");
+  const planId = button?.getAttribute("data-plan-id");
+  if (!planId) {
+    return;
+  }
+  selectPlan(planId);
+});
+
+document.addEventListener(
+  "pointerdown",
+  (event) => {
+    if (isInsidePlanPicker(event.target)) {
+      return;
+    }
+    closePlanPicker();
+  },
+  true
+);
+
+document.addEventListener("focusin", (event) => {
+  if (isInsidePlanPicker(event.target)) {
+    return;
+  }
+  closePlanPicker();
 });
 
 activityFilterEl.addEventListener("change", () => {
@@ -370,7 +586,10 @@ activityFilterEl.addEventListener("change", () => {
 });
 
 window.addEventListener("hashchange", () => {
-  void loadDetail();
+  if (suppressHashChange) {
+    return;
+  }
+  void refreshFromRoute();
 });
 
 effect(() => {
@@ -409,13 +628,14 @@ setConnectionState("disconnected");
 projectEl.classList.add("ui-select");
 filterEl.classList.add("ui-select");
 activityFilterEl.classList.add("ui-select");
+planSearchInputEl.classList.add("ui-input");
 fetchProjects()
   .then(({ workspace, projects }) => {
     workspaceBadgeEl.textContent = "workspace: " + workspace;
     renderProjectsList(projects);
-    return loadList();
+    projectsLoaded = true;
+    return refreshFromRoute();
   })
-  .then(() => loadDetail())
   .catch((err) => {
     setStatus("Failed to initialize UI: " + (err?.message || String(err)));
     addActivity("ui_error", "Initialization failure", err?.stack || String(err));

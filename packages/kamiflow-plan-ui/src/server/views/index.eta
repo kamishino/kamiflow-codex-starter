@@ -15,32 +15,44 @@
 <body data-ui-mode="<%= it.uiMode || 'observer' %>">
   <div class="app-shell">
     <header class="topbar">
-      <div class="topbar-left">
-        <h1>KamiFlow Plan Command Center</h1>
-        <p id="status">Waiting for updates...</p>
+      <div class="topbar-row-main">
+        <div class="topbar-left">
+          <h1>KamiFlow Plan Command Center</h1>
+          <p id="status">Waiting for updates...</p>
+        </div>
+        <div class="topbar-right">
+          <span id="workspace-badge" class="chip">workspace: -</span>
+          <span id="project-badge" class="chip">project: -</span>
+          <span id="api-badge" class="chip">api: /api</span>
+          <span id="connection-badge" class="chip chip-muted">disconnected</span>
+        </div>
       </div>
-      <div class="topbar-right">
-        <span id="workspace-badge" class="chip">workspace: -</span>
-        <span id="project-badge" class="chip">project: -</span>
-        <span id="api-badge" class="chip">api: /api</span>
-        <span id="connection-badge" class="chip chip-muted">disconnected</span>
+      <div id="toolbar-controls" class="topbar-controls">
+        <div class="toolbar-field">
+          <label for="project-filter">Project</label>
+          <select id="project-filter"></select>
+        </div>
+        <div class="toolbar-field toolbar-field-compact">
+          <label for="plan-filter">View</label>
+          <select id="plan-filter">
+            <option value="active">Active</option>
+            <option value="done">Done</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="toolbar-field toolbar-field-plan" id="plan-picker-wrap">
+          <label for="plan-search-input">Plan</label>
+          <div class="plan-search-wrap">
+            <input id="plan-search-input" type="text" placeholder="Click to browse or type to filter plans" autocomplete="off" />
+          </div>
+          <small class="plan-picker-hint">Click to browse all plans. Type to narrow by ID or title.</small>
+          <span id="plan-selected-pill" class="chip chip-muted">No plan selected</span>
+          <div id="plan-search-results" class="plan-search-results" hidden></div>
+        </div>
       </div>
     </header>
 
     <div class="content-grid">
-      <aside class="sidebar">
-        <h2>Plans</h2>
-        <label for="project-filter">Project</label>
-        <select id="project-filter"></select>
-        <label for="plan-filter">View</label>
-        <select id="plan-filter">
-          <option value="active">Active</option>
-          <option value="done">Done</option>
-          <option value="all">All</option>
-        </select>
-        <ul id="plan-list"></ul>
-      </aside>
-
       <main class="main">
         <section class="panel" id="timeline-panel">
           <h2>Phase Timeline</h2>
