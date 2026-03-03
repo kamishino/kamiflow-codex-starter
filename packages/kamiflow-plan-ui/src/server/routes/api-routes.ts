@@ -4,6 +4,8 @@ import { loadPlanById, loadPlans } from "../../lib/plan-store.js";
 export function registerApiRoutes(fastify: any, deps: any): void {
   const {
     workspaceName,
+    uiMode,
+    writeEnabled,
     projectContexts,
     defaultProjectId,
     getProject,
@@ -16,6 +18,16 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     broadcastPlanEvent,
     runCodexAction
   } = deps;
+
+  function readOnlyPayload(methodPath: string) {
+    return {
+      error: "UI is running in observer mode; write/execute actions are disabled.",
+      error_code: "READ_ONLY_MODE",
+      mode: uiMode || "observer",
+      method_path: methodPath,
+      recovery: "Restart with `kfc plan serve --project . --mode operator` to enable mutations."
+    };
+  }
 
   function parseSummarySection(sectionText: string | undefined): Record<string, string> {
     const out: Record<string, string> = {};
@@ -331,6 +343,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/plans/:id/status", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/plans/:id/status");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { status?: string; expected_updated_at?: string };
     if (!body.status || typeof body.status !== "string") {
@@ -345,6 +361,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/plans/:id/decision", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/plans/:id/decision");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { decision?: "GO" | "NO_GO"; expected_updated_at?: string };
     if (body.decision !== "GO" && body.decision !== "NO_GO") {
@@ -359,6 +379,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/plans/:id/task", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/plans/:id/task");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { task_index?: number; checked?: boolean; expected_updated_at?: string };
     if (!Number.isInteger(body.task_index) || typeof body.checked !== "boolean") {
@@ -373,6 +397,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/plans/:id/gate", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/plans/:id/gate");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { gate_index?: number; checked?: boolean; expected_updated_at?: string };
     if (!Number.isInteger(body.gate_index) || typeof body.checked !== "boolean") {
@@ -387,6 +415,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/plans/:id/progress", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/plans/:id/progress");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as any;
     const result = await persistMutation(defaultProjectId, id, body.expected_updated_at, (parsed) => {
@@ -419,6 +451,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/plans/:id/complete", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/plans/:id/complete");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as { check_passed?: boolean };
     if (body.check_passed !== true) {
@@ -431,6 +467,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/plans/:id/automation/apply", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/plans/:id/automation/apply");
+    }
     const { id } = request.params as { id: string };
     const body = (request.body ?? {}) as any;
     const result = await applyAutomation(defaultProjectId, id, body);
@@ -439,6 +479,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/codex/action", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/codex/action");
+    }
     const body = (request.body ?? {}) as any;
     if (!body.plan_id || !body.action_type) {
       reply.code(400);
@@ -550,6 +594,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/projects/:project_id/plans/:id/status", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/projects/:project_id/plans/:id/status");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as { status?: string; expected_updated_at?: string };
     if (!body.status || typeof body.status !== "string") {
@@ -564,6 +612,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/projects/:project_id/plans/:id/decision", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/projects/:project_id/plans/:id/decision");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as { decision?: "GO" | "NO_GO"; expected_updated_at?: string };
     if (body.decision !== "GO" && body.decision !== "NO_GO") {
@@ -578,6 +630,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/projects/:project_id/plans/:id/task", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/projects/:project_id/plans/:id/task");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as { task_index?: number; checked?: boolean; expected_updated_at?: string };
     if (!Number.isInteger(body.task_index) || typeof body.checked !== "boolean") {
@@ -592,6 +648,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.patch("/api/projects/:project_id/plans/:id/gate", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("PATCH /api/projects/:project_id/plans/:id/gate");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as { gate_index?: number; checked?: boolean; expected_updated_at?: string };
     if (!Number.isInteger(body.gate_index) || typeof body.checked !== "boolean") {
@@ -606,6 +666,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/projects/:project_id/plans/:id/progress", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/projects/:project_id/plans/:id/progress");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as any;
     const result = await persistMutation(project_id, id, body.expected_updated_at, (parsed) => {
@@ -638,6 +702,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/projects/:project_id/plans/:id/complete", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/projects/:project_id/plans/:id/complete");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as { check_passed?: boolean };
     if (body.check_passed !== true) {
@@ -650,6 +718,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/projects/:project_id/plans/:id/automation/apply", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/projects/:project_id/plans/:id/automation/apply");
+    }
     const { project_id, id } = request.params as { project_id: string; id: string };
     const body = (request.body ?? {}) as any;
     const result = await applyAutomation(project_id, id, body);
@@ -658,6 +730,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/projects/:project_id/codex/action", async (request, reply) => {
+    if (!writeEnabled) {
+      reply.code(403);
+      return readOnlyPayload("POST /api/projects/:project_id/codex/action");
+    }
     const { project_id } = request.params as { project_id: string };
     if (!getProject(project_id)) {
       reply.code(404);

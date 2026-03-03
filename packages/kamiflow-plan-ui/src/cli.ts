@@ -18,6 +18,7 @@ Options:
   --project <path>   Override target project directory
   --new              Create a unique new plan file (init only)
   --port <number>    Override local server port (serve only)
+  --mode <name>      Serve mode: observer (default) or operator (serve only)
   --workspace <name> Run server in workspace mode (serve only)
 `);
 }

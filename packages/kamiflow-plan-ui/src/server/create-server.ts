@@ -90,6 +90,8 @@ function checklistAllChecked(section: string | undefined): boolean {
 
 export async function createServer(options) {
   const { withWatcher = true, runCodexAction = runCodexActionDefault, workspaceName } = options;
+  const uiMode = options.uiMode === "operator" ? "operator" : "observer";
+  const writeEnabled = uiMode === "operator";
   const projectContexts = normalizeProjects(options);
   const defaultProjectId = projectContexts[0].project_id;
   const projectMap = new Map(projectContexts.map((item) => [item.project_id, item]));
@@ -196,6 +198,8 @@ export async function createServer(options) {
 
   registerApiRoutes(fastify, {
     workspaceName,
+    uiMode,
+    writeEnabled,
     projectContexts,
     defaultProjectId,
     getProject,
@@ -217,7 +221,7 @@ export async function createServer(options) {
     applyWipMutation
   });
 
-  registerUiRoutes(fastify);
+  registerUiRoutes(fastify, { uiMode });
 
   const watchers: Array<{ close: () => Promise<void> }> = [];
   const pending = new Map<string, { timer: NodeJS.Timeout }>();

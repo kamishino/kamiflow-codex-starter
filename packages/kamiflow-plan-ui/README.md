@@ -11,7 +11,7 @@ Phase 2 includes:
 - private plan template in `.local/plans`
 - local API + SSE
 - replay-aware SSE stream (event IDs + heartbeat + resync signal)
-- read-only browser UI
+- observer-first browser UI (read-only by default)
 - guarded write actions for status/decision/task/gate
 - codex action bridge endpoint
 - completed plan archive flow (`.local/plans/done`)
@@ -23,6 +23,8 @@ npm run kfp -- init --project <path>
 npm run kfp -- init --project <path> --new
 npm run kfp -- validate --project <path>
 npm run kfp -- serve --project <path> --port 4310
+npm run kfp -- serve --project <path> --mode observer --port 4310
+npm run kfp -- serve --project <path> --mode operator --port 4310
 npm run kfp -- workspace list
 npm run kfp -- workspace add <name> [--project <path>]
 npm run kfp -- serve --workspace <name> --port 4310
@@ -59,6 +61,12 @@ http://127.0.0.1:4310
 - `POST /api/plans/:id/complete`
 - `POST /api/plans/:id/automation/apply`
 - `POST /api/codex/action`
+
+Observer safety mode:
+
+- Default `serve` mode is `observer`.
+- In `observer`, all mutation/execute endpoints return `403` with `error_code: READ_ONLY_MODE`.
+- Use `--mode operator` only when intentionally enabling write/execute APIs.
 
 Example `GET /api/plans`:
 
@@ -137,9 +145,8 @@ The browser UI provides:
 
 - workflow rail (`Start -> Plan -> Build -> Check -> Done`)
 - plan health summary
-- action console with recommended primary command first (`plan|build|check|fix`)
-- guarded blocked-state guidance with explicit `Next:` recovery steps
-- advanced apply/finalize shortcuts (`build_result`, `check_result`, archive)
+- operator guidance panel with stage-aware external `kfc` command hints
+- read-only plan snapshot (start summary, tasks, acceptance criteria, WIP)
 - compact activity feed with severity tags (`info|ok|warn|error`) for faster scan
 - actionable empty states (no project / no plan / missing selection)
 

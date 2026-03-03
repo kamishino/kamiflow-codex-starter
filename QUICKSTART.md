@@ -51,7 +51,9 @@ kfc client done
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
 - Missing plan UI: rerun `kfc client --force`.
+- Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
 - Rules mismatch: rerun `kfc client --force`.
+- In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
 ## Next Docs
 

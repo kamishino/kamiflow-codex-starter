@@ -25,10 +25,26 @@ function resolveWorkspace(args) {
   return value;
 }
 
+function resolveMode(args) {
+  const idx = args.indexOf("--mode");
+  if (idx === -1) {
+    return "observer";
+  }
+  const value = (args[idx + 1] || "").trim().toLowerCase();
+  if (!value) {
+    throw new Error("Missing value for --mode.");
+  }
+  if (value !== "observer" && value !== "operator") {
+    throw new Error("Invalid value for --mode. Use observer or operator.");
+  }
+  return value;
+}
+
 export async function runServe(args) {
   const workspaceName = resolveWorkspace(args);
   const projectDir = workspaceName ? null : resolveProjectDir(args);
   const port = resolvePort(args);
+  const uiMode = resolveMode(args);
   const host = "127.0.0.1";
 
   let createServer;
@@ -54,7 +70,8 @@ export async function runServe(args) {
     projectDir: projectDir ?? undefined,
     projects,
     withWatcher: true,
-    workspaceName: workspaceName ?? undefined
+    workspaceName: workspaceName ?? undefined,
+    uiMode
   });
   await server.listen({ host, port });
 
@@ -65,6 +82,7 @@ export async function runServe(args) {
   } else {
     console.log(`[kfp] Project: ${projectDir}`);
   }
+  console.log(`[kfp] UI mode: ${uiMode}`);
 
   const shutdown = async () => {
     await server.close();

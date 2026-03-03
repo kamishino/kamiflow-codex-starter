@@ -11,6 +11,7 @@ const activityEl = document.querySelector("#activity-feed");
 const workspaceBadgeEl = document.querySelector("#workspace-badge");
 const projectBadgeEl = document.querySelector("#project-badge");
 const connectionBadgeEl = document.querySelector("#connection-badge");
+const UI_MODE = (document.body?.dataset?.uiMode || "observer").toLowerCase() === "operator" ? "operator" : "observer";
 
 const PRIMARY_ACTION_META = {
   "codex-plan": { label: "Run Plan", mode: "Plan" },
@@ -503,84 +504,42 @@ function renderHealth(detail) {
 }
 
 function renderActionConsole(detail) {
-  const guardrails = buildActionGuardrails(detail);
-  const btnDisabled = (flag) => (flag ? "disabled" : "");
-  const primaryOrder = buildPrimaryActionOrder(detail.summary);
-  const recommendedActionId = primaryOrder[0];
-  const primaryHtml = primaryOrder
-    .map((actionId) => {
-      const meta = PRIMARY_ACTION_META[actionId];
-      const isRecommended = actionId === recommendedActionId;
-      const classes = ["btn-primary"];
-      if (isRecommended) {
-        classes.push("btn-recommended");
-      }
-      return (
-        '<button class="' +
-        classes.join(" ") +
-        '" id="' +
-        actionId +
-        '" ' +
-        btnDisabled(guardForAction(guardrails, actionId)) +
-        ">" +
-        '<span class="btn-title">' +
-        meta.label +
-        "</span>" +
-        '<small class="btn-subtitle">Mode: ' +
-        meta.mode +
-        (isRecommended ? " | Recommended now" : "") +
-        "</small>" +
-        "</button>"
-      );
-    })
-    .join("");
-
-  const reasonHtml = guardrails.blockers.length
-    ? '<ul class="guardrail-list">' +
-      guardrails.blockers
-        .map(
-          (item) =>
-            "<li>" +
-            '<span class="guardrail-reason">' +
-            escapeHtml(item.reason) +
-            "</span>" +
-            '<span class="guardrail-next">Next: ' +
-            escapeHtml(item.nextStep) +
-            "</span>" +
-            "</li>"
-        )
-        .join("") +
-      "</ul>"
-    : '<p class="guardrail-ok">All action gates are satisfied. Follow the recommended primary action.</p>';
+  const summary = detail.summary || {};
+  const planId = summary.plan_id || "<plan_id>";
+  const projectId = summary.project_id || "default";
+  const nextCommand = summary.next_command || "plan";
+  const nextMode = summary.next_mode || "Plan";
+  const recommended = `kfc flow next --project . --plan ${planId} --style narrative`;
+  const applyCommand =
+    nextCommand === "fix"
+      ? `kfc flow apply --project . --plan ${planId} --route check --result block`
+      : nextCommand === "done"
+        ? `kfc flow apply --project . --plan ${planId} --route check --result pass`
+        : `kfc flow apply --project . --plan ${planId} --route build --result progress`;
 
   actionEl.innerHTML = `
-    <div class="action-section">
-      <h3>Primary Workflow Action</h3>
-      <p class="action-hint">Use the recommended command first, then move to apply/finalize controls.</p>
-      <div class="action-grid action-grid-primary">
-        ${primaryHtml}
-      </div>
-    </div>
-    <div class="action-section">
-      <h3>Apply / Finalize (Advanced)</h3>
-      <div class="action-grid action-grid-secondary">
-        <button class="btn-quiet" id="apply-build-result" ${btnDisabled(guardrails.flags.applyBuild)}>Apply Build Result</button>
-        <button class="btn-warn btn-quiet" id="apply-check-block" ${btnDisabled(guardrails.flags.applyCheckBlock)}>Apply Check BLOCK</button>
-        <button class="btn-quiet" id="apply-check-pass" ${btnDisabled(guardrails.flags.applyCheckPass)}>Apply Check PASS</button>
-        <button class="btn-danger btn-quiet" id="archive-plan" ${btnDisabled(guardrails.flags.archive)}>Archive Done</button>
-      </div>
-    </div>
     <div class="guardrail-box">
-      <strong>Action Guards</strong>
-      ${reasonHtml}
+      <strong>Observer Mode</strong>
+      <p class="action-hint">This UI is read-only for safety. Run commands in terminal and use this page to monitor flow.</p>
+      <ul class="guardrail-list">
+        <li><span class="guardrail-reason">UI Mode:</span><span class="guardrail-next">${escapeHtml(UI_MODE)}</span></li>
+        <li><span class="guardrail-reason">Project:</span><span class="guardrail-next">${escapeHtml(projectId)}</span></li>
+        <li><span class="guardrail-reason">Plan:</span><span class="guardrail-next">${escapeHtml(planId)}</span></li>
+        <li><span class="guardrail-reason">Next Command:</span><span class="guardrail-next">${escapeHtml(nextCommand)}</span></li>
+        <li><span class="guardrail-reason">Next Mode:</span><span class="guardrail-next">${escapeHtml(nextMode)}</span></li>
+      </ul>
     </div>
-    <label for="findings-input">Check Findings (one line each)</label>
-    <textarea id="findings-input" placeholder="Missing test coverage\nNeeds rollback guard"></textarea>
-    <label for="evidence-input">Evidence (one line each)</label>
-    <textarea id="evidence-input" placeholder="npm run plan-ui:test -> pass"></textarea>
+    <div class="action-section">
+      <h3>Terminal Commands</h3>
+      <p class="action-hint">Run these outside UI when you want to persist state changes.</p>
+      <label>Apply state</label>
+      <pre>${escapeHtml(applyCommand)}</pre>
+      <label>Get narrative next step</label>
+      <pre>${escapeHtml(recommended)}</pre>
+      <label>Enable operator API mode (optional)</label>
+      <pre>kfc plan serve --project . --mode operator --port 4310</pre>
+    </div>
   `;
-
-  bindActionConsole(detail);
 }
 
 function renderWorkSurface(detail) {
@@ -595,107 +554,69 @@ function renderWorkSurface(detail) {
   const wipEvidence = (wip.match(/^- Evidence:\s*(.*)$/m) || ["", ""])[1];
 
   workEl.innerHTML = `
-    <div>
-      <h3>Start Summary</h3>
-      <label for="start-required">Required</label>
-      <select id="start-required">
-        <option value="yes" ${(startSummary.required || "yes") === "yes" ? "selected" : ""}>yes</option>
-        <option value="no" ${(startSummary.required || "yes") === "no" ? "selected" : ""}>no</option>
-      </select>
-      <label for="start-reason">Reason</label>
-      <input id="start-reason" value="${escapeHtml(startSummary.reason || "")}" />
-      <label for="start-selected-idea">Selected Idea</label>
-      <input id="start-selected-idea" value="${escapeHtml(startSummary["selected idea"] || "")}" />
-      <label for="start-alternatives">Alternatives Considered</label>
-      <input id="start-alternatives" value="${escapeHtml(startSummary["alternatives considered"] || "")}" />
-      <label for="start-premortem">Pre-mortem Risk</label>
-      <input id="start-premortem" value="${escapeHtml(startSummary["pre-mortem risk"] || "")}" />
-      <label for="start-confidence">Handoff Confidence</label>
-      <input id="start-confidence" value="${escapeHtml(startSummary["handoff confidence"] || "")}" />
+    <div class="split-2">
+      <div>
+        <h3>Start Summary</h3>
+        <div class="keyvals">
+          <div class="kv"><span>Required</span><strong>${escapeHtml(startSummary.required || "-")}</strong></div>
+          <div class="kv"><span>Reason</span><strong>${escapeHtml(startSummary.reason || "-")}</strong></div>
+          <div class="kv"><span>Selected Idea</span><strong>${escapeHtml(startSummary["selected idea"] || "-")}</strong></div>
+          <div class="kv"><span>Alternatives</span><strong>${escapeHtml(startSummary["alternatives considered"] || "-")}</strong></div>
+          <div class="kv"><span>Pre-mortem Risk</span><strong>${escapeHtml(startSummary["pre-mortem risk"] || "-")}</strong></div>
+          <div class="kv"><span>Handoff Confidence</span><strong>${escapeHtml(startSummary["handoff confidence"] || "-")}</strong></div>
+        </div>
+      </div>
+      <div>
+        <h3>WIP Log</h3>
+        <div class="keyvals">
+          <div class="kv"><span>Status</span><strong>${escapeHtml(wipStatus || "-")}</strong></div>
+          <div class="kv"><span>Blockers</span><strong>${escapeHtml(wipBlockers || "-")}</strong></div>
+          <div class="kv"><span>Next step</span><strong>${escapeHtml(wipNext || "-")}</strong></div>
+          <div class="kv"><span>Evidence</span><strong>${escapeHtml(wipEvidence || "-")}</strong></div>
+        </div>
+      </div>
     </div>
     <div class="split-2">
       <div>
         <h3>Implementation Tasks</h3>
         <div class="checklist-box" id="task-box">
-          ${tasks
-            .map(
-              (item) =>
-                '<label><input type="checkbox" class="task-item" data-index="' +
-                item.index +
-                '" ' +
-                (item.checked ? "checked" : "") +
-                " />" +
-                escapeHtml(item.text) +
-                "</label>"
-            )
-            .join("")}
+          ${
+            tasks.length
+              ? tasks
+                  .map(
+                    (item) =>
+                      '<label><input type="checkbox" disabled ' +
+                      (item.checked ? "checked" : "") +
+                      " />" +
+                      escapeHtml(item.text) +
+                      "</label>"
+                  )
+                  .join("")
+              : "<small>No task checklist found.</small>"
+          }
         </div>
       </div>
       <div>
         <h3>Acceptance Criteria</h3>
         <div class="checklist-box" id="ac-box">
-          ${acs
-            .map(
-              (item) =>
-                '<label><input type="checkbox" class="ac-item" data-index="' +
-                item.index +
-                '" ' +
-                (item.checked ? "checked" : "") +
-                " />" +
-                escapeHtml(item.text) +
-                "</label>"
-            )
-            .join("")}
+          ${
+            acs.length
+              ? acs
+                  .map(
+                    (item) =>
+                      '<label><input type="checkbox" disabled ' +
+                      (item.checked ? "checked" : "") +
+                      " />" +
+                      escapeHtml(item.text) +
+                      "</label>"
+                  )
+                  .join("")
+              : "<small>No acceptance checklist found.</small>"
+          }
         </div>
       </div>
     </div>
-    <div>
-      <h3>WIP Log</h3>
-      <label for="wip-status">Status</label>
-      <input id="wip-status" value="${escapeHtml(wipStatus)}" />
-      <label for="wip-blockers">Blockers</label>
-      <input id="wip-blockers" value="${escapeHtml(wipBlockers)}" />
-      <label for="wip-next">Next step</label>
-      <input id="wip-next" value="${escapeHtml(wipNext)}" />
-      <label for="wip-evidence">Evidence</label>
-      <input id="wip-evidence" value="${escapeHtml(wipEvidence)}" placeholder="item1 | item2" />
-      <button id="save-wip">Save WIP</button>
-    </div>
   `;
-
-  document.querySelector("#save-wip")?.addEventListener("click", async () => {
-    const projectId = detail.summary.project_id;
-    const planId = detail.summary.plan_id;
-    const base = projectApiBase(projectId) + "/plans/" + encodeURIComponent(planId);
-    const payload = {
-      start_summary: {
-        required: document.querySelector("#start-required")?.value || "yes",
-        reason: document.querySelector("#start-reason")?.value || "",
-        selected_idea: document.querySelector("#start-selected-idea")?.value || "",
-        alternatives: document.querySelector("#start-alternatives")?.value || "",
-        pre_mortem_risk: document.querySelector("#start-premortem")?.value || "",
-        handoff_confidence: document.querySelector("#start-confidence")?.value || ""
-      },
-      wip: {
-        status: document.querySelector("#wip-status")?.value || "",
-        blockers: document.querySelector("#wip-blockers")?.value || "",
-        next_step: document.querySelector("#wip-next")?.value || "",
-        evidence: (document.querySelector("#wip-evidence")?.value || "")
-          .split("|")
-          .map((item) => item.trim())
-          .filter((item) => item.length > 0)
-      }
-    };
-    const res = await postJson(base + "/progress", payload);
-    if (!res.ok) {
-      setStatus("WIP save failed: " + (res.body.error || res.body.error_code || "unknown"));
-      return;
-    }
-    addActivity("wip_saved", "WIP log updated", "plan=" + planId);
-    setStatus("WIP updated.");
-    loadDetail();
-    loadList();
-  });
 }
 
 function getSharedWipPayload() {

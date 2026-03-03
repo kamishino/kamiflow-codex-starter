@@ -10,7 +10,8 @@ async function readPublicFile(fileName: string): Promise<string> {
   return await fs.readFile(filePath, "utf8");
 }
 
-export function registerUiRoutes(fastify: any): void {
+export function registerUiRoutes(fastify: any, options: { uiMode?: "observer" | "operator" } = {}): void {
+  const uiMode = options.uiMode === "operator" ? "operator" : "observer";
   fastify.get("/assets/app.js", async (_request, reply) => {
     reply.type("application/javascript");
     return await readPublicFile("app.js");
@@ -24,7 +25,8 @@ export function registerUiRoutes(fastify: any): void {
   fastify.get("/", async (_request, reply) => {
     reply.type("text/html");
     return await renderView("index", {
-      title: "KamiFlow Plan UI"
+      title: "KamiFlow Plan UI",
+      uiMode
     });
   });
 }

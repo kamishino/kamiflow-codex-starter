@@ -33,6 +33,7 @@ const stats = {
   skills: { copied: 0, skipped: 0 },
   rules: { copied: 0, skipped: 0 }
 };
+let skillsEpermSkipped = 0;
 
 if (!["all", "skills", "rules"].includes(only)) {
   throw new Error(`Invalid --only value: ${only}. Use one of: all, skills, rules.`);
@@ -56,6 +57,9 @@ if (only === "all" || only === "rules") {
 
 console.log(`[codex-sync] Skills copied: ${stats.skills.copied}`);
 console.log(`[codex-sync] Skills skipped: ${stats.skills.skipped}`);
+if (skillsEpermSkipped > 0) {
+  console.log(`[codex-sync] Skills protected skips (EPERM): ${skillsEpermSkipped}`);
+}
 console.log(`[codex-sync] Rules copied: ${stats.rules.copied}`);
 console.log(`[codex-sync] Rules skipped: ${stats.rules.skipped}`);
 console.log(`[codex-sync] Copied files: ${total.copied}`);
@@ -87,6 +91,25 @@ function shouldSkipFile(name) {
   return name === ".gitkeep" || name === "README.md";
 }
 
+function filesAreIdentical(leftPath, rightPath) {
+  try {
+    const leftStat = fs.statSync(leftPath);
+    const rightStat = fs.statSync(rightPath);
+    if (leftStat.size !== rightStat.size) {
+      return false;
+    }
+    const left = fs.readFileSync(leftPath);
+    const right = fs.readFileSync(rightPath);
+    return left.equals(right);
+  } catch {
+    return false;
+  }
+}
+
+function isEperm(err) {
+  return Boolean(err && typeof err === "object" && err.code === "EPERM");
+}
+
 function copyRecursiveSkills(fromDir, toDir) {
   ensureDir(toDir);
   const entries = fs.readdirSync(fromDir, { withFileTypes: true });
@@ -104,6 +127,12 @@ function copyRecursiveSkills(fromDir, toDir) {
       continue;
     }
 
+    if (force && fs.existsSync(toPath) && filesAreIdentical(fromPath, toPath)) {
+      total.skipped += 1;
+      stats.skills.skipped += 1;
+      continue;
+    }
+
     if (fs.existsSync(toPath) && !force) {
       total.skipped += 1;
       stats.skills.skipped += 1;
@@ -114,6 +143,26 @@ function copyRecursiveSkills(fromDir, toDir) {
     try {
       fs.copyFileSync(fromPath, toPath);
     } catch (err) {
+      if (isEperm(err) && fs.existsSync(toPath) && filesAreIdentical(fromPath, toPath)) {
+        total.skipped += 1;
+        stats.skills.skipped += 1;
+        skillsEpermSkipped += 1;
+        console.warn(`[codex-sync] Skip unchanged protected file (EPERM): ${toPath}`);
+        continue;
+      }
+
+      if (isEperm(err) && force && fs.existsSync(toPath)) {
+        try {
+          fs.chmodSync(toPath, 0o666);
+          fs.copyFileSync(fromPath, toPath);
+          total.copied += 1;
+          stats.skills.copied += 1;
+          continue;
+        } catch (retryErr) {
+          throw onEperm(retryErr, toPath);
+        }
+      }
+
       throw onEperm(err, toPath);
     }
     total.copied += 1;

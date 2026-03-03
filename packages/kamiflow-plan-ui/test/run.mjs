@@ -213,6 +213,7 @@ await runCase("api returns plan list (when server deps are installed)", async ()
     const server = await createServer({
       projectDir: tempDir,
       withWatcher: false,
+      uiMode: "operator",
       runCodexAction: async () => ({
         status: "completed",
         command: "codex exec \"test\"",
@@ -398,7 +399,8 @@ updated_at: 2026-03-01
     });
     assert.equal(indexResponse.statusCode, 200);
     assert.ok(indexResponse.payload.includes("Workflow Rail"));
-    assert.ok(indexResponse.payload.includes("Action Console"));
+    assert.ok(indexResponse.payload.includes("Operator Guidance"));
+    assert.ok(indexResponse.payload.includes("Plan Snapshot"));
     assert.ok(indexResponse.payload.includes("Activity"));
 
     const appJsResponse = await server.inject({
@@ -406,9 +408,9 @@ updated_at: 2026-03-01
       url: "/assets/app.js"
     });
     assert.equal(appJsResponse.statusCode, 200);
-    assert.ok(appJsResponse.payload.includes("Action Guards"));
-    assert.ok(appJsResponse.payload.includes("Primary Workflow Action"));
-    assert.ok(appJsResponse.payload.includes("Recommended now"));
+    assert.ok(appJsResponse.payload.includes("Observer Mode"));
+    assert.ok(appJsResponse.payload.includes("Terminal Commands"));
+    assert.ok(appJsResponse.payload.includes("This UI is read-only for safety"));
     assert.ok(appJsResponse.payload.includes("No plan selected."));
     assert.ok(appJsResponse.payload.includes("activity-tag"));
 
@@ -444,6 +446,7 @@ await runCase("automation apply updates transitions and archives on PASS", async
     const server = await createServer({
       projectDir: tempDir,
       withWatcher: false,
+      uiMode: "operator",
       runCodexAction: async () => ({
         status: "completed",
         command: "codex exec \"test\"",
@@ -540,6 +543,55 @@ await runCase("automation apply updates transitions and archives on PASS", async
     const archivedPlan = listAfterPayload.plans.find((item) => item.plan_id === planId);
     assert.ok(archivedPlan);
     assert.equal(archivedPlan.is_archived, true);
+
+    await server.close();
+  });
+});
+
+await runCase("observer mode blocks mutation and codex action APIs", async () => {
+  let createServer;
+  try {
+    ({ createServer } = await import("../dist/server/create-server.js"));
+  } catch (err) {
+    if (err && typeof err === "object" && (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND")) {
+      console.log("[test] SKIP observer lock test: install package dependencies first.");
+      return;
+    }
+    throw err;
+  }
+
+  await withTempDir(async (tempDir) => {
+    const initExit = await runCli(["init", "--project", tempDir]);
+    assert.equal(initExit, 0);
+
+    const server = await createServer({
+      projectDir: tempDir,
+      withWatcher: false
+    });
+    await server.ready();
+
+    const listResponse = await server.inject({ method: "GET", url: "/api/plans" });
+    assert.equal(listResponse.statusCode, 200);
+    const listPayload = JSON.parse(listResponse.payload);
+    const planId = listPayload.plans[0].plan_id;
+
+    const statusPatch = await server.inject({
+      method: "PATCH",
+      url: `/api/plans/${encodeURIComponent(planId)}/status`,
+      payload: { status: "in_progress" }
+    });
+    assert.equal(statusPatch.statusCode, 403);
+    const statusPayload = JSON.parse(statusPatch.payload);
+    assert.equal(statusPayload.error_code, "READ_ONLY_MODE");
+
+    const codexAction = await server.inject({
+      method: "POST",
+      url: "/api/codex/action",
+      payload: { plan_id: planId, action_type: "plan", mode_hint: "Plan" }
+    });
+    assert.equal(codexAction.statusCode, 403);
+    const codexPayload = JSON.parse(codexAction.payload);
+    assert.equal(codexPayload.error_code, "READ_ONLY_MODE");
 
     await server.close();
   });

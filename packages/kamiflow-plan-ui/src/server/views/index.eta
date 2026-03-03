@@ -12,7 +12,7 @@
   />
   <link rel="stylesheet" href="/assets/styles.css" />
 </head>
-<body>
+<body data-ui-mode="<%= it.uiMode || 'observer' %>">
   <div class="app-shell">
     <header class="topbar">
       <div class="topbar-left">
@@ -53,12 +53,12 @@
         </section>
 
         <section class="panel" id="action-panel">
-          <h2>Action Console</h2>
+          <h2>Operator Guidance</h2>
           <div id="action-console"></div>
         </section>
 
         <section class="panel" id="work-panel">
-          <h2>Work Panel</h2>
+          <h2>Plan Snapshot</h2>
           <div id="work-surface"></div>
         </section>
       </main>
