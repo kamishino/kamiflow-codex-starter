@@ -133,11 +133,13 @@ If global home path is restricted, set `KAMIFLOW_HOME` to override workspace con
 
 ## Build Notes
 
-- Source files are TypeScript under `src/`.
-- `npm run build` compiles to `dist/`.
+- Server source is TypeScript under `src/` and compiles with `tsc`.
+- Browser UI source is componentized under `src/client/` (`Preact` + `@preact/signals`).
+- `npm run build` compiles server code and bundles client UI to `dist/`.
 - `bin/kfp.js` runs compiled output from `dist/`.
-- UI shell template is Eta under `src/server/views`.
-- Browser assets are under `src/server/public`.
+- UI shell template is Eta under `src/server/views` and is copied to `dist/server/views`.
+- Browser bundle output is `dist/server/public/app.js` (built by `scripts/build-client.mjs`).
+- Stylesheet source remains `src/server/public/styles.css` and is copied to `dist/server/public/styles.css`.
 
 ## UI Command Center
 
