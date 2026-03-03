@@ -1,6 +1,8 @@
+import { AlertTriangle, CheckCircle2, Compass, Hash, ListChecks, Route } from "lucide-preact";
 import type { PlanDetail } from "../types";
 import { Badge } from "../ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Icon } from "../ui/Icon";
 
 interface PlanHealthProps {
   detail: PlanDetail;
@@ -12,7 +14,10 @@ export function PlanHealth(props: PlanHealthProps) {
     <div class="stats-grid">
       <Card class="stat-card">
         <CardHeader>
-          <CardTitle class="stat-label">Plan ID</CardTitle>
+          <CardTitle class="stat-label">
+            <Icon icon={Hash} />
+            Plan ID
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div class="stat-value">{summary.plan_id}</div>
@@ -20,7 +25,10 @@ export function PlanHealth(props: PlanHealthProps) {
       </Card>
       <Card class="stat-card">
         <CardHeader>
-          <CardTitle class="stat-label">Status</CardTitle>
+          <CardTitle class="stat-label">
+            <Icon icon={Compass} />
+            Status
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Badge tone="muted">{summary.status}</Badge>
@@ -28,7 +36,10 @@ export function PlanHealth(props: PlanHealthProps) {
       </Card>
       <Card class="stat-card">
         <CardHeader>
-          <CardTitle class="stat-label">Decision</CardTitle>
+          <CardTitle class="stat-label">
+            <Icon icon={summary.decision === "GO" ? CheckCircle2 : AlertTriangle} />
+            Decision
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Badge tone={summary.decision === "GO" ? "success" : "warning"}>{summary.decision}</Badge>
@@ -36,7 +47,10 @@ export function PlanHealth(props: PlanHealthProps) {
       </Card>
       <Card class="stat-card">
         <CardHeader>
-          <CardTitle class="stat-label">Mode</CardTitle>
+          <CardTitle class="stat-label">
+            <Icon icon={Route} />
+            Mode
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div class="stat-value">
@@ -46,7 +60,10 @@ export function PlanHealth(props: PlanHealthProps) {
       </Card>
       <Card class="stat-card">
         <CardHeader>
-          <CardTitle class="stat-label">Next Command</CardTitle>
+          <CardTitle class="stat-label">
+            <Icon icon={ListChecks} />
+            Next Command
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Badge>{summary.next_command}</Badge>
@@ -54,7 +71,10 @@ export function PlanHealth(props: PlanHealthProps) {
       </Card>
       <Card class="stat-card">
         <CardHeader>
-          <CardTitle class="stat-label">Validation Errors</CardTitle>
+          <CardTitle class="stat-label">
+            <Icon icon={AlertTriangle} />
+            Validation Errors
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Badge tone={props.detail.errors?.length ? "danger" : "success"}>{String(props.detail.errors?.length || 0)}</Badge>

@@ -1,8 +1,10 @@
+import { Eye, FileCode2, FolderOpenDot, PlayCircle, ShieldAlert, Sparkles, TerminalSquare } from "lucide-preact";
 import type { PlanDetail } from "../types";
 import { evaluateStartGate } from "../utils";
 import { Alert, AlertDescription, AlertTitle } from "../ui/Alert";
 import { Badge } from "../ui/Badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Icon } from "../ui/Icon";
 import { Separator } from "../ui/Separator";
 
 interface NextStepCardProps {
@@ -29,47 +31,77 @@ export function NextStepCard(props: NextStepCardProps) {
   return (
     <>
       <Alert tone="warning">
-        <AlertTitle>Observer Mode</AlertTitle>
+        <AlertTitle>
+          <Icon icon={Eye} />
+          Observer Mode
+        </AlertTitle>
         <AlertDescription class="action-hint">
           This UI is read-only for safety. Run commands in terminal and use this page to monitor flow.
         </AlertDescription>
         <ul class="guardrail-list compact-list">
           <li>
-            <span class="guardrail-reason">UI Mode:</span>
+            <span class="guardrail-reason">
+              <Icon icon={ShieldAlert} />
+              UI Mode:
+            </span>
             <Badge tone="muted">{props.uiMode}</Badge>
           </li>
           <li>
-            <span class="guardrail-reason">Project:</span>
+            <span class="guardrail-reason">
+              <Icon icon={FolderOpenDot} />
+              Project:
+            </span>
             <span class="guardrail-next mono">{projectId}</span>
           </li>
           <li>
-            <span class="guardrail-reason">Plan:</span>
+            <span class="guardrail-reason">
+              <Icon icon={FileCode2} />
+              Plan:
+            </span>
             <span class="guardrail-next mono">{planId}</span>
           </li>
           <li>
-            <span class="guardrail-reason">Next Command:</span>
+            <span class="guardrail-reason">
+              <Icon icon={PlayCircle} />
+              Next Command:
+            </span>
             <Badge>{nextCommand}</Badge>
           </li>
           <li>
-            <span class="guardrail-reason">Next Mode:</span>
+            <span class="guardrail-reason">
+              <Icon icon={Sparkles} />
+              Next Mode:
+            </span>
             <Badge tone="muted">{nextMode}</Badge>
           </li>
           <li>
-            <span class="guardrail-reason">Start Gate:</span>
+            <span class="guardrail-reason">
+              <Icon icon={startGate.ok ? PlayCircle : ShieldAlert} />
+              Start Gate:
+            </span>
             <Badge tone={startGate.ok ? "success" : "danger"}>{startGate.ok ? "ready" : startGate.reason}</Badge>
           </li>
         </ul>
       </Alert>
       <Separator class="section-gap" />
-      <Card class="terminal-card">
+      <Card class="terminal-card next-step-hero">
         <CardHeader>
-          <CardTitle>Terminal Commands</CardTitle>
+          <CardTitle>
+            <Icon icon={TerminalSquare} />
+            Terminal Commands
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p class="action-hint">Run these outside UI when you want to persist state changes.</p>
-          <label>Get narrative next step</label>
+          <label>
+            <Icon icon={Sparkles} />
+            Get narrative next step
+          </label>
           <pre>{recommended}</pre>
-          <label>Apply state</label>
+          <label>
+            <Icon icon={PlayCircle} />
+            Apply state
+          </label>
           <pre>{applyCommand}</pre>
         </CardContent>
       </Card>

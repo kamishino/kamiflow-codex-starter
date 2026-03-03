@@ -1,9 +1,20 @@
+import {
+  Activity,
+  BadgeCheck,
+  ClipboardCheck,
+  FolderKanban,
+  Gauge,
+  Lightbulb,
+  ListTodo,
+  NotebookPen
+} from "lucide-preact";
 import type { PlanDetail } from "../types";
 import { useState } from "preact/hooks";
 import { parseChecklist, parseSummarySection } from "../utils";
 import { Badge } from "../ui/Badge";
 import { Button } from "../ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Icon } from "../ui/Icon";
 import { ScrollArea } from "../ui/ScrollArea";
 
 interface PlanSnapshotProps {
@@ -45,6 +56,7 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           aria-controls="snapshot-progress-panel"
           onClick={() => setTab("progress")}
         >
+          <Icon icon={Gauge} />
           Progress
         </Button>
         <Button
@@ -56,6 +68,7 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           aria-controls="snapshot-context-panel"
           onClick={() => setTab("context")}
         >
+          <Icon icon={FolderKanban} />
           Context
         </Button>
       </div>
@@ -64,28 +77,43 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
         <div id="snapshot-progress-panel" role="tabpanel">
           <Card class="done-summary-card">
             <CardHeader>
-              <CardTitle>Done So Far</CardTitle>
+              <CardTitle>
+                <Icon icon={BadgeCheck} />
+                Done So Far
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div class="done-summary-grid">
                 <div class="done-item">
-                  <span>Implementation Tasks</span>
+                  <span>
+                    <Icon icon={ListTodo} />
+                    Implementation Tasks
+                  </span>
                   <strong>
                     {tasksDone}/{tasks.length || 0}
                   </strong>
                 </div>
                 <div class="done-item">
-                  <span>Acceptance Criteria</span>
+                  <span>
+                    <Icon icon={ClipboardCheck} />
+                    Acceptance Criteria
+                  </span>
                   <strong>
                     {acsDone}/{acs.length || 0}
                   </strong>
                 </div>
                 <div class="done-item">
-                  <span>Overall Completion</span>
+                  <span>
+                    <Icon icon={Gauge} />
+                    Overall Completion
+                  </span>
                   <strong>{completion}%</strong>
                 </div>
                 <div class="done-item">
-                  <span>Current Status</span>
+                  <span>
+                    <Icon icon={Activity} />
+                    Current Status
+                  </span>
                   <Badge tone={wipStatus ? "muted" : "warning"}>{wipStatus || "Not updated"}</Badge>
                 </div>
               </div>
@@ -95,7 +123,10 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           <div class="snapshot-column">
             <Card>
               <CardHeader>
-                <CardTitle>Implementation Tasks</CardTitle>
+                <CardTitle>
+                  <Icon icon={ListTodo} />
+                  Implementation Tasks
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ScrollArea class="checklist-box" id="task-box">
@@ -115,7 +146,10 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
 
             <Card>
               <CardHeader>
-                <CardTitle>Acceptance Criteria</CardTitle>
+                <CardTitle>
+                  <Icon icon={ClipboardCheck} />
+                  Acceptance Criteria
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <ScrollArea class="checklist-box" id="ac-box">
@@ -139,7 +173,10 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           <div class="snapshot-column">
             <Card>
               <CardHeader>
-                <CardTitle>Start Summary</CardTitle>
+                <CardTitle>
+                  <Icon icon={Lightbulb} />
+                  Start Summary
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div class="stats-grid">
@@ -173,7 +210,10 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
 
             <Card>
               <CardHeader>
-                <CardTitle>WIP Log</CardTitle>
+                <CardTitle>
+                  <Icon icon={NotebookPen} />
+                  WIP Log
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div class="stats-grid four-col">

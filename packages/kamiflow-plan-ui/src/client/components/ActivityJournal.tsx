@@ -1,6 +1,8 @@
+import { AlertCircle, CheckCircle2, Info, TriangleAlert } from "lucide-preact";
 import type { ActivityFilter, ActivityItem } from "../types";
 import { Badge } from "../ui/Badge";
 import { Card, CardContent } from "../ui/Card";
+import { Icon } from "../ui/Icon";
 import { activityMatchesFilter, formatClock } from "../utils";
 
 interface ActivityJournalProps {
@@ -10,6 +12,13 @@ interface ActivityJournalProps {
 
 export function ActivityJournal(props: ActivityJournalProps) {
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
+  const resolveToneIcon = (tone: ActivityItem["tone"]) => {
+    if (tone === "ok") return CheckCircle2;
+    if (tone === "warn") return TriangleAlert;
+    if (tone === "error") return AlertCircle;
+    return Info;
+  };
+
   if (!visibleItems.length) {
     return (
       <li class="empty-state">
@@ -31,6 +40,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
                   class={`activity-tag activity-tag-${item.tone}`}
                   tone={item.tone === "ok" ? "success" : item.tone === "warn" ? "warning" : item.tone === "error" ? "danger" : "default"}
                 >
+                  <Icon icon={resolveToneIcon(item.tone)} />
                   {item.eventLabel}
                 </Badge>
               </div>

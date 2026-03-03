@@ -1,4 +1,6 @@
+import { CircleAlert } from "lucide-preact";
 import { Alert, AlertDescription, AlertTitle } from "../ui/Alert";
+import { Icon } from "../ui/Icon";
 
 interface EmptyPanelCardProps {
   reason: string;
@@ -8,7 +10,10 @@ interface EmptyPanelCardProps {
 export function EmptyPanelCard(props: EmptyPanelCardProps) {
   return (
     <Alert class="empty-panel">
-      <AlertTitle>{props.reason}</AlertTitle>
+      <AlertTitle>
+        <Icon icon={CircleAlert} />
+        {props.reason}
+      </AlertTitle>
       <AlertDescription>{props.nextStep}</AlertDescription>
     </Alert>
   );

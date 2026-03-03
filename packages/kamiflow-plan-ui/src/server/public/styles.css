@@ -15,6 +15,14 @@
   --success-soft: #ecfdf3;
   --danger: #b91c1c;
   --danger-soft: #fef2f2;
+  --semantic-info: #1d4ed8;
+  --semantic-info-soft: #e6efff;
+  --semantic-success: var(--success);
+  --semantic-success-soft: var(--success-soft);
+  --semantic-warning: var(--warning);
+  --semantic-warning-soft: var(--warning-soft);
+  --semantic-danger: var(--danger);
+  --semantic-danger-soft: var(--danger-soft);
   --radius: 12px;
   --shadow: 0 12px 30px rgba(17, 24, 39, 0.08);
 }
@@ -166,17 +174,31 @@ textarea {
   font-size: 15px;
 }
 
-#timeline-panel,
+#next-step-panel {
+  grid-column: 1 / -1;
+  order: 1;
+  border-color: #bfdbfe;
+  box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.16), var(--shadow);
+  background: linear-gradient(180deg, #f8fbff, #ffffff);
+}
+
+#next-step-panel h2 {
+  color: #1e40af;
+}
+
+#timeline-panel {
+  order: 2;
+  grid-column: 1 / -1;
+}
+
 #snapshot-panel {
+  order: 4;
   grid-column: 1 / -1;
 }
 
 #health-panel {
-  grid-column: 1 / span 5;
-}
-
-#next-step-panel {
-  grid-column: 6 / -1;
+  order: 3;
+  grid-column: 1 / span 4;
 }
 
 .workflow-rail {
@@ -204,6 +226,12 @@ textarea {
   font-weight: 700;
 }
 
+.stage-title-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .stage-hint {
   margin: 0;
   font-size: 12px;
@@ -212,7 +240,7 @@ textarea {
 
 .stage-active {
   border-color: #7ca8f8;
-  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.22);
 }
 
 .stage-done {
@@ -235,6 +263,9 @@ textarea {
 }
 
 .stat-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -318,6 +349,9 @@ textarea {
 }
 
 .done-item span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -402,20 +436,20 @@ textarea {
 }
 
 .activity-item-info {
-  border-left-color: #8eaedf;
+  border-left-color: var(--semantic-info);
 }
 
 .activity-item-ok {
-  border-left-color: #71ba96;
+  border-left-color: var(--semantic-success);
 }
 
 .activity-item-warn {
-  border-left-color: #d8ad61;
+  border-left-color: var(--semantic-warning);
 }
 
 .activity-item-error,
 .activity-tag-error {
-  border-left-color: #d48181;
+  border-left-color: var(--semantic-danger);
 }
 
 .activity-head {
@@ -468,6 +502,9 @@ pre {
 }
 
 .guardrail-reason {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-weight: 600;
   color: var(--muted-foreground);
 }
@@ -561,7 +598,9 @@ pre {
 }
 
 .ui-alert-title {
-  display: block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 13px;
   margin-bottom: 4px;
 }
@@ -583,8 +622,8 @@ pre {
 }
 
 .ui-badge-default {
-  background: #e6efff;
-  color: #1e429f;
+  background: var(--semantic-info-soft);
+  color: var(--semantic-info);
   border-color: #bfdbfe;
 }
 
@@ -595,20 +634,20 @@ pre {
 }
 
 .ui-badge-success {
-  background: var(--success-soft);
-  color: var(--success);
+  background: var(--semantic-success-soft);
+  color: var(--semantic-success);
   border-color: #bbf7d0;
 }
 
 .ui-badge-warning {
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--semantic-warning-soft);
+  color: var(--semantic-warning);
   border-color: #fed7aa;
 }
 
 .ui-badge-danger {
-  background: var(--danger-soft);
-  color: var(--danger);
+  background: var(--semantic-danger-soft);
+  color: var(--semantic-danger);
   border-color: #fecaca;
 }
 
@@ -672,26 +711,66 @@ pre {
   background: var(--muted);
 }
 
+.chip::before {
+  margin-right: 6px;
+}
+
+#workspace-badge::before {
+  content: "◫";
+}
+
+#project-badge::before {
+  content: "◧";
+}
+
+#api-badge::before {
+  content: "⌘";
+}
+
+#connection-badge::before {
+  content: "◉";
+}
+
 .chip-muted {
   color: var(--muted-foreground);
 }
 
 .chip-ok {
   border-color: #bbf7d0;
-  background: var(--success-soft);
-  color: var(--success);
+  background: var(--semantic-success-soft);
+  color: var(--semantic-success);
 }
 
 .chip-warn {
   border-color: #fed7aa;
-  background: var(--warning-soft);
-  color: var(--warning);
+  background: var(--semantic-warning-soft);
+  color: var(--semantic-warning);
 }
 
 .chip-danger {
   border-color: #fecaca;
-  background: var(--danger-soft);
-  color: var(--danger);
+  background: var(--semantic-danger-soft);
+  color: var(--semantic-danger);
+}
+
+.ui-icon {
+  flex: 0 0 auto;
+}
+
+.ui-badge .ui-icon {
+  width: 12px;
+  height: 12px;
+}
+
+.terminal-card label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.next-step-hero {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 1px rgba(29, 78, 216, 0.16);
 }
 
 @media (max-width: 1366px) {
