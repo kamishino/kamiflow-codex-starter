@@ -17,6 +17,8 @@ export interface CodexActionResult {
   error_code?: "CODEX_NOT_FOUND" | "TIMEOUT" | "SPAWN_FAILED" | "NON_ZERO_EXIT";
 }
 
+const CODEX_ACTION_TIMEOUT_MS = 5 * 60 * 1000;
+
 function tail(text: string, maxChars = 4000): string {
   if (text.length <= maxChars) {
     return text;
@@ -50,21 +52,37 @@ function shouldTryNextCandidate(result: CodexActionResult): boolean {
   return false;
 }
 
+function quoteForCmd(arg: string): string {
+  if (!/[ \t"&<>|^]/.test(arg)) {
+    return arg;
+  }
+  return `"${arg.replace(/"/g, "\"\"")}"`;
+}
+
 async function runWithExecutable(
   exe: string,
   args: string[],
+  prompt: string,
   run_id: string
 ): Promise<CodexActionResult> {
-  const command = `${exe} ${args.map((item) => JSON.stringify(item)).join(" ")}`;
+  const command = `${exe} ${args.map((item) => JSON.stringify(item)).join(" ")} <stdin>`;
+  const useCmdWrapper = process.platform === "win32" && exe.toLowerCase().endsWith(".cmd");
 
   return await new Promise<CodexActionResult>((resolve) => {
     let stdout = "";
     let stderr = "";
     let child;
     try {
-      child = spawn(exe, args, {
-        stdio: ["ignore", "pipe", "pipe"]
-      });
+      if (useCmdWrapper) {
+        const cmdLine = `${exe} ${args.map(quoteForCmd).join(" ")}`;
+        child = spawn("cmd.exe", ["/d", "/s", "/c", cmdLine], {
+          stdio: ["pipe", "pipe", "pipe"]
+        });
+      } else {
+        child = spawn(exe, args, {
+          stdio: ["pipe", "pipe", "pipe"]
+        });
+      }
     } catch (err) {
       const spawnErr = err as NodeJS.ErrnoException;
       resolve({
@@ -99,7 +117,7 @@ async function runWithExecutable(
         run_id,
         error_code: "TIMEOUT"
       });
-    }, 60_000);
+    }, CODEX_ACTION_TIMEOUT_MS);
 
     child.stdout.on("data", (chunk) => {
       stdout += chunk.toString();
@@ -107,6 +125,12 @@ async function runWithExecutable(
     child.stderr.on("data", (chunk) => {
       stderr += chunk.toString();
     });
+    if (child.stdin) {
+      child.stdin.on("error", (err) => {
+        stderr += `\nstdin_error: ${err instanceof Error ? err.message : String(err)}`;
+      });
+      child.stdin.end(prompt);
+    }
 
     child.on("error", (err: NodeJS.ErrnoException) => {
       if (finished) {
@@ -146,13 +170,13 @@ async function runWithExecutable(
 
 export async function runCodexAction(input: CodexActionInput): Promise<CodexActionResult> {
   const prompt = buildPrompt(input);
-  const args = ["exec", prompt];
+  const args = ["exec", "-"];
   const run_id = `run_${Date.now()}`;
   const candidates = codexExecutableCandidates();
   let lastResult: CodexActionResult | null = null;
 
   for (const exe of candidates) {
-    const result = await runWithExecutable(exe, args, run_id);
+    const result = await runWithExecutable(exe, args, prompt, run_id);
     lastResult = result;
     if (result.status === "completed") {
       return result;

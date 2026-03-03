@@ -34,6 +34,8 @@ let pollTimer = null;
 let currentDetail = null;
 let currentPlans = [];
 let activityItems = [];
+const ACTIVITY_STORAGE_PREFIX = "kfp.activity.v1";
+const ACTIVITY_MAX_ITEMS = 120;
 
 function nowIso() {
   return new Date().toISOString();
@@ -119,7 +121,12 @@ function addActivity(eventType, message, detail) {
     detail: detail || "",
     ts: nowIso()
   };
-  activityItems = [entry, ...activityItems].slice(0, 60);
+  activityItems = [entry, ...activityItems].slice(0, ACTIVITY_MAX_ITEMS);
+  persistActivity();
+  renderActivity();
+}
+
+function renderActivity() {
   activityEl.innerHTML = activityItems
     .map(
       (item) =>
@@ -143,6 +150,48 @@ function addActivity(eventType, message, detail) {
         "</li>"
     )
     .join("");
+}
+
+function currentActivityStorageKey() {
+  const route = parseRoute();
+  if (!route) {
+    return "";
+  }
+  return ACTIVITY_STORAGE_PREFIX + ":" + route.projectId + ":" + route.planId;
+}
+
+function persistActivity() {
+  const key = currentActivityStorageKey();
+  if (!key) {
+    return;
+  }
+  try {
+    localStorage.setItem(key, JSON.stringify(activityItems.slice(0, ACTIVITY_MAX_ITEMS)));
+  } catch {
+    // Ignore storage issues.
+  }
+}
+
+function loadPersistedActivity() {
+  const key = currentActivityStorageKey();
+  if (!key) {
+    activityItems = [];
+    renderActivity();
+    return;
+  }
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      activityItems = [];
+      renderActivity();
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    activityItems = Array.isArray(parsed) ? parsed.slice(0, ACTIVITY_MAX_ITEMS) : [];
+  } catch {
+    activityItems = [];
+  }
+  renderActivity();
 }
 
 function escapeHtml(input) {
@@ -716,11 +765,16 @@ function resolveFailureHint(errorCode) {
   return "Check Action Guards and follow the recommended next step.";
 }
 
-async function triggerCodexAction(detail, actionType, modeHint) {
+async function triggerCodexAction(detail, actionType, modeHint, options = {}) {
   const projectId = detail.summary.project_id;
   const planId = detail.summary.plan_id;
+  const isChained = Boolean(options.chained);
   setStatus("Running Codex action: " + actionType + "...");
-  addActivity("codex_run_requested", "Requested " + actionType, "plan=" + planId);
+  addActivity(
+    "codex_run_requested",
+    (isChained ? "Auto-requested " : "Requested ") + actionType,
+    "plan=" + planId
+  );
   const res = await postJson(projectApiBase(projectId) + "/codex/action", {
     plan_id: planId,
     action_type: actionType,
@@ -745,6 +799,12 @@ async function triggerCodexAction(detail, actionType, modeHint) {
     "Action " + actionType + " -> " + res.body.status,
     (res.body.stdout_tail || "") + (res.body.stderr_tail ? "\n" + res.body.stderr_tail : "")
   );
+
+  if (actionType === "build" && res.body.status === "completed") {
+    setStatus("Build completed. Auto-starting check...");
+    addActivity("codex_chain", "Auto chain: build -> check", "plan=" + planId);
+    await triggerCodexAction(detail, "check", "Plan", { chained: true });
+  }
 }
 
 function bindActionConsole(detail) {
@@ -867,6 +927,7 @@ function bindActionConsole(detail) {
 
 async function loadDetail() {
   const route = parseRoute();
+  loadPersistedActivity();
   if (!route) {
     renderNoSelectionState(
       "No plan selected.",
