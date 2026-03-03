@@ -54,7 +54,7 @@ This repository has four active scopes:
 - `npm run docs:verify:kfp-contrast`
 - `npm run docs:verify:kfp-spacing-grid`
 - `npm run docs:verify:kfp-design-system`
-- `node packages/kamiflow-plan-ui/test/run.mjs` (or `npm --prefix packages/kamiflow-plan-ui test`)
+- `node packages/kamiflow-plan-ui/test/run.mjs` (or `npm run -w @kamishino/kamiflow-plan-ui test`)
 - Color system policy is dual strategy: sRGB fallback + OKLCH harmonies.
 - Layout spacing policy is 4px rhythm for layout spacing properties.
 - Accessibility policy is WCAG 2.1 AA ratio + APCA-oriented thresholds via policy scripts.

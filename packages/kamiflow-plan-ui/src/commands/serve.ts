@@ -58,7 +58,7 @@ export async function runServe(args) {
     ) {
       console.error("[kfp] ERROR: Missing server dependencies.");
       console.error(
-        "[kfp] Run `npm --prefix packages/kamiflow-plan-ui install` and retry `kfp serve`."
+        "[kfp] Run `npm install` from repo root and retry `kfp serve`."
       );
       return 1;
     }

@@ -7,7 +7,11 @@ import { analyzeSemver, bumpVersion } from "./semver-from-commits.mjs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../..");
-const PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json");
+const ROOT_LOCKFILE_PATH = path.join(ROOT_DIR, "package-lock.json");
+const VERSIONED_PACKAGE_JSON_PATHS = [
+  path.join(ROOT_DIR, "package.json"),
+  path.join(ROOT_DIR, "packages", "kamiflow-plan-ui", "package.json")
+];
 const VALID_BUMPS = new Set(["major", "minor", "patch"]);
 
 function usage() {
@@ -78,14 +82,33 @@ function run(command, args, options = {}) {
   return String(result.stdout || "").trim();
 }
 
-function readPackageJson() {
-  return JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
+function readPackageJson(packageJsonPath) {
+  return JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
 }
 
-function writePackageVersion(nextVersion) {
-  const pkg = readPackageJson();
-  pkg.version = nextVersion;
-  fs.writeFileSync(PACKAGE_JSON_PATH, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+function writePackageVersions(nextVersion) {
+  for (const packageJsonPath of VERSIONED_PACKAGE_JSON_PATHS) {
+    const pkg = readPackageJson(packageJsonPath);
+    pkg.version = nextVersion;
+    fs.writeFileSync(packageJsonPath, JSON.stringify(pkg, null, 2) + "\n", "utf8");
+  }
+}
+
+function refreshRootLockfileIfPresent() {
+  if (!fs.existsSync(ROOT_LOCKFILE_PATH)) {
+    return;
+  }
+  run("npm", ["install", "--package-lock-only"], { inherit: true });
+}
+
+function addReleaseFiles() {
+  const relativePaths = VERSIONED_PACKAGE_JSON_PATHS.map((packageJsonPath) =>
+    path.relative(ROOT_DIR, packageJsonPath).replace(/\\/g, "/")
+  );
+  if (fs.existsSync(ROOT_LOCKFILE_PATH)) {
+    relativePaths.push(path.relative(ROOT_DIR, ROOT_LOCKFILE_PATH).replace(/\\/g, "/"));
+  }
+  run("git", ["add", ...relativePaths], { inherit: true });
 }
 
 function ensureTagMissing(tagName) {
@@ -113,8 +136,9 @@ try {
     process.exit(0);
   }
 
-  writePackageVersion(targetVersion);
-  run("git", ["add", "package.json"], { inherit: true });
+  writePackageVersions(targetVersion);
+  refreshRootLockfileIfPresent();
+  addReleaseFiles();
   run("npm", ["run", "commit:codex", "--", "--message", `chore(release): ${targetTag}`], {
     inherit: true
   });

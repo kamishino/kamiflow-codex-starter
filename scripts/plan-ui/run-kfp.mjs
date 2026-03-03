@@ -17,7 +17,7 @@ const projectDir = process.env.KAMIFLOW_PROJECT_DIR || process.env.INIT_CWD || p
 const forwarded = hasProjectArg ? args : [...args, "--project", projectDir];
 
 const npmExe = process.platform === "win32" ? "npm.cmd" : "npm";
-const npmArgs = ["--prefix", "packages/kamiflow-plan-ui", "run", "kfp", "--", ...forwarded];
+const npmArgs = ["run", "-w", "@kamishino/kamiflow-plan-ui", "kfp", "--", ...forwarded];
 const child = spawn(npmExe, npmArgs, {
   cwd: rootDir,
   stdio: "inherit",

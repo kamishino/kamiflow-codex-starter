@@ -112,14 +112,16 @@ Example `GET /api/plans/:id` 404:
 If `kfp serve` fails due to missing dependencies:
 
 ```bash
-npm --prefix packages/kamiflow-plan-ui install
+npm install
 ```
+
+Run this from repository root so npm installs all workspace dependencies.
 
 If install fails on Windows with permission/cache errors:
 
 ```powershell
 $env:npm_config_cache = (Join-Path (Get-Location) ".npm-cache")
-npm --prefix packages/kamiflow-plan-ui install
+npm install
 ```
 
 If your environment blocks registry access, `serve` cannot start until dependencies are available locally.

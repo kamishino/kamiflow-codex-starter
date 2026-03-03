@@ -10,6 +10,9 @@
   "engines": {
     "node": ">=20"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "start": "node bin/kamiflow.js",
     "dev": "node bin/kamiflow.js",
@@ -29,7 +32,7 @@
     "plan-ui:init": "node scripts/plan-ui/run-kfp.mjs init",
     "plan-ui:serve": "node scripts/plan-ui/run-kfp.mjs serve",
     "plan-ui:validate": "node scripts/plan-ui/run-kfp.mjs validate",
-    "plan-ui:test": "npm --prefix packages/kamiflow-plan-ui test",
+    "plan-ui:test": "npm run -w @kamishino/kamiflow-plan-ui test",
     "link:self": "npm link",
     "pack:local": "npm pack",
     "dogfood:link": "node scripts/dogfood/link-all.mjs",

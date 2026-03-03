@@ -1,5 +1,8 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+
+const HOME_DIR = path.resolve(os.homedir());
 
 async function exists(targetPath: string): Promise<boolean> {
   try {
@@ -15,7 +18,10 @@ async function findUp(startDir: string, marker: string): Promise<string | null> 
   while (true) {
     const candidate = path.join(current, marker);
     if (await exists(candidate)) {
-      return current;
+      // Avoid resolving unrelated global home-level markers as project roots.
+      if (path.resolve(current) !== HOME_DIR) {
+        return current;
+      }
     }
     const parent = path.dirname(current);
     if (parent === current) {

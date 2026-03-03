@@ -31,16 +31,16 @@ prefix_rule(
 
 prefix_rule(
   decision = "allow",
-  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "install"],
-  match = ["npm --prefix packages/kamiflow-plan-ui install"],
-  not_match = ["npm --prefix packages/kamiflow-plan-ui run build"]
+  pattern = ["npm", "install"],
+  match = ["npm install"],
+  not_match = ["npm run dogfood:link"]
 )
 
 prefix_rule(
   decision = "allow",
-  pattern = ["npm", "--prefix", "packages/kamiflow-plan-ui", "run", "build"],
-  match = ["npm --prefix packages/kamiflow-plan-ui run build"],
-  not_match = ["npm --prefix packages/kamiflow-plan-ui install"]
+  pattern = ["npm", "run", "-w", "@kamishino/kamiflow-plan-ui", "build"],
+  match = ["npm run -w @kamishino/kamiflow-plan-ui build"],
+  not_match = ["npm install"]
 )
 
 prefix_rule(

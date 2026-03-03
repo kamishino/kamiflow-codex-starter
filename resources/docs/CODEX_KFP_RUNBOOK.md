@@ -6,7 +6,7 @@ Prompt wording refinement only in this phase: no route logic changes.
 ## Preconditions
 
 - Node.js 20+
-- `npm --prefix packages/kamiflow-plan-ui install` completed once
+- `npm install` completed once at repo root
 - Codex CLI available in PATH
 
 ## Command Policy
