@@ -21,18 +21,15 @@
           <p id="status">Waiting for updates...</p>
         </div>
         <div class="topbar-right">
-          <span id="workspace-badge" class="chip">workspace: -</span>
-          <span id="project-badge" class="chip">project: -</span>
-          <span id="api-badge" class="chip">api: /api</span>
           <span id="connection-badge" class="chip chip-muted">disconnected</span>
         </div>
       </div>
       <div id="toolbar-controls" class="topbar-controls">
-        <div class="toolbar-field">
+        <div class="toolbar-field toolbar-field-project">
           <label for="project-filter">Project</label>
           <select id="project-filter"></select>
         </div>
-        <div class="toolbar-field toolbar-field-compact">
+        <div class="toolbar-field toolbar-field-compact toolbar-field-view">
           <label for="plan-filter">View</label>
           <select id="plan-filter">
             <option value="active">Active</option>
@@ -45,9 +42,10 @@
           <div class="plan-search-wrap">
             <input id="plan-search-input" type="text" placeholder="Click to browse or type to filter plans" autocomplete="off" />
           </div>
-          <small class="plan-picker-hint">Click to browse all plans. Type to narrow by ID or title.</small>
-          <span id="plan-selected-pill" class="chip chip-muted">No plan selected</span>
           <div id="plan-search-results" class="plan-search-results" hidden></div>
+        </div>
+        <div class="toolbar-field toolbar-field-selected">
+          <small id="plan-selection-help" class="plan-selection-help">Selected plan: none.</small>
         </div>
       </div>
     </header>

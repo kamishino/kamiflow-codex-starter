@@ -404,7 +404,12 @@ updated_at: 2026-03-01
     assert.equal(indexResponse.statusCode, 200);
     assert.ok(indexResponse.payload.includes("toolbar-controls"));
     assert.ok(indexResponse.payload.includes("plan-search-input"));
+    assert.ok(indexResponse.payload.includes("plan-selection-help"));
     assert.ok(indexResponse.payload.includes("plan-search-results"));
+    assert.ok(!indexResponse.payload.includes("workspace-badge"));
+    assert.ok(!indexResponse.payload.includes("project-badge"));
+    assert.ok(!indexResponse.payload.includes("api-badge"));
+    assert.ok(!indexResponse.payload.includes("plan-selected-pill"));
     assert.ok(indexResponse.payload.includes("Phase Timeline"));
     assert.ok(indexResponse.payload.includes("Next Step"));
     assert.ok(indexResponse.payload.includes("Plan Snapshot"));

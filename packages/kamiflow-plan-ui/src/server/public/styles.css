@@ -104,7 +104,11 @@ samp,
 
 .topbar-controls {
   display: grid;
-  grid-template-columns: minmax(260px, 1.1fr) 140px minmax(420px, 2fr);
+  grid-template-columns: minmax(0, 1fr) 140px;
+  grid-template-areas:
+    "project project"
+    "plan view"
+    "selected selected";
   gap: 10px;
   align-items: end;
 }
@@ -113,16 +117,33 @@ samp,
   min-width: 0;
 }
 
+.toolbar-field-project {
+  grid-area: project;
+}
+
+.toolbar-field-plan {
+  grid-area: plan;
+  position: relative;
+}
+
+.toolbar-field-view {
+  grid-area: view;
+}
+
+.toolbar-field-selected {
+  grid-area: selected;
+  padding: 8px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  background: #f8fbff;
+}
+
 .toolbar-field label {
   margin-bottom: 5px;
 }
 
 .toolbar-field-compact {
-  max-width: 200px;
-}
-
-.toolbar-field-plan {
-  position: relative;
+  max-width: 160px;
 }
 
 .plan-search-wrap {
@@ -135,18 +156,9 @@ samp,
   margin-bottom: 0;
 }
 
-#plan-selected-pill {
-  display: inline-flex;
-  margin-top: 8px;
-  max-width: 100%;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.plan-picker-hint {
+.plan-selection-help {
   display: block;
-  margin-top: 5px;
+  margin: 0;
   font-size: 11px;
   color: var(--muted-foreground);
 }
@@ -819,18 +831,6 @@ pre {
   margin-right: 6px;
 }
 
-#workspace-badge::before {
-  content: "◫";
-}
-
-#project-badge::before {
-  content: "◧";
-}
-
-#api-badge::before {
-  content: "⌘";
-}
-
 #connection-badge::before {
   content: "◉";
 }
@@ -896,10 +896,14 @@ pre {
 
   .topbar-controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "project project"
+      "plan view"
+      "selected selected";
   }
 
-  .toolbar-field-plan {
-    grid-column: 1 / -1;
+  .toolbar-field-view {
+    justify-self: end;
   }
 
   #health-panel,
@@ -947,6 +951,11 @@ pre {
 
   .topbar-controls {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "project"
+      "plan"
+      "view"
+      "selected";
   }
 
   .toolbar-field-compact {
@@ -955,10 +964,6 @@ pre {
 
   .plan-search-wrap {
     display: block;
-  }
-
-  #plan-selected-pill {
-    max-width: none;
   }
 
   .journal-header {

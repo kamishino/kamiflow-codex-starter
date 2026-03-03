@@ -14,8 +14,8 @@ import { activityTone, formatEventLabel, nowIso, parseRoute } from "./utils";
 const projectEl = document.querySelector<HTMLSelectElement>("#project-filter");
 const filterEl = document.querySelector<HTMLSelectElement>("#plan-filter");
 const planSearchInputEl = document.querySelector<HTMLInputElement>("#plan-search-input");
+const planSelectionHelpEl = document.querySelector<HTMLElement>("#plan-selection-help");
 const planSearchResultsEl = document.querySelector<HTMLElement>("#plan-search-results");
-const planSelectedPillEl = document.querySelector<HTMLElement>("#plan-selected-pill");
 const planPickerWrapEl = document.querySelector<HTMLElement>("#plan-picker-wrap");
 const activityFilterEl = document.querySelector<HTMLSelectElement>("#activity-filter");
 
@@ -25,16 +25,14 @@ const healthEl = document.querySelector<HTMLElement>("#plan-health");
 const nextStepEl = document.querySelector<HTMLElement>("#next-step-card");
 const workEl = document.querySelector<HTMLElement>("#work-surface");
 const activityEl = document.querySelector<HTMLElement>("#activity-feed");
-const workspaceBadgeEl = document.querySelector<HTMLElement>("#workspace-badge");
-const projectBadgeEl = document.querySelector<HTMLElement>("#project-badge");
 const connectionBadgeEl = document.querySelector<HTMLElement>("#connection-badge");
 
 if (
   !projectEl ||
   !filterEl ||
   !planSearchInputEl ||
+  !planSelectionHelpEl ||
   !planSearchResultsEl ||
-  !planSelectedPillEl ||
   !planPickerWrapEl ||
   !activityFilterEl ||
   !statusEl ||
@@ -43,8 +41,6 @@ if (
   !nextStepEl ||
   !workEl ||
   !activityEl ||
-  !workspaceBadgeEl ||
-  !projectBadgeEl ||
   !connectionBadgeEl
 ) {
   throw new Error("KFP UI bootstrap failed: required DOM nodes are missing.");
@@ -111,23 +107,19 @@ function selectedRoutePlanId(): string {
   return route.value?.planId || parseRoute(location.hash || "")?.planId || "";
 }
 
-function syncSelectedPlanPill(): void {
+function syncPlanSelectionHelp(): void {
   const routeFromHash = parseRoute(location.hash || "");
   const selectedPlanId = routeFromHash?.planId || "";
-
   if (!selectedPlanId) {
-    planSelectedPillEl.className = "chip chip-muted";
-    planSelectedPillEl.textContent = "No plan selected";
+    planSelectionHelpEl.textContent = "Selected plan: none.";
     return;
   }
 
   const fromList = currentPlans.find((item) => item.plan_id === selectedPlanId);
   const fromDetail = detail.value?.summary?.plan_id === selectedPlanId ? detail.value.summary : null;
-  const label = fromList || fromDetail;
-  const title = label?.title ? ` - ${label.title}` : "";
-
-  planSelectedPillEl.className = "chip";
-  planSelectedPillEl.textContent = `selected: ${selectedPlanId}${title}`;
+  const selected = fromList || fromDetail;
+  const title = selected?.title ? ` - ${selected.title}` : "";
+  planSelectionHelpEl.textContent = `Selected plan: ${selectedPlanId}${title}`;
 }
 
 function openPlanPicker(): void {
@@ -327,7 +319,7 @@ async function loadList(): Promise<void> {
   if (!projectId) {
     currentPlans = [];
     renderPlanSearchResults();
-    syncSelectedPlanPill();
+    syncPlanSelectionHelp();
     setStatus("No project selected.");
     return;
   }
@@ -335,7 +327,7 @@ async function loadList(): Promise<void> {
   const includeDone = currentPlanFilter() !== "active";
   currentPlans = await fetchPlans(projectId, includeDone);
   renderPlanSearchResults();
-  syncSelectedPlanPill();
+  syncPlanSelectionHelp();
 }
 
 async function loadDetail(): Promise<void> {
@@ -348,7 +340,7 @@ async function loadDetail(): Promise<void> {
       "No plan selected.",
       "Choose a plan from the toolbar plan picker. If none exists, run kfc plan init --project . --new."
     );
-    syncSelectedPlanPill();
+    syncPlanSelectionHelp();
     return;
   }
 
@@ -358,7 +350,7 @@ async function loadDetail(): Promise<void> {
         "Selected plan belongs to another project.",
         "Choose a plan from the current project using the toolbar plan picker."
       );
-      syncSelectedPlanPill();
+      syncPlanSelectionHelp();
       return;
     }
     projectEl.value = routeFromHash.projectId;
@@ -370,14 +362,14 @@ async function loadDetail(): Promise<void> {
   if (!fetchedDetail) {
     setStatus("Plan not found. Select another plan or refresh list.");
     renderNoSelectionState("Selected plan is unavailable.", "Refresh list or pick another plan from the toolbar picker.");
-    syncSelectedPlanPill();
+    syncPlanSelectionHelp();
     return;
   }
 
   detail.value = fetchedDetail;
   emptyPanelState.value = null;
-  syncSelectedPlanPill();
   renderPlanSearchResults();
+  syncPlanSelectionHelp();
   attachStream(currentProjectId(), routeFromHash.planId);
 }
 
@@ -597,10 +589,6 @@ effect(() => {
 });
 
 effect(() => {
-  projectBadgeEl.textContent = "project: " + (selectedProjectId.value || "-");
-});
-
-effect(() => {
   const state = emptyPanelState.value;
   const activeDetail = detail.value;
   if (state) {
@@ -630,8 +618,7 @@ filterEl.classList.add("ui-select");
 activityFilterEl.classList.add("ui-select");
 planSearchInputEl.classList.add("ui-input");
 fetchProjects()
-  .then(({ workspace, projects }) => {
-    workspaceBadgeEl.textContent = "workspace: " + workspace;
+  .then(({ projects }) => {
     renderProjectsList(projects);
     projectsLoaded = true;
     return refreshFromRoute();
