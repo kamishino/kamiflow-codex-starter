@@ -149,7 +149,9 @@ The browser UI provides:
 - phase timeline (`Start -> Plan -> Build -> Check -> Done`)
 - plan health summary
 - next-step panel with terminal command hints (`kfc flow next` + `kfc flow apply`)
-- read-only plan snapshot (start summary, tasks, acceptance criteria, WIP)
+- read-only progress-first snapshot:
+  - `Progress` tab shows done summary + single-column Tasks and Acceptance Criteria
+  - `Context` tab contains Start Summary and WIP Log details
 - activity journal with severity tags (`info|ok|warn|error`) and filter (`all|plan|codex|system`)
 - actionable empty states (no project / no plan / missing selection)
 - responsive tablet mode: at `<=1366px`, layout becomes `Sidebar + Main`, and Activity moves below main content

@@ -273,6 +273,62 @@ textarea {
   gap: 10px;
 }
 
+.snapshot-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--muted);
+}
+
+.snapshot-tab {
+  min-width: 110px;
+}
+
+.snapshot-tab-active {
+  box-shadow: 0 0 0 2px rgba(29, 78, 216, 0.18);
+}
+
+.snapshot-column {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.done-summary-card {
+  margin-bottom: 10px;
+}
+
+.done-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.done-item {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--muted);
+  padding: 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.done-item span {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+}
+
+.done-item strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
 .checklist-box {
   max-height: 220px;
   padding: 9px;
@@ -664,6 +720,10 @@ pre {
   .stats-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .done-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 860px) {
@@ -684,6 +744,10 @@ pre {
   .split-2,
   .stats-grid,
   .four-col {
+    grid-template-columns: 1fr;
+  }
+
+  .done-summary-grid {
     grid-template-columns: 1fr;
   }
 
