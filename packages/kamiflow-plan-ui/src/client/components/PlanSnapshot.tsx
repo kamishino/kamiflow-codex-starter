@@ -1,5 +1,7 @@
 import type { PlanDetail } from "../types";
 import { parseChecklist, parseSummarySection } from "../utils";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { ScrollArea } from "../ui/ScrollArea";
 
 interface PlanSnapshotProps {
   detail: PlanDetail;
@@ -25,88 +27,104 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
   return (
     <>
       <div class="split-2">
-        <div>
-          <h3>Start Summary</h3>
-          <div class="keyvals">
-            <div class="kv">
-              <span>Required</span>
-              <strong>{startSummary.required || "-"}</strong>
+        <Card>
+          <CardHeader>
+            <CardTitle>Start Summary</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="stats-grid">
+              <div class="stat-tile">
+                <span>Required</span>
+                <strong>{startSummary.required || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Reason</span>
+                <strong>{startSummary.reason || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Selected Idea</span>
+                <strong>{startSummary["selected idea"] || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Alternatives</span>
+                <strong>{startSummary["alternatives considered"] || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Pre-mortem Risk</span>
+                <strong>{startSummary["pre-mortem risk"] || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Handoff Confidence</span>
+                <strong>{startSummary["handoff confidence"] || "-"}</strong>
+              </div>
             </div>
-            <div class="kv">
-              <span>Reason</span>
-              <strong>{startSummary.reason || "-"}</strong>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>WIP Log</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div class="stats-grid four-col">
+              <div class="stat-tile">
+                <span>Status</span>
+                <strong>{wipStatus || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Blockers</span>
+                <strong>{wipBlockers || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Next step</span>
+                <strong>{wipNext || "-"}</strong>
+              </div>
+              <div class="stat-tile">
+                <span>Evidence</span>
+                <strong>{wipEvidence || "-"}</strong>
+              </div>
             </div>
-            <div class="kv">
-              <span>Selected Idea</span>
-              <strong>{startSummary["selected idea"] || "-"}</strong>
-            </div>
-            <div class="kv">
-              <span>Alternatives</span>
-              <strong>{startSummary["alternatives considered"] || "-"}</strong>
-            </div>
-            <div class="kv">
-              <span>Pre-mortem Risk</span>
-              <strong>{startSummary["pre-mortem risk"] || "-"}</strong>
-            </div>
-            <div class="kv">
-              <span>Handoff Confidence</span>
-              <strong>{startSummary["handoff confidence"] || "-"}</strong>
-            </div>
-          </div>
-        </div>
-        <div>
-          <h3>WIP Log</h3>
-          <div class="keyvals">
-            <div class="kv">
-              <span>Status</span>
-              <strong>{wipStatus || "-"}</strong>
-            </div>
-            <div class="kv">
-              <span>Blockers</span>
-              <strong>{wipBlockers || "-"}</strong>
-            </div>
-            <div class="kv">
-              <span>Next step</span>
-              <strong>{wipNext || "-"}</strong>
-            </div>
-            <div class="kv">
-              <span>Evidence</span>
-              <strong>{wipEvidence || "-"}</strong>
-            </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
       <div class="split-2">
-        <div>
-          <h3>Implementation Tasks</h3>
-          <div class="checklist-box" id="task-box">
-            {tasks.length ? (
-              tasks.map((item) => (
-                <label>
-                  <input type="checkbox" checked={item.checked} disabled />
-                  {item.text}
-                </label>
-              ))
-            ) : (
-              <small>No task checklist found.</small>
-            )}
-          </div>
-        </div>
-        <div>
-          <h3>Acceptance Criteria</h3>
-          <div class="checklist-box" id="ac-box">
-            {acs.length ? (
-              acs.map((item) => (
-                <label>
-                  <input type="checkbox" checked={item.checked} disabled />
-                  {item.text}
-                </label>
-              ))
-            ) : (
-              <small>No acceptance checklist found.</small>
-            )}
-          </div>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Implementation Tasks</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea class="checklist-box" id="task-box">
+              {tasks.length ? (
+                tasks.map((item) => (
+                  <label>
+                    <input type="checkbox" checked={item.checked} disabled />
+                    {item.text}
+                  </label>
+                ))
+              ) : (
+                <small>No task checklist found.</small>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Acceptance Criteria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea class="checklist-box" id="ac-box">
+              {acs.length ? (
+                acs.map((item) => (
+                  <label>
+                    <input type="checkbox" checked={item.checked} disabled />
+                    {item.text}
+                  </label>
+                ))
+              ) : (
+                <small>No acceptance checklist found.</small>
+              )}
+            </ScrollArea>
+          </CardContent>
+        </Card>
       </div>
     </>
   );

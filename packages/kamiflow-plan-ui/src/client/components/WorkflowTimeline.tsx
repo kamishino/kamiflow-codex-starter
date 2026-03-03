@@ -1,5 +1,7 @@
 import type { PlanDetail } from "../types";
 import { deriveStage } from "../utils";
+import { Card, CardContent, CardDescription, CardTitle } from "../ui/Card";
+import { cn } from "../ui/cn";
 
 interface WorkflowTimelineProps {
   detail: PlanDetail;
@@ -33,10 +35,12 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
                   : "archive complete";
 
         return (
-          <div class={classes.join(" ")}>
-            <strong>{stage}</strong>
-            <small>{hint}</small>
-          </div>
+          <Card class={cn(classes.join(" "), "stage-card")}>
+            <CardContent class="stage-card-content">
+              <CardTitle class="stage-title">{stage}</CardTitle>
+              <CardDescription class="stage-hint">{hint}</CardDescription>
+            </CardContent>
+          </Card>
         );
       })}
     </>

@@ -182,7 +182,7 @@ function renderPlanList(plans: PlanSummary[]): void {
     .map((item) => {
       const invalid = item.is_valid ? "" : " (invalid)";
       const archived = item.is_archived ? " [archived]" : "";
-      return `<li><button data-plan-id="${item.plan_id}">${item.plan_id} - ${item.title}${archived}${invalid}</button></li>`;
+      return `<li><button class="ui-button ui-button-ghost plan-list-button" data-plan-id="${item.plan_id}">${item.plan_id} - ${item.title}${archived}${invalid}</button></li>`;
     })
     .join("");
 
@@ -406,6 +406,9 @@ effect(() => {
 });
 
 setConnectionState("disconnected");
+projectEl.classList.add("ui-select");
+filterEl.classList.add("ui-select");
+activityFilterEl.classList.add("ui-select");
 fetchProjects()
   .then(({ workspace, projects }) => {
     workspaceBadgeEl.textContent = "workspace: " + workspace;

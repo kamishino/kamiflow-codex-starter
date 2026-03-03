@@ -135,6 +135,7 @@ If global home path is restricted, set `KAMIFLOW_HOME` to override workspace con
 
 - Server source is TypeScript under `src/` and compiles with `tsc`.
 - Browser UI source is componentized under `src/client/` (`Preact` + `@preact/signals`).
+- UI primitives are under `src/client/ui/` (Shadcn-style card/badge/alert patterns for Preact).
 - `npm run build` compiles server code and bundles client UI to `dist/`.
 - `bin/kfp.js` runs compiled output from `dist/`.
 - UI shell template is Eta under `src/server/views` and is copied to `dist/server/views`.

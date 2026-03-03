@@ -1,4 +1,6 @@
 import type { ActivityFilter, ActivityItem } from "../types";
+import { Badge } from "../ui/Badge";
+import { Card, CardContent } from "../ui/Card";
 import { activityMatchesFilter, formatClock } from "../utils";
 
 interface ActivityJournalProps {
@@ -21,12 +23,21 @@ export function ActivityJournal(props: ActivityJournalProps) {
     <>
       {visibleItems.map((item) => (
         <li class={`activity-item activity-item-${item.tone}`}>
-          <div class="activity-head">
-            <time>{formatClock(item.ts)}</time>
-            <span class={`activity-tag activity-tag-${item.tone}`}>{item.eventLabel}</span>
-          </div>
-          <div class="activity-message">{item.message}</div>
-          {item.detail ? <pre>{item.detail}</pre> : null}
+          <Card class="activity-card">
+            <CardContent>
+              <div class="activity-head">
+                <time>{formatClock(item.ts)}</time>
+                <Badge
+                  class={`activity-tag activity-tag-${item.tone}`}
+                  tone={item.tone === "ok" ? "success" : item.tone === "warn" ? "warning" : item.tone === "error" ? "danger" : "default"}
+                >
+                  {item.eventLabel}
+                </Badge>
+              </div>
+              <div class="activity-message">{item.message}</div>
+              {item.detail ? <pre>{item.detail}</pre> : null}
+            </CardContent>
+          </Card>
         </li>
       ))}
     </>

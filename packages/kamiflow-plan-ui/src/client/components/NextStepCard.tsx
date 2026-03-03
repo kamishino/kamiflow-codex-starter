@@ -1,5 +1,9 @@
 import type { PlanDetail } from "../types";
 import { evaluateStartGate } from "../utils";
+import { Alert, AlertDescription, AlertTitle } from "../ui/Alert";
+import { Badge } from "../ui/Badge";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
+import { Separator } from "../ui/Separator";
 
 interface NextStepCardProps {
   detail: PlanDetail;
@@ -24,44 +28,51 @@ export function NextStepCard(props: NextStepCardProps) {
 
   return (
     <>
-      <div class="guardrail-box">
-        <strong>Observer Mode</strong>
-        <p class="action-hint">This UI is read-only for safety. Run commands in terminal and use this page to monitor flow.</p>
-        <ul class="guardrail-list">
+      <Alert tone="warning">
+        <AlertTitle>Observer Mode</AlertTitle>
+        <AlertDescription class="action-hint">
+          This UI is read-only for safety. Run commands in terminal and use this page to monitor flow.
+        </AlertDescription>
+        <ul class="guardrail-list compact-list">
           <li>
             <span class="guardrail-reason">UI Mode:</span>
-            <span class="guardrail-next">{props.uiMode}</span>
+            <Badge tone="muted">{props.uiMode}</Badge>
           </li>
           <li>
             <span class="guardrail-reason">Project:</span>
-            <span class="guardrail-next">{projectId}</span>
+            <span class="guardrail-next mono">{projectId}</span>
           </li>
           <li>
             <span class="guardrail-reason">Plan:</span>
-            <span class="guardrail-next">{planId}</span>
+            <span class="guardrail-next mono">{planId}</span>
           </li>
           <li>
             <span class="guardrail-reason">Next Command:</span>
-            <span class="guardrail-next">{nextCommand}</span>
+            <Badge>{nextCommand}</Badge>
           </li>
           <li>
             <span class="guardrail-reason">Next Mode:</span>
-            <span class="guardrail-next">{nextMode}</span>
+            <Badge tone="muted">{nextMode}</Badge>
           </li>
           <li>
             <span class="guardrail-reason">Start Gate:</span>
-            <span class="guardrail-next">{startGate.ok ? "ready" : startGate.reason}</span>
+            <Badge tone={startGate.ok ? "success" : "danger"}>{startGate.ok ? "ready" : startGate.reason}</Badge>
           </li>
         </ul>
-      </div>
-      <div class="action-section">
-        <h3>Terminal Commands</h3>
-        <p class="action-hint">Run these outside UI when you want to persist state changes.</p>
-        <label>Get narrative next step</label>
-        <pre>{recommended}</pre>
-        <label>Apply state</label>
-        <pre>{applyCommand}</pre>
-      </div>
+      </Alert>
+      <Separator class="section-gap" />
+      <Card class="terminal-card">
+        <CardHeader>
+          <CardTitle>Terminal Commands</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p class="action-hint">Run these outside UI when you want to persist state changes.</p>
+          <label>Get narrative next step</label>
+          <pre>{recommended}</pre>
+          <label>Apply state</label>
+          <pre>{applyCommand}</pre>
+        </CardContent>
+      </Card>
     </>
   );
 }
