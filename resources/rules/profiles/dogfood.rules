@@ -1,4 +1,5 @@
 # Dogfooding profile: optimize for rapid local iteration.
+# Anti-pattern reference: AP-001 (repo-context commands allowed here by design).
 
 prefix_rule(
   decision = "allow",

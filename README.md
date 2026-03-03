@@ -143,6 +143,8 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 - `resources/docs/COMMAND_BOUNDARY_POLICY.md`
 - `resources/docs/CODEX_KFP_RUNBOOK.md`
 - `resources/docs/CODEX_RULES_RUNBOOK.md`
+- `resources/docs/CODEX_ANTI_PATTERNS.md`
+- `resources/docs/CODEX_INCIDENT_LEDGER.md`
 - `resources/docs/PLAN_CONTRACT_V1.md`
 - `resources/docs/ROUTE_PROMPTS.md`
 - `resources/docs/CONTRIBUTOR_BOOTSTRAP.md`

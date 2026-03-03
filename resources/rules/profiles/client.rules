@@ -1,6 +1,7 @@
 # Client profile: enforce client-project command boundaries.
+# Anti-pattern references: AP-001, AP-002
 
-# Wrong-context KFC repository scripts are forbidden in client projects.
+# AP-001: wrong-context KFC repository scripts are forbidden in client projects.
 prefix_rule(
   decision = "forbidden",
   pattern = ["npm", "run", "dogfood:link"],
@@ -62,6 +63,14 @@ prefix_rule(
   pattern = ["npm", "run", "release:cut"],
   match = ["npm run release:cut -- --bump patch"],
   not_match = ["npm run release:plan"]
+)
+
+# AP-002: client-facing flow must use kfc, not direct kfp commands.
+prefix_rule(
+  decision = "forbidden",
+  pattern = ["kfp"],
+  match = ["kfp serve --project ."],
+  not_match = ["kfc plan validate --project ."]
 )
 
 # Allow core client-project KFC workflow commands.

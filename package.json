@@ -44,6 +44,8 @@
     "pack:commit": "node scripts/release/pack-commit.mjs",
     "docs:verify-command-boundary": "node scripts/policy/verify-command-boundary.mjs",
     "docs:verify:codex-client-contract": "node scripts/policy/verify-codex-client-contract.mjs",
+    "docs:verify:codex-intelligence": "node scripts/policy/verify-codex-intelligence-contract.mjs",
+    "docs:verify:codex-governance": "npm run docs:verify-command-boundary && npm run docs:verify:codex-client-contract && npm run docs:verify:codex-intelligence",
     "docs:verify:skills-contract": "node scripts/policy/verify-kamiflow-skill-contract.mjs",
     "docs:verify:kfp-timeline-contrast": "node scripts/policy/verify-kfp-timeline-contrast.mjs",
     "docs:verify:kfp-contrast": "node scripts/policy/verify-kfp-contrast.mjs",

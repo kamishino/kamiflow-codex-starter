@@ -9,6 +9,14 @@ This repository has four active scopes:
 
 `resources/` is the SSOT area.
 
+## Instruction Topology
+
+- `AGENTS.md`: global boundaries, context routing, anti-pattern routing.
+- `resources/rules/*`: enforceable command policy (`allow|prompt|forbidden`) by profile.
+- `resources/skills/*`: behavior contracts, route discipline, output contracts, recovery logic.
+- `.kfc/CODEX_READY.md`: runtime mission brief for client-project execution.
+- `.local/plans/*.md`: live execution state and next action source of truth.
+
 ## Boundaries
 
 - Keep canonical docs/skills/rules content in `resources/`.
@@ -20,6 +28,12 @@ This repository has four active scopes:
 - Never commit private/secrets-bearing `.codex` runtime config.
 - Do not import `src/*` directly from dogfood fixtures.
 - Dogfood fixtures must consume the CLI as users do (`npm link` or tarball install).
+
+## Context Resolver
+
+- Repo context (`kamiflow-codex-starter`): use `npm run ...` maintainer commands.
+- Client-project context: use `kfc ...` (or `npx --no-install kfc ...`), never repo-only `npm run ...`.
+- Client bootstrap flow: `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done`.
 
 ## Command Boundary
 
@@ -45,11 +59,26 @@ This repository has four active scopes:
 - Layout spacing policy is 4px rhythm for layout spacing properties.
 - Accessibility policy is WCAG 2.1 AA ratio + APCA-oriented thresholds via policy scripts.
 
+## Anti-Pattern Router
+
+- Source of truth: `resources/docs/CODEX_ANTI_PATTERNS.md`.
+- Each anti-pattern must define: symptom, why wrong, and deterministic corrective command.
+- Encode recurring anti-patterns as execution-policy rules where possible (`forbidden` or `prompt` with fix hint in docs).
+
 ## Commit Workflow
 
 - Preferred commit path: `npm run commit:codex -- --message "type(scope): summary"`.
 - If local Git hooks fail with `env.exe` signal-pipe Win32 error 5, fallback to `git commit --no-verify`.
 - When fallback is used, record the reason in your task note/summary.
+
+## Learning Loop Contract
+
+- Source of truth: `resources/docs/CODEX_INCIDENT_LEDGER.md`.
+- Any recurring incident (same signature more than once) must result in at least one durable guardrail:
+- rules update in `resources/rules/*`, or
+- skill update in `resources/skills/*`, or
+- verification policy update in `scripts/policy/*`.
+- Every incident entry must include a verification command that proves the guardrail.
 
 ## Safety
 

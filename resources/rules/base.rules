@@ -1,6 +1,8 @@
 # Base Codex execution policy for all Kami Flow contexts.
 # Profile-specific files extend this baseline.
+# Anti-pattern references: AP-003, AP-004, AP-005, AP-006
 
+# AP-003/SSOT sync path.
 prefix_rule(
   decision = "allow",
   pattern = ["npm", "run", "codex:setup"],
@@ -8,6 +10,7 @@ prefix_rule(
   not_match = ["npm run codex:sync"]
 )
 
+# AP-003/SSOT sync path.
 prefix_rule(
   decision = "allow",
   pattern = ["npm", "run", "codex:sync"],
@@ -15,6 +18,7 @@ prefix_rule(
   not_match = ["pnpm run codex:sync"]
 )
 
+# AP-003/Rules sync path.
 prefix_rule(
   decision = "allow",
   pattern = ["npm", "run", "codex:sync:rules"],
@@ -22,6 +26,7 @@ prefix_rule(
   not_match = ["npm run codex:sync:skills -- --force"]
 )
 
+# AP-003/Skills sync path.
 prefix_rule(
   decision = "allow",
   pattern = ["npm", "run", "codex:sync:skills"],
@@ -29,6 +34,7 @@ prefix_rule(
   not_match = ["npm run codex:sync:rules -- --scope repo --force"]
 )
 
+# AP-006/ensure-plan primary recovery path.
 prefix_rule(
   decision = "allow",
   pattern = ["kfc", "flow", "ensure-plan"],
@@ -62,6 +68,14 @@ prefix_rule(
   pattern = ["npm", "unlink"],
   match = ["npm unlink"],
   not_match = ["npm link"]
+)
+
+# AP-005/allow emergency no-verify commit as explicit prompt.
+prefix_rule(
+  decision = "prompt",
+  pattern = ["git", "commit", "--no-verify"],
+  match = ["git commit --no-verify -m \"docs: fallback\""],
+  not_match = ["git commit -m \"docs: normal\""]
 )
 
 prefix_rule(

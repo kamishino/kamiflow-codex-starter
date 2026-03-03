@@ -48,6 +48,21 @@ Pick mode before executing route logic:
 - For plan persistence in `build`/`check`, treat KFP API checks as required after health preflight.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 
+## Failure Recovery
+
+- Command boundary mismatch:
+  - Symptom: repo-only `npm run ...` shown or used in client project.
+  - Recovery: switch to `kfc client` (or `kfc client bootstrap --project . --profile client`) and continue with `kfc ...`.
+- Codex invocation/quoting failure:
+  - Symptom: `spawn codex ENOENT` or `unexpected argument` from `codex exec`.
+  - Recovery: use KFC route automation commands first (`kfc flow next`, `kfc flow apply`), and if manual fallback is required use a single quoted prompt: `codex exec "<prompt>"`.
+- Plan bootstrap failure:
+  - Symptom: plan file missing or `kfc plan init ... --new` fails in flow.
+  - Recovery: run `kfc flow ensure-plan --project .` (fallback: `kfc plan init --project . --new`).
+- Git hook signal-pipe failure:
+  - Symptom: `env.exe ... couldn't create signal pipe, Win32 error 5`.
+  - Recovery: use `git commit --no-verify -m "<message>"` and record fallback reason in task summary.
+
 ## Mode Mismatch Policy
 
 When current mode is incompatible, output:
