@@ -39,7 +39,8 @@ try {
     "AP-003",
     "AP-004",
     "AP-005",
-    "AP-006"
+    "AP-006",
+    "AP-007"
   ]) {
     assertIncludes(antiPatterns, antiPatternsFile, token, errors);
   }

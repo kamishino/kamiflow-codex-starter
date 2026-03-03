@@ -45,6 +45,7 @@ Pick mode before executing route logic:
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
 - If mode does not satisfy route requirements, do not continue.
+- For implementation routes (`build`, `fix`), resolve/create the target plan file via `kfc flow ensure-plan --project <path>` before execution.
 - For plan persistence in `build`/`check`, treat KFP API checks as required after health preflight.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 

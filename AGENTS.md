@@ -40,6 +40,7 @@ This repository has four active scopes:
 - In KFC repo (`kamiflow-codex-starter`), use `npm run ...` maintainer scripts.
 - In client projects, use `kfc ...` (or `npx --no-install kfc ...`), not this repo's `npm run ...`.
 - Client bootstrap flow is `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done` for cleanup.
+- Before entering implementation routes (`build`/`fix`), resolve or create the active plan file via `kfc flow ensure-plan --project .`.
 
 ## KFP UI Rules
 

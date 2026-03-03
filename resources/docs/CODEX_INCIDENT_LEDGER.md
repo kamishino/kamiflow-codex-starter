@@ -37,3 +37,19 @@ Use this ledger to turn repeated failures into durable automation and policy.
 - `resources/docs/CODEX_ANTI_PATTERNS.md`
 - `resources/skills/kamiflow-core/references/plan.md`
 - Verification Command: `kfc flow ensure-plan --project .`
+
+### 2026-03-04 - Implementation Route Skipped Plan Resolution
+
+- Date: 2026-03-04
+- Environment: KFC route execution (`build`/`fix`) in repo and client contexts
+- Failure Signature: implementation started without resolving target `.local/plans/*.md`
+- Root Cause: implementation route contracts did not explicitly enforce plan resolution preflight
+- Permanent Guardrail Added: enforce `kfc flow ensure-plan --project <path>` preflight + BLOCK fallback in `build`/`fix`; add AP-007 and skill-contract verification tokens
+- Files Changed:
+- `AGENTS.md`
+- `resources/skills/kamiflow-core/SKILL.md`
+- `resources/skills/kamiflow-core/references/build.md`
+- `resources/skills/kamiflow-core/references/fix.md`
+- `scripts/policy/verify-kamiflow-skill-contract.mjs`
+- `resources/docs/CODEX_ANTI_PATTERNS.md`
+- Verification Command: `npm run docs:verify:skills-contract`

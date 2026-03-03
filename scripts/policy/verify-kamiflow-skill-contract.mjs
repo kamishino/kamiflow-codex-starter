@@ -43,6 +43,10 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/build.md",
     required: [
+      "kfc flow ensure-plan --project <path>",
+      "Status: BLOCK",
+      "Recovery: kfc flow ensure-plan --project <path>",
+      "Expected: {\"ok\":true,\"plan_path\":\"<absolute-path>\",...}",
       "kfc flow apply --project <path> --plan <plan_id> --route build --result progress",
       "Next Command: check",
       "Next Mode: Plan"
@@ -68,6 +72,10 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/fix.md",
     required: [
+      "kfc flow ensure-plan --project <path>",
+      "Status: BLOCK",
+      "Recovery: kfc flow ensure-plan --project <path>",
+      "Expected: {\"ok\":true,\"plan_path\":\"<absolute-path>\",...}",
       "kfc flow apply --project <path> --plan <plan_id> --route fix --result progress",
       "Next Command: check",
       "Next Mode: Plan"
