@@ -1,7 +1,7 @@
-import type { PlanDetail } from "../types";
+import type { PlanDetail, TimelineStepState } from "../types";
 import { CheckCircle2, ClipboardList, Hammer, SearchCode, Sparkles } from "lucide-preact";
-import { deriveStage } from "../utils";
-import { Card, CardContent, CardDescription, CardTitle } from "../ui/Card";
+import { buildTimelineStepStates, deriveStage } from "../utils";
+import { CardDescription } from "../ui/Card";
 import { cn } from "../ui/cn";
 import { Icon } from "../ui/Icon";
 
@@ -19,30 +19,42 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
   ] as const;
   const current = deriveStage(props.detail.summary, props.detail);
   const index = stages.findIndex((stage) => stage.name === current);
+  const stepStates = buildTimelineStepStates(current);
+
+  function stateLabel(state: TimelineStepState): string {
+    if (state === "done") {
+      return "Done";
+    }
+    if (state === "current") {
+      return "Current";
+    }
+    return "Next";
+  }
 
   return (
-    <>
+    <ol class="phase-timeline" role="list" aria-label="Phase timeline">
       {stages.map((stage, i) => {
-        const classes = ["stage"];
-        if (i < index) {
-          classes.push("stage-done");
-        }
-        if (i === index) {
-          classes.push("stage-active");
-        }
-
+        const state = stepStates[i];
         return (
-          <Card class={cn(classes.join(" "), "stage-card")} data-stage={stage.name.toLowerCase()}>
-            <CardContent class="stage-card-content">
-              <div class="stage-title-row">
-                <Icon icon={stage.icon} class="stage-icon" />
-                <CardTitle class="stage-title">{stage.name}</CardTitle>
+          <li class={cn("phase-step", "phase-step-" + state)} data-stage={stage.name.toLowerCase()} data-state={state}>
+            {i < stages.length - 1 ? (
+              <span class={cn("phase-connector", i < index ? "phase-connector-done" : "")} aria-hidden="true" />
+            ) : null}
+            <span class="phase-node" aria-hidden="true">
+              <Icon icon={stage.icon} class="phase-node-icon" />
+            </span>
+            <div class="phase-content">
+              <div class="phase-title-row">
+                <h3 class="phase-title" aria-current={state === "current" ? "step" : undefined}>
+                  {stage.name}
+                </h3>
+                <span class={cn("phase-badge", "phase-badge-" + state)}>{stateLabel(state)}</span>
               </div>
-              <CardDescription class="stage-hint">{stage.hint}</CardDescription>
-            </CardContent>
-          </Card>
+              <CardDescription class="phase-hint">{stage.hint}</CardDescription>
+            </div>
+          </li>
         );
       })}
-    </>
+    </ol>
   );
 }

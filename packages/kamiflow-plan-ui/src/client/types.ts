@@ -57,3 +57,5 @@ export interface StartGateResult {
   required: string;
   reason: string;
 }
+
+export type TimelineStepState = "done" | "current" | "upcoming";

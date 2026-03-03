@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { runCli } from "../dist/cli.js";
 import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
 import { validateParsedPlan } from "../dist/schema/validate-plan.js";
@@ -180,6 +180,13 @@ await runCase("detectProjectRoot prefers git root then package then cwd", async 
     const detectedPlain = await detectProjectRoot(plainNested);
     assert.equal(detectedPlain, plainNested);
   });
+});
+
+await runCase("timeline contrast policy check passes", async () => {
+  const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfp-timeline-contrast.mjs");
+  const policyModule = await import(pathToFileURL(policyPath).href);
+  const result = await policyModule.verifyKfpTimelineContrast();
+  assert.equal(result.failures.length, 0, result.failures.join("\n"));
 });
 
 await runCase("codex runner does not throw on spawn failures", async () => {
@@ -424,6 +431,9 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("No plan selected."));
     assert.ok(appJsResponse.payload.includes("toolbar plan picker"));
     assert.ok(appJsResponse.payload.includes("activity-tag"));
+    assert.ok(appJsResponse.payload.includes("phase-step-\" + state"));
+    assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
+    assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
 
     const stylesResponse = await server.inject({
       method: "GET",
@@ -433,6 +443,10 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".journal-header"));
     assert.ok(stylesResponse.payload.includes(".empty-state"));
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
+    assert.ok(stylesResponse.payload.includes(".phase-timeline"));
+    assert.ok(stylesResponse.payload.includes(".phase-step-current"));
+    assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
+    assert.ok(stylesResponse.payload.includes("@media (prefers-reduced-motion: reduce)"));
 
     await server.close();
   });

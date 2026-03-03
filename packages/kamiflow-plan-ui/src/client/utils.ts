@@ -4,8 +4,12 @@ import type {
   PlanDetail,
   PlanSummary,
   RouteInfo,
-  StartGateResult
+  StartGateResult,
+  TimelineStepState
 } from "./types";
+
+export const WORKFLOW_STAGES = ["Start", "Plan", "Build", "Check", "Done"] as const;
+export type WorkflowStage = (typeof WORKFLOW_STAGES)[number];
 
 export function nowIso(): string {
   return new Date().toISOString();
@@ -146,4 +150,25 @@ export function deriveStage(summary: PlanSummary, detail: PlanDetail): string {
     return "Build";
   }
   return "Plan";
+}
+
+function normalizeStage(stage: string): WorkflowStage {
+  if (WORKFLOW_STAGES.includes(stage as WorkflowStage)) {
+    return stage as WorkflowStage;
+  }
+  return "Plan";
+}
+
+export function buildTimelineStepStates(currentStage: string): TimelineStepState[] {
+  const normalizedStage = normalizeStage(currentStage);
+  const currentIndex = WORKFLOW_STAGES.findIndex((item) => item === normalizedStage);
+  return WORKFLOW_STAGES.map((_, index) => {
+    if (index < currentIndex) {
+      return "done";
+    }
+    if (index === currentIndex) {
+      return "current";
+    }
+    return "upcoming";
+  });
 }
