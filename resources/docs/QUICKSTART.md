@@ -31,12 +31,23 @@ Do not use `npm run ...` from this repo in client projects.
 In the client project:
 
 ```bash
-kfc client
+kfc client --force
 ```
 
-Then tell Codex:
+For each task, use this KISS loop:
 
-- Read `.kfc/CODEX_READY.md` and execute the mission.
+1. Tell Codex to read `.kfc/CODEX_READY.md` and execute the mission.
+2. Before any implementation route (`build`/`fix`), require:
+
+```bash
+kfc flow ensure-plan --project .
+```
+
+3. If behavior looks off, run:
+
+```bash
+kfc client doctor --project .
+```
 
 After work is complete, cleanup is required:
 
@@ -49,6 +60,7 @@ kfc client done
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
 - Missing plan UI: rerun `kfc client --force`.
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
+- Flow behavior mismatch: run `kfc client doctor --project .`.
 - Rules mismatch: rerun `kfc client --force`.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
