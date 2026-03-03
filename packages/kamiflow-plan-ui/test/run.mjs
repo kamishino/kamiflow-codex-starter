@@ -8,6 +8,7 @@ import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
 import { validateParsedPlan } from "../dist/schema/validate-plan.js";
 import { SSEStream } from "../dist/server/sse-stream.js";
 import { detectProjectRoot } from "../dist/lib/project-detect.js";
+import { runCodexAction } from "../dist/lib/codex-runner.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -179,6 +180,18 @@ await runCase("detectProjectRoot prefers git root then package then cwd", async 
     const detectedPlain = await detectProjectRoot(plainNested);
     assert.equal(detectedPlain, plainNested);
   });
+});
+
+await runCase("codex runner does not throw on spawn failures", async () => {
+  const result = await runCodexAction({
+    plan_id: "PLAN-TEST-001",
+    action_type: "plan",
+    prompt: "invalid\u0000prompt"
+  });
+  assert.equal(typeof result.status, "string");
+  assert.equal(typeof result.run_id, "string");
+  assert.equal(result.status, "failed");
+  assert.ok(result.error_code === "SPAWN_FAILED" || result.error_code === "CODEX_NOT_FOUND");
 });
 
 await runCase("api returns plan list (when server deps are installed)", async () => {

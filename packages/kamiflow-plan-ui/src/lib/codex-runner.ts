@@ -32,19 +32,52 @@ function buildPrompt(input: CodexActionInput): string {
   return `Plan ${input.plan_id}. Execute action: ${input.action_type}.${mode}`;
 }
 
-export async function runCodexAction(input: CodexActionInput): Promise<CodexActionResult> {
-  const prompt = buildPrompt(input);
-  const exe = process.platform === "win32" ? "codex.cmd" : "codex";
-  const args = ["exec", prompt];
-  const run_id = `run_${Date.now()}`;
+function codexExecutableCandidates(): string[] {
+  if (process.platform !== "win32") {
+    return ["codex"];
+  }
+  return ["codex", "codex.exe", "codex.cmd"];
+}
+
+function shouldTryNextCandidate(result: CodexActionResult): boolean {
+  if (result.error_code === "CODEX_NOT_FOUND") {
+    return true;
+  }
+  if (result.error_code === "SPAWN_FAILED") {
+    const stderr = (result.stderr_tail || "").toLowerCase();
+    return stderr.includes("spawn") && (stderr.includes("enoent") || stderr.includes("einval"));
+  }
+  return false;
+}
+
+async function runWithExecutable(
+  exe: string,
+  args: string[],
+  run_id: string
+): Promise<CodexActionResult> {
   const command = `${exe} ${args.map((item) => JSON.stringify(item)).join(" ")}`;
 
   return await new Promise<CodexActionResult>((resolve) => {
     let stdout = "";
     let stderr = "";
-    const child = spawn(exe, args, {
-      stdio: ["ignore", "pipe", "pipe"]
-    });
+    let child;
+    try {
+      child = spawn(exe, args, {
+        stdio: ["ignore", "pipe", "pipe"]
+      });
+    } catch (err) {
+      const spawnErr = err as NodeJS.ErrnoException;
+      resolve({
+        status: "failed",
+        command,
+        stdout_tail: "",
+        stderr_tail: tail(spawnErr?.message ? String(spawnErr.message) : String(err)),
+        exit_code: -1,
+        run_id,
+        error_code: spawnErr?.code === "ENOENT" ? "CODEX_NOT_FOUND" : "SPAWN_FAILED"
+      });
+      return;
+    }
 
     let finished = false;
     const timeout = setTimeout(() => {
@@ -109,4 +142,35 @@ export async function runCodexAction(input: CodexActionInput): Promise<CodexActi
       });
     });
   });
+}
+
+export async function runCodexAction(input: CodexActionInput): Promise<CodexActionResult> {
+  const prompt = buildPrompt(input);
+  const args = ["exec", prompt];
+  const run_id = `run_${Date.now()}`;
+  const candidates = codexExecutableCandidates();
+  let lastResult: CodexActionResult | null = null;
+
+  for (const exe of candidates) {
+    const result = await runWithExecutable(exe, args, run_id);
+    lastResult = result;
+    if (result.status === "completed") {
+      return result;
+    }
+    if (!shouldTryNextCandidate(result)) {
+      return result;
+    }
+  }
+
+  return (
+    lastResult ?? {
+      status: "failed",
+      command: `codex ${args.map((item) => JSON.stringify(item)).join(" ")}`,
+      stdout_tail: "",
+      stderr_tail: "No executable candidate available.",
+      exit_code: -1,
+      run_id,
+      error_code: "CODEX_NOT_FOUND"
+    }
+  );
 }
