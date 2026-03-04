@@ -41,10 +41,12 @@ Pick mode before executing route logic:
 ## Global Rules
 
 - Keep output concise, structured, and human-readable.
-- No emoji in default output.
+- No emoji in machine-critical contract fields.
+- Emoji is allowed in human-facing markdown summaries/docs when it improves readability.
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
 - If mode does not satisfy route requirements, do not continue.
+- Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
 - Every top-level user request must resolve one active non-done plan in `.local/plans` before route output.
 - Reuse the active plan by default; create a new plan file only when no active plan exists or scope is explicitly split.
 - Every route invocation persists plan-state changes directly in markdown before final output.

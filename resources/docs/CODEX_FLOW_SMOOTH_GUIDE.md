@@ -10,6 +10,12 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 4. Mutate plan frontmatter + `WIP Log`.
 5. Respond with compact user guidance.
 
+## Chat-Only Execution
+
+- `🧭` Chat is the control plane: Codex executes normal flow commands directly.
+- `🤝` Do not push routine CLI steps back to the user when the agent can run them.
+- `🧱` If execution is blocked by environment boundaries, report the blocker and request the smallest possible user action.
+
 ## Compact Response Shape
 
 - `State`: current phase + status.
@@ -34,3 +40,9 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 - Build-readiness uncertainty: `kfc flow ready --project .`
 - Shell/profile crash: rerun with no-profile/non-login shell.
 - Runtime skill/rules drift: `npm run codex:sync -- --scope repo --force`
+
+## Readability Style
+
+- `✨` Emoji is allowed for human-facing markdown cues and section scanning.
+- `⚙️` Keep machine-readable fields plain and deterministic (no emoji in command literals or strict contract keys).
+- `🧩` Use emoji sparingly and consistently to improve comprehension, not decoration.

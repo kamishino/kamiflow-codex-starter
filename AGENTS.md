@@ -95,6 +95,19 @@ This repository has four active scopes:
 - Environment recovery:
 - If shell startup crashes from local profile modules, rerun commands with non-login/no-profile shell.
 
+## Chat-Only Operation Contract
+
+- Treat chat as the control plane: execute the workflow end-to-end without asking the user to run routine flow commands.
+- Do not require the user to run `kfc`/`npm` commands for normal route execution when the agent can run them directly.
+- Ask the user to run a command only when execution is impossible from agent context (for example: external terminal permissions, interactive auth, or environment outside workspace access).
+- When escalation is needed, explain the blocker briefly and keep user action minimal.
+
+## Markdown Readability Policy
+
+- Emoji is allowed in human-facing markdown documentation and summaries to reduce wall-of-text.
+- Keep machine contracts and command examples deterministic; avoid emoji inside command literals or parse-sensitive fields.
+- Prefer light, consistent emoji markers (section headers, status cues), not decorative overuse.
+
 ## KFP UI Rules
 
 - Keep KFP observer-first by default; do not reintroduce unsafe mutation/execute controls in observer mode.

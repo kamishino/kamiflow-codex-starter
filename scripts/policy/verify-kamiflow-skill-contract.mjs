@@ -15,6 +15,8 @@ const RULES = [
       "Current Mode: Plan|Build",
       "Reason: <one line>",
       "Instruction: Switch mode and rerun the same command.",
+      "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
+      "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
       "## Smooth Flow Checklist",
       "## Response Handoff Contract"
     ]

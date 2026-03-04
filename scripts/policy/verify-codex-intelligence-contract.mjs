@@ -28,10 +28,13 @@ try {
     "## Plan Lifecycle Contract",
     "## Evidence Gate",
     "## Smooth Flow Protocol",
+    "## Chat-Only Operation Contract",
+    "## Markdown Readability Policy",
     "## Anti-Pattern Router",
     "## Learning Loop Contract",
     "Every top-level user request must resolve one active non-done plan",
     "Every route call must persist plan updates",
+    "Do not require the user to run `kfc`/`npm` commands for normal route execution",
     "State`, `Doing`, and `Next`",
     "$kamiflow-core plan"
   ]) {
@@ -89,6 +92,8 @@ try {
   for (const token of [
     "## Smooth Flow Checklist",
     "## Failure Recovery",
+    "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
+    "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
     "Every route invocation persists plan-state changes directly in markdown",
     "Every top-level user request must resolve one active non-done plan",
     "If evidence is unavailable, mark status as `Unknown`",
@@ -128,10 +133,13 @@ try {
   const smoothGuide = read(smoothGuideFile);
   for (const token of [
     "## Core Sequence",
+    "## Chat-Only Execution",
     "## Compact Response Shape",
     "## Evidence Rule",
     "## Completion Safety",
     "## Recovery Shortcuts",
+    "## Readability Style",
+    "Emoji is allowed for human-facing markdown cues",
     "Do not treat plan as done if archive fails."
   ]) {
     assertIncludes(smoothGuide, smoothGuideFile, token, errors);
