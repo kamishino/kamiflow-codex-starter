@@ -713,9 +713,75 @@ textarea {
   margin-bottom: var(--space-2);
 }
 
+.checklist-item {
+  min-height: var(--space-6);
+}
+
 .checklist-box input[type="checkbox"] {
   width: auto;
   margin: 0;
+}
+
+.plan-check {
+  appearance: none;
+  width: var(--space-4) !important;
+  height: var(--space-4) !important;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-1);
+  position: relative;
+  flex: 0 0 auto;
+  cursor: default;
+}
+
+.plan-check::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--primary-foreground);
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+  opacity: 0;
+}
+
+.plan-check:checked {
+  border-color: var(--semantic-success);
+  background: var(--semantic-success);
+  box-shadow: 0 0 0 2px var(--semantic-success-soft);
+}
+
+.plan-check:checked::after {
+  opacity: 1;
+}
+
+.plan-check:disabled {
+  opacity: 1;
+}
+
+.checklist-text {
+  min-width: 0;
+  line-height: var(--lh-normal);
+}
+
+.plan-file-link {
+  color: var(--primary);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+.plan-file-link:hover {
+  color: var(--primary-strong);
+}
+
+.plan-file-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .journal {

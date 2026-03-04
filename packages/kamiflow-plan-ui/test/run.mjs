@@ -554,6 +554,11 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
     assert.ok(appJsResponse.payload.includes("Completed"));
     assert.ok(appJsResponse.payload.includes("Brainstorm"));
+    assert.ok(appJsResponse.payload.includes("plan-check"));
+    assert.ok(appJsResponse.payload.includes("plan-file-link"));
+    assert.ok(appJsResponse.payload.includes("_ts="));
+    assert.ok(appJsResponse.payload.includes("cache-control"));
+    assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
     assert.ok(appJsResponse.payload.includes("Current Task/Subtask"));
     assert.ok(appJsResponse.payload.includes("SUCCESS "));
     assert.ok(appJsResponse.payload.includes("FAIL "));
@@ -571,6 +576,8 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
     assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
+    assert.ok(stylesResponse.payload.includes(".plan-check"));
+    assert.ok(stylesResponse.payload.includes(".plan-file-link"));
     assert.ok(stylesResponse.payload.includes("--space-4"));
     assert.ok(stylesResponse.payload.includes("@supports (color: oklch"));
     assert.ok(stylesResponse.payload.includes("@media (prefers-reduced-motion: reduce)"));

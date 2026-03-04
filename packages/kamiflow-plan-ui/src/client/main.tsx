@@ -45,10 +45,14 @@ const ACTIVITY_MAX_ITEMS = 120;
 const PLAN_PICKER_MAX_RESULTS = 50;
 
 let currentStream: EventSource | null = null;
+let currentStreamScope = "";
 let lastHeartbeatTs = 0;
 let staleTimer: number | null = null;
 let pollTimer: number | null = null;
+let liveRefreshTimer: number | null = null;
+let liveRefreshBusy = false;
 let currentPlans: PlanSummary[] = [];
+let projectDirById = new Map<string, string>();
 let planSearchQuery = "";
 let projectsLoaded = false;
 let suppressHashChange = false;
@@ -250,6 +254,7 @@ function summarizeCodexRunEvent(
 }
 
 function renderProjectsList(projects: Array<{ project_id: string; project_dir: string }>): void {
+  projectDirById = new Map(projects.map((item) => [item.project_id, item.project_dir]));
   projectEl.innerHTML = projects
     .map((item) => `<option value="${item.project_id}">${item.project_id} - ${item.project_dir}</option>`)
     .join("");
@@ -358,6 +363,7 @@ async function loadDetail(): Promise<void> {
   loadPersistedActivity();
 
   if (!routeFromHash) {
+    detachStream(true);
     renderNoSelectionState(
       "No plan selected.",
       "Choose a plan from the toolbar plan picker. If none exists, run kfc plan init --project . --new."
@@ -368,6 +374,7 @@ async function loadDetail(): Promise<void> {
 
   if (routeFromHash.projectId !== currentProjectId()) {
     if (projectsLoaded) {
+      detachStream(true);
       renderNoSelectionState(
         "Selected plan belongs to another project.",
         "Choose a plan from the current project using the toolbar plan picker."
@@ -382,6 +389,7 @@ async function loadDetail(): Promise<void> {
 
   const fetchedDetail = await fetchPlanDetail(currentProjectId(), routeFromHash.planId);
   if (!fetchedDetail) {
+    detachStream(true);
     setStatus("Plan not found. Select another plan or refresh list.");
     renderNoSelectionState("Selected plan is unavailable.", "Refresh list or pick another plan from the toolbar picker.");
     syncPlanSelectionHelp();
@@ -444,11 +452,73 @@ function stopPollingFallback(): void {
   pollTimer = null;
 }
 
-function attachStream(projectId: string, planId: string): void {
+function detachStream(resetBadge = false): void {
   if (currentStream) {
     currentStream.close();
     currentStream = null;
   }
+  currentStreamScope = "";
+  if (staleTimer) {
+    window.clearInterval(staleTimer);
+    staleTimer = null;
+  }
+  if (resetBadge) {
+    setConnectionState("disconnected");
+  }
+}
+
+async function refreshActivePlanDetail(): Promise<void> {
+  if (liveRefreshBusy) {
+    return;
+  }
+  const activeRoute = route.value;
+  if (!activeRoute) {
+    return;
+  }
+  liveRefreshBusy = true;
+  try {
+    const latest = await fetchPlanDetail(activeRoute.projectId, activeRoute.planId);
+    if (!latest) {
+      return;
+    }
+    const currentUpdatedAt = detail.value?.summary?.updated_at || "";
+    const nextUpdatedAt = latest.summary.updated_at || "";
+    if (currentUpdatedAt !== nextUpdatedAt) {
+      detail.value = latest;
+      emptyPanelState.value = null;
+      syncPlanSelectionHelp();
+      setStatus("Plan hot-reloaded from file changes.");
+      void loadList();
+    }
+  } finally {
+    liveRefreshBusy = false;
+  }
+}
+
+function startLiveRefreshTimer(): void {
+  if (liveRefreshTimer) {
+    return;
+  }
+  liveRefreshTimer = window.setInterval(() => {
+    void refreshActivePlanDetail();
+  }, 4000);
+}
+
+function stopLiveRefreshTimer(): void {
+  if (!liveRefreshTimer) {
+    return;
+  }
+  window.clearInterval(liveRefreshTimer);
+  liveRefreshTimer = null;
+}
+
+function attachStream(projectId: string, planId: string): void {
+  const scope = projectId + "::" + planId;
+  if (currentStream && currentStreamScope === scope) {
+    return;
+  }
+  detachStream(false);
+  currentStreamScope = scope;
 
   currentStream = new EventSource(
     "/api/projects/" + encodeURIComponent(projectId) + "/plans/" + encodeURIComponent(planId) + "/events"
@@ -623,7 +693,13 @@ effect(() => {
   }
 
   render(<WorkflowTimeline detail={activeDetail} />, workflowEl);
-  render(<PlanSnapshot detail={activeDetail} />, workEl);
+  render(
+    <PlanSnapshot
+      detail={activeDetail}
+      projectDir={projectDirById.get(activeDetail.summary.project_id || currentProjectId()) || ""}
+    />,
+    workEl
+  );
 });
 
 effect(() => {
@@ -635,6 +711,12 @@ projectEl.classList.add("ui-select");
 filterEl.classList.add("ui-select");
 activityFilterEl.classList.add("ui-select");
 planSearchInputEl.classList.add("ui-input");
+startLiveRefreshTimer();
+window.addEventListener("beforeunload", () => {
+  stopLiveRefreshTimer();
+  stopPollingFallback();
+  detachStream(false);
+});
 fetchProjects()
   .then(({ projects }) => {
     renderProjectsList(projects);
