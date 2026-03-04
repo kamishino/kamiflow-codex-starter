@@ -32,6 +32,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc client` (default client setup + Codex-ready handoff)
 - `kfc client done` (cleanup)
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
+- `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
 - `kfc run` (auto-runs `flow ensure-plan`, then `flow ready`)
 - `kf` is an alias for `kfc`
 
@@ -93,6 +94,25 @@ After Codex finishes:
 
 ```bash
 kfc client done
+```
+
+## Copy Codex Sessions
+
+```bash
+# show default local sessions root
+kfc session where
+
+# find exact session file by id
+kfc session find --id 019caccc-f25d-7151-ad1d-6eab893d714d
+
+# copy exact session file by id into transfer folder
+kfc session copy --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
+
+# copy one day from this machine into a transfer folder
+kfc session copy --to E:/transfer/codex-sessions --date 2026-03-04
+
+# on another machine, restore into local Codex sessions
+kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merge
 ```
 
 ## Versioning (No Publish)

@@ -59,6 +59,22 @@ kfc client done
 
 During normal implementation turns, Codex should run check validations automatically and report `Check: PASS|BLOCK` before final response.
 
+## Copy Codex Sessions Between Machines
+
+```bash
+# find exact session file by id
+kfc session find --id 019caccc-f25d-7151-ad1d-6eab893d714d
+
+# copy exact session file by id into transfer folder
+kfc session copy --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
+
+# source machine: export one day into transfer folder
+kfc session copy --to E:/transfer/codex-sessions --date 2026-03-04
+
+# destination machine: import into local Codex sessions root
+kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merge
+```
+
 ## Troubleshooting
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
@@ -66,6 +82,7 @@ During normal implementation turns, Codex should run check validations automatic
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
 - Flow behavior mismatch: run `kfc client doctor --project . --fix`.
 - Rules mismatch: rerun `kfc client --force`.
+- Cannot find local Codex sessions folder: run `kfc session where`.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
 ## Next Docs

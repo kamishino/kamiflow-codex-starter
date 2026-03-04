@@ -5,6 +5,7 @@ import { runWorkflow } from "./commands/run.js";
 import { runPlan } from "./commands/plan.js";
 import { runFlow } from "./commands/flow.js";
 import { runClient } from "./commands/client.js";
+import { runSession } from "./commands/session.js";
 import { error } from "./lib/logger.js";
 
 function printUsage() {
@@ -19,6 +20,7 @@ Commands:
   plan       Run kfp plan workflow (init|serve|validate)
   flow       Deterministic plan guardrails (ensure-plan|ready|apply|next)
   client     Client-project one-command setup, diagnostics, and cleanup
+  session    Codex session transfer helpers (where|find|copy)
   run        Execute Kami Flow with plan guardrails
   help       Show this usage
 
@@ -47,6 +49,11 @@ client options:
   kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check]
   kfc client doctor [--project <path>] [--fix]
   kfc client done [--project <path>]
+
+session options:
+  kfc session where
+  kfc session find --id <session-id> [--from <path>]
+  kfc session copy --to <path> [--from <path>] [--date <YYYY-MM-DD|YYYY/MM/DD>|--id <session-id>] [--overwrite|--merge]
 `);
 }
 
@@ -103,6 +110,10 @@ export async function runCli(argv) {
 
     if (command === "client") {
       return await runClient({ cwd: global.cwd, args: commandArgs });
+    }
+
+    if (command === "session") {
+      return await runSession({ cwd: global.cwd, args: commandArgs });
     }
 
     error(`Unknown command: ${command}`);
