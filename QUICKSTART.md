@@ -60,6 +60,8 @@ After work is complete, cleanup is required:
 kfc client done
 ```
 
+During normal implementation turns, Codex should run check validations automatically and report `Check: PASS|BLOCK` before final response.
+
 ## Troubleshooting
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.

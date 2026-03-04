@@ -87,6 +87,7 @@ Then tell Codex:
 
 - Read `.kfc/CODEX_READY.md` and execute the mission.
 - Run routine `kfc ...` flow commands autonomously (no user reminder loop).
+- Run check validation before final response and report `Check: PASS|BLOCK`.
 
 After Codex finishes:
 

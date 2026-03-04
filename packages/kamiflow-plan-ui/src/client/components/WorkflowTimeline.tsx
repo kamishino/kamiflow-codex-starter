@@ -23,7 +23,7 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
 
   function stateLabel(state: TimelineStepState): string {
     if (state === "done") {
-      return "Done";
+      return "Completed";
     }
     if (state === "current") {
       return "Current";

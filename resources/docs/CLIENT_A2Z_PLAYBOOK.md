@@ -40,7 +40,8 @@ This generates `.kfc/CODEX_READY.md` for Codex handoff.
 - Execute one task slice at a time.
 - After each slice:
   - record progress with `kfc flow apply ... --route build --result progress`,
-  - run validation commands for that slice.
+  - run validation commands for that slice,
+  - run check validations and report `Check: PASS|BLOCK` before final response.
 
 4. Check Loop
 - Evaluate results against acceptance criteria.

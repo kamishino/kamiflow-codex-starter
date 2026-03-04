@@ -89,6 +89,7 @@ This repository has four active scopes:
 
 - Route discipline:
 - Resolve active plan first, then execute exactly one route (`start|plan|build|check|fix|research`) per response.
+- After finishing implementation in a `build`/`fix` slice, run check validations before final response and report `Check: PASS|BLOCK` with evidence.
 - Persist plan mutation before final response; never return route output without plan-state mutation.
 - Response shape:
 - Keep non-trivial route responses concise with `State`, `Doing`, and `Next`.

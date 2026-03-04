@@ -38,15 +38,16 @@ Rules:
 7) Keep phase tracking updated after each meaningful step:
    - Build progress: `kfc flow apply --project . --plan <plan-id> --route build --result progress`
    - Check pass/block: `kfc flow apply --project . --plan <plan-id> --route check --result pass|block`
-8) After each response, always provide:
+8) After finishing implementation in a turn, run check validations and report `Check: PASS|BLOCK`.
+9) After each response, always provide:
    - current phase,
    - what was completed,
    - the next 1-3 concrete actions (commands or file edits).
-9) If blocked, stop and output:
+10) If blocked, stop and output:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
    - `Recovery: <exact command>`
-10) Before declaring completion, always run cleanup:
+11) Before declaring completion, always run cleanup:
    - `kfc client done`
    - confirm `.kfc/CODEX_READY.md` is removed.
 

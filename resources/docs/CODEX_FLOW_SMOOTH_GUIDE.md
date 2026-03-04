@@ -8,7 +8,8 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 2. Choose exactly one route (`start|plan|build|check|fix|research`).
 3. Execute one scoped slice.
 4. Mutate plan frontmatter + `WIP Log`.
-5. Respond with compact user guidance.
+5. Run check validations for completed build/fix work.
+6. Respond with compact user guidance.
 
 ## Plan Touch Cadence
 
@@ -28,6 +29,12 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 - `State`: current phase + status.
 - `Doing`: what was executed in this slice.
 - `Next`: one concrete action to run next.
+
+## Auto Check Gate
+
+- When a `build`/`fix` slice is completed in the current turn, run check validations before final response.
+- Report check outcome explicitly as `Check: PASS` or `Check: BLOCK`.
+- If check cannot be completed, return `Status: BLOCK` with one recovery command.
 
 ## Evidence Rule
 

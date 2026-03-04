@@ -161,6 +161,9 @@ function normalizeStage(stage: string): WorkflowStage {
 
 export function buildTimelineStepStates(currentStage: string): TimelineStepState[] {
   const normalizedStage = normalizeStage(currentStage);
+  if (normalizedStage === "Done") {
+    return WORKFLOW_STAGES.map(() => "done");
+  }
   const currentIndex = WORKFLOW_STAGES.findIndex((item) => item === normalizedStage);
   return WORKFLOW_STAGES.map((_, index) => {
     if (index < currentIndex) {

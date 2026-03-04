@@ -58,6 +58,13 @@ async function runNodeProcess(command, args, cwd) {
   });
 }
 
+function toLocalDateStamp(date = new Date()) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 await runCase("parse and validate template plan", async () => {
   const templatePath = path.resolve(__dirname, "../templates/plan-template.md");
   const markdown = await fs.readFile(templatePath, "utf8");
@@ -153,6 +160,11 @@ await runCase("init creates plan template", async () => {
     const plansDir = path.join(tempDir, ".local", "plans");
     const files = await fs.readdir(plansDir);
     assert.ok(files.some((name) => name.endsWith(".md")));
+    const createdFile = files.find((name) => name.endsWith(".md"));
+    const markdown = await fs.readFile(path.join(plansDir, createdFile), "utf8");
+    const parsed = parsePlanFileContent(markdown, createdFile);
+    assert.ok(/^PLAN-\d{4}-\d{2}-\d{2}-\d{3}$/.test(parsed.frontmatter.plan_id), parsed.frontmatter.plan_id);
+    assert.notEqual(parsed.frontmatter.plan_id, "PLAN-YYYY-MM-DD-001");
   });
 });
 
@@ -211,6 +223,41 @@ await runCase("init supports topic/route slug in filename", async () => {
     const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md"));
     assert.equal(files.length, 1);
     assert.ok(/-\d{3}-build-improve-kami-flow-core\.md$/i.test(files[0]));
+    const markdown = await fs.readFile(path.join(plansDir, files[0]), "utf8");
+    const parsed = parsePlanFileContent(markdown, files[0]);
+    assert.equal(parsed.frontmatter.title, "Improve Kami Flow Core");
+    assert.ok(/^PLAN-\d{4}-\d{2}-\d{2}-\d{3}$/.test(parsed.frontmatter.plan_id), parsed.frontmatter.plan_id);
+  });
+});
+
+await runCase("init --new uses next available daily sequence across slugs", async () => {
+  await withTempDir(async (tempDir) => {
+    const plansDir = path.join(tempDir, ".local", "plans");
+    await fs.mkdir(plansDir, { recursive: true });
+    const dateStamp = toLocalDateStamp();
+    const existingPlan = `${dateStamp}-001-plan-existing.md`;
+    await fs.writeFile(path.join(plansDir, existingPlan), "# existing", "utf8");
+
+    const exitCode = await runCli([
+      "init",
+      "--project",
+      tempDir,
+      "--new",
+      "--route",
+      "build",
+      "--topic",
+      "Global Seq"
+    ]);
+    assert.equal(exitCode, 0);
+
+    const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md")).sort();
+    assert.equal(files.length, 2);
+    const createdFile = files.find((name) => /-002-build-global-seq\.md$/i.test(name));
+    assert.ok(createdFile, files.join(", "));
+
+    const markdown = await fs.readFile(path.join(plansDir, createdFile), "utf8");
+    const parsed = parsePlanFileContent(markdown, createdFile);
+    assert.equal(parsed.frontmatter.plan_id, `PLAN-${dateStamp}-002`);
   });
 });
 
@@ -505,6 +552,8 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("activity-tag"));
     assert.ok(appJsResponse.payload.includes("phase-step-\" + state"));
     assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
+    assert.ok(appJsResponse.payload.includes("Completed"));
+    assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
     assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
 
     const stylesResponse = await server.inject({

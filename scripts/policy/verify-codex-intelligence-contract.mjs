@@ -38,6 +38,7 @@ try {
     "Every route call must persist plan updates",
     "Do not require the user to run `kfc`/`npm` commands for normal route execution",
     ".local/` is git-ignored; do not use `git status` as proof that plan files were touched",
+    "run check validations before final response and report `Check: PASS|BLOCK` with evidence",
     "State`, `Doing`, and `Next`",
     "$kamiflow-core plan"
   ]) {
@@ -99,6 +100,7 @@ try {
     "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
     "Every route invocation persists plan-state changes directly in markdown",
     "Every top-level user request must resolve one active non-done plan",
+    "run check validations and report `Check: PASS|BLOCK` before final response",
     "If evidence is unavailable, mark status as `Unknown`",
     "kfc flow ensure-plan --project .",
     "Prefer direct plan-file mutation as primary lifecycle path",
@@ -115,6 +117,7 @@ try {
     "Status: BLOCK",
     "Recovery: update plan via `$kamiflow-core plan` and rerun build",
     "Persist build phase/progress via direct markdown mutation",
+    "report `Check: PASS|BLOCK`",
     "mark the claim as `Unknown`"
   ]) {
     assertIncludes(buildRef, buildRefFile, token, errors);
@@ -127,6 +130,7 @@ try {
     "Status: BLOCK",
     "Recovery: update plan via `$kamiflow-core plan` and rerun fix",
     "Persist fix/build progress via direct markdown mutation",
+    "report `Check: PASS|BLOCK`",
     "mark the claim as `Unknown`"
   ]) {
     assertIncludes(fixRef, fixRefFile, token, errors);
@@ -139,12 +143,14 @@ try {
     "## Plan Touch Cadence",
     "## Chat-Only Execution",
     "## Compact Response Shape",
+    "## Auto Check Gate",
     "## Evidence Rule",
     "## Completion Safety",
     "## Recovery Shortcuts",
     "## Readability Style",
     "Touch active plan at route start",
     "Touch active plan again before final response",
+    "Check: PASS",
     "Emoji is allowed for human-facing markdown cues",
     "Do not treat plan as done if archive fails."
   ]) {

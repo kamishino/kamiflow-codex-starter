@@ -10,7 +10,8 @@ const REQUIRED_PATTERNS = [
   { label: "start command", regex: /\bkfc client\b/ },
   { label: "ready file", regex: /\.kfc\/CODEX_READY\.md/ },
   { label: "cleanup command", regex: /\bkfc client done\b/ },
-  { label: "autonomous flow execution", regex: /\bautonom(?:ous|ously)\b/i }
+  { label: "autonomous flow execution", regex: /\bautonom(?:ous|ously)\b/i },
+  { label: "auto check gate", regex: /Check:\s*PASS\|BLOCK/i }
 ];
 
 const FILE_SPECIFIC_PATTERNS = {

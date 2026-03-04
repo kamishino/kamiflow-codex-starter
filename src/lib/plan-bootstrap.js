@@ -98,11 +98,91 @@ function buildSlugBase(options = {}) {
   return combined.slice(0, 64).replace(/-+$/g, "") || "plan";
 }
 
+function toIsoNow() {
+  return new Date().toISOString();
+}
+
 function toLocalDateStamp(date = new Date()) {
   const year = String(date.getFullYear());
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function humanizeSlug(slug, fallback = "Plan") {
+  const value = String(slug || "")
+    .split("-")
+    .filter(Boolean)
+    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
+    .join(" ")
+    .trim();
+  return value || fallback;
+}
+
+function parsePlanFileIdentity(filePath, options = {}) {
+  const fallbackDate = toLocalDateStamp();
+  const baseName = path.basename(filePath, ".md");
+  const match = baseName.match(/^(?<date>\d{4}-\d{2}-\d{2})(?:-(?<seq>\d{3}))?(?:-(?<slug>.+))?$/i);
+  const date = match?.groups?.date || fallbackDate;
+  const seq = match?.groups?.seq || "001";
+  const slug = String(match?.groups?.slug || "").trim();
+  const slugParts = slug.split("-").filter(Boolean);
+  const route = slugifySegment(slugParts[0] || options.route || "plan", "plan");
+  const topicSlug = slugParts.length > 1
+    ? slugifySegment(slugParts.slice(1).join("-"), "")
+    : slugifySegment(options.topic || options.slug || "", "");
+  const rawTopic = String(options.topic || "").trim();
+  const title = rawTopic || humanizeSlug(topicSlug, `${humanizeSlug(route)} Plan`);
+  return {
+    date,
+    seq,
+    route,
+    topicSlug,
+    title
+  };
+}
+
+function updateFrontmatterField(markdown, key, value) {
+  const text = String(markdown || "");
+  if (!text.startsWith("---")) {
+    return text;
+  }
+
+  const lines = text.split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return text;
+  }
+
+  const targetPrefix = `${key}:`;
+  let found = false;
+  for (let i = 1; i < endIdx; i += 1) {
+    if (lines[i].trim().startsWith(targetPrefix)) {
+      lines[i] = `${key}: ${value}`;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    lines.splice(endIdx, 0, `${key}: ${value}`);
+  }
+  return lines.join("\n");
+}
+
+function materializeTemplate(template, targetPath, options = {}) {
+  const identity = parsePlanFileIdentity(targetPath, options);
+  const planId = `PLAN-${identity.date}-${identity.seq}`;
+  let next = String(template || "");
+  next = updateFrontmatterField(next, "plan_id", planId);
+  next = updateFrontmatterField(next, "title", identity.title);
+  next = updateFrontmatterField(next, "updated_at", toIsoNow());
+  return next;
 }
 
 function buildDefaultPlanFileName(options = {}) {
@@ -114,7 +194,32 @@ function buildDefaultPlanFileName(options = {}) {
 async function resolveUniqueNewPlanPath(plansDir, options = {}) {
   const date = toLocalDateStamp();
   const slugBase = buildSlugBase(options);
+  const usedSequenceNumbers = new Set();
+  const pattern = new RegExp(`^${date}-(\\d{3})(?:-.+)?\\.md$`, "i");
+
+  try {
+    const entries = await fs.readdir(plansDir, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      const match = entry.name.match(pattern);
+      if (!match) {
+        continue;
+      }
+      const parsed = Number.parseInt(match[1], 10);
+      if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 999) {
+        usedSequenceNumbers.add(parsed);
+      }
+    }
+  } catch {
+    // plansDir is created before this call; fall back to collision checks below.
+  }
+
   for (let i = 1; i <= 999; i += 1) {
+    if (usedSequenceNumbers.has(i)) {
+      continue;
+    }
     const suffix = String(i).padStart(3, "0");
     const candidate = path.join(plansDir, `${date}-${suffix}-${slugBase}.md`);
     try {
@@ -164,7 +269,8 @@ export async function createLocalPlanTemplate(projectDir, options = {}) {
     }
   }
 
-  await fs.writeFile(targetPath, template, "utf8");
+  const materialized = materializeTemplate(template, targetPath, naming);
+  await fs.writeFile(targetPath, materialized, "utf8");
   if (log) {
     log(`Plan bootstrap fallback used: ${targetPath}`);
   }

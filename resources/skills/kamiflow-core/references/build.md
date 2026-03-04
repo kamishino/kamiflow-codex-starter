@@ -44,9 +44,10 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
 12. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert completion.
-13. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
-14. End with concise next-step guidance; do not require verbose response footer fields.
-15. Final response should use compact guidance shape:
+13. Before final response, run check validations for the implemented slice and report `Check: PASS|BLOCK` with evidence.
+14. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+15. End with concise next-step guidance; do not require verbose response footer fields.
+16. Final response should use compact guidance shape:
    - `State`: active phase + task status
    - `Doing`: implemented slice and validations run
    - `Next`: one concrete next action (normally `check`)

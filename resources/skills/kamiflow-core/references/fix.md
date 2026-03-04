@@ -35,8 +35,9 @@ Use this route for focused issue resolution with minimal scope.
    - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
 11. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert resolution.
-12. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
-13. End with concise next-step guidance; do not require verbose response footer fields.
+12. Before final response, run check validations for the fix slice and report `Check: PASS|BLOCK` with evidence.
+13. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+14. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 

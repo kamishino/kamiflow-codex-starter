@@ -409,6 +409,7 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     "4. Ask the user only when execution is impossible from agent context (permissions/auth/out-of-workspace).",
     "5. Before `build`/`fix`, run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
     "6. If readiness or flow behavior fails, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.",
+    "7. After completing implementation in a turn, run check validations and report `Check: PASS|BLOCK` before final response.",
     "",
     "## Phase Update Commands",
     "- Readiness gate: `kfc flow ready --project .`",
