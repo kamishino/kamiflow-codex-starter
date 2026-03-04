@@ -43,6 +43,7 @@ Use this route to execute an approved plan in small, verifiable slices.
    - frontmatter: `lifecycle_phase: build`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
+   - during multi-step implementation, after each completed task/subtask update checklist + timestamped WIP evidence before the next subtask
 12. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert completion.
 13. Before final response, run check validations for the implemented slice and report `Check: PASS|BLOCK` with evidence.
 14. Resolve next-step narrative from mutated frontmatter and remaining checklist state.

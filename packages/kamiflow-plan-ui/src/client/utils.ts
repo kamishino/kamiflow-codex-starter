@@ -8,7 +8,7 @@ import type {
   TimelineStepState
 } from "./types";
 
-export const WORKFLOW_STAGES = ["Start", "Plan", "Build", "Check", "Done"] as const;
+export const WORKFLOW_STAGES = ["Brainstorm", "Plan", "Build", "Check", "Done"] as const;
 export type WorkflowStage = (typeof WORKFLOW_STAGES)[number];
 
 export function nowIso(): string {
@@ -138,7 +138,7 @@ export function evaluateStartGate(detail: PlanDetail): StartGateResult {
 export function deriveStage(summary: PlanSummary, detail: PlanDetail): string {
   const startGate = evaluateStartGate(detail);
   if (!startGate.ok) {
-    return "Start";
+    return "Brainstorm";
   }
   if (summary.is_archived || summary.status === "done" || summary.next_command === "done") {
     return "Done";
@@ -153,6 +153,9 @@ export function deriveStage(summary: PlanSummary, detail: PlanDetail): string {
 }
 
 function normalizeStage(stage: string): WorkflowStage {
+  if (stage === "Start") {
+    return "Brainstorm";
+  }
   if (WORKFLOW_STAGES.includes(stage as WorkflowStage)) {
     return stage as WorkflowStage;
   }

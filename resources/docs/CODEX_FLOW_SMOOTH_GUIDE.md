@@ -15,6 +15,7 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 
 - `📝` Touch active plan at route start (set current turn context).
 - `📝` Touch active plan again before final response (persist actual outcomes).
+- `📝` During `build`/`fix`, after each completed task/subtask, immediately update checklist state and append timestamped WIP evidence before continuing.
 - A valid touch updates `updated_at` and appends a timestamped `WIP Log` line.
 - `.local/` is git-ignored, so plan touches will not appear in `git status`.
 

@@ -220,6 +220,35 @@ function addActivity(eventType: string, message: string, detailText = ""): void 
   persistActivity();
 }
 
+function summarizeCodexRunEvent(
+  eventType: string,
+  payload: { action_type?: string; status?: string; stdout_tail?: string; stderr_tail?: string }
+): { message: string; detail: string } {
+  const action = String(payload.action_type || "task").toUpperCase();
+  if (eventType === "codex_run_started") {
+    return {
+      message: `RUNNING ${action}`,
+      detail: payload.stdout_tail || payload.stderr_tail || ""
+    };
+  }
+  if (eventType === "codex_run_completed") {
+    return {
+      message: `SUCCESS ${action}`,
+      detail: payload.stdout_tail || payload.stderr_tail || "Task completed."
+    };
+  }
+  if (eventType === "codex_run_failed") {
+    return {
+      message: `FAIL ${action}`,
+      detail: payload.stderr_tail || payload.stdout_tail || "Task failed."
+    };
+  }
+  return {
+    message: `${action} ${String(payload.status || eventType).toUpperCase()}`,
+    detail: payload.stdout_tail || payload.stderr_tail || ""
+  };
+}
+
 function renderProjectsList(projects: Array<{ project_id: string; project_dir: string }>): void {
   projectEl.innerHTML = projects
     .map((item) => `<option value="${item.project_id}">${item.project_id} - ${item.project_dir}</option>`)
@@ -476,9 +505,9 @@ function attachStream(projectId: string, planId: string): void {
       } catch {
         payload = {};
       }
-      const summary = payload.action_type ? payload.action_type + " -> " + (payload.status || eventType) : eventType;
-      addActivity(eventType, summary, payload.stdout_tail || payload.stderr_tail || payloadText);
-      setStatus("Codex run event: " + summary);
+      const summary = summarizeCodexRunEvent(eventType, payload);
+      addActivity(eventType, summary.message, summary.detail || payloadText);
+      setStatus("Codex run event: " + summary.message);
     });
   }
 

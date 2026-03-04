@@ -21,6 +21,7 @@ const RULES = [
       "Touch active plan at route start (`updated_at` + WIP line).",
       "Touch active plan again before final output to persist actual results from this turn.",
       "run check validations and report `Check: PASS|BLOCK` before final response",
+      "after each completed task/subtask, immediately mutate the active plan file",
       "YYYY-MM-DD-<seq>-<route>-<topic-slug>.md",
       "## Response Handoff Contract"
     ]
@@ -59,6 +60,7 @@ const RULES = [
       "Expected: plan markdown exists and is writable",
       "evaluate build-ready criteria directly from plan markdown",
       "Persist build phase/progress via direct markdown mutation",
+      "after each completed task/subtask update checklist + timestamped WIP evidence",
       "report `Check: PASS|BLOCK` with evidence",
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
@@ -97,6 +99,7 @@ const RULES = [
       "Expected: plan markdown exists and is writable",
       "evaluate build-ready criteria directly from plan markdown",
       "Persist fix/build progress via direct markdown mutation",
+      "after each completed task/subtask update checklist + timestamped WIP evidence",
       "report `Check: PASS|BLOCK` with evidence",
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",

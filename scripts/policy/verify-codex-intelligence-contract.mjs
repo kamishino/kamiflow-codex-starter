@@ -39,6 +39,7 @@ try {
     "Do not require the user to run `kfc`/`npm` commands for normal route execution",
     ".local/` is git-ignored; do not use `git status` as proof that plan files were touched",
     "run check validations before final response and report `Check: PASS|BLOCK` with evidence",
+    "after each completed task/subtask, immediately mutate the active plan file",
     "State`, `Doing`, and `Next`",
     "$kamiflow-core plan"
   ]) {
@@ -101,6 +102,7 @@ try {
     "Every route invocation persists plan-state changes directly in markdown",
     "Every top-level user request must resolve one active non-done plan",
     "run check validations and report `Check: PASS|BLOCK` before final response",
+    "after each completed task/subtask, immediately mutate the active plan file",
     "If evidence is unavailable, mark status as `Unknown`",
     "kfc flow ensure-plan --project .",
     "Prefer direct plan-file mutation as primary lifecycle path",
@@ -117,6 +119,7 @@ try {
     "Status: BLOCK",
     "Recovery: update plan via `$kamiflow-core plan` and rerun build",
     "Persist build phase/progress via direct markdown mutation",
+    "after each completed task/subtask update checklist + timestamped WIP evidence",
     "report `Check: PASS|BLOCK`",
     "mark the claim as `Unknown`"
   ]) {
@@ -130,6 +133,7 @@ try {
     "Status: BLOCK",
     "Recovery: update plan via `$kamiflow-core plan` and rerun fix",
     "Persist fix/build progress via direct markdown mutation",
+    "after each completed task/subtask update checklist + timestamped WIP evidence",
     "report `Check: PASS|BLOCK`",
     "mark the claim as `Unknown`"
   ]) {
@@ -150,6 +154,7 @@ try {
     "## Readability Style",
     "Touch active plan at route start",
     "Touch active plan again before final response",
+    "after each completed task/subtask, immediately update checklist state",
     "Check: PASS",
     "Emoji is allowed for human-facing markdown cues",
     "Do not treat plan as done if archive fails."

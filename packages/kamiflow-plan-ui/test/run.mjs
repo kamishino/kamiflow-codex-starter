@@ -553,6 +553,10 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("phase-step-\" + state"));
     assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
     assert.ok(appJsResponse.payload.includes("Completed"));
+    assert.ok(appJsResponse.payload.includes("Brainstorm"));
+    assert.ok(appJsResponse.payload.includes("Current Task/Subtask"));
+    assert.ok(appJsResponse.payload.includes("SUCCESS "));
+    assert.ok(appJsResponse.payload.includes("FAIL "));
     assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
     assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
 

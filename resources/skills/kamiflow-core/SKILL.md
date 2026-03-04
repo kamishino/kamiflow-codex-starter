@@ -66,8 +66,9 @@ Pick mode before executing route logic:
 7. State claims only with evidence; otherwise label `Unknown`.
 8. Keep user response compact: `State`, `Doing`, `Next`.
 9. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
-10. Treat completion as valid only after archive success.
-11. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
+10. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
+11. Treat completion as valid only after archive success.
+12. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
 
 ## Plan Lifecycle Protocol
 

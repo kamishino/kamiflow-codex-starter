@@ -34,6 +34,7 @@ Use this route for focused issue resolution with minimal scope.
 10. Persist fix/build progress via direct markdown mutation:
    - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
+   - during multi-step fixes, after each completed task/subtask update checklist + timestamped WIP evidence before the next subtask
 11. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert resolution.
 12. Before final response, run check validations for the fix slice and report `Check: PASS|BLOCK` with evidence.
 13. Resolve next-step narrative from mutated frontmatter and remaining checklist state.

@@ -11,6 +11,20 @@ interface ActivityJournalProps {
 }
 
 export function ActivityJournal(props: ActivityJournalProps) {
+  const successCount = props.items.filter((item) => item.tone === "ok").length;
+  const failCount = props.items.filter((item) => item.tone === "error").length;
+  const latestTaskEvent =
+    props.items.find((item) => item.eventType.startsWith("codex_run_")) ||
+    props.items.find((item) => item.eventType.startsWith("plan_")) ||
+    null;
+  const currentTaskState = latestTaskEvent
+    ? latestTaskEvent.tone === "ok"
+      ? "SUCCESS"
+      : latestTaskEvent.tone === "error"
+        ? "FAIL"
+        : "RUNNING"
+    : "IDLE";
+  const currentTaskMessage = latestTaskEvent?.message || "No current task/subtask event.";
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -30,6 +44,31 @@ export function ActivityJournal(props: ActivityJournalProps) {
 
   return (
     <>
+      <li class="activity-summary-item">
+        <Card class="activity-summary-card">
+          <CardContent>
+            <div class="activity-summary-head">
+              <strong>Current Task/Subtask</strong>
+              <div class="activity-summary-metrics">
+                <Badge class="activity-summary-badge activity-summary-badge-success" tone="success">
+                  <Icon icon={CheckCircle2} />
+                  SUCCESS {successCount}
+                </Badge>
+                <Badge class="activity-summary-badge activity-summary-badge-fail" tone="danger">
+                  <Icon icon={AlertCircle} />
+                  FAIL {failCount}
+                </Badge>
+              </div>
+            </div>
+            <p class="activity-summary-current">
+              <span class={`activity-summary-state activity-summary-state-${currentTaskState.toLowerCase()}`}>
+                {currentTaskState}
+              </span>
+              {currentTaskMessage}
+            </p>
+          </CardContent>
+        </Card>
+      </li>
       {visibleItems.map((item) => (
         <li class={`activity-item activity-item-${item.tone}`}>
           <Card class="activity-card">
