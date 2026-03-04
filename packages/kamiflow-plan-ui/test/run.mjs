@@ -261,6 +261,38 @@ await runCase("init --new uses next available daily sequence across slugs", asyn
   });
 });
 
+await runCase("init --new uses monotonic sequence across active and done folders", async () => {
+  await withTempDir(async (tempDir) => {
+    const plansDir = path.join(tempDir, ".local", "plans");
+    const doneDir = path.join(plansDir, "done");
+    await fs.mkdir(doneDir, { recursive: true });
+    const dateStamp = toLocalDateStamp();
+
+    await fs.writeFile(path.join(plansDir, `${dateStamp}-001-plan-active.md`), "# active", "utf8");
+    await fs.writeFile(path.join(doneDir, `${dateStamp}-004-plan-archived.md`), "# done", "utf8");
+
+    const exitCode = await runCli([
+      "init",
+      "--project",
+      tempDir,
+      "--new",
+      "--route",
+      "build",
+      "--topic",
+      "Monotonic Seq"
+    ]);
+    assert.equal(exitCode, 0);
+
+    const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md")).sort();
+    const createdFile = files.find((name) => /-005-build-monotonic-seq\.md$/i.test(name));
+    assert.ok(createdFile, files.join(", "));
+
+    const markdown = await fs.readFile(path.join(plansDir, createdFile), "utf8");
+    const parsed = parsePlanFileContent(markdown, createdFile);
+    assert.equal(parsed.frontmatter.plan_id, `PLAN-${dateStamp}-005`);
+  });
+});
+
 await runCase("validate succeeds for generated template", async () => {
   await withTempDir(async (tempDir) => {
     const initExit = await runCli(["init", "--project", tempDir]);

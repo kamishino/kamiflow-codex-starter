@@ -24,10 +24,22 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
   const tasksProgress = tasks.length > 0 ? Math.round((tasksDone / tasks.length) * 100) : 0;
   const acceptanceProgress = acs.length > 0 ? Math.round((acsDone / acs.length) * 100) : 0;
 
+  function normalizePathCandidate(value: string): string {
+    const trimmed = String(value || "").trim();
+    const unquoted = trimmed.replace(/^["']|["']$/g, "");
+    return unquoted.replace(/[),.;]+$/g, "");
+  }
+
   function looksLikePath(value: string): boolean {
-    const text = String(value || "").trim();
+    const text = normalizePathCandidate(value);
     if (!text) {
       return false;
+    }
+    if (/^https?:\/\//i.test(text)) {
+      return false;
+    }
+    if (/^vscode:\/\//i.test(text)) {
+      return true;
     }
     if (/^file:\/\//i.test(text)) {
       return true;
@@ -35,25 +47,40 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
     if (/^[a-zA-Z]:[\\/]/.test(text)) {
       return true;
     }
+    if (text.startsWith("~/")) {
+      return true;
+    }
+    if (text.startsWith("/")) {
+      return true;
+    }
     if (text.startsWith("./") || text.startsWith("../")) {
       return true;
     }
-    if (/[\\/]/.test(text) && /\.[a-z0-9]{1,8}$/i.test(text)) {
+    if (/[\\/]/.test(text)) {
+      return true;
+    }
+    if (/^[^\\/:*?"<>|\r\n]+\.[^\\/:*?"<>|\r\n]+$/i.test(text)) {
       return true;
     }
     return false;
   }
 
   function toFileHref(rawPath: string): string | null {
-    const text = String(rawPath || "").trim();
+    const text = normalizePathCandidate(rawPath);
     if (!text) {
       return null;
+    }
+    if (/^vscode:\/\//i.test(text)) {
+      return text;
     }
     if (/^file:\/\//i.test(text)) {
       return text;
     }
 
     let normalized = text.replace(/\\/g, "/");
+    if (normalized.startsWith("~/")) {
+      normalized = normalized.slice(1);
+    }
     if (!/^[a-zA-Z]:\//.test(normalized) && !normalized.startsWith("/")) {
       if (!projectDir) {
         return null;
@@ -84,7 +111,7 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
       if (match.index > lastIdx) {
         nodes.push(text.slice(lastIdx, match.index));
       }
-      const candidate = String(match[1] || "").trim();
+      const candidate = normalizePathCandidate(match[1] || "");
       const href = looksLikePath(candidate) ? toFileHref(candidate) : null;
       if (href) {
         nodes.push(
@@ -93,7 +120,7 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
             href={href}
             target="_blank"
             rel="noopener noreferrer"
-            title={candidate}
+            title={`${candidate} (open with your editor/app)`}
           >
             {fileLabel(candidate)}
           </a>

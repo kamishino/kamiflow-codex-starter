@@ -718,27 +718,38 @@ textarea {
 }
 
 .checklist-box input[type="checkbox"] {
-  width: auto;
+  width: var(--space-4);
+  height: var(--space-4);
   margin: 0;
+  padding: 0;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .plan-check {
   appearance: none;
-  width: var(--space-4) !important;
-  height: var(--space-4) !important;
+  width: var(--space-4);
+  height: var(--space-4);
+  min-width: var(--space-4);
+  min-height: var(--space-4);
   border: 2px solid var(--border);
-  border-radius: 6px;
+  border-radius: var(--space-1);
   background: var(--surface-1);
   position: relative;
   flex: 0 0 auto;
   cursor: default;
+  padding: 0;
+  margin: 0;
+  display: inline-grid;
+  place-content: center;
+  vertical-align: middle;
 }
 
 .plan-check::after {
   content: "";
   position: absolute;
   left: 4px;
-  top: 1px;
+  top: 0;
   width: 4px;
   height: 8px;
   border: solid var(--primary-foreground);

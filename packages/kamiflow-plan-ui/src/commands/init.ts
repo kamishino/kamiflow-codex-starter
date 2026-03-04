@@ -133,27 +133,38 @@ async function resolveUniqueNewPlanPath(plansDir: string, topic: string, route: 
   const slugBase = buildSlugBase(topic, route);
   const usedSequenceNumbers = new Set<number>();
   const pattern = new RegExp(`^${date}-(\\d{3})(?:-.+)?\\.md$`, "i");
+  let highestSequence = 0;
 
-  try {
-    const entries = await fs.readdir(plansDir, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isFile()) {
-        continue;
+  async function collectUsedSequences(dirPath: string): Promise<void> {
+    try {
+      const entries = await fs.readdir(dirPath, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isFile()) {
+          continue;
+        }
+        const match = entry.name.match(pattern);
+        if (!match) {
+          continue;
+        }
+        const parsed = Number.parseInt(match[1], 10);
+        if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 999) {
+          usedSequenceNumbers.add(parsed);
+          highestSequence = Math.max(highestSequence, parsed);
+        }
       }
-      const match = entry.name.match(pattern);
-      if (!match) {
-        continue;
-      }
-      const parsed = Number.parseInt(match[1], 10);
-      if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 999) {
-        usedSequenceNumbers.add(parsed);
-      }
+    } catch {
+      // Ignore missing directories.
     }
-  } catch {
-    // plansDir is created before this call; fall back to collision checks below.
   }
 
-  for (let i = 1; i <= 999; i += 1) {
+  await collectUsedSequences(plansDir);
+  await collectUsedSequences(path.join(plansDir, "done"));
+
+  if (highestSequence >= 999) {
+    throw new Error("Unable to allocate new plan filename. Too many plans for today.");
+  }
+
+  for (let i = highestSequence + 1; i <= 999; i += 1) {
     if (usedSequenceNumbers.has(i)) {
       continue;
     }
