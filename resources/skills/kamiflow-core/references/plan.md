@@ -55,6 +55,10 @@ This route should leave no major ambiguity for the build phase.
    - `WIP Log`: `Status`, `Blockers`, `Next step`
 17. Resolve next-step narrative from mutated frontmatter and checklist state.
 18. End with concise next-step guidance; do not require verbose response footer fields.
+19. Final response should use compact guidance shape:
+   - `State`: current phase + readiness
+   - `Doing`: current planning slice
+   - `Next`: one concrete next action
 
 ## Output
 

@@ -15,6 +15,7 @@ const RULES = [
       "Current Mode: Plan|Build",
       "Reason: <one line>",
       "Instruction: Switch mode and rerun the same command.",
+      "## Smooth Flow Checklist",
       "## Response Handoff Contract"
     ]
   },
@@ -39,7 +40,8 @@ const RULES = [
       "next_mode: Build",
       "Persist plan phase/handoff update by direct markdown mutation",
       "lifecycle_phase: plan",
-      "active non-done plan"
+      "active non-done plan",
+      "Final response should use compact guidance shape"
     ]
   },
   {
@@ -53,7 +55,8 @@ const RULES = [
       "Persist build phase/progress via direct markdown mutation",
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
-      "do not require verbose response footer fields"
+      "do not require verbose response footer fields",
+      "Final response should use compact guidance shape"
     ]
   },
   {
@@ -63,8 +66,10 @@ const RULES = [
       "Apply archive gate:",
       "move file to `.local/plans/done/<same-file>.md`",
       "keep only latest 20 files in `.local/plans/done/`",
+      "if archive fails, do not report done",
       "Resolve next-step narrative from mutated state (`fix` or `done`).",
-      "do not require verbose response footer fields"
+      "do not require verbose response footer fields",
+      "Final response should use compact guidance shape"
     ]
   },
   {

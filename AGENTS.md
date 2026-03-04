@@ -14,6 +14,7 @@ This repository has four active scopes:
 - `AGENTS.md`: global boundaries, context routing, anti-pattern routing.
 - `resources/rules/*`: enforceable command policy (`allow|prompt|forbidden`) by profile.
 - `resources/skills/*`: behavior contracts, route discipline, output contracts, recovery logic.
+- `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`: deterministic execution checklist for stable route flow.
 - `.kfc/CODEX_READY.md`: runtime mission brief for client-project execution.
 - `.local/plans/*.md`: live execution state and next action source of truth.
 
@@ -79,6 +80,20 @@ This repository has four active scopes:
 - Do not present implementation or validation claims without evidence.
 - Evidence must come from command output, repository files, or explicit user-provided data.
 - If evidence is missing, state `Unknown` and route to `research` or `plan` instead of guessing.
+
+## Smooth Flow Protocol
+
+- Route discipline:
+- Resolve active plan first, then execute exactly one route (`start|plan|build|check|fix|research`) per response.
+- Persist plan mutation before final response; never return route output without plan-state mutation.
+- Response shape:
+- Keep non-trivial route responses concise with `State`, `Doing`, and `Next`.
+- Use plan frontmatter as canonical machine state (`selected_mode`, `next_command`, `next_mode`, `lifecycle_phase`).
+- Check-to-done safety:
+- Only treat task as done when archive succeeds (plan moved to `.local/plans/done/`).
+- If PASS is reported but archive fails, keep plan active and continue with recovery (`fix`/`plan`) instead of silent done.
+- Environment recovery:
+- If shell startup crashes from local profile modules, rerun commands with non-login/no-profile shell.
 
 ## KFP UI Rules
 

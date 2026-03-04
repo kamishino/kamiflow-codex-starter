@@ -1,6 +1,7 @@
 # Route Prompts
 
 Copy/paste prompts for `kamiflow-core`.
+For deterministic execution behavior, also follow `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`.
 
 ## Plan Route
 

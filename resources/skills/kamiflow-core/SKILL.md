@@ -53,6 +53,17 @@ Pick mode before executing route logic:
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
 
+## Smooth Flow Checklist
+
+1. Resolve one active plan before route logic.
+2. Pick exactly one route and one mode.
+3. Execute one scoped slice only (avoid multi-route mixing in one output).
+4. Mutate plan frontmatter + WIP Log before final response.
+5. State claims only with evidence; otherwise label `Unknown`.
+6. Keep user response compact: `State`, `Doing`, `Next`.
+7. Treat completion as valid only after archive success.
+8. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
+
 ## Plan Lifecycle Protocol
 
 - Naming: `YYYY-MM-DD-<seq>-<route>.md`.

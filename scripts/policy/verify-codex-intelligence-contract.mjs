@@ -27,10 +27,12 @@ try {
     "## Session Bootstrap Contract",
     "## Plan Lifecycle Contract",
     "## Evidence Gate",
+    "## Smooth Flow Protocol",
     "## Anti-Pattern Router",
     "## Learning Loop Contract",
     "Every top-level user request must resolve one active non-done plan",
     "Every route call must persist plan updates",
+    "State`, `Doing`, and `Next`",
     "$kamiflow-core plan"
   ]) {
     assertIncludes(agents, agentsFile, token, errors);
@@ -85,6 +87,7 @@ try {
   const skillFile = "resources/skills/kamiflow-core/SKILL.md";
   const skill = read(skillFile);
   for (const token of [
+    "## Smooth Flow Checklist",
     "## Failure Recovery",
     "Every route invocation persists plan-state changes directly in markdown",
     "Every top-level user request must resolve one active non-done plan",
@@ -119,6 +122,19 @@ try {
     "mark the claim as `Unknown`"
   ]) {
     assertIncludes(fixRef, fixRefFile, token, errors);
+  }
+
+  const smoothGuideFile = "resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md";
+  const smoothGuide = read(smoothGuideFile);
+  for (const token of [
+    "## Core Sequence",
+    "## Compact Response Shape",
+    "## Evidence Rule",
+    "## Completion Safety",
+    "## Recovery Shortcuts",
+    "Do not treat plan as done if archive fails."
+  ]) {
+    assertIncludes(smoothGuide, smoothGuideFile, token, errors);
   }
 
   if (errors.length > 0) {

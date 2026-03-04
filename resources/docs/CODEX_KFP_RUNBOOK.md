@@ -2,6 +2,7 @@
 
 Use this runbook to dogfood Kami Flow in this repo with predictable route behavior.
 Prompt wording refinement only in this phase: no route logic changes.
+For route execution discipline, also follow `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`.
 
 ## Preconditions
 
