@@ -15,8 +15,8 @@ Expected:
 - if `START_CONTEXT` is absent and request is vague (missing 2+ core fields), reroute to `start` first
 - resolve target plan file in this order:
   1. user-provided path
-  2. active draft/ready plan
-  3. `kfc flow ensure-plan --project .`
+  2. active non-done plan
+  3. create a new plan file only when no active plan exists or scope split is explicit
 - if plan file resolution fails, return BLOCK with:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
@@ -61,7 +61,7 @@ Expected:
 - each question has 3 options + `Other`
 - second turn (after answers) returns numbered idea cards
 - includes `START_CONTEXT` block
-- ends with exact `Run next:` command for `plan` including plan-file bootstrap
+- ends with exact `Run next:` command for `plan` and active-plan handoff
 
 ## Build Route
 
@@ -75,6 +75,7 @@ Expected:
 - validation command outcomes
 - explicit limitations
 - plan frontmatter handoff to `check`
+- do not claim completion without evidence; mark unknown claims as `Unknown`
 - if API is unreachable, return BLOCK with:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`
@@ -93,6 +94,7 @@ Expected:
 - acceptance criteria status
 - PASS/BLOCK decision
 - explicit next command (`fix` or `done`)
+- on PASS archive, keep latest 20 plans in `.local/plans/done/`
 - if API is unreachable, return BLOCK with:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`

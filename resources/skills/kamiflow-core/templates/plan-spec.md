@@ -35,7 +35,7 @@
 - Next action: Implement one scoped task and record validation outcomes.
 
 ## Plan Lifecycle Mutation
-- Plan file path: `.local/plans/YYYY-MM-DD-<seq>-plan.md`
+- Plan file path: `.local/plans/<active-plan>.md` (reuse-first; create only when required)
 - Frontmatter updates: `request_id`, `parent_plan_id`, `lifecycle_phase`, `updated_at`, `decision`, `next_command`, `next_mode`
 - WIP Log updates: `Status`, `Blockers`, `Next step`
 

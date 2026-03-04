@@ -39,7 +39,8 @@ This repository has four active scopes:
 
 - Every new session must start by reading `AGENTS.md`.
 - If `.kfc/CODEX_READY.md` exists, read it before implementation.
-- Every top-level user request must create a new plan file in `.local/plans/` before route output.
+- Every top-level user request must resolve one active non-done plan in `.local/plans/` before route output.
+- Reuse the active plan by default; create a new plan file only when no active plan exists or the scope is explicitly split.
 - Every route call must persist plan updates before final response.
 - On `check` PASS with all Acceptance Criteria and Go/No-Go items checked, archive the plan to `.local/plans/done/`.
 - If build readiness is unclear or blocked, do not continue implementation; switch to planning and run `$kamiflow-core plan`.
@@ -56,8 +57,11 @@ This repository has four active scopes:
 
 ## Plan Lifecycle Contract
 
-- File naming pattern for request-created plans: `YYYY-MM-DD-<seq>-<route>.md`.
-- Every new file should include:
+- File naming pattern for created plans: `YYYY-MM-DD-<seq>-<route>.md`.
+- Create plan files only when required:
+- no active non-done plan exists, or
+- user explicitly asks to split work into a separate plan.
+- Every created file should include:
 - `request_id`
 - `parent_plan_id` (when a previous active plan exists)
 - `lifecycle_phase` (`start|plan|build|check|fix|research|done`)
@@ -67,6 +71,14 @@ This repository has four active scopes:
 - `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 - Archive gate:
 - Only archive on `check` PASS when all Acceptance Criteria and Go/No-Go checklist items are checked.
+- Done retention:
+- Keep the most recent 20 files in `.local/plans/done/`; prune older done files during normal plan-lifecycle maintenance.
+
+## Evidence Gate
+
+- Do not present implementation or validation claims without evidence.
+- Evidence must come from command output, repository files, or explicit user-provided data.
+- If evidence is missing, state `Unknown` and route to `research` or `plan` instead of guessing.
 
 ## KFP UI Rules
 

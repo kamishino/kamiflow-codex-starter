@@ -17,6 +17,7 @@
 - Required next command: fix | done
 - Next action: <narrative next step>
 - Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.
+- Done retention: keep latest 20 archived plans in `.local/plans/done/`.
 
 ## Optional Response Handoff (Compact)
 - Next step: <one line>

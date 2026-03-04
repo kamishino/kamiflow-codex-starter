@@ -26,9 +26,10 @@ try {
     "## Context Resolver",
     "## Session Bootstrap Contract",
     "## Plan Lifecycle Contract",
+    "## Evidence Gate",
     "## Anti-Pattern Router",
     "## Learning Loop Contract",
-    "Every top-level user request must create a new plan file",
+    "Every top-level user request must resolve one active non-done plan",
     "Every route call must persist plan updates",
     "$kamiflow-core plan"
   ]) {
@@ -47,7 +48,9 @@ try {
     "AP-006",
     "AP-007",
     "AP-008",
-    "AP-009"
+    "AP-009",
+    "AP-010",
+    "AP-011"
   ]) {
     assertIncludes(antiPatterns, antiPatternsFile, token, errors);
   }
@@ -84,6 +87,8 @@ try {
   for (const token of [
     "## Failure Recovery",
     "Every route invocation persists plan-state changes directly in markdown",
+    "Every top-level user request must resolve one active non-done plan",
+    "If evidence is unavailable, mark status as `Unknown`",
     "kfc flow ensure-plan --project .",
     "Prefer direct plan-file mutation as primary lifecycle path",
     "$kamiflow-core plan",
@@ -98,7 +103,8 @@ try {
     "evaluate build-ready criteria directly from plan markdown",
     "Status: BLOCK",
     "Recovery: update plan via `$kamiflow-core plan` and rerun build",
-    "Persist build phase/progress via direct markdown mutation"
+    "Persist build phase/progress via direct markdown mutation",
+    "mark the claim as `Unknown`"
   ]) {
     assertIncludes(buildRef, buildRefFile, token, errors);
   }
@@ -109,7 +115,8 @@ try {
     "evaluate build-ready criteria directly from plan markdown",
     "Status: BLOCK",
     "Recovery: update plan via `$kamiflow-core plan` and rerun fix",
-    "Persist fix/build progress via direct markdown mutation"
+    "Persist fix/build progress via direct markdown mutation",
+    "mark the claim as `Unknown`"
   ]) {
     assertIncludes(fixRef, fixRefFile, token, errors);
   }

@@ -22,6 +22,7 @@ Use this route for quality verification and release-readiness decisions.
    - if result is `PASS` and all Acceptance Criteria + Go/No-Go checklist items are checked:
    - set `status: done`, `next_command: done`, `next_mode: done`, `lifecycle_phase: done`, `archived_at: <iso>`
    - move file to `.local/plans/done/<same-file>.md`
+   - prune older done plans and keep only latest 20 files in `.local/plans/done/`
 8. Resolve next-step narrative from mutated state (`fix` or `done`).
 9. End with concise next-step guidance; do not require verbose response footer fields.
 
@@ -36,4 +37,5 @@ Use `../templates/check-report.md` shape.
 - Acceptance criteria status is explicit.
 - Plan file is mutated directly before response is returned.
 - PASS only archives when checklist gates are fully satisfied.
+- Done-plan retention is enforced (latest 20 kept).
 - Handoff metadata is persisted in plan frontmatter.

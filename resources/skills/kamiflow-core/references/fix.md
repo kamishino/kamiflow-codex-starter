@@ -12,9 +12,8 @@ Use this route for focused issue resolution with minimal scope.
 
 1. Resolve target plan file before any fix action using this order:
    1. user-provided file path or plan id
-   2. current request-scoped fix plan (`YYYY-MM-DD-<seq>-fix.md`)
-   3. active non-done plan
-   4. create a new request-scoped plan file directly from template
+   2. active non-done plan
+   3. create a new plan file directly from template only when no active plan exists or scope split is explicit
 2. If no target file can be resolved, return:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
@@ -35,8 +34,9 @@ Use this route for focused issue resolution with minimal scope.
 10. Persist fix/build progress via direct markdown mutation:
    - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
-11. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
-12. End with concise next-step guidance; do not require verbose response footer fields.
+11. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert resolution.
+12. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+13. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
@@ -52,5 +52,6 @@ Provide:
 - Issue is addressed with minimal scope and verified.
 - A concrete target plan file is resolved before execution begins.
 - Readiness gate in markdown passes before fix starts.
+- Claims are evidence-backed or explicitly marked `Unknown`.
 - Plan file is mutated directly before response is returned.
 - Handoff metadata is persisted in plan frontmatter.

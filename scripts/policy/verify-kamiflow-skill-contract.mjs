@@ -38,18 +38,20 @@ const RULES = [
       "next_command: build",
       "next_mode: Build",
       "Persist plan phase/handoff update by direct markdown mutation",
-      "lifecycle_phase: plan"
+      "lifecycle_phase: plan",
+      "active non-done plan"
     ]
   },
   {
     file: "resources/skills/kamiflow-core/references/build.md",
     required: [
-      "current request-scoped build plan",
+      "active non-done plan",
       "Status: BLOCK",
       "Recovery: create .local/plans/<date-seq>-build.md from template",
       "Expected: plan markdown exists and is writable",
       "evaluate build-ready criteria directly from plan markdown",
       "Persist build phase/progress via direct markdown mutation",
+      "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
       "do not require verbose response footer fields"
     ]
@@ -60,6 +62,7 @@ const RULES = [
       "Persist check decision by direct markdown mutation",
       "Apply archive gate:",
       "move file to `.local/plans/done/<same-file>.md`",
+      "keep only latest 20 files in `.local/plans/done/`",
       "Resolve next-step narrative from mutated state (`fix` or `done`).",
       "do not require verbose response footer fields"
     ]
@@ -68,6 +71,7 @@ const RULES = [
     file: "resources/skills/kamiflow-core/references/research.md",
     required: [
       "Persist handoff phase by direct markdown mutation",
+      "Mark unknown claims as `Unknown` when evidence is insufficient; do not guess.",
       "Resolve next-step narrative from mutated state.",
       "do not require verbose response footer fields"
     ]
@@ -75,12 +79,13 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/fix.md",
     required: [
-      "current request-scoped fix plan",
+      "active non-done plan",
       "Status: BLOCK",
       "Recovery: create .local/plans/<date-seq>-fix.md from template",
       "Expected: plan markdown exists and is writable",
       "evaluate build-ready criteria directly from plan markdown",
       "Persist fix/build progress via direct markdown mutation",
+      "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
       "do not require verbose response footer fields"
     ]

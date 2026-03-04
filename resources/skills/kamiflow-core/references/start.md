@@ -43,8 +43,9 @@ The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 - `recommended_route`
    - include explicit block markers: `START_CONTEXT` and `END_START_CONTEXT`
 9. Emit one exact `Run next:` command for `plan`.
-   - ensure a new plan file is created for this request before final output.
-   - use naming pattern: `YYYY-MM-DD-<seq>-start.md`.
+   - resolve an active non-done plan before final output.
+   - create a new plan file only when no active plan exists or scope must be split.
+   - when creating: use naming pattern `YYYY-MM-DD-<seq>-start.md`.
 10. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`
 - `Reason`
@@ -71,5 +72,5 @@ Use `../templates/start-report.md` shape.
 - `Run next:` command is present and executable.
 - Start Summary payload is complete and non-placeholder.
 - One clear handoff route selected.
-- A new request-scoped plan file is created before response completes.
+- Active plan file is resolved (or created only when required) before response completes.
 - Handoff metadata is persisted in plan frontmatter.

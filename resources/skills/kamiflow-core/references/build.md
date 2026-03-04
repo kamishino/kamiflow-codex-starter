@@ -19,9 +19,8 @@ Use this route to execute an approved plan in small, verifiable slices.
 
 1. Resolve target plan file before any implementation using this order:
    1. user-provided file path or plan id
-   2. current request-scoped build plan (`YYYY-MM-DD-<seq>-build.md`)
-   3. active non-done plan
-   4. create a new request-scoped plan file directly from template
+   2. active non-done plan
+   3. create a new plan file directly from template only when no active plan exists or scope split is explicit
 2. If no target file can be resolved, return:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
@@ -44,8 +43,9 @@ Use this route to execute an approved plan in small, verifiable slices.
    - frontmatter: `lifecycle_phase: build`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
-12. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
-13. End with concise next-step guidance; do not require verbose response footer fields.
+12. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert completion.
+13. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+14. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
@@ -64,5 +64,6 @@ Provide:
 - A concrete target plan file is resolved before execution begins.
 - Readiness gate in markdown passes before implementation starts.
 - Build action is blocked when Start Summary gate is not satisfied.
+- Claims are evidence-backed or explicitly marked `Unknown`.
 - Plan file is mutated directly before response is returned.
 - Handoff metadata is persisted in plan frontmatter.

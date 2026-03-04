@@ -22,9 +22,8 @@ This route should leave no major ambiguity for the build phase.
 3. If `START_CONTEXT` is not present and 2+ core fields are missing, require `start` first and do not proceed to build-ready handoff.
 4. Resolve target plan file using this exact order:
    1. user-provided file path
-   2. current request-scoped plan file (`YYYY-MM-DD-<seq>-plan.md`)
-   3. active non-done plan
-   4. create a new request-scoped plan file directly from template
+   2. active non-done plan
+   3. create a new plan file directly from template only when no active plan exists or scope split is explicit
 5. If no target file can be resolved, return `BLOCK` using this format:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
@@ -67,7 +66,7 @@ When ready, ensure handoff fields are persisted in plan frontmatter (`decision: 
 
 - Scope, tasks, and acceptance criteria are concrete and testable.
 - `START_CONTEXT` handoff is consumed when provided.
-- A concrete target plan file is created/resolved before planning output.
+- A concrete active plan file is resolved (or created only when required) before planning output.
 - Start Summary is present and consistent with request clarity.
 - No unresolved high-impact open decisions remain.
 - Validation commands are concrete and runnable.

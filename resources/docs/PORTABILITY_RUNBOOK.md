@@ -61,7 +61,7 @@ What bootstrap verifies:
 
 ## Step 3 (Optional): Run Canonical Route Loop
 
-Use `kamiflow-core` command flow against the new plan file:
+Use `kamiflow-core` command flow against the active plan file (reuse-first):
 
 1. `start` for idea framing and `START_CONTEXT`
 2. `plan` to produce decision-complete spec (`next_command: build`)

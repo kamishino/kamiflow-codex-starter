@@ -71,7 +71,8 @@ END_START_CONTEXT
 Run next: $kamiflow-core plan use START_CONTEXT, create/update target .local/plans/<file>.md directly to a decision-complete build-ready spec.
 
 Plan lifecycle mutation:
-- Create request-scoped plan file: `YYYY-MM-DD-<seq>-start.md`.
+- Resolve active non-done plan file first.
+- Create plan file only when no active plan exists or scope split is explicit (`YYYY-MM-DD-<seq>-start.md`).
 - Update frontmatter + `WIP Log` before response.
 
 ## Optional Response Handoff (Compact)

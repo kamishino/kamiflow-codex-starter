@@ -45,14 +45,20 @@ Pick mode before executing route logic:
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
 - If mode does not satisfy route requirements, do not continue.
-- Every top-level user request creates one new plan file in `.local/plans` before route output.
+- Every top-level user request must resolve one active non-done plan in `.local/plans` before route output.
+- Reuse the active plan by default; create a new plan file only when no active plan exists or scope is explicitly split.
 - Every route invocation persists plan-state changes directly in markdown before final output.
 - Prefer direct plan-file mutation as primary lifecycle path; use `kfc flow ...` only as recovery fallback.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
+- Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
+- If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
 
 ## Plan Lifecycle Protocol
 
 - Naming: `YYYY-MM-DD-<seq>-<route>.md`.
+- Active plan policy:
+- resolve and reuse one active non-done plan by default.
+- create a new plan file only when none exists or scope split is explicit.
 - Required frontmatter fields (core):
 - `plan_id`
 - `status`
@@ -72,6 +78,8 @@ Pick mode before executing route logic:
 - update `WIP Log` (`Status`, `Blockers`, `Next step`)
 - Archive condition:
 - on `check` PASS, archive only when Acceptance Criteria and Go/No-Go checklist items are fully checked.
+- Done retention:
+- keep latest 20 files in `.local/plans/done/`; prune older done files during lifecycle maintenance.
 
 ## Failure Recovery
 

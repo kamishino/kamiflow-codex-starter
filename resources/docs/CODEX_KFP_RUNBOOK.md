@@ -59,9 +59,8 @@ kfc plan validate --project .
 - `start` final output must include `START_CONTEXT` + exact `Run next:` command
 - `plan` route must resolve/create target plan file in this exact order:
   1. user-provided file path
-  2. current request-scoped file (`YYYY-MM-DD-<seq>-plan.md`)
-  3. active non-done plan
-  4. create request-scoped plan file from template
+  2. active non-done plan
+  3. create a new plan file only when no active plan exists or scope split is explicit
 - if `START_CONTEXT` is present, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request remains vague, reroute to `start`
 - if plan file cannot be resolved, return BLOCK with:
@@ -106,9 +105,11 @@ $kamiflow-core check verify current changes against Acceptance Criteria in .loca
 Deterministic persistence (direct markdown lifecycle):
 
 ```text
-- Every top-level request creates a new file: .local/plans/YYYY-MM-DD-<seq>-<route>.md
+- Every top-level request resolves one active non-done plan first (reuse by default)
+- Create a new plan file only when no active plan exists or the scope is explicitly split
 - Every route updates frontmatter + WIP Log before final response
 - check PASS archives only when all Acceptance Criteria + Go/No-Go checklist items are checked
+- Keep latest 20 files in .local/plans/done/; prune older archived plans
 ```
 
 Server resolution:
