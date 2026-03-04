@@ -36,7 +36,7 @@ Use this route for focused issue resolution with minimal scope.
    - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
 11. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
-12. End with narrative next action and machine footer (`Next Command: check`, `Next Mode: Plan`).
+12. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
@@ -53,4 +53,4 @@ Provide:
 - A concrete target plan file is resolved before execution begins.
 - Readiness gate in markdown passes before fix starts.
 - Plan file is mutated directly before response is returned.
-- Final footer includes selected mode and next mode.
+- Handoff metadata is persisted in plan frontmatter.

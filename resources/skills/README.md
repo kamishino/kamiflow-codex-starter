@@ -13,6 +13,6 @@ Edit skill content only in `resources/skills`.
 
 ## Editing rules
 
-- Keep machine-critical contracts intact (mode mismatch fields, START_CONTEXT markers, route footer fields).
+- Keep machine-critical contracts intact (mode mismatch fields, START_CONTEXT markers, plan lifecycle metadata fields).
 - You can improve tone and readability, but do not change route behavior.
 - After edits, sync runtime skills from SSOT and run validation checks.

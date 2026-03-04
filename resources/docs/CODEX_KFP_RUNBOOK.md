@@ -83,13 +83,12 @@ Plan:
 $kamiflow-core plan check the .local/plans/<file>.md and produce a decision-complete implementation plan.
 ```
 
-Plan ready footer contract:
+Plan ready handoff contract (in plan markdown frontmatter):
 
 ```text
-Selected Mode: Plan
-Mode Reason: Planning is decision-complete and build-ready.
-Next Command: build
-Next Mode: Build
+decision: GO
+next_command: build
+next_mode: Build
 ```
 
 Build:

@@ -55,18 +55,13 @@ This route should leave no major ambiguity for the build phase.
    - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
 17. Resolve next-step narrative from mutated frontmatter and checklist state.
-18. End with narrative next action and machine footer (`Next Command: build`, `Next Mode: Build`).
+18. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
 Use `../templates/plan-spec.md` shape.
 When blocked, use the required BLOCK format from Step 5.
-When ready, final footer must include:
-
-- `Selected Mode: Plan`
-- `Next Command: build`
-- `Next Mode: Build`
-- include `Next Action: <narrative>` immediately before footer
+When ready, ensure handoff fields are persisted in plan frontmatter (`decision: GO`, `next_command: build`, `next_mode: Build`).
 
 ## Exit Criteria
 
@@ -78,4 +73,4 @@ When ready, final footer must include:
 - Validation commands are concrete and runnable.
 - Ready output includes `decision: GO`, `next_command: build`, and `next_mode: Build`.
 - Plan file is mutated directly before response is returned.
-- Final footer includes selected mode and next mode.
+- Handoff metadata is persisted in plan frontmatter.

@@ -18,9 +18,5 @@
 - Next action: <narrative next step>
 - Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.
 
-## Footer (Required)
-- Selected Mode: Plan | Build
-- Mode Reason: <one line>
-- Next Action: <one line>
-- Next Command: fix | done
-- Next Mode: Build | done
+## Optional Response Handoff (Compact)
+- Next step: <one line>

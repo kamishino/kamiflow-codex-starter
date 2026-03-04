@@ -23,7 +23,7 @@ Use this route for quality verification and release-readiness decisions.
    - set `status: done`, `next_command: done`, `next_mode: done`, `lifecycle_phase: done`, `archived_at: <iso>`
    - move file to `.local/plans/done/<same-file>.md`
 8. Resolve next-step narrative from mutated state (`fix` or `done`).
-9. End with narrative next action and machine footer (`Next Command: fix|done`, `Next Mode: Build|done`).
+9. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
@@ -36,4 +36,4 @@ Use `../templates/check-report.md` shape.
 - Acceptance criteria status is explicit.
 - Plan file is mutated directly before response is returned.
 - PASS only archives when checklist gates are fully satisfied.
-- Final footer includes selected mode and next mode.
+- Handoff metadata is persisted in plan frontmatter.

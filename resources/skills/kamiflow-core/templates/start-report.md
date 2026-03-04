@@ -74,9 +74,5 @@ Plan lifecycle mutation:
 - Create request-scoped plan file: `YYYY-MM-DD-<seq>-start.md`.
 - Update frontmatter + `WIP Log` before response.
 
-## Footer (Required)
-- Selected Mode: Plan
-- Mode Reason: <one line>
-- Next Action: <one line>
-- Next Command: <plan|build|research>
-- Next Mode: Plan | Build
+## Optional Response Handoff (Compact)
+- Next step: <one line>

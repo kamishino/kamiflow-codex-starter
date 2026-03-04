@@ -43,7 +43,7 @@ This repository has four active scopes:
 - Every route call must persist plan updates before final response.
 - On `check` PASS with all Acceptance Criteria and Go/No-Go items checked, archive the plan to `.local/plans/done/`.
 - If build readiness is unclear or blocked, do not continue implementation; switch to planning and run `$kamiflow-core plan`.
-- End every non-trivial response with explicit `Next Command` and `Next Mode`.
+- Persist `next_command` and `next_mode` in plan frontmatter on every route; user-facing footer fields are optional.
 - If `.kfc/CODEX_READY.md` is missing, continue with `AGENTS.md` + active `.local/plans/*.md` as runtime source of truth.
 
 ## Command Boundary

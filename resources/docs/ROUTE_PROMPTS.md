@@ -29,16 +29,15 @@ Expected:
   - file-level tasks
   - testable acceptance criteria
   - runnable validation commands
-- explicit `Next Command: build`
-- explicit `Next Mode: Build`
+- plan frontmatter handoff is explicit (`next_command: build`, `next_mode: Build`)
 
 Plan output example (ready):
 
 ```text
-Selected Mode: Plan
-Mode Reason: Planning is decision-complete and build-ready.
-Next Command: build
-Next Mode: Build
+Plan markdown updated:
+- decision: GO
+- next_command: build
+- next_mode: Build
 ```
 
 Plan output example (blocked):
@@ -75,12 +74,12 @@ Expected:
 - no execution outside selected task scope
 - validation command outcomes
 - explicit limitations
-- explicit next command `check`
+- plan frontmatter handoff to `check`
 - if API is unreachable, return BLOCK with:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`
 - update plan via `kfc flow apply --project <path> --plan <id> --route build --result progress`
-- include `Next Action` narrative plus machine footer (`Next Command`, `Next Mode`)
+- include concise next-step guidance when useful (verbose footer optional)
 
 ## Check Route
 
@@ -98,6 +97,6 @@ Expected:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`
 - apply decision via `kfc flow apply --project <path> --plan <id> --route check --result pass|block`
-- include `Next Action` narrative plus machine footer (`Next Command`, `Next Mode`)
+- include concise next-step guidance when useful (verbose footer optional)
 
 When check result is `PASS`, automation apply auto-archives by default (`auto_archive_on_pass: true`).

@@ -39,9 +39,5 @@
 - Frontmatter updates: `request_id`, `parent_plan_id`, `lifecycle_phase`, `updated_at`, `decision`, `next_command`, `next_mode`
 - WIP Log updates: `Status`, `Blockers`, `Next step`
 
-## Footer (Required)
-- Selected Mode: Plan
-- Mode Reason: <one line>
-- Next Action: <one line>
-- Next Command: build
-- Next Mode: Build
+## Optional Response Handoff (Compact)
+- Next step: <one line>

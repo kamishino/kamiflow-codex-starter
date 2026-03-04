@@ -45,7 +45,7 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
 12. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
-14. End with narrative next action and machine footer (`Next Command: check`, `Next Mode: Plan`).
+13. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
@@ -65,4 +65,4 @@ Provide:
 - Readiness gate in markdown passes before implementation starts.
 - Build action is blocked when Start Summary gate is not satisfied.
 - Plan file is mutated directly before response is returned.
-- Final footer includes selected mode and next mode.
+- Handoff metadata is persisted in plan frontmatter.

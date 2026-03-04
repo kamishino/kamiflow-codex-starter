@@ -13,8 +13,9 @@ const RULES = [
       "Status: MODE_MISMATCH",
       "Required Mode: Plan|Build",
       "Current Mode: Plan|Build",
-      "Next Command: <start|plan|build|check|research|fix|done>",
-      "Next Mode: Plan|Build|done"
+      "Reason: <one line>",
+      "Instruction: Switch mode and rerun the same command.",
+      "## Response Handoff Contract"
     ]
   },
   {
@@ -49,8 +50,8 @@ const RULES = [
       "Expected: plan markdown exists and is writable",
       "evaluate build-ready criteria directly from plan markdown",
       "Persist build phase/progress via direct markdown mutation",
-      "Next Command: check",
-      "Next Mode: Plan"
+      "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
+      "do not require verbose response footer fields"
     ]
   },
   {
@@ -59,16 +60,16 @@ const RULES = [
       "Persist check decision by direct markdown mutation",
       "Apply archive gate:",
       "move file to `.local/plans/done/<same-file>.md`",
-      "Next Command: fix|done",
-      "Next Mode: Build|done"
+      "Resolve next-step narrative from mutated state (`fix` or `done`).",
+      "do not require verbose response footer fields"
     ]
   },
   {
     file: "resources/skills/kamiflow-core/references/research.md",
     required: [
       "Persist handoff phase by direct markdown mutation",
-      "Next Command: plan|start",
-      "Next Mode: Plan"
+      "Resolve next-step narrative from mutated state.",
+      "do not require verbose response footer fields"
     ]
   },
   {
@@ -80,8 +81,8 @@ const RULES = [
       "Expected: plan markdown exists and is writable",
       "evaluate build-ready criteria directly from plan markdown",
       "Persist fix/build progress via direct markdown mutation",
-      "Next Command: check",
-      "Next Mode: Plan"
+      "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
+      "do not require verbose response footer fields"
     ]
   },
   {
@@ -90,20 +91,18 @@ const RULES = [
       "START_CONTEXT",
       "END_START_CONTEXT",
       "Run next:",
-      "Selected Mode: Plan",
-      "Next Action:",
-      "Next Command:",
-      "Next Mode: Plan | Build"
+      "Plan lifecycle mutation:",
+      "## Optional Response Handoff (Compact)",
+      "Next step: <one line>"
     ]
   },
   {
     file: "resources/skills/kamiflow-core/templates/plan-spec.md",
     required: [
       "Next command: build",
-      "Selected Mode: Plan",
-      "Next Action:",
-      "Next Command: build",
-      "Next Mode: Build"
+      "## Plan Lifecycle Mutation",
+      "## Optional Response Handoff (Compact)",
+      "Next step: <one line>"
     ]
   },
   {
@@ -111,10 +110,9 @@ const RULES = [
     required: [
       "Result: PASS | BLOCK",
       "Required next command: fix | done",
-      "Selected Mode: Plan | Build",
-      "Next Action:",
-      "Next Command: fix | done",
-      "Next Mode: Build | done"
+      "Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.",
+      "## Optional Response Handoff (Compact)",
+      "Next step: <one line>"
     ]
   }
 ];

@@ -27,7 +27,7 @@ Pick mode before executing route logic:
 4. If mode is incompatible, return `MODE_MISMATCH` and stop.
 5. Load only the matched route reference file.
 6. Produce output in that route's required shape.
-7. End with one explicit next command and next mode.
+7. Provide concise next-step guidance when helpful; persist command/mode handoff in plan metadata.
 
 ## Command Routes
 
@@ -101,12 +101,8 @@ When current mode is incompatible, output:
 - `Reason: <one line>`
 - `Instruction: Switch mode and rerun the same command.`
 
-## Output Footer Contract
+## Response Handoff Contract
 
-Every route output must end with:
-
-- `Selected Mode: Plan|Build`
-- `Mode Reason: <one line>`
-- `Next Action: <one narrative line>`
-- `Next Command: <start|plan|build|check|research|fix|done>`
-- `Next Mode: Plan|Build|done`
+- Verbose response footers are optional.
+- Route handoff state is authoritative in plan markdown (`selected_mode`, `next_command`, `next_mode`, `lifecycle_phase`, `updated_at`).
+- Prefer one concise next-step sentence in user-facing output when it improves clarity.

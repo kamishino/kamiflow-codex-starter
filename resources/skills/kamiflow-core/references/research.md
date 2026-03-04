@@ -17,7 +17,7 @@ Use this route when missing facts or high risk would make execution unsafe.
    - set frontmatter: `lifecycle_phase: research`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
    - update `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 6. Resolve next-step narrative from mutated state.
-7. End with narrative next action and machine footer (`Next Command: plan|start`, `Next Mode: Plan`).
+7. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output
 
@@ -32,4 +32,4 @@ Provide:
 
 - Unknowns are reduced enough to continue with plan.
 - Plan file is mutated directly before response is returned.
-- Final footer includes selected mode and next mode.
+- Handoff metadata is persisted in plan frontmatter.
