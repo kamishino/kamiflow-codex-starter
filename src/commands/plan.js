@@ -16,7 +16,7 @@ function parseProjectDir(defaultCwd, args) {
     return defaultCwd;
   }
   const value = args[idx + 1];
-  if (!value) {
+  if (!value || value.startsWith("--")) {
     throw new Error("Missing value for --project.");
   }
   return path.resolve(value);

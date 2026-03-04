@@ -98,14 +98,21 @@ function buildSlugBase(options = {}) {
   return combined.slice(0, 64).replace(/-+$/g, "") || "plan";
 }
 
+function toLocalDateStamp(date = new Date()) {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function buildDefaultPlanFileName(options = {}) {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = toLocalDateStamp();
   const slugBase = buildSlugBase(options);
   return `${date}-${slugBase}.md`;
 }
 
 async function resolveUniqueNewPlanPath(plansDir, options = {}) {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = toLocalDateStamp();
   const slugBase = buildSlugBase(options);
   for (let i = 1; i <= 999; i += 1) {
     const suffix = String(i).padStart(3, "0");

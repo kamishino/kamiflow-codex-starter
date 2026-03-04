@@ -7,7 +7,7 @@ export function resolveProjectDir(args) {
     return process.cwd();
   }
   const value = args[idx + 1];
-  if (!value) {
+  if (!value || String(value).startsWith("--")) {
     throw new Error("Missing value for --project.");
   }
   return path.resolve(value);

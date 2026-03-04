@@ -41,6 +41,8 @@ This repository has four active scopes:
 - Every new session must start by reading `AGENTS.md`.
 - If `.kfc/CODEX_READY.md` exists, read it before implementation.
 - Every top-level user request must resolve one active non-done plan in `.local/plans/` before route output.
+- Every top-level user request must touch the active plan twice: once at route start, once before final response.
+- A valid touch means updating `updated_at` and appending a timestamped `WIP Log` entry for what was done in that turn.
 - Reuse the active plan by default; create a new plan file only when no active plan exists or the scope is explicitly split.
 - Every route call must persist plan updates before final response.
 - On `check` PASS with all Acceptance Criteria and Go/No-Go items checked, archive the plan to `.local/plans/done/`.
@@ -58,7 +60,7 @@ This repository has four active scopes:
 
 ## Plan Lifecycle Contract
 
-- File naming pattern for created plans: `YYYY-MM-DD-<seq>-<route>.md`.
+- File naming pattern for created plans: `YYYY-MM-DD-<seq>-<route>-<topic-slug>.md` (topic slug optional).
 - Create plan files only when required:
 - no active non-done plan exists, or
 - user explicitly asks to split work into a separate plan.
@@ -74,6 +76,8 @@ This repository has four active scopes:
 - Only archive on `check` PASS when all Acceptance Criteria and Go/No-Go checklist items are checked.
 - Done retention:
 - Keep the most recent 20 files in `.local/plans/done/`; prune older done files during normal plan-lifecycle maintenance.
+- Visibility note:
+- `.local/` is git-ignored; do not use `git status` as proof that plan files were touched.
 
 ## Evidence Gate
 

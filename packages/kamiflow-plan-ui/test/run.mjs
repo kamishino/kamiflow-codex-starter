@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -33,6 +34,28 @@ async function withTempDir(fn) {
   } finally {
     await fs.rm(tempBase, { recursive: true, force: true });
   }
+}
+
+async function runNodeProcess(command, args, cwd) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(command, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+    let stdout = "";
+    let stderr = "";
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", reject);
+    child.on("close", (code) => {
+      resolve({
+        exitCode: code ?? -1,
+        stdout,
+        stderr
+      });
+    });
+  });
 }
 
 await runCase("parse and validate template plan", async () => {
@@ -146,6 +169,28 @@ await runCase("init --new creates unique incremented plan files", async () => {
     assert.ok(/-\d{3}-plan(?:-[a-z0-9-]+)?\.md$/i.test(files[0]));
     assert.ok(/-\d{3}-plan(?:-[a-z0-9-]+)?\.md$/i.test(files[1]));
     assert.notEqual(files[0], files[1]);
+  });
+});
+
+await runCase("kfp init rejects --project when value is another flag", async () => {
+  const exitCode = await runCli(["init", "--project", "--new"]);
+  assert.equal(exitCode, 1);
+});
+
+await runCase("kfc plan init rejects --project when value is another flag", async () => {
+  await withTempDir(async (tempDir) => {
+    const rootBin = path.resolve(__dirname, "../../../bin/kamiflow.js");
+    const result = await runNodeProcess(process.execPath, [rootBin, "plan", "init", "--project", "--new"], tempDir);
+    assert.equal(result.exitCode, 1, `stdout: ${result.stdout}\nstderr: ${result.stderr}`);
+
+    const accidentalDir = path.join(tempDir, "--new");
+    let exists = true;
+    try {
+      await fs.access(accidentalDir);
+    } catch {
+      exists = false;
+    }
+    assert.equal(exists, false, "should not create accidental --new directory");
   });
 });
 

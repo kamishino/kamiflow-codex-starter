@@ -33,8 +33,11 @@ try {
     "## Anti-Pattern Router",
     "## Learning Loop Contract",
     "Every top-level user request must resolve one active non-done plan",
+    "Every top-level user request must touch the active plan twice",
+    "A valid touch means updating `updated_at` and appending a timestamped `WIP Log` entry",
     "Every route call must persist plan updates",
     "Do not require the user to run `kfc`/`npm` commands for normal route execution",
+    ".local/` is git-ignored; do not use `git status` as proof that plan files were touched",
     "State`, `Doing`, and `Next`",
     "$kamiflow-core plan"
   ]) {
@@ -133,12 +136,15 @@ try {
   const smoothGuide = read(smoothGuideFile);
   for (const token of [
     "## Core Sequence",
+    "## Plan Touch Cadence",
     "## Chat-Only Execution",
     "## Compact Response Shape",
     "## Evidence Rule",
     "## Completion Safety",
     "## Recovery Shortcuts",
     "## Readability Style",
+    "Touch active plan at route start",
+    "Touch active plan again before final response",
     "Emoji is allowed for human-facing markdown cues",
     "Do not treat plan as done if archive fails."
   ]) {

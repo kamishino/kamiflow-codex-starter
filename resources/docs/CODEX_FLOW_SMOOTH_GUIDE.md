@@ -10,6 +10,13 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 4. Mutate plan frontmatter + `WIP Log`.
 5. Respond with compact user guidance.
 
+## Plan Touch Cadence
+
+- `📝` Touch active plan at route start (set current turn context).
+- `📝` Touch active plan again before final response (persist actual outcomes).
+- A valid touch updates `updated_at` and appends a timestamped `WIP Log` line.
+- `.local/` is git-ignored, so plan touches will not appear in `git status`.
+
 ## Chat-Only Execution
 
 - `🧭` Chat is the control plane: Codex executes normal flow commands directly.

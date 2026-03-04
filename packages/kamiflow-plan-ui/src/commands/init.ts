@@ -37,14 +37,21 @@ function buildSlugBase(topic: string, route: string): string {
   return combined.slice(0, 64).replace(/-+$/g, "") || "plan";
 }
 
+function toLocalDateStamp(date = new Date()): string {
+  const year = String(date.getFullYear());
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function buildDefaultPlanFileName(topic: string, route: string) {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = toLocalDateStamp();
   const slugBase = buildSlugBase(topic, route);
   return `${date}-${slugBase}.md`;
 }
 
 async function resolveUniqueNewPlanPath(plansDir: string, topic: string, route: string): Promise<string> {
-  const date = new Date().toISOString().slice(0, 10);
+  const date = toLocalDateStamp();
   const slugBase = buildSlugBase(topic, route);
   for (let i = 1; i <= 999; i += 1) {
     const suffix = String(i).padStart(3, "0");

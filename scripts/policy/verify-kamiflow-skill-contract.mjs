@@ -18,6 +18,9 @@ const RULES = [
       "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
       "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
       "## Smooth Flow Checklist",
+      "Touch active plan at route start (`updated_at` + WIP line).",
+      "Touch active plan again before final output to persist actual results from this turn.",
+      "YYYY-MM-DD-<seq>-<route>-<topic-slug>.md",
       "## Response Handoff Contract"
     ]
   },

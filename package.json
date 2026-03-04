@@ -16,6 +16,7 @@
   "scripts": {
     "start": "node bin/kamiflow.js",
     "dev": "node bin/kamiflow.js",
+    "test": "npm run plan-ui:test && npm run docs:verify:skills-contract && npm run docs:verify:codex-intelligence && npm run docs:verify:kfp-design-system",
     "build": "node -e \"console.log('No build step. Running from source ESM.')\"",
     "typecheck": "node -e \"console.log('TypeScript typecheck not configured yet.')\"",
     "codex:setup": "node scripts/codex/setup-local.mjs",
