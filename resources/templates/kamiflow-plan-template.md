@@ -18,8 +18,9 @@ Request:
 - If `START_CONTEXT` is provided, consume it directly.
 - Resolve target plan file in this order:
   1. user-provided file path
-  2. active draft/ready plan
-  3. `kfc flow ensure-plan --project <path>`
+  2. request-scoped plan file (`YYYY-MM-DD-<seq>-plan.md`)
+  3. active non-done plan
+  4. create plan from template if missing
 
 Output requirements:
 - Concrete file-level tasks.
@@ -35,5 +36,5 @@ Blocking behavior:
 - If plan file cannot be resolved, return:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc flow ensure-plan --project <path>`
-  - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
+  - `Recovery: create .local/plans/<date-seq>-plan.md from template`
+  - `Expected: plan markdown exists and is writable`

@@ -1,16 +1,16 @@
 # Check Report: <change>
 
 ## Findings (Highest Severity First)
-1. [Severity] Finding summary - file/path reference
-2. [Severity] Finding summary - file/path reference
+1. [Severity] <finding> - <file/path>
+2. [Severity] <finding> - <file/path>
 
 ## Acceptance Criteria Status
-- [ ] Criterion 1
-- [ ] Criterion 2
+- [ ] <criterion 1>
+- [ ] <criterion 2>
 
 ## Test and Validation Notes
-- Command:
-- Outcome:
+- Command: <command>
+- Outcome: <pass|fail + note>
 
 ## Decision
 - Result: PASS | BLOCK
@@ -18,9 +18,9 @@
 - Next action: <narrative next step>
 - Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.
 
-## Mode
+## Footer (Required)
 - Selected Mode: Plan | Build
-- Mode Reason:
-- Next Action:
+- Mode Reason: <one line>
+- Next Action: <one line>
 - Next Command: fix | done
 - Next Mode: Build | done

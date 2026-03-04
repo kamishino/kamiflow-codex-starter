@@ -1,76 +1,61 @@
 ---
 plan_id: PLAN-YYYY-MM-DD-001
-request_id: REQ-YYYYMMDD-001
-parent_plan_id: ""
 title: New Plan
 status: draft
 decision: NO_GO
-lifecycle_phase: plan
 selected_mode: Plan
 next_mode: Plan
 next_command: plan
 updated_at: 2026-03-01
-archived_at: ""
 ---
 
 ## Start Summary
 - Required: yes
-- Reason: Missing 2+ core planning fields.
-- Selected Idea: Initial draft candidate
-- Alternatives Considered: Safe option | Dark horse option
-- Pre-mortem Risk: Weak clarity can cause rework.
+- Reason: Missing core planning inputs.
+- Selected Idea: Initial candidate
+- Alternatives Considered: Option A | Option B
+- Pre-mortem Risk: TBD
 - Handoff Confidence: 1
 
 ## Goal
-- Define the desired outcome.
+- One-sentence target outcome.
 
 ## Scope (In/Out)
-- In:
-- Out:
+- In: Core work items.
+- Out: Non-goals.
 
 ## Constraints
-- Technical:
-- Time:
-- Risk:
+- Key constraints: Time, risk, compatibility.
 
 ## Assumptions
-- A1:
-- A2:
+- A1: Primary assumption.
 
 ## Open Decisions
-- [ ] D1:
+- [ ] D1: One unresolved decision.
 - Remaining Count: 1
 
 ## Implementation Tasks
-- [ ] Task 1
-- [ ] Task 2
+- [ ] `path/to/file`: implement scoped change.
 
 ## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
+- [ ] Core behavior is correct.
+- [ ] Validation commands pass.
 
 ## Validation Commands
-- command 1
-- command 2
+- npm test
 
 ## Risks & Rollback
-- Risk:
-- Mitigation:
-- Rollback:
+- Risk: Main failure mode.
+- Mitigation: Primary mitigation.
+- Rollback: Revert strategy.
 
 ## Go/No-Go Checklist
 - [ ] Goal is explicit
 - [ ] Scope in/out is explicit
 - [ ] No unresolved high-impact decisions
-- [ ] Feasibility is validated
-- [ ] Acceptance criteria are testable
-- [ ] Tasks are implementation-ready
-- [ ] Risks and rollback are defined
-- [ ] Validation commands are concrete
-- [ ] Dependencies/access are ready
-- [ ] First build step is explicit
+- [ ] Tasks and validation commands are implementation-ready
 
 ## WIP Log
-- Status:
-- Blockers:
-- Next step:
+- Status: Not started
+- Blockers: None
+- Next step: Plan first concrete task slice

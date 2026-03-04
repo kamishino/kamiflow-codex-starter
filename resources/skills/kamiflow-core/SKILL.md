@@ -53,18 +53,19 @@ Pick mode before executing route logic:
 ## Plan Lifecycle Protocol
 
 - Naming: `YYYY-MM-DD-<seq>-<route>.md`.
-- Required frontmatter fields in active plans:
+- Required frontmatter fields (core):
 - `plan_id`
-- `request_id`
-- `parent_plan_id` (if previous active plan exists)
-- `lifecycle_phase` (`start|plan|build|check|fix|research|done`)
 - `status`
 - `decision`
 - `selected_mode`
 - `next_command`
 - `next_mode`
 - `updated_at`
-- `archived_at` (only when moved to done)
+- Optional tracking metadata:
+- `request_id`
+- `parent_plan_id`
+- `lifecycle_phase`
+- `archived_at`
 - Minimum mutation on every route:
 - update `updated_at`
 - update `lifecycle_phase`

@@ -10,12 +10,13 @@ Constraints:
 - Implement only selected task scope.
 - No destructive git commands.
 - Keep guidance client-facing via `kfc`.
+- Update plan frontmatter + `WIP Log` before final response.
 
 Request:
 - List planned file-level actions first.
 - Implement only scoped changes.
 - Run targeted validation commands.
-- Persist build result to plan state.
+- Persist build result directly in markdown plan state.
 
 Output requirements:
 - Planned changes

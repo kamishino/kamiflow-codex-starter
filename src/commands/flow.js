@@ -4,6 +4,15 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
 import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
+import {
+  applyLifecycleMutation,
+  buildPhaseDigest,
+  evaluateArchiveGate,
+  evaluateBuildReadiness as evaluateBuildReadinessFromLifecycle,
+  normalizeBlockers as normalizeBlockersFromLifecycle,
+  toIsoTimestamp as toIsoTimestampFromLifecycle,
+  toNextAction as toNextActionFromLifecycle
+} from "../lib/plan-lifecycle.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -520,22 +529,28 @@ function normalizeBlockers(reason, findings) {
 }
 
 async function persistReadinessBlock(planRecord, reason, findings = []) {
-  let next = String(planRecord?.raw || "");
-  if (!next) {
+  const raw = String(planRecord?.raw || "");
+  if (!raw) {
     return false;
   }
 
-  next = updateFrontmatterField(next, "decision", "NO_GO");
-  next = updateFrontmatterField(next, "status", "in_progress");
-  next = updateFrontmatterField(next, "selected_mode", "Build");
-  next = updateFrontmatterField(next, "next_command", "plan");
-  next = updateFrontmatterField(next, "next_mode", "Plan");
-  next = updateFrontmatterField(next, "updated_at", toIsoTimestamp());
-  next = updateWipField(next, "Status", "Blocked at build-readiness gate");
-  next = updateWipField(next, "Blockers", normalizeBlockers(reason, findings));
-  next = updateWipField(next, "Next step", "Run $kamiflow-core plan to resolve blockers, then rerun $kamiflow-core build.");
+  const next = applyLifecycleMutation(raw, {
+    frontmatter: {
+      decision: "NO_GO",
+      status: "in_progress",
+      selected_mode: "Build",
+      next_command: "plan",
+      next_mode: "Plan",
+      updated_at: toIsoTimestampFromLifecycle()
+    },
+    wip: {
+      status: "Blocked at build-readiness gate",
+      blockers: normalizeBlockersFromLifecycle(reason, findings),
+      next_step: "Run $kamiflow-core plan to resolve blockers, then rerun $kamiflow-core build."
+    }
+  });
 
-  if (next === planRecord.raw) {
+  if (next === raw) {
     return false;
   }
 
@@ -544,18 +559,24 @@ async function persistReadinessBlock(planRecord, reason, findings = []) {
 }
 
 async function persistReadinessReady(planRecord) {
-  let next = String(planRecord?.raw || "");
-  if (!next) {
+  const raw = String(planRecord?.raw || "");
+  if (!raw) {
     return false;
   }
 
-  next = updateFrontmatterField(next, "selected_mode", "Build");
-  next = updateFrontmatterField(next, "updated_at", toIsoTimestamp());
-  next = updateWipField(next, "Status", "Build-readiness gate passed");
-  next = updateWipField(next, "Blockers", "None");
-  next = updateWipField(next, "Next step", "Run $kamiflow-core build and execute one concrete task slice.");
+  const next = applyLifecycleMutation(raw, {
+    frontmatter: {
+      selected_mode: "Build",
+      updated_at: toIsoTimestampFromLifecycle()
+    },
+    wip: {
+      status: "Build-readiness gate passed",
+      blockers: "None",
+      next_step: "Run $kamiflow-core build and execute one concrete task slice."
+    }
+  });
 
-  if (next === planRecord.raw) {
+  if (next === raw) {
     return false;
   }
 
@@ -845,7 +866,7 @@ async function runReady(options, args) {
     return 1;
   }
 
-  const readiness = evaluateBuildReadiness(resolved.selected);
+  const readiness = evaluateBuildReadinessFromLifecycle(resolved.selected);
   if (!readiness.ready) {
     await syncBlockToPlan("Plan is not build-ready.", readiness.findings);
     printReadinessBlock(projectDir, "Plan is not build-ready.", readiness.findings);
@@ -924,11 +945,21 @@ async function runApply(options, args) {
     route,
     result,
     applied: res.json?.applied || [],
-    next_action_human: toNextAction(summary),
+    next_action_human: toNextActionFromLifecycle(summary),
     next_command: summary.next_command || "unknown",
     next_mode: summary.next_mode || "unknown",
     status: summary.status || "unknown"
   };
+
+  try {
+    const refreshed = await resolvePlanByRef(projectDir, planId, true);
+    if (refreshed) {
+      output.phase_digest = buildPhaseDigest(refreshed);
+      output.archive_gate = evaluateArchiveGate(refreshed.raw);
+    }
+  } catch {
+    // Keep output backward-compatible if digest refresh fails.
+  }
 
   info(`Plan updated via ${route}/${result}: ${planId}`);
   console.log(JSON.stringify(output, null, 2));
@@ -957,9 +988,11 @@ async function runNext(options, args) {
     ok: true,
     plan_id: planRecord.planId,
     plan_path: planRecord.filePath,
-    next_action_human: toNextAction({ next_command: nextCommand }),
+    next_action_human: toNextActionFromLifecycle({ next_command: nextCommand }),
     next_command: nextCommand,
-    next_mode: nextMode
+    next_mode: nextMode,
+    phase_digest: buildPhaseDigest(planRecord),
+    archive_gate: evaluateArchiveGate(planRecord.raw)
   };
 
   console.log(`Next Action: ${payload.next_action_human}`);

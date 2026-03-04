@@ -1,8 +1,8 @@
 # Plan Spec: <feature-or-change>
 
 ## Objective
-- Goal:
-- Out of scope:
+- Goal: <one clear outcome>
+- Out of scope: <non-goals>
 
 ## Constraints
 - Technical:
@@ -10,22 +10,20 @@
 - Risk:
 
 ## Affected Areas
-- Files/modules likely changed:
+- Files/modules:
 - External dependencies:
 
 ## Task Breakdown
-1. Task 1
-2. Task 2
-3. Task 3
+1. <task with file path>
+2. <task with file path>
 
 ## Acceptance Criteria
-- [ ] Criterion 1
-- [ ] Criterion 2
-- [ ] Criterion 3
+- [ ] <testable criterion 1>
+- [ ] <testable criterion 2>
 
 ## Validation Plan
-- Command/check 1:
-- Command/check 2:
+- <command 1>
+- <command 2>
 
 ## Risks and Fallback
 - Risk:
@@ -34,26 +32,16 @@
 
 ## Handoff
 - Next command: build
-- Next action: Implement the next scoped task and record validation outcomes in the plan.
+- Next action: Implement one scoped task and record validation outcomes.
 
 ## Plan Lifecycle Mutation
 - Plan file path: `.local/plans/YYYY-MM-DD-<seq>-plan.md`
-- Frontmatter updates:
-- `request_id`
-- `parent_plan_id`
-- `lifecycle_phase: plan`
-- `updated_at`
-- `decision`
-- `next_command`
-- `next_mode`
-- WIP Log updates:
-- `Status`
-- `Blockers`
-- `Next step`
+- Frontmatter updates: `request_id`, `parent_plan_id`, `lifecycle_phase`, `updated_at`, `decision`, `next_command`, `next_mode`
+- WIP Log updates: `Status`, `Blockers`, `Next step`
 
-## Mode
+## Footer (Required)
 - Selected Mode: Plan
-- Mode Reason:
-- Next Action:
+- Mode Reason: <one line>
+- Next Action: <one line>
 - Next Command: build
 - Next Mode: Build

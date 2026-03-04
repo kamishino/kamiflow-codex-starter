@@ -12,14 +12,14 @@
 
 ## Step Results
 
-| # | Step | Command | Expected | Actual | Result |
-|---|------|---------|----------|--------|--------|
-| 1 | Link CLI | `npm link` | CLI linked | | |
-| 2 | Link package in target | `npm link @kamishino/kamiflow-codex` | `kfc` available in target | | |
-| 3 | CLI help | `npx --no-install kfc --help` | help output | | |
-| 4 | Bootstrap (baseline) | `npx --no-install kfc client bootstrap --project . --profile client` | config/rules/plan/health checks PASS | | |
-| 5 | Optional route loop | `start -> plan -> build -> check -> done` | completed loop | | |
-| 6 | Optional archive check | `.local/plans/done/<file>.md` | file archived | | |
+| # | Step | Command | Result |
+|---|------|---------|--------|
+| 1 | Link CLI | `npm link` | PASS/BLOCK |
+| 2 | Link package in target | `npm link @kamishino/kamiflow-codex` | PASS/BLOCK |
+| 3 | CLI help | `npx --no-install kfc --help` | PASS/BLOCK |
+| 4 | Bootstrap | `npx --no-install kfc client bootstrap --project . --profile client` | PASS/BLOCK |
+| 5 | Route loop | `start -> plan -> build -> check -> done` | PASS/BLOCK |
+| 6 | Archive check | `.local/plans/done/<file>.md` exists | PASS/BLOCK |
 
 ## Blockers (if any)
 
@@ -30,5 +30,4 @@
 ## Notes
 
 - command output snippets:
-- differences between expected and actual behavior:
 - follow-up actions:
