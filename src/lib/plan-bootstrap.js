@@ -80,16 +80,36 @@ export function resolvePlansDir(projectDir) {
   return path.join(projectDir, ".local", "plans");
 }
 
-function buildDefaultPlanFileName() {
-  const date = new Date().toISOString().slice(0, 10);
-  return `${date}-new-plan.md`;
+function slugifySegment(value, fallback = "") {
+  const slug = String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  if (!slug) {
+    return fallback;
+  }
+  return slug;
 }
 
-async function resolveUniqueNewPlanPath(plansDir) {
+function buildSlugBase(options = {}) {
+  const route = slugifySegment(options.route || "plan", "plan");
+  const topic = slugifySegment(options.topic || options.slug || "", "");
+  const combined = topic ? `${route}-${topic}` : route;
+  return combined.slice(0, 64).replace(/-+$/g, "") || "plan";
+}
+
+function buildDefaultPlanFileName(options = {}) {
   const date = new Date().toISOString().slice(0, 10);
+  const slugBase = buildSlugBase(options);
+  return `${date}-${slugBase}.md`;
+}
+
+async function resolveUniqueNewPlanPath(plansDir, options = {}) {
+  const date = new Date().toISOString().slice(0, 10);
+  const slugBase = buildSlugBase(options);
   for (let i = 1; i <= 999; i += 1) {
     const suffix = String(i).padStart(3, "0");
-    const candidate = path.join(plansDir, `${date}-${suffix}-new-plan.md`);
+    const candidate = path.join(plansDir, `${date}-${suffix}-${slugBase}.md`);
     try {
       await fs.access(candidate);
       continue;
@@ -111,13 +131,17 @@ async function readPlanTemplate() {
 export async function createLocalPlanTemplate(projectDir, options = {}) {
   const forceNew = Boolean(options.forceNew);
   const log = typeof options.log === "function" ? options.log : null;
+  const naming = {
+    topic: options.topic || options.slug || "",
+    route: options.route || "plan"
+  };
   const plansDir = resolvePlansDir(projectDir);
   await fs.mkdir(plansDir, { recursive: true });
 
   const template = await readPlanTemplate();
   const targetPath = forceNew
-    ? await resolveUniqueNewPlanPath(plansDir)
-    : path.join(plansDir, buildDefaultPlanFileName());
+    ? await resolveUniqueNewPlanPath(plansDir, naming)
+    : path.join(plansDir, buildDefaultPlanFileName(naming));
 
   if (!forceNew) {
     try {

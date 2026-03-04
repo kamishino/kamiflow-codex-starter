@@ -30,7 +30,7 @@ npm run kfp -- workspace add <name> [--project <path>]
 npm run kfp -- serve --workspace <name> --port 4310
 ```
 
-`init --new` always creates a unique file using `YYYY-MM-DD-00x-new-plan.md`.
+`init --new` always creates a unique file using `YYYY-MM-DD-00x-<route>-<topic-slug>.md` (defaults to `...-plan.md` when no topic is provided).
 
 Then open:
 

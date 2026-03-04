@@ -22,6 +22,18 @@ function parseProjectDir(defaultCwd, args) {
   return path.resolve(value);
 }
 
+function readOption(args, flag, fallback = "") {
+  const idx = args.indexOf(flag);
+  if (idx === -1) {
+    return fallback;
+  }
+  const value = args[idx + 1];
+  if (!value || value.startsWith("--")) {
+    return fallback;
+  }
+  return value;
+}
+
 async function pathExists(filePath) {
   try {
     await fs.access(filePath);
@@ -81,7 +93,7 @@ export async function runPlan(options) {
   if (!subcommand || subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
     info("Usage: kfc plan <init|serve|validate|workspace> [kfp options]");
     info("Examples:");
-    info("  kfc plan init");
+    info("  kfc plan init --topic \"improve flow\" --route plan");
     info("  kfc plan serve --port 4310");
     info("  kfc plan validate --project <path>");
     return 0;
@@ -94,6 +106,8 @@ export async function runPlan(options) {
   }
 
   const projectDir = subcommand === "workspace" ? options.cwd : parseProjectDir(options.cwd, rest);
+  const topic = readOption(rest, "--topic", readOption(rest, "--slug", ""));
+  const route = readOption(rest, "--route", "plan");
   const hasProject = rest.includes("--project");
   const forwarded =
     subcommand === "workspace" || hasProject
@@ -107,6 +121,8 @@ export async function runPlan(options) {
     if (subcommand === "init") {
       await createLocalPlanTemplate(projectDir, {
         forceNew: rest.includes("--new"),
+        topic,
+        route,
         log: info
       });
       return 0;
@@ -119,6 +135,8 @@ export async function runPlan(options) {
   if (subcommand === "init" && exitCode !== 0) {
     await createLocalPlanTemplate(projectDir, {
       forceNew: rest.includes("--new"),
+      topic,
+      route,
       log: info
     });
     return 0;

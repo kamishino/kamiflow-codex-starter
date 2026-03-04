@@ -17,6 +17,8 @@ Commands:
 Options:
   --project <path>   Override target project directory
   --new              Create a unique new plan file (init only)
+  --topic <text>     Add topic slug to plan filename (init only)
+  --route <name>     Add route slug to plan filename (init only, default: plan)
   --port <number>    Override local server port (serve only)
   --mode <name>      Serve mode: observer (default) or operator (serve only)
   --workspace <name> Run server in workspace mode (serve only)

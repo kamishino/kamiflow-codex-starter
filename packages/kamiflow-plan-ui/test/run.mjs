@@ -143,9 +143,29 @@ await runCase("init --new creates unique incremented plan files", async () => {
     const plansDir = path.join(tempDir, ".local", "plans");
     const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md")).sort();
     assert.equal(files.length, 2);
-    assert.ok(/-\d{3}-new-plan\.md$/i.test(files[0]));
-    assert.ok(/-\d{3}-new-plan\.md$/i.test(files[1]));
+    assert.ok(/-\d{3}-plan(?:-[a-z0-9-]+)?\.md$/i.test(files[0]));
+    assert.ok(/-\d{3}-plan(?:-[a-z0-9-]+)?\.md$/i.test(files[1]));
     assert.notEqual(files[0], files[1]);
+  });
+});
+
+await runCase("init supports topic/route slug in filename", async () => {
+  await withTempDir(async (tempDir) => {
+    const exitCode = await runCli([
+      "init",
+      "--project",
+      tempDir,
+      "--new",
+      "--route",
+      "build",
+      "--topic",
+      "Improve Kami Flow Core"
+    ]);
+    assert.equal(exitCode, 0);
+    const plansDir = path.join(tempDir, ".local", "plans");
+    const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md"));
+    assert.equal(files.length, 1);
+    assert.ok(/-\d{3}-build-improve-kami-flow-core\.md$/i.test(files[0]));
   });
 });
 

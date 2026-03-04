@@ -23,7 +23,7 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:4310";
 function usage() {
   info("Usage: kfc flow <ensure-plan|ready|apply|next> [options]");
   info("Examples:");
-  info("  kfc flow ensure-plan --project .");
+  info("  kfc flow ensure-plan --project . --topic \"improve flow\" --route plan");
   info("  kfc flow ready --project .");
   info("  kfc flow ready --project . --no-sync-block");
   info("  kfc flow apply --project . --plan PLAN-YYYY-MM-DD-001 --route build --result progress");
@@ -191,6 +191,68 @@ function selectActivePlan(plans) {
   return active[0] || null;
 }
 
+function normalizeText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function planMatchesTopic(planRecord, topic) {
+  const normalizedTopic = normalizeText(topic);
+  if (!normalizedTopic) {
+    return true;
+  }
+  const title = normalizeText(planRecord?.frontmatter?.title || "");
+  if (!title || title === "new plan") {
+    return false;
+  }
+  return title.includes(normalizedTopic) || normalizedTopic.includes(title);
+}
+
+function isPlanDoneRecord(planRecord) {
+  const fm = planRecord?.frontmatter || {};
+  return (
+    String(fm.status || "").toLowerCase() === "done" ||
+    String(fm.next_command || "").toLowerCase() === "done" ||
+    String(fm.next_mode || "").toLowerCase() === "done" ||
+    String(fm.lifecycle_phase || "").toLowerCase() === "done"
+  );
+}
+
+async function resolveUniqueArchivePath(doneDir, fileName) {
+  const parsed = path.parse(fileName);
+  for (let i = 0; i < 1000; i += 1) {
+    const suffix = i === 0 ? "" : `-${i}`;
+    const candidate = path.join(doneDir, `${parsed.name}${suffix}${parsed.ext}`);
+    try {
+      await fs.access(candidate);
+      continue;
+    } catch {
+      return candidate;
+    }
+  }
+  throw new Error(`Unable to archive plan due to repeated filename collisions: ${fileName}`);
+}
+
+async function archiveDonePlansInRoot(projectDir, plans) {
+  const doneDir = path.join(resolvePlansDir(projectDir), "done");
+  let moved = 0;
+  await fs.mkdir(doneDir, { recursive: true });
+  for (const plan of plans) {
+    if (!isPlanDoneRecord(plan)) {
+      continue;
+    }
+    if (plan.filePath.includes(`${path.sep}done${path.sep}`)) {
+      continue;
+    }
+    const target = await resolveUniqueArchivePath(doneDir, path.basename(plan.filePath));
+    await fs.rename(plan.filePath, target);
+    moved += 1;
+  }
+  return moved;
+}
+
 function runNode(commandArgs, cwd) {
   return new Promise((resolve, reject) => {
     const child = spawn(process.execPath, commandArgs, {
@@ -212,9 +274,16 @@ function runNode(commandArgs, cwd) {
   });
 }
 
-async function createPlanViaInit(projectDir, cwd) {
+async function createPlanViaInit(projectDir, cwd, options = {}) {
+  const initArgs = [KFC_BIN, "plan", "init", "--project", projectDir, "--new"];
+  if (options.route) {
+    initArgs.push("--route", String(options.route));
+  }
+  if (options.topic) {
+    initArgs.push("--topic", String(options.topic));
+  }
   try {
-    const result = await runNode([KFC_BIN, "plan", "init", "--project", projectDir, "--new"], cwd);
+    const result = await runNode(initArgs, cwd);
     if (result.code === 0) {
       const match = result.stdout.match(/\[kfp\] Created template:\s*(.+)/);
       if (match) {
@@ -231,7 +300,12 @@ async function createPlanViaInit(projectDir, cwd) {
   } catch (err) {
     info(`kfc plan init invocation failed. Falling back to local bootstrap: ${err instanceof Error ? err.message : String(err)}`);
   }
-  return await createLocalPlanTemplate(projectDir, { forceNew: true, log: info });
+  return await createLocalPlanTemplate(projectDir, {
+    forceNew: true,
+    route: options.route,
+    topic: options.topic,
+    log: info
+  });
 }
 
 function ensureRoute(route) {
@@ -751,10 +825,11 @@ export async function runFlow(options) {
   return 1;
 }
 
-async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd }) {
+async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic = "", route = "plan" }) {
   let selected = null;
   let created = false;
   let source = "existing";
+  let archivedDone = 0;
 
   if (planRef) {
     selected = await resolvePlanByRef(projectDir, planRef);
@@ -763,28 +838,43 @@ async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd }) {
     }
     source = "provided";
   } else {
-    const plans = await loadPlans(projectDir);
+    let plans = await loadPlans(projectDir);
+    archivedDone = await archiveDonePlansInRoot(projectDir, plans);
+    if (archivedDone > 0) {
+      plans = await loadPlans(projectDir);
+    }
     selected = selectActivePlan(plans);
+    if (selected && topic && !forceNew && !planMatchesTopic(selected, topic)) {
+      selected = null;
+      source = "topic_split";
+    }
   }
 
   if (!selected || forceNew) {
-    const createdPath = await createPlanViaInit(projectDir, cwd);
+    const createdPath = await createPlanViaInit(projectDir, cwd, { topic, route });
     selected = await readPlanRecord(createdPath);
     created = true;
     source = "created";
   }
 
-  return { selected, created, source };
+  return { selected, created, source, archivedDone };
 }
 
 async function runEnsurePlan(options, args) {
   const projectDir = resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const forceNew = readFlag(args, "--new");
+  const topic = readOption(args, "--topic", readOption(args, "--slug", ""));
+  const route = readOption(args, "--route", "plan").toLowerCase();
+  if (route) {
+    ensureRoute(route);
+  }
   const resolved = await resolveOrCreatePlan({
     projectDir,
     planRef,
     forceNew,
+    topic,
+    route,
     cwd: options.cwd
   });
 
@@ -796,9 +886,13 @@ async function runEnsurePlan(options, args) {
     plan_path: resolved.selected.filePath,
     plan_id: resolved.selected.planId,
     status: resolved.selected.status,
-    updated_at: resolved.selected.updatedAt
+    updated_at: resolved.selected.updatedAt,
+    archived_done: resolved.archivedDone
   };
 
+  if (resolved.archivedDone > 0) {
+    info(`Auto-archived stale done plans: ${resolved.archivedDone}`);
+  }
   info(`Plan resolved: ${payload.plan_path}`);
   console.log(JSON.stringify(payload, null, 2));
   return 0;
@@ -808,12 +902,19 @@ async function runReady(options, args) {
   const projectDir = resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const forceNew = readFlag(args, "--new");
+  const topic = readOption(args, "--topic", readOption(args, "--slug", ""));
+  const route = readOption(args, "--route", "plan").toLowerCase();
+  if (route) {
+    ensureRoute(route);
+  }
   const syncBlock = !readFlag(args, "--no-sync-block");
   const syncReady = !readFlag(args, "--no-sync-ready");
   const resolved = await resolveOrCreatePlan({
     projectDir,
     planRef,
     forceNew,
+    topic,
+    route,
     cwd: options.cwd
   });
 
