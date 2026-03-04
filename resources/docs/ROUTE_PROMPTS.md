@@ -73,6 +73,7 @@ $kamiflow-core build execute only Task <n> from .local/plans/<file>.md, list pla
 Expected:
 
 - no execution outside selected task scope
+- build/fix updates `Implementation Tasks` only
 - validation command outcomes
 - explicit limitations
 - plan frontmatter handoff to `check`
@@ -93,9 +94,11 @@ Expected:
 
 - findings-first output
 - acceptance criteria status
+- check phase validates/tests Acceptance Criteria
 - PASS/BLOCK decision
 - explicit next command (`fix` or `done`)
-- on PASS archive, keep latest 20 plans in `.local/plans/done/`
+- if completion is below 100%, amend tasks/criteria and continue `build/fix -> check`
+- on PASS with completion 100%, archive and keep latest 20 plans in `.local/plans/done/`
 - if API is unreachable, return BLOCK with:
   - `kfc plan serve --project <path> --port <n>`
   - health check `GET <base>/api/health`

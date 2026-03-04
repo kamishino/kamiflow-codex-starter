@@ -40,6 +40,9 @@ try {
     ".local/` is git-ignored; do not use `git status` as proof that plan files were touched",
     "run check validations before final response and report `Check: PASS|BLOCK` with evidence",
     "after each completed task/subtask, immediately mutate the active plan file",
+    "Build/Fix route scope: mutate and complete `Implementation Tasks` only",
+    "Check route scope: verify/test `Acceptance Criteria` and decide PASS/BLOCK from evidence.",
+    "If completion is below 100% (remaining checklist items), do not archive",
     "State`, `Doing`, and `Next`",
     "$kamiflow-core plan"
   ]) {
@@ -100,9 +103,11 @@ try {
     "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
     "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
     "Every route invocation persists plan-state changes directly in markdown",
+    "Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.",
     "Every top-level user request must resolve one active non-done plan",
     "run check validations and report `Check: PASS|BLOCK` before final response",
     "after each completed task/subtask, immediately mutate the active plan file",
+    "completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop",
     "If evidence is unavailable, mark status as `Unknown`",
     "kfc flow ensure-plan --project .",
     "Prefer direct plan-file mutation as primary lifecycle path",
@@ -120,6 +125,7 @@ try {
     "Recovery: update plan via `$kamiflow-core plan` and rerun build",
     "Persist build phase/progress via direct markdown mutation",
     "after each completed task/subtask update checklist + timestamped WIP evidence",
+    "Build/Fix scope is `Implementation Tasks` only.",
     "report `Check: PASS|BLOCK`",
     "mark the claim as `Unknown`"
   ]) {
@@ -144,6 +150,7 @@ try {
   const smoothGuide = read(smoothGuideFile);
   for (const token of [
     "## Core Sequence",
+    "## Phase Scope",
     "## Plan Touch Cadence",
     "## Chat-Only Execution",
     "## Compact Response Shape",
@@ -155,6 +162,8 @@ try {
     "Touch active plan at route start",
     "Touch active plan again before final response",
     "after each completed task/subtask, immediately update checklist state",
+    "Build/Fix phase: execute and update `Implementation Tasks`.",
+    "Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.",
     "Check: PASS",
     "Emoji is allowed for human-facing markdown cues",
     "Do not treat plan as done if archive fails."

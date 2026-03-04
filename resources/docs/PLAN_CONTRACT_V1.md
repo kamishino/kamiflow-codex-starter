@@ -43,7 +43,7 @@ If any gate fails, do not run `build`; reroute to `plan` or `research`.
 
 A plan can move to done only when all are true:
 
-1. In-scope acceptance criteria are completed.
+1. Completion is 100% (`Implementation Tasks` + `Acceptance Criteria` checklist items are all checked).
 2. Validation commands were executed and outcomes recorded.
 3. `next_command: done`
 4. `next_mode: done`

@@ -11,6 +11,7 @@ Use this route for quality verification and release-readiness decisions.
 ## Steps
 
 1. Inspect changes against acceptance criteria.
+   - Check scope is Acceptance Criteria validation/testing from current build output.
 2. Identify findings ordered by severity.
 3. Flag behavioral regressions or missing tests.
 4. Map each validation command to its outcome.
@@ -19,10 +20,11 @@ Use this route for quality verification and release-readiness decisions.
    - set frontmatter: `lifecycle_phase: check`, `selected_mode`, `decision`, `status`, `next_command`, `next_mode`, `updated_at`
    - update `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 7. Apply archive gate:
-   - if result is `PASS` and all Acceptance Criteria + Go/No-Go checklist items are checked:
+   - if result is `PASS` and completion is 100% (Implementation Tasks + Acceptance Criteria fully checked):
    - archive first: move file to `.local/plans/done/<same-file>.md`
    - then treat completion as final (`status: done`, `next_command: done`, `next_mode: done`, `lifecycle_phase: done`, `archived_at: <iso>`)
    - prune older done plans and keep only latest 20 files in `.local/plans/done/`
+   - if result is `BLOCK` or completion is below 100%, amend Implementation Tasks/Acceptance Criteria and continue `Build/Fix -> Check`
    - if archive fails, do not report done; keep active recovery path (`fix` or `plan`)
 8. Resolve next-step narrative from mutated state (`fix` or `done`).
 9. End with concise next-step guidance; do not require verbose response footer fields.

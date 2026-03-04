@@ -29,6 +29,7 @@ Use this route for focused issue resolution with minimal scope.
 5. Restate the issue and expected behavior.
 6. Reproduce or identify concrete evidence of failure.
 7. Propose the smallest safe fix.
+   - when check failed, amend `Implementation Tasks` and `Acceptance Criteria` with concrete subtasks for the next loop.
 8. Validate fix with targeted checks.
 9. Note regression risk.
 10. Persist fix/build progress via direct markdown mutation:
@@ -38,6 +39,7 @@ Use this route for focused issue resolution with minimal scope.
 11. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert resolution.
 12. Before final response, run check validations for the fix slice and report `Check: PASS|BLOCK` with evidence.
 13. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+   - if unresolved checklist items remain, continue `fix/build -> check` iteration (do not hand off to done).
 14. End with concise next-step guidance; do not require verbose response footer fields.
 
 ## Output

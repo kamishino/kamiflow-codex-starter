@@ -35,6 +35,8 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `Expected: readiness gates pass in plan markdown`
 5. Confirm required plan or scope exists and map to the resolved plan file.
 6. Select one concrete task slice from the plan.
+   - Build/Fix scope is `Implementation Tasks` only.
+   - Do not mark `Acceptance Criteria` complete in build unless explicitly converting validated evidence from check route.
 7. List exact file-level actions before implementation.
 8. Implement in small logical steps.
 9. Run targeted checks relevant to changed areas.
@@ -47,6 +49,7 @@ Use this route to execute an approved plan in small, verifiable slices.
 12. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert completion.
 13. Before final response, run check validations for the implemented slice and report `Check: PASS|BLOCK` with evidence.
 14. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+   - if remaining completion is below 100%, keep `next_command: check` and carry unresolved checklist context in WIP.
 15. End with concise next-step guidance; do not require verbose response footer fields.
 16. Final response should use compact guidance shape:
    - `State`: active phase + task status

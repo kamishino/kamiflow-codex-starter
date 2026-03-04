@@ -113,6 +113,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     if (existing.parsed.frontmatter.status !== "done") errors.push("status must be done");
     if (existing.parsed.frontmatter.next_command !== "done") errors.push("next_command must be done");
     if (existing.parsed.frontmatter.next_mode !== "done") errors.push("next_mode must be done");
+    if (!checklistAllChecked(existing.parsed.sections["Implementation Tasks"])) {
+      errors.push("all Implementation Tasks checklist items must be checked");
+    }
     if (!checklistAllChecked(existing.parsed.sections["Acceptance Criteria"])) {
       errors.push("all Acceptance Criteria checklist items must be checked");
     }
@@ -161,8 +164,29 @@ export function registerApiRoutes(fastify: any, deps: any): void {
         payload: { error: "Invalid check result", error_code: "BAD_REQUEST" }
       };
     }
+    if (body.action_type === "build_result" && Array.isArray(body.ac_updates) && body.ac_updates.length > 0) {
+      return {
+        statusCode: 400,
+        payload: {
+          error: "Build phase only supports Implementation Tasks updates.",
+          error_code: "PHASE_SCOPE_VIOLATION",
+          recovery: "Move acceptance updates to check_result payload in Check phase."
+        }
+      };
+    }
+    if (body.action_type === "check_result" && Array.isArray(body.task_updates) && body.task_updates.length > 0) {
+      return {
+        statusCode: 400,
+        payload: {
+          error: "Check phase only supports Acceptance Criteria updates.",
+          error_code: "PHASE_SCOPE_VIOLATION",
+          recovery: "Move task updates to build_result/fix cycle in Build phase."
+        }
+      };
+    }
 
     const applied: string[] = [];
+    let effectiveCheckResult: "PASS" | "BLOCK" | null = body?.check?.result === "PASS" ? "PASS" : "BLOCK";
     const result = await persistMutation(projectId, planId, body.expected_updated_at, (parsed) => {
       if (body.action_type === "build_result") {
         const startGate = evaluateStartGate(parsed);
@@ -213,6 +237,27 @@ export function registerApiRoutes(fastify: any, deps: any): void {
         applied.push("handoff:check");
       } else {
         if (body.check.result === "PASS") {
+          const tasksReady = checklistAllChecked(next.sections["Implementation Tasks"]);
+          const acceptanceReady = checklistAllChecked(next.sections["Acceptance Criteria"]);
+          const completionReady = tasksReady && acceptanceReady;
+          if (!completionReady) {
+            effectiveCheckResult = "BLOCK";
+            next = deps.applyDecisionMutation(next, "NO_GO");
+            next = deps.applyHandoffMutation(next, {
+              status: "in_progress",
+              next_command: "fix",
+              next_mode: "Build"
+            });
+            next = deps.applyWipMutation(next, {
+              status: "Blocked at completion gate",
+              blockers: `Completion is incomplete. tasks_ready=${tasksReady}, acceptance_ready=${acceptanceReady}`,
+              next_step: "Amend Implementation Tasks/Acceptance Criteria and iterate Build/Fix -> Check."
+            });
+            applied.push("decision:NO_GO");
+            applied.push("handoff:fix");
+            applied.push("completion:block");
+            return next;
+          }
           next = deps.applyDecisionMutation(next, "GO");
           next = deps.applyHandoffMutation(next, {
             status: "done",
@@ -222,6 +267,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
           applied.push("decision:GO");
           applied.push("handoff:done");
         } else {
+          effectiveCheckResult = "BLOCK";
           next = deps.applyDecisionMutation(next, "NO_GO");
           next = deps.applyHandoffMutation(next, {
             status: "in_progress",
@@ -240,7 +286,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     }
 
     const payload = result.payload as any;
-    if (body.action_type === "check_result" && body.check.result === "PASS" && body.auto_archive_on_pass !== false) {
+    if (body.action_type === "check_result" && effectiveCheckResult === "PASS" && body.auto_archive_on_pass !== false) {
       const completion = await completePlan(projectId, planId);
       if (completion.statusCode !== 200) {
         return {

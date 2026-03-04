@@ -22,6 +22,7 @@ const RULES = [
       "Touch active plan again before final output to persist actual results from this turn.",
       "run check validations and report `Check: PASS|BLOCK` before final response",
       "after each completed task/subtask, immediately mutate the active plan file",
+      "Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.",
       "YYYY-MM-DD-<seq>-<route>-<topic-slug>.md",
       "## Response Handoff Contract"
     ]
@@ -61,6 +62,7 @@ const RULES = [
       "evaluate build-ready criteria directly from plan markdown",
       "Persist build phase/progress via direct markdown mutation",
       "after each completed task/subtask update checklist + timestamped WIP evidence",
+      "Build/Fix scope is `Implementation Tasks` only.",
       "report `Check: PASS|BLOCK` with evidence",
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
@@ -73,6 +75,9 @@ const RULES = [
     required: [
       "Persist check decision by direct markdown mutation",
       "Apply archive gate:",
+      "Check scope is Acceptance Criteria validation/testing from current build output.",
+      "completion is 100% (Implementation Tasks + Acceptance Criteria fully checked)",
+      "if result is `BLOCK` or completion is below 100%",
       "move file to `.local/plans/done/<same-file>.md`",
       "keep only latest 20 files in `.local/plans/done/`",
       "if archive fails, do not report done",
@@ -100,6 +105,7 @@ const RULES = [
       "evaluate build-ready criteria directly from plan markdown",
       "Persist fix/build progress via direct markdown mutation",
       "after each completed task/subtask update checklist + timestamped WIP evidence",
+      "amend `Implementation Tasks` and `Acceptance Criteria` with concrete subtasks",
       "report `Check: PASS|BLOCK` with evidence",
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
@@ -131,7 +137,8 @@ const RULES = [
     required: [
       "Result: PASS | BLOCK",
       "Required next command: fix | done",
-      "Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.",
+      "Archive gate: archive only when PASS and completion is 100% (Implementation Tasks + Acceptance Criteria checked).",
+      "If completion <100% or result is BLOCK, amend tasks/criteria and continue Build/Fix -> Check.",
       "## Optional Response Handoff (Compact)",
       "Next step: <one line>"
     ]

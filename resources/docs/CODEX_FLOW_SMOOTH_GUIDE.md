@@ -11,6 +11,12 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 5. Run check validations for completed build/fix work.
 6. Respond with compact user guidance.
 
+## Phase Scope
+
+- Build/Fix phase: execute and update `Implementation Tasks`.
+- Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.
+- If check is `BLOCK`, amend tasks/criteria and loop `Build/Fix -> Check`.
+
 ## Plan Touch Cadence
 
 - `📝` Touch active plan at route start (set current turn context).
@@ -46,6 +52,7 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 ## Completion Safety
 
 - `check` is complete only when archive succeeds.
+- If completion is below 100% (remaining checklist items), do not archive; amend plan and continue cycle.
 - Do not treat plan as done if archive fails.
 - On archive failure, keep active recovery path (`fix` or `plan`) and report the blocker explicitly.
 

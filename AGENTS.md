@@ -89,6 +89,8 @@ This repository has four active scopes:
 
 - Route discipline:
 - Resolve active plan first, then execute exactly one route (`start|plan|build|check|fix|research`) per response.
+- Build/Fix route scope: mutate and complete `Implementation Tasks` only; do not treat Acceptance Criteria as build-phase completion evidence.
+- Check route scope: verify/test `Acceptance Criteria` and decide PASS/BLOCK from evidence.
 - After finishing implementation in a `build`/`fix` slice, run check validations before final response and report `Check: PASS|BLOCK` with evidence.
 - During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped `WIP Log` evidence) before starting the next subtask.
 - Persist plan mutation before final response; never return route output without plan-state mutation.
@@ -97,6 +99,7 @@ This repository has four active scopes:
 - Use plan frontmatter as canonical machine state (`selected_mode`, `next_command`, `next_mode`, `lifecycle_phase`).
 - Check-to-done safety:
 - Only treat task as done when archive succeeds (plan moved to `.local/plans/done/`).
+- If completion is below 100% (remaining checklist items), do not archive; amend tasks/criteria and continue `Build/Fix -> Check`.
 - If PASS is reported but archive fails, keep plan active and continue with recovery (`fix`/`plan`) instead of silent done.
 - Environment recovery:
 - If shell startup crashes from local profile modules, rerun commands with non-login/no-profile shell.

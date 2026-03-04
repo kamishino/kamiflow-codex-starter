@@ -16,7 +16,8 @@
 - Result: PASS | BLOCK
 - Required next command: fix | done
 - Next action: <narrative next step>
-- Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.
+- Archive gate: archive only when PASS and completion is 100% (Implementation Tasks + Acceptance Criteria checked).
+- If completion <100% or result is BLOCK, amend tasks/criteria and continue Build/Fix -> Check.
 - Done retention: keep latest 20 archived plans in `.local/plans/done/`.
 
 ## Optional Response Handoff (Compact)

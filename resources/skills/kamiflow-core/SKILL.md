@@ -51,6 +51,7 @@ Pick mode before executing route logic:
 - Reuse the active plan by default; create a new plan file only when no active plan exists or scope is explicitly split.
 - Every route invocation persists plan-state changes directly in markdown before final output.
 - Prefer direct plan-file mutation as primary lifecycle path; use `kfc flow ...` only as recovery fallback.
+- Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
@@ -67,8 +68,9 @@ Pick mode before executing route logic:
 8. Keep user response compact: `State`, `Doing`, `Next`.
 9. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
 10. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
-11. Treat completion as valid only after archive success.
-12. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
+11. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
+12. Treat completion as valid only after archive success.
+13. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
 
 ## Plan Lifecycle Protocol
 

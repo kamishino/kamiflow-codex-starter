@@ -171,13 +171,16 @@ export function normalizeBlockers(reason, findings = []) {
 }
 
 export function evaluateArchiveGate(markdown) {
+  const tasks = parseChecklistItems(extractSection(markdown, "Implementation Tasks"));
   const acceptance = parseChecklistItems(extractSection(markdown, "Acceptance Criteria"));
   const goNoGo = parseChecklistItems(extractSection(markdown, "Go/No-Go Checklist"));
+  const tasksReady = tasks.length > 0 && tasks.every((item) => item.checked);
   const acceptanceReady = acceptance.length > 0 && acceptance.every((item) => item.checked);
-  const goNoGoReady = goNoGo.length > 0 && goNoGo.every((item) => item.checked);
-  const ready = acceptanceReady && goNoGoReady;
+  const goNoGoReady = goNoGo.length > 0 ? goNoGo.every((item) => item.checked) : true;
+  const ready = tasksReady && acceptanceReady;
   return {
     ready,
+    tasks_ready: tasksReady,
     acceptance_ready: acceptanceReady,
     go_no_go_ready: goNoGoReady
   };

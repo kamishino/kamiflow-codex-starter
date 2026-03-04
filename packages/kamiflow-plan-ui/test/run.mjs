@@ -622,6 +622,18 @@ await runCase("automation apply updates transitions and archives on PASS", async
     });
     assert.equal(badAction.statusCode, 400);
 
+    const buildScopeViolation = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "build_result",
+        ac_updates: [{ index: 0, checked: true }]
+      }
+    });
+    assert.equal(buildScopeViolation.statusCode, 400);
+    const buildScopePayload = JSON.parse(buildScopeViolation.payload);
+    assert.equal(buildScopePayload.error_code, "PHASE_SCOPE_VIOLATION");
+
     const buildApply = await server.inject({
       method: "POST",
       url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
@@ -641,6 +653,19 @@ await runCase("automation apply updates transitions and archives on PASS", async
     assert.equal(buildPayload.summary.next_command, "check");
     assert.equal(buildPayload.summary.next_mode, "Plan");
     assert.equal(buildPayload.archive.archived, false);
+
+    const checkScopeViolation = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "check_result",
+        task_updates: [{ index: 0, checked: true }],
+        check: { result: "BLOCK", findings: [] }
+      }
+    });
+    assert.equal(checkScopeViolation.statusCode, 400);
+    const checkScopePayload = JSON.parse(checkScopeViolation.payload);
+    assert.equal(checkScopePayload.error_code, "PHASE_SCOPE_VIOLATION");
 
     const blockApply = await server.inject({
       method: "POST",
@@ -695,6 +720,67 @@ await runCase("automation apply updates transitions and archives on PASS", async
     const archivedPlan = listAfterPayload.plans.find((item) => item.plan_id === planId);
     assert.ok(archivedPlan);
     assert.equal(archivedPlan.is_archived, true);
+
+    await server.close();
+  });
+});
+
+await runCase("check PASS loops to fix when completion is below 100%", async () => {
+  let createServer;
+  try {
+    ({ createServer } = await import("../dist/server/create-server.js"));
+  } catch (err) {
+    if (err && typeof err === "object" && (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND")) {
+      console.log("[test] SKIP completion-gate test: install package dependencies first.");
+      return;
+    }
+    throw err;
+  }
+
+  await withTempDir(async (tempDir) => {
+    const initExit = await runCli(["init", "--project", tempDir]);
+    assert.equal(initExit, 0);
+
+    const server = await createServer({
+      projectDir: tempDir,
+      withWatcher: false,
+      uiMode: "operator",
+      runCodexAction: async () => ({
+        status: "completed",
+        command: "codex exec \"test\"",
+        stdout_tail: "ok",
+        stderr_tail: "",
+        exit_code: 0,
+        run_id: "run_test"
+      })
+    });
+    await server.ready();
+
+    const listResponse = await server.inject({ method: "GET", url: "/api/plans" });
+    assert.equal(listResponse.statusCode, 200);
+    const listPayload = JSON.parse(listResponse.payload);
+    const planId = listPayload.plans[0].plan_id;
+
+    const checkPassIncomplete = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "check_result",
+        ac_updates: [
+          { index: 0, checked: true },
+          { index: 1, checked: true }
+        ],
+        check: { result: "PASS", findings: [] }
+      }
+    });
+    assert.equal(checkPassIncomplete.statusCode, 200);
+    const incompletePayload = JSON.parse(checkPassIncomplete.payload);
+    assert.equal(incompletePayload.summary.next_command, "fix");
+    assert.equal(incompletePayload.summary.next_mode, "Build");
+    assert.equal(incompletePayload.summary.decision, "NO_GO");
+    assert.equal(incompletePayload.archive.archived, false);
+    assert.ok(Array.isArray(incompletePayload.applied));
+    assert.ok(incompletePayload.applied.includes("completion:block"));
 
     await server.close();
   });

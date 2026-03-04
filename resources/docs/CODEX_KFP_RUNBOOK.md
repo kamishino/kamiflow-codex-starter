@@ -71,9 +71,11 @@ kfc plan validate --project .
   - `Expected: plan markdown exists and is writable`
 - then finalize scope and gates
 - `build` route only when plan is build-ready
+- `build/fix` updates Implementation Tasks
 - recommended preflight for build/fix route: evaluate readiness directly from the active plan markdown
-- `check` route after each build slice
-- after PASS + done handoff with all checklist gates checked, archive to `.local/plans/done/`
+- `check` route validates Acceptance Criteria after each build/fix slice
+- if completion <100%, amend tasks/criteria and iterate `build/fix -> check`
+- after PASS + done handoff with completion 100%, archive to `.local/plans/done/`
 
 ## Minimal Route Prompts
 
@@ -109,7 +111,8 @@ Deterministic persistence (direct markdown lifecycle):
 - Every top-level request resolves one active non-done plan first (reuse by default)
 - Create a new plan file only when no active plan exists or the scope is explicitly split
 - Every route updates frontmatter + WIP Log before final response
-- check PASS archives only when all Acceptance Criteria + Go/No-Go checklist items are checked
+- build/fix focuses on Implementation Tasks; check validates Acceptance Criteria
+- check PASS archives only when completion is 100% (Implementation Tasks + Acceptance Criteria checked)
 - Keep latest 20 files in .local/plans/done/; prune older archived plans
 ```
 
