@@ -86,6 +86,7 @@ kfc client
 Then tell Codex:
 
 - Read `.kfc/CODEX_READY.md` and execute the mission.
+- Run routine `kfc ...` flow commands autonomously (no user reminder loop).
 
 After Codex finishes:
 

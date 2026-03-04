@@ -30,7 +30,9 @@ This generates `.kfc/CODEX_READY.md` for Codex handoff.
 
 2. Environment and Plan Readiness
 - Use `.kfc/CODEX_READY.md` as mission + plan contract.
+- Codex should execute routine flow commands autonomously without user reminders.
 - Before any implementation route (`build`/`fix`), run `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.
+- Touch active plan markdown at route start and before final response.
 - If route behavior looks inconsistent, run `kfc client doctor --project . --fix`.
 - If needed, rerun `kfc client --force`.
 

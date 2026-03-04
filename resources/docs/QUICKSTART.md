@@ -37,14 +37,15 @@ kfc client --force
 For each task, use this KISS loop:
 
 1. Tell Codex to read `.kfc/CODEX_READY.md` and execute the mission.
-2. Before any implementation route (`build`/`fix`), require:
+2. Codex should run routine flow commands autonomously (no user reminder loop).
+3. Before any implementation route (`build`/`fix`), require:
 
 ```bash
 kfc flow ensure-plan --project .
 kfc flow ready --project .
 ```
 
-3. If behavior looks off, run:
+4. If behavior looks off, run:
 
 ```bash
 kfc client doctor --project . --fix

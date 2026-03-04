@@ -239,9 +239,26 @@ function loadPackageName() {
   return pkg.name;
 }
 
-function defaultClientResourcesDir() {
+function packagedClientResourcesDir() {
   const packageName = loadPackageName();
   return `./node_modules/${packageName}/resources`;
+}
+
+function bundledResourcesDirAbsolute() {
+  return path.join(PACKAGE_ROOT, "resources");
+}
+
+function resolveClientResourcesHint(projectDir) {
+  const packageName = loadPackageName();
+  const packagedPath = path.join(projectDir, "node_modules", packageName, "resources");
+  if (fs.existsSync(packagedPath)) {
+    return packagedClientResourcesDir();
+  }
+  const bundledPath = bundledResourcesDirAbsolute();
+  if (fs.existsSync(bundledPath)) {
+    return bundledPath;
+  }
+  return packagedClientResourcesDir();
 }
 
 function resolveClientQuickstartPath(projectDir) {
@@ -380,11 +397,18 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     `- plan_id: ${planId}`,
     `- plan_path: ${planPath}`,
     "",
-    "## Execution Rules",
+    "## Session Bootstrap (Every Session)",
+    "1. Read `AGENTS.md` first, then re-read this file before implementation.",
+    "2. Resolve one active non-done plan in `.local/plans/` before route output.",
+    "3. Touch the active plan at route start and again before final response (`updated_at` + timestamped `WIP Log` line).",
+    "",
+    "## Autonomous Execution Contract",
     "1. Use only `kfc ...` commands in this client project.",
-    "2. Keep changes scoped to the mission and acceptance criteria.",
-    "3. Before build/fix, run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
-    "4. After each meaningful change, update phase and report next steps.",
+    "2. Keep changes scoped to mission and acceptance criteria.",
+    "3. Execute routine flow commands yourself; do not ask the user to run normal `kfc` commands.",
+    "4. Ask the user only when execution is impossible from agent context (permissions/auth/out-of-workspace).",
+    "5. Before `build`/`fix`, run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
+    "6. If readiness or flow behavior fails, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.",
     "",
     "## Phase Update Commands",
     "- Readiness gate: `kfc flow ready --project .`",
@@ -476,7 +500,7 @@ function determineProfile(explicitProfile, configData) {
 
 async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
   const configPath = getConfigPath(projectDir);
-  const resourceHint = defaultClientResourcesDir();
+  const resourceHint = resolveClientResourcesHint(projectDir);
 
   if (!fs.existsSync(configPath)) {
     const config = defaultConfig();
@@ -522,13 +546,16 @@ async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
   try {
     await assertReadableDirectory(resolvedResourcesDir);
   } catch (err) {
-    if (!force) {
+    const fallbackResourceHint = bundledResourcesDirAbsolute();
+    const fallbackReadable = fs.existsSync(fallbackResourceHint);
+    if (!force && !fallbackReadable) {
       throw new Error(
         `Configured resourcesDir is not readable (${resolvedResourcesDir}). Rerun with --force to set ${resourceHint}.`
       );
     }
-    config.paths.resourcesDir = resourceHint;
+    config.paths.resourcesDir = fallbackReadable ? fallbackResourceHint : resourceHint;
     changed = true;
+    info(`Using resources fallback: ${config.paths.resourcesDir}`);
   }
 
   if (changed) {

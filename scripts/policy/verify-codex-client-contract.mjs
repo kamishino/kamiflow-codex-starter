@@ -9,8 +9,21 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const REQUIRED_PATTERNS = [
   { label: "start command", regex: /\bkfc client\b/ },
   { label: "ready file", regex: /\.kfc\/CODEX_READY\.md/ },
-  { label: "cleanup command", regex: /\bkfc client done\b/ }
+  { label: "cleanup command", regex: /\bkfc client done\b/ },
+  { label: "autonomous flow execution", regex: /\bautonom(?:ous|ously)\b/i }
 ];
+
+const FILE_SPECIFIC_PATTERNS = {
+  "resources/docs/QUICKSTART.md": [
+    { label: "no reminder loop guidance", regex: /no user reminder loop/i }
+  ],
+  "resources/docs/CLIENT_KICKOFF_PROMPT.md": [
+    { label: "plan touch cadence", regex: /Touch active plan markdown twice per request/i }
+  ],
+  "resources/docs/CLIENT_A2Z_PLAYBOOK.md": [
+    { label: "plan touch cadence", regex: /Touch active plan markdown at route start and before final response/i }
+  ]
+};
 
 const TARGET_FILES = [
   "README.md",
@@ -22,7 +35,11 @@ const TARGET_FILES = [
 function verifyFile(relPath) {
   const absPath = path.join(ROOT_DIR, relPath);
   const content = fs.readFileSync(absPath, "utf8");
-  const missing = REQUIRED_PATTERNS.filter((rule) => !rule.regex.test(content));
+  const required = [
+    ...REQUIRED_PATTERNS,
+    ...(FILE_SPECIFIC_PATTERNS[relPath] || [])
+  ];
+  const missing = required.filter((rule) => !rule.regex.test(content));
   return { relPath, missing };
 }
 
