@@ -23,7 +23,7 @@ const RULES = [
       "START_CONTEXT",
       "END_START_CONTEXT",
       "Run next:",
-      "kfc flow ensure-plan --project <path>",
+      "YYYY-MM-DD-<seq>-start.md",
       "Required: yes|no"
     ]
   },
@@ -31,26 +31,24 @@ const RULES = [
     file: "resources/skills/kamiflow-core/references/plan.md",
     required: [
       "Status: BLOCK",
-      "Recovery: kfc flow ensure-plan --project <path>",
-      "Expected: {\"ok\":true,\"plan_path\":\"<absolute-path>\",...}",
+      "Recovery: create .local/plans/<date-seq>-plan.md from template",
+      "Expected: plan markdown exists and is writable",
       "decision: GO",
       "next_command: build",
       "next_mode: Build",
-      "kfc flow apply --project <path> --plan <plan_id> --route plan --result go",
-      "kfc flow next --project <path> --plan <plan_id> --style narrative"
+      "Persist plan phase/handoff update by direct markdown mutation",
+      "lifecycle_phase: plan"
     ]
   },
   {
     file: "resources/skills/kamiflow-core/references/build.md",
     required: [
-      "kfc flow ensure-plan --project <path>",
-      "kfc flow ready --project <path>",
+      "current request-scoped build plan",
       "Status: BLOCK",
-      "Recovery: kfc flow ensure-plan --project <path>",
-      "Expected: {\"ok\":true,\"plan_path\":\"<absolute-path>\",...}",
-      "Recovery: kfc flow ready --project <path>",
-      "Expected: {\"ok\":true,\"ready\":true,...}",
-      "kfc flow apply --project <path> --plan <plan_id> --route build --result progress",
+      "Recovery: create .local/plans/<date-seq>-build.md from template",
+      "Expected: plan markdown exists and is writable",
+      "evaluate build-ready criteria directly from plan markdown",
+      "Persist build phase/progress via direct markdown mutation",
       "Next Command: check",
       "Next Mode: Plan"
     ]
@@ -58,8 +56,9 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/check.md",
     required: [
-      "kfc flow apply --project <path> --plan <plan_id> --route check --result pass",
-      "kfc flow apply --project <path> --plan <plan_id> --route check --result block",
+      "Persist check decision by direct markdown mutation",
+      "Apply archive gate:",
+      "move file to `.local/plans/done/<same-file>.md`",
       "Next Command: fix|done",
       "Next Mode: Build|done"
     ]
@@ -67,7 +66,7 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/research.md",
     required: [
-      "kfc flow apply --project <path> --plan <plan_id> --route research --result progress",
+      "Persist handoff phase by direct markdown mutation",
       "Next Command: plan|start",
       "Next Mode: Plan"
     ]
@@ -75,14 +74,12 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/fix.md",
     required: [
-      "kfc flow ensure-plan --project <path>",
-      "kfc flow ready --project <path>",
+      "current request-scoped fix plan",
       "Status: BLOCK",
-      "Recovery: kfc flow ensure-plan --project <path>",
-      "Expected: {\"ok\":true,\"plan_path\":\"<absolute-path>\",...}",
-      "Recovery: kfc flow ready --project <path>",
-      "Expected: {\"ok\":true,\"ready\":true,...}",
-      "kfc flow apply --project <path> --plan <plan_id> --route fix --result progress",
+      "Recovery: create .local/plans/<date-seq>-fix.md from template",
+      "Expected: plan markdown exists and is writable",
+      "evaluate build-ready criteria directly from plan markdown",
+      "Persist fix/build progress via direct markdown mutation",
       "Next Command: check",
       "Next Mode: Plan"
     ]

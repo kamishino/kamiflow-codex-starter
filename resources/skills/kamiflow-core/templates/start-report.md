@@ -139,7 +139,12 @@ END_START_CONTEXT
 - Reason:
 - Immediate next command:
 
-Run next: $kamiflow-core plan use START_CONTEXT, ensure plan file via `kfc flow ensure-plan --project .` when missing, then update target .local/plans/<file>.md to decision-complete build-ready spec.
+Run next: $kamiflow-core plan use START_CONTEXT, create/update target .local/plans/<file>.md directly to a decision-complete build-ready spec.
+
+Plan lifecycle mutation:
+- Create request-scoped plan file using `YYYY-MM-DD-<seq>-start.md`.
+- Set frontmatter fields: `request_id`, `parent_plan_id` (if any), `lifecycle_phase: start`, `updated_at`.
+- Update `WIP Log` before response.
 
 ## Mode
 - Selected Mode: Plan

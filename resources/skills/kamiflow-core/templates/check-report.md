@@ -16,6 +16,7 @@
 - Result: PASS | BLOCK
 - Required next command: fix | done
 - Next action: <narrative next step>
+- Archive gate: archive only when PASS and all Acceptance Criteria + Go/No-Go checklist items are checked.
 
 ## Mode
 - Selected Mode: Plan | Build

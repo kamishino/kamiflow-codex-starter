@@ -25,10 +25,11 @@ try {
     "## Instruction Topology",
     "## Context Resolver",
     "## Session Bootstrap Contract",
+    "## Plan Lifecycle Contract",
     "## Anti-Pattern Router",
     "## Learning Loop Contract",
-    "kfc flow ensure-plan --project .",
-    "kfc flow ready --project .",
+    "Every top-level user request must create a new plan file",
+    "Every route call must persist plan updates",
     "$kamiflow-core plan"
   ]) {
     assertIncludes(agents, agentsFile, token, errors);
@@ -44,7 +45,9 @@ try {
     "AP-004",
     "AP-005",
     "AP-006",
-    "AP-007"
+    "AP-007",
+    "AP-008",
+    "AP-009"
   ]) {
     assertIncludes(antiPatterns, antiPatternsFile, token, errors);
   }
@@ -80,8 +83,9 @@ try {
   const skill = read(skillFile);
   for (const token of [
     "## Failure Recovery",
+    "Every route invocation persists plan-state changes directly in markdown",
     "kfc flow ensure-plan --project .",
-    "kfc flow ready --project .",
+    "Prefer direct plan-file mutation as primary lifecycle path",
     "$kamiflow-core plan",
     "git commit --no-verify"
   ]) {
@@ -91,10 +95,10 @@ try {
   const buildRefFile = "resources/skills/kamiflow-core/references/build.md";
   const buildRef = read(buildRefFile);
   for (const token of [
-    "kfc flow ready --project <path>",
+    "evaluate build-ready criteria directly from plan markdown",
     "Status: BLOCK",
-    "Recovery: kfc flow ready --project <path>",
-    'Expected: {"ok":true,"ready":true,...}'
+    "Recovery: update plan via `$kamiflow-core plan` and rerun build",
+    "Persist build phase/progress via direct markdown mutation"
   ]) {
     assertIncludes(buildRef, buildRefFile, token, errors);
   }
@@ -102,10 +106,10 @@ try {
   const fixRefFile = "resources/skills/kamiflow-core/references/fix.md";
   const fixRef = read(fixRefFile);
   for (const token of [
-    "kfc flow ready --project <path>",
+    "evaluate build-ready criteria directly from plan markdown",
     "Status: BLOCK",
-    "Recovery: kfc flow ready --project <path>",
-    'Expected: {"ok":true,"ready":true,...}'
+    "Recovery: update plan via `$kamiflow-core plan` and rerun fix",
+    "Persist fix/build progress via direct markdown mutation"
   ]) {
     assertIncludes(fixRef, fixRefFile, token, errors);
   }

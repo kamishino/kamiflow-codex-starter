@@ -39,10 +39,10 @@ This repository has four active scopes:
 
 - Every new session must start by reading `AGENTS.md`.
 - If `.kfc/CODEX_READY.md` exists, read it before implementation.
-- Before any implementation route (`build`/`fix`), run:
-- `kfc flow ensure-plan --project .`
-- `kfc flow ready --project .`
-- If readiness fails, do not continue implementation; switch to planning and run `$kamiflow-core plan`.
+- Every top-level user request must create a new plan file in `.local/plans/` before route output.
+- Every route call must persist plan updates before final response.
+- On `check` PASS with all Acceptance Criteria and Go/No-Go items checked, archive the plan to `.local/plans/done/`.
+- If build readiness is unclear or blocked, do not continue implementation; switch to planning and run `$kamiflow-core plan`.
 - End every non-trivial response with explicit `Next Command` and `Next Mode`.
 - If `.kfc/CODEX_READY.md` is missing, continue with `AGENTS.md` + active `.local/plans/*.md` as runtime source of truth.
 
@@ -51,8 +51,22 @@ This repository has four active scopes:
 - In KFC repo (`kamiflow-codex-starter`), use `npm run ...` maintainer scripts.
 - In client projects, use `kfc ...` (or `npx --no-install kfc ...`), not this repo's `npm run ...`.
 - Client bootstrap flow is `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done` for cleanup.
-- Before entering implementation routes (`build`/`fix`), resolve or create the active plan file via `kfc flow ensure-plan --project .`.
-- Before entering implementation routes (`build`/`fix`), verify readiness via `kfc flow ready --project .`.
+- Primary lifecycle behavior is direct markdown mutation in `.local/plans/*.md`; do not require `kfc flow ...` commands in normal route execution.
+- `kfc flow ensure-plan --project .` and `kfc flow ready --project .` are fallback recovery commands when plan files are missing or inconsistent.
+
+## Plan Lifecycle Contract
+
+- File naming pattern for request-created plans: `YYYY-MM-DD-<seq>-<route>.md`.
+- Every new file should include:
+- `request_id`
+- `parent_plan_id` (when a previous active plan exists)
+- `lifecycle_phase` (`start|plan|build|check|fix|research|done`)
+- `archived_at` (set when archived)
+- Direct mutation minimum per route:
+- frontmatter fields (`updated_at`, `selected_mode`, `next_command`, `next_mode`, `status`, `decision`)
+- `WIP Log` lines (`Status`, `Blockers`, `Next step`)
+- Archive gate:
+- Only archive on `check` PASS when all Acceptance Criteria and Go/No-Go checklist items are checked.
 
 ## KFP UI Rules
 

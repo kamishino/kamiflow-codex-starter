@@ -24,10 +24,11 @@ Prompt wording refinement only in this phase: no route logic changes.
 npm run codex:sync -- --profile dogfood --force
 ```
 
-2. Initialize private plans directory and template:
+2. Initialize private plans directory and template (markdown-first lifecycle):
 
 ```bash
-kfc flow ensure-plan --project .
+mkdir .local\plans
+kfc plan init --project . --new
 ```
 
 3. Validate plans:
@@ -48,8 +49,7 @@ When KFC is linked into a client repo, use `kfc` commands there (not `npm run` f
 
 ```bash
 npx --no-install kfc client bootstrap --project . --profile client
-kfc flow ensure-plan --project .
-kfc flow ready --project .
+kfc plan init --project . --new
 kfc plan validate --project .
 ```
 
@@ -59,20 +59,21 @@ kfc plan validate --project .
 - `start` final output must include `START_CONTEXT` + exact `Run next:` command
 - `plan` route must resolve/create target plan file in this exact order:
   1. user-provided file path
-  2. active draft/ready plan
-  3. `kfc flow ensure-plan --project .`
+  2. current request-scoped file (`YYYY-MM-DD-<seq>-plan.md`)
+  3. active non-done plan
+  4. create request-scoped plan file from template
 - if `START_CONTEXT` is present, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request remains vague, reroute to `start`
 - if plan file cannot be resolved, return BLOCK with:
   - `Status: BLOCK`
   - `Reason: <single concrete cause>`
-  - `Recovery: kfc flow ensure-plan --project .`
-  - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
+  - `Recovery: create .local/plans/<date-seq>-<route>.md from template`
+  - `Expected: plan markdown exists and is writable`
 - then finalize scope and gates
 - `build` route only when plan is build-ready
-- recommended preflight for build/fix route: `kfc flow ready --project .`
+- recommended preflight for build/fix route: evaluate readiness directly from the active plan markdown
 - `check` route after each build slice
-- after PASS + done handoff, use complete/archive flow
+- after PASS + done handoff with all checklist gates checked, archive to `.local/plans/done/`
 
 ## Minimal Route Prompts
 
@@ -103,12 +104,12 @@ Check:
 $kamiflow-core check verify current changes against Acceptance Criteria in .local/plans/<file>.md and return PASS or BLOCK.
 ```
 
-Deterministic persistence (build/check):
+Deterministic persistence (direct markdown lifecycle):
 
 ```text
-kfc flow apply --project . --plan <id> --route build --result progress
-kfc flow apply --project . --plan <id> --route check --result block|pass
-kfc flow next --project . --plan <id> --style narrative
+- Every top-level request creates a new file: .local/plans/YYYY-MM-DD-<seq>-<route>.md
+- Every route updates frontmatter + WIP Log before final response
+- check PASS archives only when all Acceptance Criteria + Go/No-Go checklist items are checked
 ```
 
 Server resolution:
@@ -128,8 +129,8 @@ Server resolution:
 
 ### Run in KFC Repo
 
-- Missing `.local/`: run `kfc flow ensure-plan --project .`.
-- If plan bootstrap still fails: run `kfc plan init --project . --new`, then retry `kfc flow ensure-plan --project .`.
+- Missing `.local/`: create `.local/plans/` and bootstrap from `packages/kamiflow-plan-ui/templates/plan-template.md`.
+- If direct lifecycle is not possible (permissions/runtime issue), use fallback commands: `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.
 - Skill/rules mismatch after edits: run `npm run codex:sync -- --profile dogfood --force` and restart Codex CLI.
 - Runtime skill still shows old commands: run `npm run codex:sync:skills -- --force` and restart Codex CLI.
 - Build route blocked: check `resources/docs/PLAN_CONTRACT_V1.md` build readiness gate.

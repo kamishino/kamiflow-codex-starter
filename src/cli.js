@@ -35,7 +35,7 @@ plan options:
 
 flow options:
   kfc flow ensure-plan --project <path> [--plan <path|plan_id>] [--new]
-  kfc flow ready --project <path> [--plan <path|plan_id>] [--new]
+  kfc flow ready --project <path> [--plan <path|plan_id>] [--new] [--no-sync-block] [--no-sync-ready]
   kfc flow apply --project <path> --plan <path|plan_id> --route <plan|build|check|fix|research|start> --result <go|progress|pass|block>
   kfc flow next --project <path> --plan <path|plan_id> --style narrative
 

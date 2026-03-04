@@ -16,6 +16,7 @@ function usage() {
   info("Examples:");
   info("  kfc flow ensure-plan --project .");
   info("  kfc flow ready --project .");
+  info("  kfc flow ready --project . --no-sync-block");
   info("  kfc flow apply --project . --plan PLAN-YYYY-MM-DD-001 --route build --result progress");
   info("  kfc flow next --project . --plan PLAN-YYYY-MM-DD-001 --style narrative");
 }
@@ -176,7 +177,7 @@ async function resolvePlanByRef(projectDir, planRef, includeDone = true) {
 }
 
 function selectActivePlan(plans) {
-  const active = plans.filter((item) => item.status === "draft" || item.status === "ready");
+  const active = plans.filter((item) => String(item.status || "").toLowerCase() !== "done");
   active.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
   return active[0] || null;
 }
@@ -440,6 +441,128 @@ function printReadinessBlock(projectDir, reason, extraFindings = []) {
   console.error(lines.join("\n"));
 }
 
+function updateFrontmatterField(markdown, key, value) {
+  const text = String(markdown || "");
+  if (!text.startsWith("---")) {
+    return text;
+  }
+  const lines = text.split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return text;
+  }
+
+  const targetPrefix = `${key}:`;
+  let found = false;
+  for (let i = 1; i < endIdx; i += 1) {
+    if (lines[i].trim().startsWith(targetPrefix)) {
+      lines[i] = `${key}: ${value}`;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    lines.splice(endIdx, 0, `${key}: ${value}`);
+  }
+  return lines.join("\n");
+}
+
+function updateWipField(markdown, key, value) {
+  const sectionName = "WIP Log";
+  const current = extractSection(markdown, sectionName);
+  if (!current) {
+    return markdown;
+  }
+  const lines = current.split(/\r?\n/);
+  const prefix = `- ${key}:`;
+  let found = false;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].trim().startsWith(prefix)) {
+      lines[i] = `${prefix} ${value}`;
+      found = true;
+      break;
+    }
+  }
+  if (!found) {
+    lines.push(`${prefix} ${value}`);
+  }
+
+  const escaped = markdownEscapeRegExp(sectionName);
+  const re = new RegExp(`(^|\\r?\\n)##\\s+${escaped}\\s*\\r?\\n([\\s\\S]*?)(?=\\r?\\n##\\s+|$)`, "i");
+  return String(markdown).replace(re, (full, lead) => `${lead}## ${sectionName}\n${lines.join("\n").trimEnd()}\n`);
+}
+
+function toIsoTimestamp() {
+  return new Date().toISOString();
+}
+
+function normalizeBlockers(reason, findings) {
+  const parts = [reason, ...(Array.isArray(findings) ? findings : [])]
+    .map((item) => String(item || "").trim())
+    .filter(Boolean);
+  const compact = [];
+  for (const part of parts) {
+    if (!compact.includes(part)) {
+      compact.push(part);
+    }
+  }
+  const joined = compact.join(" | ");
+  if (joined.length <= 600) {
+    return joined;
+  }
+  return `${joined.slice(0, 597)}...`;
+}
+
+async function persistReadinessBlock(planRecord, reason, findings = []) {
+  let next = String(planRecord?.raw || "");
+  if (!next) {
+    return false;
+  }
+
+  next = updateFrontmatterField(next, "decision", "NO_GO");
+  next = updateFrontmatterField(next, "status", "in_progress");
+  next = updateFrontmatterField(next, "selected_mode", "Build");
+  next = updateFrontmatterField(next, "next_command", "plan");
+  next = updateFrontmatterField(next, "next_mode", "Plan");
+  next = updateFrontmatterField(next, "updated_at", toIsoTimestamp());
+  next = updateWipField(next, "Status", "Blocked at build-readiness gate");
+  next = updateWipField(next, "Blockers", normalizeBlockers(reason, findings));
+  next = updateWipField(next, "Next step", "Run $kamiflow-core plan to resolve blockers, then rerun $kamiflow-core build.");
+
+  if (next === planRecord.raw) {
+    return false;
+  }
+
+  await fs.writeFile(planRecord.filePath, next, "utf8");
+  return true;
+}
+
+async function persistReadinessReady(planRecord) {
+  let next = String(planRecord?.raw || "");
+  if (!next) {
+    return false;
+  }
+
+  next = updateFrontmatterField(next, "selected_mode", "Build");
+  next = updateFrontmatterField(next, "updated_at", toIsoTimestamp());
+  next = updateWipField(next, "Status", "Build-readiness gate passed");
+  next = updateWipField(next, "Blockers", "None");
+  next = updateWipField(next, "Next step", "Run $kamiflow-core build and execute one concrete task slice.");
+
+  if (next === planRecord.raw) {
+    return false;
+  }
+
+  await fs.writeFile(planRecord.filePath, next, "utf8");
+  return true;
+}
+
 async function requestJson(method, url, body) {
   const res = await fetch(url, {
     method,
@@ -664,6 +787,8 @@ async function runReady(options, args) {
   const projectDir = resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const forceNew = readFlag(args, "--new");
+  const syncBlock = !readFlag(args, "--no-sync-block");
+  const syncReady = !readFlag(args, "--no-sync-ready");
   const resolved = await resolveOrCreatePlan({
     projectDir,
     planRef,
@@ -671,16 +796,49 @@ async function runReady(options, args) {
     cwd: options.cwd
   });
 
+  async function syncBlockToPlan(reason, findings = []) {
+    if (!syncBlock) {
+      return;
+    }
+    try {
+      const changed = await persistReadinessBlock(resolved.selected, reason, findings);
+      if (changed) {
+        console.error(`- Plan blocker context synced: ${resolved.selected.filePath}`);
+      }
+    } catch (err) {
+      info(`Failed to sync readiness blocker to plan file: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
+  async function syncReadyToPlan() {
+    if (!syncReady) {
+      return;
+    }
+    try {
+      const changed = await persistReadinessReady(resolved.selected);
+      if (changed) {
+        resolved.selected = await readPlanRecord(resolved.selected.filePath);
+        console.error(`- Plan readiness context synced: ${resolved.selected.filePath}`);
+      }
+    } catch (err) {
+      info(`Failed to sync readiness pass to plan file: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
+
   let validateResult;
   try {
     validateResult = await runNode([KFC_BIN, "plan", "validate", "--project", projectDir], options.cwd);
   } catch (err) {
+    await syncBlockToPlan("kfc plan validate failed to run.", [err instanceof Error ? err.message : String(err)]);
     printReadinessBlock(projectDir, "kfc plan validate failed to run.", [
       err instanceof Error ? err.message : String(err)
     ]);
     return 1;
   }
   if (validateResult.code !== 0) {
+    await syncBlockToPlan("kfc plan validate failed.", [
+      "Run `kfc plan validate --project .` and fix validation errors before build."
+    ]);
     printReadinessBlock(projectDir, "kfc plan validate failed.", [
       "Run `kfc plan validate --project .` and fix validation errors before build."
     ]);
@@ -689,9 +847,12 @@ async function runReady(options, args) {
 
   const readiness = evaluateBuildReadiness(resolved.selected);
   if (!readiness.ready) {
+    await syncBlockToPlan("Plan is not build-ready.", readiness.findings);
     printReadinessBlock(projectDir, "Plan is not build-ready.", readiness.findings);
     return 1;
   }
+
+  await syncReadyToPlan();
 
   const payload = {
     ok: true,

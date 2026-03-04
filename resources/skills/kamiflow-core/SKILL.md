@@ -45,9 +45,32 @@ Pick mode before executing route logic:
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
 - If mode does not satisfy route requirements, do not continue.
-- For implementation routes (`build`, `fix`), resolve/create the target plan file via `kfc flow ensure-plan --project <path>` before execution.
-- For plan persistence in `build`/`check`, treat KFP API checks as required after health preflight.
+- Every top-level user request creates one new plan file in `.local/plans` before route output.
+- Every route invocation persists plan-state changes directly in markdown before final output.
+- Prefer direct plan-file mutation as primary lifecycle path; use `kfc flow ...` only as recovery fallback.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
+
+## Plan Lifecycle Protocol
+
+- Naming: `YYYY-MM-DD-<seq>-<route>.md`.
+- Required frontmatter fields in active plans:
+- `plan_id`
+- `request_id`
+- `parent_plan_id` (if previous active plan exists)
+- `lifecycle_phase` (`start|plan|build|check|fix|research|done`)
+- `status`
+- `decision`
+- `selected_mode`
+- `next_command`
+- `next_mode`
+- `updated_at`
+- `archived_at` (only when moved to done)
+- Minimum mutation on every route:
+- update `updated_at`
+- update `lifecycle_phase`
+- update `WIP Log` (`Status`, `Blockers`, `Next step`)
+- Archive condition:
+- on `check` PASS, archive only when Acceptance Criteria and Go/No-Go checklist items are fully checked.
 
 ## Failure Recovery
 
@@ -56,12 +79,12 @@ Pick mode before executing route logic:
   - Recovery: switch to `kfc client` (or `kfc client bootstrap --project . --profile client`) and continue with `kfc ...`.
 - Codex invocation/quoting failure:
   - Symptom: `spawn codex ENOENT` or `unexpected argument` from `codex exec`.
-  - Recovery: use KFC route automation commands first (`kfc flow next`, `kfc flow apply`), and if manual fallback is required use a single quoted prompt: `codex exec "<prompt>"`.
+  - Recovery: persist plan state directly in markdown first; if manual fallback is required use a single quoted prompt: `codex exec "<prompt>"`.
 - Plan bootstrap failure:
   - Symptom: plan file missing or `kfc plan init ... --new` fails in flow.
-  - Recovery: run `kfc flow ensure-plan --project .` (fallback: `kfc plan init --project . --new`).
+  - Recovery: create plan markdown directly from template; fallback: `kfc flow ensure-plan --project .` or `kfc plan init --project . --new`.
 - Readiness gate failure:
-  - Symptom: `kfc flow ready --project .` returns `Status: BLOCK`.
+  - Symptom: plan lacks build-ready gates (`decision`, handoff mode/command, unresolved checklist items).
   - Recovery: do not run `build`/`fix`; switch to planning and run `$kamiflow-core plan` after addressing blockers.
 - Git hook signal-pipe failure:
   - Symptom: `env.exe ... couldn't create signal pipe, Win32 error 5`.

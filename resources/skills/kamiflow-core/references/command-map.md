@@ -47,3 +47,4 @@ Select exactly one route:
 - If risk includes auth, billing, data migration, or permissions, prefer `research` then `plan`.
 - If scope grows beyond original assumptions, pause and reroute to `plan`.
 - If current mode mismatches route requirements, return `MODE_MISMATCH` and stop.
+- Every selected route must mutate the request-scoped plan markdown before final output.

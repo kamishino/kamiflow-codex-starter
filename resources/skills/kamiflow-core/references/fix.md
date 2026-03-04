@@ -12,29 +12,30 @@ Use this route for focused issue resolution with minimal scope.
 
 1. Resolve target plan file before any fix action using this order:
    1. user-provided file path or plan id
-   2. active draft/ready plan
-   3. `kfc flow ensure-plan --project <path>`, then capture `plan_path` from JSON output
+   2. current request-scoped fix plan (`YYYY-MM-DD-<seq>-fix.md`)
+   3. active non-done plan
+   4. create a new request-scoped plan file directly from template
 2. If no target file can be resolved, return:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
-   - `Recovery: kfc flow ensure-plan --project <path>`
-   - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
+   - `Recovery: create .local/plans/<date-seq>-fix.md from template`
+   - `Expected: plan markdown exists and is writable`
 3. Run readiness gate before fix implementation:
-   - `kfc flow ready --project <path>`
+   - evaluate build-ready criteria directly from plan markdown (`decision`, handoff, open decisions, tasks, acceptance criteria, validation commands).
 4. If readiness gate fails, return:
    - `Status: BLOCK`
    - `Reason: plan is not build-ready`
-   - `Recovery: kfc flow ready --project <path>`
-   - `Expected: {"ok":true,"ready":true,...}`
+   - `Recovery: update plan via `$kamiflow-core plan` and rerun fix`
+   - `Expected: readiness gates pass in plan markdown`
 5. Restate the issue and expected behavior.
 6. Reproduce or identify concrete evidence of failure.
 7. Propose the smallest safe fix.
 8. Validate fix with targeted checks.
 9. Note regression risk.
-10. Persist fix/build progress via deterministic command:
-   - `kfc flow apply --project <path> --plan <plan_id> --route fix --result progress [--payload <json-file>]`
-11. Resolve next-step narrative after persistence:
-   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+10. Persist fix/build progress via direct markdown mutation:
+   - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
+   - `WIP Log`: `Status`, `Blockers`, `Next step`
+11. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
 12. End with narrative next action and machine footer (`Next Command: check`, `Next Mode: Plan`).
 
 ## Output
@@ -50,5 +51,6 @@ Provide:
 
 - Issue is addressed with minimal scope and verified.
 - A concrete target plan file is resolved before execution begins.
-- Readiness gate (`kfc flow ready --project <path>`) passes before fix starts.
+- Readiness gate in markdown passes before fix starts.
+- Plan file is mutated directly before response is returned.
 - Final footer includes selected mode and next mode.

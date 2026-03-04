@@ -36,6 +36,21 @@
 - Next command: build
 - Next action: Implement the next scoped task and record validation outcomes in the plan.
 
+## Plan Lifecycle Mutation
+- Plan file path: `.local/plans/YYYY-MM-DD-<seq>-plan.md`
+- Frontmatter updates:
+- `request_id`
+- `parent_plan_id`
+- `lifecycle_phase: plan`
+- `updated_at`
+- `decision`
+- `next_command`
+- `next_mode`
+- WIP Log updates:
+- `Status`
+- `Blockers`
+- `Next step`
+
 ## Mode
 - Selected Mode: Plan
 - Mode Reason:

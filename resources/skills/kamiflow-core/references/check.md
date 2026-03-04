@@ -15,16 +15,14 @@ Use this route for quality verification and release-readiness decisions.
 3. Flag behavioral regressions or missing tests.
 4. Map each validation command to its outcome.
 5. Decide pass or block.
-6. Ensure KFP API is reachable before writing decision:
-   - Resolve base URL from `KFP_BASE_URL`, fallback `http://127.0.0.1:4310`
-   - Health check: `GET <base>/api/health` expects `{ "ok": true }`
-   - If unreachable, return `BLOCK` with exact recovery command:
-     - `kfc plan serve --project <path> --port <n>`
-7. Persist check decision via deterministic command:
-   - PASS: `kfc flow apply --project <path> --plan <plan_id> --route check --result pass [--payload <json-file>]`
-   - BLOCK: `kfc flow apply --project <path> --plan <plan_id> --route check --result block [--payload <json-file>]`
-8. Resolve next-step narrative after persistence:
-   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+6. Persist check decision by direct markdown mutation:
+   - set frontmatter: `lifecycle_phase: check`, `selected_mode`, `decision`, `status`, `next_command`, `next_mode`, `updated_at`
+   - update `WIP Log` lines (`Status`, `Blockers`, `Next step`)
+7. Apply archive gate:
+   - if result is `PASS` and all Acceptance Criteria + Go/No-Go checklist items are checked:
+   - set `status: done`, `next_command: done`, `next_mode: done`, `lifecycle_phase: done`, `archived_at: <iso>`
+   - move file to `.local/plans/done/<same-file>.md`
+8. Resolve next-step narrative from mutated state (`fix` or `done`).
 9. End with narrative next action and machine footer (`Next Command: fix|done`, `Next Mode: Build|done`).
 
 ## Output
@@ -36,4 +34,6 @@ Use `../templates/check-report.md` shape.
 - Findings are actionable and prioritized.
 - Decision is explicit: pass or block.
 - Acceptance criteria status is explicit.
+- Plan file is mutated directly before response is returned.
+- PASS only archives when checklist gates are fully satisfied.
 - Final footer includes selected mode and next mode.

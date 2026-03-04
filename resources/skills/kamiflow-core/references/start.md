@@ -43,8 +43,8 @@ The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 - `recommended_route`
    - include explicit block markers: `START_CONTEXT` and `END_START_CONTEXT`
 9. Emit one exact `Run next:` command for `plan`.
-   - include plan-file bootstrap instruction:
-     - ensure file exists via `kfc flow ensure-plan --project <path>` when no target file is provided.
+   - ensure a new plan file is created for this request before final output.
+   - use naming pattern: `YYYY-MM-DD-<seq>-start.md`.
 10. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`
 - `Reason`
@@ -54,6 +54,10 @@ The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 - `Handoff Confidence`
 11. End with one handoff route: `plan`, `build`, or `research`.
 12. Include narrative next action and machine footer fields at the end.
+13. Persist direct plan-file mutation before final output:
+   - set frontmatter: `lifecycle_phase: start`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
+   - write `Start Summary` section
+   - write `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 
 ## Output
 
@@ -67,4 +71,5 @@ Use `../templates/start-report.md` shape.
 - `Run next:` command is present and executable.
 - Start Summary payload is complete and non-placeholder.
 - One clear handoff route selected.
+- A new request-scoped plan file is created before response completes.
 - Final footer includes selected mode and next mode.

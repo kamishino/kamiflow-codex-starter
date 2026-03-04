@@ -22,13 +22,14 @@ This route should leave no major ambiguity for the build phase.
 3. If `START_CONTEXT` is not present and 2+ core fields are missing, require `start` first and do not proceed to build-ready handoff.
 4. Resolve target plan file using this exact order:
    1. user-provided file path
-   2. active draft/ready plan
-   3. `kfc flow ensure-plan --project .`, then capture `plan_path` from JSON output
+   2. current request-scoped plan file (`YYYY-MM-DD-<seq>-plan.md`)
+   3. active non-done plan
+   4. create a new request-scoped plan file directly from template
 5. If no target file can be resolved, return `BLOCK` using this format:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
-   - `Recovery: kfc flow ensure-plan --project <path>`
-   - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
+   - `Recovery: create .local/plans/<date-seq>-plan.md from template`
+   - `Expected: plan markdown exists and is writable`
 6. Define problem and scope boundaries.
 7. List constraints and assumptions.
 8. Propose implementation approach and affected areas.
@@ -50,10 +51,10 @@ This route should leave no major ambiguity for the build phase.
    - `decision: GO`
    - `next_command: build`
    - `next_mode: Build`
-16. Persist plan phase/handoff update via deterministic command:
-   - `kfc flow apply --project <path> --plan <plan_id> --route plan --result go`
-17. Resolve next-step narrative after persistence:
-   - `kfc flow next --project <path> --plan <plan_id> --style narrative`
+16. Persist plan phase/handoff update by direct markdown mutation:
+   - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`
+   - `WIP Log`: `Status`, `Blockers`, `Next step`
+17. Resolve next-step narrative from mutated frontmatter and checklist state.
 18. End with narrative next action and machine footer (`Next Command: build`, `Next Mode: Build`).
 
 ## Output
@@ -76,4 +77,5 @@ When ready, final footer must include:
 - No unresolved high-impact open decisions remain.
 - Validation commands are concrete and runnable.
 - Ready output includes `decision: GO`, `next_command: build`, and `next_mode: Build`.
+- Plan file is mutated directly before response is returned.
 - Final footer includes selected mode and next mode.

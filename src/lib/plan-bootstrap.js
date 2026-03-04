@@ -15,13 +15,17 @@ const REPO_KFP_TEMPLATE = path.join(
 
 const FALLBACK_PLAN_TEMPLATE = `---
 plan_id: PLAN-YYYY-MM-DD-001
+request_id: REQ-YYYYMMDD-001
+parent_plan_id: ""
 title: New Plan
 status: draft
 decision: NO_GO
+lifecycle_phase: plan
 selected_mode: Plan
 next_mode: Plan
 next_command: plan
 updated_at: 2026-03-01
+archived_at: ""
 ---
 
 ## Start Summary
