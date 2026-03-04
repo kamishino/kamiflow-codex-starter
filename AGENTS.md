@@ -35,12 +35,24 @@ This repository has four active scopes:
 - Client-project context: use `kfc ...` (or `npx --no-install kfc ...`), never repo-only `npm run ...`.
 - Client bootstrap flow: `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done`.
 
+## Session Bootstrap Contract
+
+- Every new session must start by reading `AGENTS.md`.
+- If `.kfc/CODEX_READY.md` exists, read it before implementation.
+- Before any implementation route (`build`/`fix`), run:
+- `kfc flow ensure-plan --project .`
+- `kfc flow ready --project .`
+- If readiness fails, do not continue implementation; switch to planning and run `$kamiflow-core plan`.
+- End every non-trivial response with explicit `Next Command` and `Next Mode`.
+- If `.kfc/CODEX_READY.md` is missing, continue with `AGENTS.md` + active `.local/plans/*.md` as runtime source of truth.
+
 ## Command Boundary
 
 - In KFC repo (`kamiflow-codex-starter`), use `npm run ...` maintainer scripts.
 - In client projects, use `kfc ...` (or `npx --no-install kfc ...`), not this repo's `npm run ...`.
 - Client bootstrap flow is `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done` for cleanup.
 - Before entering implementation routes (`build`/`fix`), resolve or create the active plan file via `kfc flow ensure-plan --project .`.
+- Before entering implementation routes (`build`/`fix`), verify readiness via `kfc flow ready --project .`.
 
 ## KFP UI Rules
 

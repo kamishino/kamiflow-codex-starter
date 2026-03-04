@@ -24,8 +24,12 @@ try {
   for (const token of [
     "## Instruction Topology",
     "## Context Resolver",
+    "## Session Bootstrap Contract",
     "## Anti-Pattern Router",
-    "## Learning Loop Contract"
+    "## Learning Loop Contract",
+    "kfc flow ensure-plan --project .",
+    "kfc flow ready --project .",
+    "$kamiflow-core plan"
   ]) {
     assertIncludes(agents, agentsFile, token, errors);
   }
@@ -77,9 +81,33 @@ try {
   for (const token of [
     "## Failure Recovery",
     "kfc flow ensure-plan --project .",
+    "kfc flow ready --project .",
+    "$kamiflow-core plan",
     "git commit --no-verify"
   ]) {
     assertIncludes(skill, skillFile, token, errors);
+  }
+
+  const buildRefFile = "resources/skills/kamiflow-core/references/build.md";
+  const buildRef = read(buildRefFile);
+  for (const token of [
+    "kfc flow ready --project <path>",
+    "Status: BLOCK",
+    "Recovery: kfc flow ready --project <path>",
+    'Expected: {"ok":true,"ready":true,...}'
+  ]) {
+    assertIncludes(buildRef, buildRefFile, token, errors);
+  }
+
+  const fixRefFile = "resources/skills/kamiflow-core/references/fix.md";
+  const fixRef = read(fixRefFile);
+  for (const token of [
+    "kfc flow ready --project <path>",
+    "Status: BLOCK",
+    "Recovery: kfc flow ready --project <path>",
+    'Expected: {"ok":true,"ready":true,...}'
+  ]) {
+    assertIncludes(fixRef, fixRefFile, token, errors);
   }
 
   if (errors.length > 0) {

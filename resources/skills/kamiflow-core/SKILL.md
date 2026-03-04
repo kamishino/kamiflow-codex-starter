@@ -60,6 +60,9 @@ Pick mode before executing route logic:
 - Plan bootstrap failure:
   - Symptom: plan file missing or `kfc plan init ... --new` fails in flow.
   - Recovery: run `kfc flow ensure-plan --project .` (fallback: `kfc plan init --project . --new`).
+- Readiness gate failure:
+  - Symptom: `kfc flow ready --project .` returns `Status: BLOCK`.
+  - Recovery: do not run `build`/`fix`; switch to planning and run `$kamiflow-core plan` after addressing blockers.
 - Git hook signal-pipe failure:
   - Symptom: `env.exe ... couldn't create signal pipe, Win32 error 5`.
   - Recovery: use `git commit --no-verify -m "<message>"` and record fallback reason in task summary.

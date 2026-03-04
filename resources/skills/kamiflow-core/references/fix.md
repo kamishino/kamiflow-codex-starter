@@ -19,16 +19,23 @@ Use this route for focused issue resolution with minimal scope.
    - `Reason: <single concrete cause>`
    - `Recovery: kfc flow ensure-plan --project <path>`
    - `Expected: {"ok":true,"plan_path":"<absolute-path>",...}`
-3. Restate the issue and expected behavior.
-4. Reproduce or identify concrete evidence of failure.
-5. Propose the smallest safe fix.
-6. Validate fix with targeted checks.
-7. Note regression risk.
-8. Persist fix/build progress via deterministic command:
+3. Run readiness gate before fix implementation:
+   - `kfc flow ready --project <path>`
+4. If readiness gate fails, return:
+   - `Status: BLOCK`
+   - `Reason: plan is not build-ready`
+   - `Recovery: kfc flow ready --project <path>`
+   - `Expected: {"ok":true,"ready":true,...}`
+5. Restate the issue and expected behavior.
+6. Reproduce or identify concrete evidence of failure.
+7. Propose the smallest safe fix.
+8. Validate fix with targeted checks.
+9. Note regression risk.
+10. Persist fix/build progress via deterministic command:
    - `kfc flow apply --project <path> --plan <plan_id> --route fix --result progress [--payload <json-file>]`
-9. Resolve next-step narrative after persistence:
+11. Resolve next-step narrative after persistence:
    - `kfc flow next --project <path> --plan <plan_id> --style narrative`
-10. End with narrative next action and machine footer (`Next Command: check`, `Next Mode: Plan`).
+12. End with narrative next action and machine footer (`Next Command: check`, `Next Mode: Plan`).
 
 ## Output
 
@@ -43,4 +50,5 @@ Provide:
 
 - Issue is addressed with minimal scope and verified.
 - A concrete target plan file is resolved before execution begins.
+- Readiness gate (`kfc flow ready --project <path>`) passes before fix starts.
 - Final footer includes selected mode and next mode.
