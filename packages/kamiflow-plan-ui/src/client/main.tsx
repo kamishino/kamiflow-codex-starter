@@ -329,6 +329,49 @@ function summarizeCodexRunEvent(
   };
 }
 
+function runStateFromEventType(eventType: string): "RUNNING" | "SUCCESS" | "FAIL" | "IDLE" {
+  if (eventType.endsWith("_started")) {
+    return "RUNNING";
+  }
+  if (eventType.endsWith("_completed")) {
+    return "SUCCESS";
+  }
+  if (eventType.endsWith("_failed")) {
+    return "FAIL";
+  }
+  return "IDLE";
+}
+
+function summarizeRunlogEvent(
+  eventType: string,
+  payload: {
+    action_type?: string;
+    status?: string;
+    run_state?: "RUNNING" | "SUCCESS" | "FAIL" | "IDLE";
+    message?: string;
+    detail?: string;
+    evidence?: string;
+  }
+): { message: string; detail: string; runState: "RUNNING" | "SUCCESS" | "FAIL" | "IDLE" } {
+  const action = String(payload.action_type || "task").toUpperCase();
+  const runState = payload.run_state || runStateFromEventType(eventType);
+  const status = String(payload.status || "").toUpperCase();
+  const message =
+    payload.message ||
+    (runState === "RUNNING"
+      ? `RUNNING ${action}`
+      : runState === "SUCCESS"
+        ? `SUCCESS ${action}`
+        : runState === "FAIL"
+          ? `FAIL ${action}`
+          : `${action} ${status || "UPDATE"}`);
+  return {
+    message,
+    detail: payload.detail || payload.evidence || "",
+    runState
+  };
+}
+
 function renderProjectsList(projects: Array<{ project_id: string; project_dir: string }>): void {
   projectDirById = new Map(projects.map((item) => [item.project_id, item.project_dir]));
   projectEl.innerHTML = projects
@@ -729,6 +772,32 @@ function attachStream(projectId: string, planId: string): void {
         source: payload.action_type ? `codex:${payload.action_type}` : "codex"
       });
       setStatus("Codex run event: " + summary.message);
+    });
+  }
+
+  for (const eventType of ["runlog_started", "runlog_completed", "runlog_failed", "runlog_updated", "runlog_deleted"]) {
+    currentStream.addEventListener(eventType, (evt) => {
+      const payloadText = (evt as MessageEvent).data || "{}";
+      const payload = parseJsonPayload(payloadText) || {};
+      const summary = summarizeRunlogEvent(eventType, payload);
+      const derivedPhase = String(payload.phase || "") || phaseFromActionType(payload.action_type);
+      if (derivedPhase) {
+        lastKnownPhase = derivedPhase;
+      }
+      const blocker =
+        summary.runState === "FAIL"
+          ? summarizeEvidence(String(payload.detail || payload.evidence || payload.status || "Runtime task failed."))
+          : "";
+      const evidence = summarizeEvidence(String(payload.evidence || payload.detail || payloadText));
+      addActivity(eventType, summary.message, summary.detail || payloadText, {
+        run_state: summary.runState,
+        phase: derivedPhase || lastKnownPhase || undefined,
+        blocker: blocker || undefined,
+        evidence: evidence || undefined,
+        source: payload.source || (payload.action_type ? `runlog:${payload.action_type}` : "runlog")
+      });
+      setStatus("Runtime stream update: " + summary.message);
+      void refreshActivePlanDetail();
     });
   }
 

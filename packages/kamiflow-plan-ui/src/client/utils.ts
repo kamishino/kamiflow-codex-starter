@@ -60,7 +60,7 @@ export function activityTone(eventType: string): ActivityTone {
 
 export function activityCategory(eventType: string): ActivityFilter | "unknown" {
   const key = String(eventType || "").toLowerCase();
-  if (key.includes("codex")) {
+  if (key.includes("codex") || key.includes("runlog")) {
     return "codex";
   }
   if (key.startsWith("plan_") || key.includes("plan")) {

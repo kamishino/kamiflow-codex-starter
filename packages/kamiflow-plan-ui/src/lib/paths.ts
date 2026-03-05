@@ -1,5 +1,5 @@
 import path from "node:path";
-import { DEFAULT_PLAN_DIR } from "../constants.js";
+import { DEFAULT_PLAN_DIR, DEFAULT_RUN_DIR } from "../constants.js";
 
 export function resolveProjectDir(args) {
   const idx = args.indexOf("--project");
@@ -19,4 +19,8 @@ export function resolvePlansDir(projectDir) {
 
 export function resolveDonePlansDir(projectDir) {
   return path.join(resolvePlansDir(projectDir), "done");
+}
+
+export function resolveRunsDir(projectDir) {
+  return path.join(projectDir, DEFAULT_RUN_DIR);
 }

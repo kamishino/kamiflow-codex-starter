@@ -11,6 +11,10 @@ interface ActivityJournalProps {
 }
 
 export function ActivityJournal(props: ActivityJournalProps) {
+  function isRuntimeEvent(eventType: string): boolean {
+    return eventType.startsWith("codex_run_") || eventType.startsWith("runlog_");
+  }
+
   function compactText(value: string, max = 120): string {
     const singleLine = String(value || "").replace(/\s+/g, " ").trim();
     if (!singleLine) {
@@ -30,7 +34,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
   const failCount = props.items.filter((item) => item.tone === "error").length;
   const latestNowEvent =
     props.items.find((item) => item.meta?.run_state && item.meta.run_state !== "IDLE") ||
-    props.items.find((item) => item.eventType.startsWith("codex_run_")) ||
+    props.items.find((item) => isRuntimeEvent(item.eventType)) ||
     props.items.find((item) => item.eventType.startsWith("plan_")) ||
     null;
   const currentTaskState = latestNowEvent?.meta?.run_state
@@ -48,7 +52,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
   const phaseLabel = latestPhaseEvent?.meta?.phase || "Unknown";
   const phaseTime = latestPhaseEvent?.ts ? formatClock(latestPhaseEvent.ts) : "-";
   const latestActivityEvent =
-    props.items.find((item) => item.eventType.startsWith("codex_run_") || item.eventType.startsWith("plan_")) || null;
+    props.items.find((item) => isRuntimeEvent(item.eventType) || item.eventType.startsWith("plan_")) || null;
   const blockerEvent = props.items.find((item) => Boolean(item.meta?.blocker) || item.tone === "error") || null;
   const blockerText = compactText(blockerEvent?.meta?.blocker || blockerEvent?.message || "", 96);
   const activityText = compactText(latestActivityEvent?.message || "No recent activity events.");

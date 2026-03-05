@@ -133,6 +133,10 @@ Server resolution:
 
 KFP Activity panel is observer-first; use it as evidence, not control.
 
+- Direct `POST /api/codex/action` controls are intentionally disabled (`CODEX_ACTION_DISABLED`).
+- Runtime liveness should come from `.local/runs/<plan-id>.jsonl` updates streamed as `runlog_*` SSE events.
+- Preferred control plane is chat-driven Codex execution; KFP remains read/observe oriented.
+
 - `Confidence High`: latest execution is successful and evidence is present.
 - `Confidence Medium`: execution is running/successful but evidence is partial.
 - `Confidence Low`: failures/blockers exist in current route cycle.

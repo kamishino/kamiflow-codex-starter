@@ -15,8 +15,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     withProjectSummary,
     toDetail,
     persistMutation,
-    broadcastPlanEvent,
-    runCodexAction
+    broadcastPlanEvent
   } = deps;
 
   function readOnlyPayload(methodPath: string) {
@@ -26,6 +25,15 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       mode: uiMode || "observer",
       method_path: methodPath,
       recovery: "Restart with `kfc plan serve --project . --mode operator` to enable mutations."
+    };
+  }
+
+  function codexControlDisabledPayload(methodPath: string) {
+    return {
+      error: "Direct Codex execution from KFP is disabled. Use Codex chat as the control plane.",
+      error_code: "CODEX_ACTION_DISABLED",
+      method_path: methodPath,
+      recovery: "Run Codex from chat and use KFP Activity Stream as observer evidence."
     };
   }
 
@@ -324,25 +332,6 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     };
   }
 
-  function publishCodexRunEvent(
-    projectId: string,
-    planId: string,
-    type: "codex_run_started" | "codex_run_completed" | "codex_run_failed",
-    payload: Record<string, unknown>
-  ) {
-    stream.publish(
-      type,
-      {
-        event_type: type,
-        project_id: projectId,
-        plan_id: planId,
-        updated_at: Date.now(),
-        ...payload
-      },
-      scopeKey(projectId, planId)
-    );
-  }
-
   fastify.get("/api/health", async () => ({ ok: true }));
 
   fastify.get("/api/projects", async () => ({
@@ -525,70 +514,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/codex/action", async (request, reply) => {
-    if (!writeEnabled) {
-      reply.code(403);
-      return readOnlyPayload("POST /api/codex/action");
-    }
-    const body = (request.body ?? {}) as any;
-    if (!body.plan_id || !body.action_type) {
-      reply.code(400);
-      return { error: "Missing plan_id or action_type", error_code: "BAD_REQUEST" };
-    }
-    if (body.action_type === "build") {
-      const project = getProject(defaultProjectId)!;
-      const existing = await loadPlanById(project.project_dir, body.plan_id);
-      if (!existing?.parsed) {
-        reply.code(404);
-        return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: body.plan_id };
-      }
-      const startGate = evaluateStartGate(existing.parsed);
-      if (!startGate.ok) {
-        reply.code(400);
-        return { error: "Start gate failed", error_code: "START_GATE_FAILED", reason: startGate.reason };
-      }
-    }
-    const startedAt = new Date().toISOString();
-    publishCodexRunEvent(defaultProjectId, body.plan_id, "codex_run_started", {
-      action_type: body.action_type,
-      status: "started",
-      started_at: startedAt
-    });
-    const result = await runCodexAction({
-      plan_id: body.plan_id,
-      action_type: body.action_type,
-      mode_hint: body.mode_hint,
-      prompt: body.prompt
-    });
-    const endedAt = new Date().toISOString();
-    const enriched = {
-      ...result,
-      action_type: body.action_type,
-      plan_id: body.plan_id,
-      project_id: defaultProjectId,
-      started_at: startedAt,
-      ended_at: endedAt
-    };
-    publishCodexRunEvent(
-      defaultProjectId,
-      body.plan_id,
-      result.status === "completed" ? "codex_run_completed" : "codex_run_failed",
-      {
-        action_type: body.action_type,
-        status: result.status,
-        run_id: result.run_id,
-        exit_code: result.exit_code,
-        error_code: result.error_code,
-        error_class: result.error_class,
-        recovery_hint: result.recovery_hint,
-        failure_signature: result.failure_signature,
-        stdout_tail: result.stdout_tail,
-        stderr_tail: result.stderr_tail,
-        started_at: startedAt,
-        ended_at: endedAt
-      }
-    );
-    reply.code(result.status === "completed" ? 200 : 500);
-    return enriched;
+    void request;
+    reply.code(403);
+    return codexControlDisabledPayload("POST /api/codex/action");
   });
 
   fastify.get("/api/projects/:project_id/plans", async (request, reply) => {
@@ -780,74 +708,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
   });
 
   fastify.post("/api/projects/:project_id/codex/action", async (request, reply) => {
-    if (!writeEnabled) {
-      reply.code(403);
-      return readOnlyPayload("POST /api/projects/:project_id/codex/action");
-    }
-    const { project_id } = request.params as { project_id: string };
-    if (!getProject(project_id)) {
-      reply.code(404);
-      return { error: "Project not found", error_code: "PROJECT_NOT_FOUND", project_id };
-    }
-    const body = (request.body ?? {}) as any;
-    if (!body.plan_id || !body.action_type) {
-      reply.code(400);
-      return { error: "Missing plan_id or action_type", error_code: "BAD_REQUEST" };
-    }
-    if (body.action_type === "build") {
-      const project = getProject(project_id)!;
-      const existing = await loadPlanById(project.project_dir, body.plan_id);
-      if (!existing?.parsed) {
-        reply.code(404);
-        return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: body.plan_id };
-      }
-      const startGate = evaluateStartGate(existing.parsed);
-      if (!startGate.ok) {
-        reply.code(400);
-        return { error: "Start gate failed", error_code: "START_GATE_FAILED", reason: startGate.reason };
-      }
-    }
-    const startedAt = new Date().toISOString();
-    publishCodexRunEvent(project_id, body.plan_id, "codex_run_started", {
-      action_type: body.action_type,
-      status: "started",
-      started_at: startedAt
-    });
-    const result = await runCodexAction({
-      plan_id: body.plan_id,
-      action_type: body.action_type,
-      mode_hint: body.mode_hint,
-      prompt: body.prompt
-    });
-    const endedAt = new Date().toISOString();
-    const enriched = {
-      ...result,
-      action_type: body.action_type,
-      plan_id: body.plan_id,
-      project_id,
-      started_at: startedAt,
-      ended_at: endedAt
-    };
-    publishCodexRunEvent(
-      project_id,
-      body.plan_id,
-      result.status === "completed" ? "codex_run_completed" : "codex_run_failed",
-      {
-        action_type: body.action_type,
-        status: result.status,
-        run_id: result.run_id,
-        exit_code: result.exit_code,
-        error_code: result.error_code,
-        error_class: result.error_class,
-        recovery_hint: result.recovery_hint,
-        failure_signature: result.failure_signature,
-        stdout_tail: result.stdout_tail,
-        stderr_tail: result.stderr_tail,
-        started_at: startedAt,
-        ended_at: endedAt
-      }
-    );
-    reply.code(result.status === "completed" ? 200 : 500);
-    return enriched;
+    void request;
+    reply.code(403);
+    return codexControlDisabledPayload("POST /api/projects/:project_id/codex/action");
   });
 }

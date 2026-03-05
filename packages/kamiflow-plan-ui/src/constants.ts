@@ -1,4 +1,5 @@
 export const DEFAULT_PLAN_DIR = ".local/plans";
+export const DEFAULT_RUN_DIR = ".local/runs";
 
 export const REQUIRED_FRONTMATTER_FIELDS = [
   "plan_id",

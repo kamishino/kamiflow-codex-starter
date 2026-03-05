@@ -3,10 +3,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { loadPlanByFilePath, loadPlanById } from "../lib/plan-store.js";
 import { watchPlans } from "./watch-plans.js";
+import { watchRunlogs } from "./watch-runlogs.js";
 import { SSEStream } from "./sse-stream.js";
 import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
 import { serializePlan } from "../lib/plan-serializer.js";
+import { derivePlanIdFromRunlogPath, readRunlogSignal } from "../lib/runlog.js";
 import {
   applyAcceptanceCriteriaMutation,
   applyDecisionMutation,
@@ -225,6 +227,7 @@ export async function createServer(options) {
 
   const watchers: Array<{ close: () => Promise<void> }> = [];
   const pending = new Map<string, { timer: NodeJS.Timeout }>();
+  const pendingRunlogs = new Map<string, { timer: NodeJS.Timeout }>();
   if (withWatcher) {
     for (const project of projectContexts) {
       const watcher = watchPlans(project.project_dir, async ({ type, filePath }) => {
@@ -244,6 +247,53 @@ export async function createServer(options) {
         pending.set(key, { timer });
       });
       watchers.push(watcher);
+
+      const runlogWatcher = watchRunlogs(project.project_dir, async ({ type, filePath }) => {
+        const signal = await readRunlogSignal(filePath);
+        const fallbackPlanId = derivePlanIdFromRunlogPath(filePath);
+        const planId = signal?.plan_id || fallbackPlanId;
+        if (!planId) {
+          return;
+        }
+        const key = scopeKey(project.project_id, planId) + "::runlog";
+        const existingPending = pendingRunlogs.get(key);
+        if (existingPending) {
+          clearTimeout(existingPending.timer);
+        }
+        const timer = setTimeout(() => {
+          pendingRunlogs.delete(key);
+          const payload = signal
+            ? {
+                event_type: signal.event_type,
+                project_id: project.project_id,
+                plan_id: planId,
+                run_id: signal.run_id,
+                action_type: signal.action_type,
+                status: signal.status,
+                run_state: signal.run_state,
+                phase: signal.phase,
+                source: signal.source,
+                message: signal.message,
+                detail: signal.detail,
+                evidence: signal.evidence,
+                updated_at: Date.now()
+              }
+            : {
+                event_type: type === "runlog_deleted" ? "runlog_deleted" : "runlog_updated",
+                project_id: project.project_id,
+                plan_id: planId,
+                run_state: "IDLE",
+                source: "runlog",
+                message: type === "runlog_deleted" ? "Run log removed" : "Run log updated",
+                detail: filePath,
+                updated_at: Date.now()
+              };
+          const eventType = String(payload.event_type || "runlog_updated");
+          stream.publish(eventType, payload, scopeKey(project.project_id, planId));
+        }, 120);
+        pendingRunlogs.set(key, { timer });
+      });
+      watchers.push(runlogWatcher);
     }
   }
 
@@ -259,6 +309,10 @@ export async function createServer(options) {
       clearTimeout(item.timer);
     }
     pending.clear();
+    for (const item of pendingRunlogs.values()) {
+      clearTimeout(item.timer);
+    }
+    pendingRunlogs.clear();
     for (const watcher of watchers) {
       await watcher.close();
     }

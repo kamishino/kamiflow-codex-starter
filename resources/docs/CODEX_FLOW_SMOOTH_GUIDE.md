@@ -59,6 +59,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `🧭` Chat is the control plane: Codex executes normal flow commands directly.
 - `🤝` Do not push routine CLI steps back to the user when the agent can run them.
 - `🧱` If execution is blocked by environment boundaries, report the blocker and request the smallest possible user action.
+- `👀` KFP stays observer-first: direct UI/API Codex execution is disabled; Activity Stream relies on plan + run-log (`.local/runs/*.jsonl`) events.
 
 ## Compact Response Shape
 

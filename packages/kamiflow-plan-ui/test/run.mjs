@@ -15,6 +15,7 @@ import {
   runCodexAction,
   shouldPreferPlanInteractiveMode
 } from "../dist/lib/codex-runner.js";
+import { readRunlogSignal } from "../dist/lib/runlog.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -436,6 +437,43 @@ await runCase("codex runner keeps default args when no plan-interactive hint is 
   );
 });
 
+await runCase("runlog parser extracts runtime signal from latest jsonl entry", async () => {
+  await withTempDir(async (tempDir) => {
+    const runsDir = path.join(tempDir, ".local", "runs");
+    await fs.mkdir(runsDir, { recursive: true });
+    const filePath = path.join(runsDir, "PLAN-2026-03-05-123.jsonl");
+    await fs.writeFile(
+      filePath,
+      [
+        JSON.stringify({
+          status: "started",
+          action_type: "build",
+          run_id: "run_old",
+          plan_id: "PLAN-2026-03-05-123",
+          stdout_tail: "build started"
+        }),
+        JSON.stringify({
+          status: "failed",
+          action_type: "build",
+          run_id: "run_new",
+          plan_id: "PLAN-2026-03-05-123",
+          stderr_tail: "build failed at test stage"
+        })
+      ].join("\n"),
+      "utf8"
+    );
+
+    const signal = await readRunlogSignal(filePath);
+    assert.ok(signal);
+    assert.equal(signal.plan_id, "PLAN-2026-03-05-123");
+    assert.equal(signal.event_type, "runlog_failed");
+    assert.equal(signal.run_state, "FAIL");
+    assert.equal(signal.run_id, "run_new");
+    assert.equal(signal.action_type, "build");
+    assert.ok(String(signal.detail).includes("failed"));
+  });
+});
+
 await runCase("api returns plan list (when server deps are installed)", async () => {
   let createServer;
   try {
@@ -626,14 +664,9 @@ updated_at: 2026-03-01
       url: "/api/codex/action",
       payload: { plan_id: planId, action_type: "plan", mode_hint: "Plan" }
     });
-    assert.equal(codexAction.statusCode, 200);
+    assert.equal(codexAction.statusCode, 403);
     const codexPayload = JSON.parse(codexAction.payload);
-    assert.equal(codexPayload.status, "completed");
-    assert.equal(codexPayload.action_type, "plan");
-    assert.equal(codexPayload.plan_id, planId);
-    assert.equal(codexPayload.project_id, "default");
-    assert.equal(typeof codexPayload.started_at, "string");
-    assert.equal(typeof codexPayload.ended_at, "string");
+    assert.equal(codexPayload.error_code, "CODEX_ACTION_DISABLED");
 
     const indexResponse = await server.inject({
       method: "GET",
@@ -988,7 +1021,7 @@ await runCase("observer mode blocks mutation and codex action APIs", async () =>
     });
     assert.equal(codexAction.statusCode, 403);
     const codexPayload = JSON.parse(codexAction.payload);
-    assert.equal(codexPayload.error_code, "READ_ONLY_MODE");
+    assert.equal(codexPayload.error_code, "CODEX_ACTION_DISABLED");
 
     await server.close();
   });
