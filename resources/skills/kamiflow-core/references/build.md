@@ -34,24 +34,28 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `Recovery: update plan via `$kamiflow-core plan` and rerun build`
    - `Expected: readiness gates pass in plan markdown`
 5. Confirm required plan or scope exists and map to the resolved plan file.
-6. Select one concrete task slice from the plan.
+6. Ensure `Technical Solution Diagram` section exists before implementing:
+   - if missing, backfill section with a Mermaid diagram derived from current plan context/tasks.
+   - keep this section updated when implementation changes the solution path.
+7. Select one concrete task slice from the plan.
    - Build/Fix scope is `Implementation Tasks` only.
    - Do not mark `Acceptance Criteria` complete in build unless explicitly converting validated evidence from check route.
-7. List exact file-level actions before implementation.
-8. Implement in small logical steps.
-9. Run targeted checks relevant to changed areas.
-10. Summarize what changed and why.
-11. Persist build phase/progress via direct markdown mutation:
+8. List exact file-level actions before implementation.
+9. Implement in small logical steps.
+10. Run targeted checks relevant to changed areas.
+11. Summarize what changed and why.
+12. Persist build phase/progress via direct markdown mutation:
    - frontmatter: `lifecycle_phase: build`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
+   - sections: keep `Technical Solution Diagram` synchronized with actual implementation direction
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
    - during multi-step implementation, after each completed task/subtask update checklist + timestamped WIP evidence before the next subtask
-12. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert completion.
-13. Before final response, run check validations for the implemented slice and report `Check: PASS|BLOCK` with evidence.
-14. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
+13. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert completion.
+14. Before final response, run check validations for the implemented slice and report `Check: PASS|BLOCK` with evidence.
+15. Resolve next-step narrative from mutated frontmatter and remaining checklist state.
    - if remaining completion is below 100%, keep `next_command: check` and carry unresolved checklist context in WIP.
-15. End with concise next-step guidance; do not require verbose response footer fields.
-16. Final response should use compact guidance shape:
+16. End with concise next-step guidance; do not require verbose response footer fields.
+17. Final response should use compact guidance shape:
    - `State`: active phase + task status
    - `Doing`: implemented slice and validations run
    - `Next`: one concrete next action (normally `check`)
@@ -86,6 +90,7 @@ Provide:
 - A concrete target plan file is resolved before execution begins.
 - Readiness gate in markdown passes before implementation starts.
 - Build action is blocked when Start Summary gate is not satisfied.
+- `Technical Solution Diagram` section is present before implementation progress is reported.
 - Claims are evidence-backed or explicitly marked `Unknown`.
 - Plan file is mutated directly before response is returned.
 - Handoff metadata is persisted in plan frontmatter.

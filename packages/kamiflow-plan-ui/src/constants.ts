@@ -19,6 +19,7 @@ export const REQUIRED_SECTIONS = [
   "Constraints",
   "Assumptions",
   "Open Decisions",
+  "Technical Solution Diagram",
   "Implementation Tasks",
   "Acceptance Criteria",
   "Validation Commands",

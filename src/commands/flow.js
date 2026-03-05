@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
 import { runPlan } from "./plan.js";
-import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
+import { createLocalPlanTemplate, ensurePlanFileTechnicalSolutionDiagram } from "../lib/plan-bootstrap.js";
 import {
   applyLifecycleMutation,
   buildPhaseDigest,
@@ -598,7 +598,20 @@ async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic =
     source = "created";
   }
 
-  return { selected, created, source, archivedDone };
+  let technicalDiagramBackfilled = false;
+  try {
+    const normalized = await ensurePlanFileTechnicalSolutionDiagram(selected.filePath, {
+      title: selected.frontmatter?.title || topic || ""
+    });
+    technicalDiagramBackfilled = Boolean(normalized?.changed);
+    if (technicalDiagramBackfilled) {
+      selected = await readPlanRecord(selected.filePath);
+    }
+  } catch (err) {
+    info(`Technical Solution Diagram normalization skipped: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  return { selected, created, source, archivedDone, technicalDiagramBackfilled };
 }
 
 async function runEnsurePlan(options, args) {
@@ -628,7 +641,8 @@ async function runEnsurePlan(options, args) {
     plan_id: resolved.selected.planId,
     status: resolved.selected.status,
     updated_at: resolved.selected.updatedAt,
-    archived_done: resolved.archivedDone
+    archived_done: resolved.archivedDone,
+    technical_solution_backfilled: resolved.technicalDiagramBackfilled
   };
 
   if (resolved.archivedDone > 0) {
@@ -725,7 +739,8 @@ async function runReady(options, args) {
     plan_id: resolved.selected.planId,
     decision: resolved.selected.frontmatter.decision || "",
     next_command: resolved.selected.frontmatter.next_command || "",
-    next_mode: resolved.selected.frontmatter.next_mode || ""
+    next_mode: resolved.selected.frontmatter.next_mode || "",
+    technical_solution_backfilled: resolved.technicalDiagramBackfilled
   };
   info(`Build-ready plan confirmed: ${payload.plan_path}`);
   console.log(JSON.stringify(payload, null, 2));

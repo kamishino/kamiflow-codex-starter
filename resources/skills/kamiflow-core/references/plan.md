@@ -36,26 +36,32 @@ This route should leave no major ambiguity for the build phase.
 10. Split work into ordered file-level tasks.
 11. Identify risks and fallback strategy.
 12. Resolve high-impact open decisions before handoff.
-13. Ensure `Start Summary` is present in plan file and non-placeholder:
+13. Ensure `Technical Solution Diagram` section exists and is populated:
+   - heading: `## Technical Solution Diagram`
+   - include a ```mermaid block representing chosen solution logic
+   - if section is missing, add it before build handoff
+14. Ensure `Start Summary` is present in plan file and non-placeholder:
    - if request is vague -> `Required: yes` with concrete values
    - if not vague -> `Required: no` with clear reason
-14. Verify build-readiness checklist (binary gates):
+15. Verify build-readiness checklist (binary gates):
    - scope is explicit
    - implementation tasks are concrete and file-level
    - acceptance criteria are testable
    - validation commands are runnable
    - no unresolved high-impact open decisions remain
+   - Technical Solution Diagram section exists with Mermaid content
    - Start Summary fields are non-placeholder
-15. Set plan handoff metadata for build readiness:
+16. Set plan handoff metadata for build readiness:
    - `decision: GO`
    - `next_command: build`
    - `next_mode: Build`
-16. Persist plan phase/handoff update by direct markdown mutation:
+17. Persist plan phase/handoff update by direct markdown mutation:
    - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`
+   - sections: ensure `Technical Solution Diagram` block remains present
    - `WIP Log`: `Status`, `Blockers`, `Next step`
-17. Resolve next-step narrative from mutated frontmatter and checklist state.
-18. End with concise next-step guidance; do not require verbose response footer fields.
-19. Final response should use compact guidance shape:
+18. Resolve next-step narrative from mutated frontmatter and checklist state.
+19. End with concise next-step guidance; do not require verbose response footer fields.
+20. Final response should use compact guidance shape:
    - `State`: current phase + readiness
    - `Doing`: current planning slice
    - `Next`: one concrete next action

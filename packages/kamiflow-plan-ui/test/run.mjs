@@ -78,6 +78,8 @@ await runCase("parse and validate template plan", async () => {
   const parsed = parsePlanFileContent(markdown, templatePath);
   const errors = validateParsedPlan(parsed);
   assert.equal(parsed.frontmatter.plan_id, "PLAN-YYYY-MM-DD-001");
+  assert.ok(parsed.sections["Technical Solution Diagram"]);
+  assert.ok(parsed.sections["Technical Solution Diagram"].includes("```mermaid"));
   assert.equal(errors.length, 0);
 });
 
@@ -158,6 +160,74 @@ updated_at: 2026-03-02
   const parsed = parsePlanFileContent(markdown, "<memory>");
   const errors = validateParsedPlan(parsed);
   assert.ok(errors.some((item) => item.includes("Start Summary")));
+  assert.ok(parsed.sections["Technical Solution Diagram"]);
+});
+
+await runCase("parser backfills technical solution diagram section when missing", async () => {
+  const markdown = `---
+plan_id: PLAN-2026-03-05-001
+title: Backfill Diagram
+status: in_progress
+decision: GO
+selected_mode: Plan
+next_mode: Build
+next_command: build
+updated_at: 2026-03-05
+---
+
+## Start Summary
+- Required: no
+- Reason: Clear request.
+- Selected Idea: Backfill test
+- Alternatives Considered: none
+- Pre-mortem Risk: low
+- Handoff Confidence: 5
+
+## Goal
+- Validate parser backfill.
+
+## Scope (In/Out)
+- In: parser
+- Out: unrelated
+
+## Constraints
+- none
+
+## Assumptions
+- A1: data exists
+
+## Open Decisions
+- [x] D1: none
+- Remaining Count: 0
+
+## Implementation Tasks
+- [ ] task one
+
+## Acceptance Criteria
+- [ ] criterion one
+
+## Validation Commands
+- npm test
+
+## Risks & Rollback
+- Risk: none
+- Mitigation: none
+- Rollback: none
+
+## Go/No-Go Checklist
+- [x] Goal is explicit
+- [x] Scope in/out is explicit
+- [x] No unresolved high-impact decisions
+- [x] Tasks and validation commands are implementation-ready
+
+## WIP Log
+- Status: ready
+- Blockers: none
+- Next step: build
+`;
+  const parsed = parsePlanFileContent(markdown, "<memory>");
+  assert.ok(parsed.sections["Technical Solution Diagram"]);
+  assert.ok(parsed.sections["Technical Solution Diagram"].includes("flowchart LR"));
 });
 
 await runCase("init creates plan template", async () => {

@@ -62,9 +62,67 @@ export function parseSections(body) {
   return sections;
 }
 
+function sanitizeDiagramLabel(value) {
+  return String(value || "")
+    .replace(/\r?\n+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/"/g, '\\"')
+    .slice(0, 80);
+}
+
+function extractChecklistItems(sectionText) {
+  const lines = String(sectionText || "").split(/\r?\n/);
+  const out = [];
+  for (const line of lines) {
+    const match = line.match(/^\s*- \[(?<state>[ xX])\]\s*(?<text>.+)$/);
+    if (!match?.groups?.text) {
+      continue;
+    }
+    const label = sanitizeDiagramLabel(match.groups.text);
+    if (!label) {
+      continue;
+    }
+    out.push({
+      checked: String(match.groups.state || " ").toLowerCase() === "x",
+      text: label
+    });
+  }
+  return out;
+}
+
+function hasTechnicalSolutionDiagramSection(sections) {
+  const candidates = ["Technical Solution Diagram", "Solution Diagram", "Technical Solution", "Implementation Flow"];
+  return candidates.some((name) => typeof sections[name] === "string" && sections[name].trim().length > 0);
+}
+
+function buildDefaultTechnicalSolutionSection(frontmatter, sections) {
+  const title = sanitizeDiagramLabel(frontmatter?.title || "") || "Selected Solution";
+  const tasks = extractChecklistItems(sections["Implementation Tasks"] || "").slice(0, 4);
+  const lines = ["flowchart LR", `  IDEA["${title}"] --> PLAN["Implementation Plan"]`];
+  if (!tasks.length) {
+    lines.push('  PLAN --> BUILD["Build Slice"] --> CHECK["Check Acceptance"]');
+  } else {
+    let previous = "PLAN";
+    for (let i = 0; i < tasks.length; i += 1) {
+      const nodeId = `T${i + 1}`;
+      const prefix = tasks[i].checked ? "DONE: " : "TODO: ";
+      lines.push(`  ${nodeId}["${sanitizeDiagramLabel(prefix + tasks[i].text)}"]`);
+      lines.push(`  ${previous} --> ${nodeId}`);
+      previous = nodeId;
+    }
+    lines.push(`  ${previous} --> CHECK["Check Acceptance"]`);
+  }
+
+  return ["```mermaid", lines.join("\n"), "```", "- Notes: Keep this diagram updated as implementation decisions evolve."].join("\n");
+}
+
 export function parsePlanFileContent(markdown, filePath = "<memory>") {
   const { frontmatter, body } = extractFrontmatter(markdown);
   const sections = parseSections(body);
+  if (!hasTechnicalSolutionDiagramSection(sections)) {
+    sections["Technical Solution Diagram"] = buildDefaultTechnicalSolutionSection(frontmatter, sections);
+  }
   const parsed: ParsedPlan = {
     filePath,
     fileName: path.basename(filePath),

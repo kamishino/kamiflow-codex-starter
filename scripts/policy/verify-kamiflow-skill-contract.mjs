@@ -42,7 +42,9 @@ const RULES = [
       "END_START_CONTEXT",
       "Run next:",
       "YYYY-MM-DD-<seq>-start.md",
-      "Required: yes|no"
+      "Required: yes|no",
+      "Technical Solution Diagram",
+      "write `Technical Solution Diagram` section with mermaid content"
     ]
   },
   {
@@ -59,7 +61,9 @@ const RULES = [
       "Persist plan phase/handoff update by direct markdown mutation",
       "lifecycle_phase: plan",
       "active non-done plan",
-      "Final response should use compact guidance shape"
+      "Final response should use compact guidance shape",
+      "Ensure `Technical Solution Diagram` section exists and is populated",
+      "Technical Solution Diagram section exists with Mermaid content"
     ]
   },
   {
@@ -79,7 +83,9 @@ const RULES = [
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
       "do not require verbose response footer fields",
-      "Final response should use compact guidance shape"
+      "Final response should use compact guidance shape",
+      "Ensure `Technical Solution Diagram` section exists before implementing",
+      "keep `Technical Solution Diagram` synchronized with actual implementation direction"
     ]
   },
   {

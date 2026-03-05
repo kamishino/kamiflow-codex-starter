@@ -13,6 +13,12 @@
 - Files/modules:
 - External dependencies:
 
+## Technical Solution Diagram
+```mermaid
+flowchart LR
+  IDEA["Selected Solution"] --> BUILD["Implementation"] --> CHECK["Validation"]
+```
+
 ## Task Breakdown
 1. <task with file path>
 2. <task with file path>
@@ -37,6 +43,7 @@
 ## Plan Lifecycle Mutation
 - Plan file path: `.local/plans/<active-plan>.md` (reuse-first; create only when required)
 - Frontmatter updates: `request_id`, `parent_plan_id`, `lifecycle_phase`, `updated_at`, `decision`, `next_command`, `next_mode`
+- Section updates: keep `Technical Solution Diagram` present and aligned with chosen solution.
 - WIP Log updates: `Status`, `Blockers`, `Next step`
 
 ## Optional Response Handoff (Compact)

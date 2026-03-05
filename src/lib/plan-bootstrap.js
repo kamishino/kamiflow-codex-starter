@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureTechnicalSolutionDiagramSection } from "./technical-solution-diagram.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +49,13 @@ updated_at: 2026-03-01
 ## Open Decisions
 - [ ] D1: One unresolved decision.
 - Remaining Count: 1
+
+## Technical Solution Diagram
+\`\`\`mermaid
+flowchart LR
+  IDEA["Selected Solution"] --> PLAN["Implementation Plan"] --> BUILD["Build Slice"] --> CHECK["Check Acceptance"]
+\`\`\`
+- Notes: Keep this diagram updated as implementation decisions evolve.
 
 ## Implementation Tasks
 - [ ] \`path/to/file\`: implement scoped change.
@@ -182,6 +190,7 @@ function materializeTemplate(template, targetPath, options = {}) {
   next = updateFrontmatterField(next, "plan_id", planId);
   next = updateFrontmatterField(next, "title", identity.title);
   next = updateFrontmatterField(next, "updated_at", toIsoNow());
+  next = ensureTechnicalSolutionDiagramSection(next, { title: identity.title }).markdown;
   return next;
 }
 
@@ -269,6 +278,10 @@ export async function createLocalPlanTemplate(projectDir, options = {}) {
   if (!forceNew) {
     try {
       await fs.access(targetPath);
+      const normalized = await ensurePlanFileTechnicalSolutionDiagram(targetPath, { title: options.topic || options.slug || "" });
+      if (normalized.changed && log) {
+        log(`Technical Solution Diagram backfilled: ${targetPath}`);
+      }
       if (log) {
         log(`Plan bootstrap fallback used: ${targetPath}`);
       }
@@ -288,4 +301,14 @@ export async function createLocalPlanTemplate(projectDir, options = {}) {
   console.log(`[kfp] Created template: ${targetPath}`);
   console.log(`[kfp] Plans directory ready: ${plansDir}`);
   return targetPath;
+}
+
+export async function ensurePlanFileTechnicalSolutionDiagram(filePath, options = {}) {
+  const raw = await fs.readFile(filePath, "utf8");
+  const normalized = ensureTechnicalSolutionDiagramSection(raw, { title: options.title || "" });
+  if (!normalized.changed) {
+    return { changed: false, filePath };
+  }
+  await fs.writeFile(filePath, normalized.markdown, "utf8");
+  return { changed: true, filePath };
 }

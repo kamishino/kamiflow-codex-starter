@@ -34,6 +34,13 @@ updated_at: 2026-03-01
 - [ ] D1: One unresolved decision.
 - Remaining Count: 1
 
+## Technical Solution Diagram
+```mermaid
+flowchart LR
+  IDEA["Selected Solution"] --> PLAN["Implementation Plan"] --> BUILD["Build Slice"] --> CHECK["Check Acceptance"]
+```
+- Notes: Keep this diagram updated as implementation decisions evolve.
+
 ## Implementation Tasks
 - [ ] `path/to/file`: implement scoped change.
 
