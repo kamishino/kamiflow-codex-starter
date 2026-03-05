@@ -11,7 +11,7 @@ export function resolveDiagramMode(value: unknown): DiagramModeResolution {
   const raw = String(value ?? "").trim().toLowerCase();
   if (!raw) {
     return {
-      mode: "required",
+      mode: "auto",
       explicit: false,
       valid: true,
       raw: ""
@@ -26,7 +26,7 @@ export function resolveDiagramMode(value: unknown): DiagramModeResolution {
     };
   }
   return {
-    mode: "required",
+    mode: "auto",
     explicit: true,
     valid: false,
     raw

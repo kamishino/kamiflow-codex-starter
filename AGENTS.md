@@ -93,6 +93,7 @@ This repository has four active scopes:
 - `Technical Solution Diagram` policy is controlled by `diagram_mode` (`required|auto|hidden`).
 - `diagram_mode: required` means the Mermaid section is mandatory and must reflect implementation.
 - `diagram_mode: auto|hidden` means Technical diagram is optional; KFP should fall back to Tasks/Subtasks when absent.
+- Accountability rule: after user clarification/answer in Brainstorm/Plan, decide if a technical diagram is needed; if needed, set `diagram_mode: required` and update the plan file with a Mermaid diagram (do not leave required mode without diagram content).
 - Check route scope: verify/test `Acceptance Criteria` and decide PASS/BLOCK from evidence.
 - After finishing implementation in a `build`/`fix` slice, run check validations before final response and report `Check: PASS|BLOCK` with evidence.
 - During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped `WIP Log` evidence) before starting the next subtask.

@@ -73,6 +73,18 @@ function looksRunnableCommand(text) {
   return /^(npm|npx|node|kfc|kf|git|pnpm|yarn|python|pytest|cargo|go)\b/i.test(value);
 }
 
+function resolveDiagramMode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "required" || normalized === "auto" || normalized === "hidden") {
+    return normalized;
+  }
+  return "auto";
+}
+
+function hasMermaidBlock(sectionText) {
+  return /```mermaid\s*[\s\S]*?```/i.test(String(sectionText || ""));
+}
+
 function updateFrontmatterField(markdown, key, value) {
   const text = String(markdown || "");
   if (!text.startsWith("---")) {
@@ -299,6 +311,20 @@ export function evaluateBuildReadiness(planRecord) {
     findings.push("Validation Commands section is empty.");
   } else if (validationCommands.some((command) => !looksRunnableCommand(command))) {
     findings.push("Validation Commands must be runnable commands in this repo.");
+  }
+
+  const diagramMode = resolveDiagramMode(fm.diagram_mode);
+  if (diagramMode === "required") {
+    const technicalSection =
+      extractSection(markdown, "Technical Solution Diagram") ||
+      extractSection(markdown, "Solution Diagram") ||
+      extractSection(markdown, "Technical Solution") ||
+      extractSection(markdown, "Implementation Flow");
+    if (!technicalSection.trim()) {
+      findings.push("diagram_mode is required but Technical Solution Diagram section is missing.");
+    } else if (!hasMermaidBlock(technicalSection)) {
+      findings.push("diagram_mode is required but Technical Solution Diagram Mermaid block is missing.");
+    }
   }
 
   return {

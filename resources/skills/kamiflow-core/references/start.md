@@ -59,13 +59,17 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 - `Alternatives Considered`
 - `Pre-mortem Risk`
 - `Handoff Confidence`
-13. Persist `diagram_mode` in target plan markdown and apply policy:
+13. Run Diagram Need Decision immediately after user answers:
+- if chosen solution needs architecture/flow explanation, mark diagram as needed.
+- if needed, set `diagram_mode: required` and make sure Mermaid content is written in plan markdown.
+- if not needed, set `diagram_mode: auto` (or `hidden` only when explicitly requested).
+14. Persist `diagram_mode` in target plan markdown and apply policy:
 - set `diagram_mode: required|auto|hidden`
 - when `required`, include `## Technical Solution Diagram` with one ```mermaid block that captures selected solution logic
 - when `auto|hidden`, Technical section may be omitted (KFP falls back to Tasks/Subtasks)
-14. End with one handoff route: `plan`, `build`, or `research`.
-15. Include concise next-step guidance when useful; do not require verbose response footer fields.
-16. Persist direct plan-file mutation before final output:
+15. End with one handoff route: `plan`, `build`, or `research`.
+16. Include concise next-step guidance when useful; do not require verbose response footer fields.
+17. Persist direct plan-file mutation before final output:
    - set frontmatter: `lifecycle_phase: start`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
    - write `Start Summary` section
    - when `diagram_mode: required`, write `Technical Solution Diagram` section with mermaid content

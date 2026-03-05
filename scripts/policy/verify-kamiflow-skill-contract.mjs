@@ -29,6 +29,7 @@ const RULES = [
       "run check validations and report `Check: PASS|BLOCK` before final response",
       "after each completed task/subtask, immediately mutate the active plan file",
       "Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.",
+      "After user clarifies answers in Brainstorm/Plan, decide whether a technical diagram is needed",
       "YYYY-MM-DD-<seq>-<route>-<topic-slug>.md",
       "## Response Handoff Contract"
     ]
@@ -44,7 +45,8 @@ const RULES = [
       "YYYY-MM-DD-<seq>-start.md",
       "Required: yes|no",
       "Technical Solution Diagram",
-      "write `Technical Solution Diagram` section with mermaid content"
+      "write `Technical Solution Diagram` section with mermaid content",
+      "Run Diagram Need Decision immediately after user answers"
     ]
   },
   {
@@ -64,6 +66,7 @@ const RULES = [
       "Final response should use compact guidance shape",
       "Set and enforce `diagram_mode` policy in frontmatter",
       "allowed values: `required|auto|hidden`",
+      "Run Diagram Need Decision after planning details are clear",
       "Technical Solution Diagram section exists with Mermaid content"
     ]
   },

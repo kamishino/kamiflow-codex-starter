@@ -5,6 +5,44 @@ const SECTION_CANDIDATES = [
   "Implementation Flow"
 ];
 
+function resolveDiagramMode(markdown) {
+  const text = String(markdown || "");
+  if (!text.startsWith("---")) {
+    return "auto";
+  }
+  const lines = text.split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return "auto";
+  }
+  for (let i = 1; i < endIdx; i += 1) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const sep = trimmed.indexOf(":");
+    if (sep <= 0) {
+      continue;
+    }
+    const key = trimmed.slice(0, sep).trim().toLowerCase();
+    if (key !== "diagram_mode") {
+      continue;
+    }
+    const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+    if (value === "required" || value === "auto" || value === "hidden") {
+      return value;
+    }
+    return "auto";
+  }
+  return "auto";
+}
+
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -103,13 +141,40 @@ function buildDiagramSection(title, markdown) {
   ].join("\n");
 }
 
+function resolveInsertPoint(markdown) {
+  const text = String(markdown || "");
+  const candidates = ["Implementation Tasks", "Acceptance Criteria", "Validation Commands", "WIP Log"];
+  for (const heading of candidates) {
+    const escaped = escapeRegExp(heading);
+    const re = new RegExp(`\\r?\\n##\\s+${escaped}\\s*\\r?\\n`, "i");
+    const match = re.exec(text);
+    if (match && typeof match.index === "number") {
+      return match.index;
+    }
+  }
+  return -1;
+}
+
 export function ensureTechnicalSolutionDiagramSection(markdown, options = {}) {
   const raw = String(markdown || "");
   if (!raw.trim()) {
     return { markdown: raw, changed: false };
   }
+  const diagramMode = resolveDiagramMode(raw);
   const section = findTechnicalSection(raw);
   if (!section) {
+    if (diagramMode !== "required") {
+      return { markdown: raw, changed: false };
+    }
+    const newSection = buildDiagramSection(options.title || "", raw);
+    const insertAt = resolveInsertPoint(raw);
+    if (insertAt >= 0) {
+      const next = `${raw.slice(0, insertAt).trimEnd()}\n\n${newSection}\n\n${raw.slice(insertAt).trimStart()}`;
+      return { markdown: next, changed: next !== raw };
+    }
+    return { markdown: `${raw.trimEnd()}\n\n${newSection}\n`, changed: true };
+  }
+  if (diagramMode === "hidden") {
     return { markdown: raw, changed: false };
   }
   if (hasMermaidBlock(section.sectionText)) {

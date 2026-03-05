@@ -36,14 +36,18 @@ This route should leave no major ambiguity for the build phase.
 10. Split work into ordered file-level tasks.
 11. Identify risks and fallback strategy.
 12. Resolve high-impact open decisions before handoff.
-13. Set and enforce `diagram_mode` policy in frontmatter:
+13. Run Diagram Need Decision after planning details are clear:
+- if the selected solution needs architecture/flow explanation, mark diagram as needed.
+- if needed, set `diagram_mode: required` and update the plan file with Mermaid content before handoff.
+- if not needed, set `diagram_mode: auto` (or `hidden` only when explicitly requested).
+14. Set and enforce `diagram_mode` policy in frontmatter:
    - allowed values: `required|auto|hidden`
    - `required`: ensure `## Technical Solution Diagram` exists with a ```mermaid block representing chosen solution logic
    - `auto|hidden`: Technical section is optional; KFP falls back to Tasks/Subtasks when missing
-14. Ensure `Start Summary` is present in plan file and non-placeholder:
+15. Ensure `Start Summary` is present in plan file and non-placeholder:
    - if request is vague -> `Required: yes` with concrete values
    - if not vague -> `Required: no` with clear reason
-15. Verify build-readiness checklist (binary gates):
+16. Verify build-readiness checklist (binary gates):
    - scope is explicit
    - implementation tasks are concrete and file-level
    - acceptance criteria are testable
@@ -51,17 +55,17 @@ This route should leave no major ambiguity for the build phase.
    - no unresolved high-impact open decisions remain
    - if `diagram_mode: required`, Technical Solution Diagram section exists with Mermaid content
    - Start Summary fields are non-placeholder
-16. Set plan handoff metadata for build readiness:
+17. Set plan handoff metadata for build readiness:
    - `decision: GO`
    - `next_command: build`
    - `next_mode: Build`
-17. Persist plan phase/handoff update by direct markdown mutation:
+18. Persist plan phase/handoff update by direct markdown mutation:
    - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`
    - sections: keep Technical Solution Diagram aligned when `diagram_mode: required` (or when the section already exists)
    - `WIP Log`: `Status`, `Blockers`, `Next step`
-18. Resolve next-step narrative from mutated frontmatter and checklist state.
-19. End with concise next-step guidance; do not require verbose response footer fields.
-20. Final response should use compact guidance shape:
+19. Resolve next-step narrative from mutated frontmatter and checklist state.
+20. End with concise next-step guidance; do not require verbose response footer fields.
+21. Final response should use compact guidance shape:
    - `State`: current phase + readiness
    - `Doing`: current planning slice
    - `Next`: one concrete next action
