@@ -6,6 +6,8 @@ Use this route to execute an approved plan in small, verifiable slices.
 
 - Required mode: `Build`.
 - If current mode is not `Build`, return `MODE_MISMATCH` and stop.
+- Route confidence for `build` must be `>=4` before execution.
+- If route confidence is `<4`, return `Status: REROUTE` with fallback route (`plan|research|start`) and stop.
 - Implementation must not proceed until a concrete target plan file is resolved.
 - Require an approved plan before execution:
   - `decision: GO`

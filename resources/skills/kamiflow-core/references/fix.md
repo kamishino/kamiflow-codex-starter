@@ -6,6 +6,8 @@ Use this route for focused issue resolution with minimal scope.
 
 - Required mode: `Build`.
 - If current mode is not `Build`, return `MODE_MISMATCH` and stop.
+- Route confidence for `fix` must be `>=4` before execution.
+- If route confidence is `<4`, return `Status: REROUTE` with fallback route (`plan|research|start`) and stop.
 - Fix execution must not proceed until a concrete target plan file is resolved.
 
 ## Steps

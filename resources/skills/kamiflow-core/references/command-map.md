@@ -2,6 +2,24 @@
 
 Use this map to choose one route, one mode, and one next step.
 
+## Confidence Gate (Mandatory)
+
+Before final route lock, assign `Route Confidence` (`1-5`) for the candidate route.
+
+- `4-5`: continue with the selected route.
+- `<4`: do not execute the selected route. Reroute:
+  - intent unclear -> `start`
+  - unknown facts/risk high -> `research`
+  - plan/readiness missing -> `plan`
+
+When rerouting, return:
+
+- `Status: REROUTE`
+- `Selected Route: <route>`
+- `Route Confidence: <1-5>`
+- `Fallback Route: <start|plan|research>`
+- `Reason: <single concrete cause>`
+
 ## Route Selection
 
 Select exactly one route:

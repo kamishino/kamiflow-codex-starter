@@ -7,6 +7,8 @@ Use this route for quality verification and release-readiness decisions.
 - Required mode: `Plan` by default.
 - Use `Build` only when running commands/tests or proposing file edits.
 - If current mode is incompatible with intended check actions, return `MODE_MISMATCH` and stop.
+- Route confidence for `check` must be `>=4` before execution.
+- If route confidence is `<4`, return `Status: REROUTE` with fallback route (`plan|research|start`) and stop.
 
 ## Steps
 

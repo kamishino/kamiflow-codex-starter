@@ -22,12 +22,34 @@ Pick mode before executing route logic:
 ## Routing Workflow
 
 1. Read `references/command-map.md`.
-2. Classify the request into exactly one route.
-3. Resolve the required mode from that route.
-4. If mode is incompatible, return `MODE_MISMATCH` and stop.
-5. Load only the matched route reference file.
-6. Produce output in that route's required shape.
-7. Provide concise next-step guidance when helpful; persist command/mode handoff in plan metadata.
+2. Classify the request into one primary route candidate plus one fallback.
+3. Assign `Route Confidence` (`1-5`) for the primary route.
+4. If route confidence is below `4`, reroute to `start`, `plan`, or `research` and stop route execution.
+5. Resolve the required mode from the chosen route.
+6. If mode is incompatible, return `MODE_MISMATCH` and stop.
+7. Load only the matched route reference file.
+8. Produce output in that route's required shape.
+9. Provide concise next-step guidance when helpful; persist command/mode handoff in plan metadata.
+
+## Route Confidence Gate
+
+- Evaluate confidence using:
+  - request intent fit with route purpose
+  - availability of route-required artifacts (active plan, acceptance scope, evidence inputs)
+  - unknown/risk level that could invalidate execution
+- Confidence decision:
+  - `4-5`: execute selected route
+  - `<4`: do not execute selected route; reroute to one safer route
+- If route confidence is below `4`, reroute to `start`, `plan`, or `research`.
+- Fallback mapping:
+  - unclear intent -> `start`
+  - unknown facts/high risk -> `research`
+  - missing build-ready plan state -> `plan`
+- On reroute, return:
+  - `Status: REROUTE`
+  - `Route Confidence: <1-5>`
+  - `Fallback Route: <start|plan|research>`
+  - `Reason: <one line>`
 
 ## Command Routes
 
@@ -83,6 +105,7 @@ Pick mode before executing route logic:
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
 - For vague feature-discovery requests, prefer `research` ideation preset before `start`.
+- If route confidence is below `4`, reroute instead of forcing the selected route.
 - If mode does not satisfy route requirements, do not continue.
 - Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
 - Every top-level user request must resolve one active non-done plan in `.local/plans` before route output.
@@ -101,16 +124,17 @@ Pick mode before executing route logic:
 1. Resolve one active plan before route logic.
 2. Touch active plan at route start (`updated_at` + WIP line).
 3. Pick exactly one route and one mode.
-4. Execute one scoped slice only (avoid multi-route mixing in one output).
-5. Mutate plan frontmatter + WIP Log before final response.
-6. Touch active plan again before final output to persist actual results from this turn.
-7. State claims only with evidence; otherwise label `Unknown`.
-8. Keep user response compact: `State`, `Doing`, `Next`.
-9. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
-10. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
-11. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
-12. Treat completion as valid only after archive success.
-13. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
+4. Record `Route Confidence` (`1-5`) and reroute when score is below `4`.
+5. Execute one scoped slice only (avoid multi-route mixing in one output).
+6. Mutate plan frontmatter + WIP Log before final response.
+7. Touch active plan again before final output to persist actual results from this turn.
+8. State claims only with evidence; otherwise label `Unknown`.
+9. Keep user response compact: `State`, `Doing`, `Next`.
+10. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
+11. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
+12. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
+13. Treat completion as valid only after archive success.
+14. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
 
 ## Plan Lifecycle Protocol
 

@@ -6,6 +6,8 @@ Use this route when missing facts or high risk would make execution unsafe.
 
 - Required mode: `Plan`.
 - If current mode is not `Plan`, return `MODE_MISMATCH` and stop.
+- Route confidence for `research` must be `>=4` before execution.
+- If route confidence is `<4`, return `Status: REROUTE` with fallback route (`start|plan|research`) and stop.
 
 ## Steps
 

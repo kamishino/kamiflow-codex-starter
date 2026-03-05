@@ -17,6 +17,10 @@ const RULES = [
       "Instruction: Switch mode and rerun the same command.",
       "## Trigger Contract",
       "## Boundaries Contract",
+      "## Route Confidence Gate",
+      "Assign `Route Confidence` (`1-5`)",
+      "If route confidence is below `4`, reroute to `start`, `plan`, or `research`.",
+      "Status: REROUTE",
       "## Route Output Contract",
       "## Evidence Contract",
       "All non-trivial route responses must use compact sections:",
@@ -24,6 +28,7 @@ const RULES = [
       "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
       "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
       "## Smooth Flow Checklist",
+      "Record `Route Confidence` (`1-5`) and reroute when score is below `4`.",
       "Touch active plan at route start (`updated_at` + WIP line).",
       "Touch active plan again before final output to persist actual results from this turn.",
       "run check validations and report `Check: PASS|BLOCK` before final response",
@@ -32,6 +37,17 @@ const RULES = [
       "After user clarifies answers in Brainstorm/Plan, decide whether a technical diagram is needed",
       "YYYY-MM-DD-<seq>-<route>-<topic-slug>.md",
       "## Response Handoff Contract"
+    ]
+  },
+  {
+    file: "resources/skills/kamiflow-core/references/command-map.md",
+    required: [
+      "## Confidence Gate (Mandatory)",
+      "assign `Route Confidence` (`1-5`)",
+      "Status: REROUTE",
+      "Route Confidence: <1-5>",
+      "Fallback Route: <start|plan|research>",
+      "Reason: <single concrete cause>"
     ]
   },
   {
@@ -48,7 +64,8 @@ const RULES = [
       "Technical Solution Diagram",
       "write `Technical Solution Diagram` section with mermaid content",
       "Run Diagram Need Decision immediately after user answers",
-      "First turn contains only questions with options when `IDEATION_CONTEXT` is absent."
+      "First turn contains only questions with options when `IDEATION_CONTEXT` is absent.",
+      "Route confidence for `start` must be `>=4` before execution."
     ]
   },
   {
@@ -69,7 +86,8 @@ const RULES = [
       "Set and enforce `diagram_mode` policy in frontmatter",
       "allowed values: `required|auto|hidden`",
       "Run Diagram Need Decision after planning details are clear",
-      "Technical Solution Diagram section exists with Mermaid content"
+      "Technical Solution Diagram section exists with Mermaid content",
+      "Route confidence for `plan` must be `>=4` before execution."
     ]
   },
   {
@@ -91,7 +109,8 @@ const RULES = [
       "do not require verbose response footer fields",
       "Final response should use compact guidance shape",
       "Follow `diagram_mode` before implementing",
-      "keep `Technical Solution Diagram` synchronized when `diagram_mode: required`"
+      "keep `Technical Solution Diagram` synchronized when `diagram_mode: required`",
+      "Route confidence for `build` must be `>=4` before execution."
     ]
   },
   {
@@ -109,7 +128,8 @@ const RULES = [
       "if archive fails, do not report done",
       "Resolve next-step narrative from mutated state (`fix` or `done`).",
       "do not require verbose response footer fields",
-      "Final response should use compact guidance shape"
+      "Final response should use compact guidance shape",
+      "Route confidence for `check` must be `>=4` before execution."
     ]
   },
   {
@@ -123,7 +143,8 @@ const RULES = [
       "IDEATION_CONTEXT",
       "END_IDEATION_CONTEXT",
       "Idea Categories (3-5)",
-      "Top Shortlist (Quick Win, Balanced, Ambitious)"
+      "Top Shortlist (Quick Win, Balanced, Ambitious)",
+      "Route confidence for `research` must be `>=4` before execution."
     ]
   },
   {
@@ -142,7 +163,18 @@ const RULES = [
       "report `Check: PASS|BLOCK` with evidence",
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
-      "do not require verbose response footer fields"
+      "do not require verbose response footer fields",
+      "Route confidence for `fix` must be `>=4` before execution."
+    ]
+  },
+  {
+    file: "resources/docs/ROUTE_PROMPTS.md",
+    required: [
+      "## Route Confidence Gate",
+      "Status: REROUTE",
+      "Route Confidence: <1-5>",
+      "Fallback Route: <start|plan|research>",
+      "route confidence `>=4` for selected route (otherwise reroute)"
     ]
   },
   {

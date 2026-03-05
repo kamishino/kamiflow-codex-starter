@@ -23,6 +23,21 @@ Fallback order for all routes:
 3. Re-read contracts (`AGENTS.md`, `.kfc/CODEX_READY.md` when present).
 4. Return `Status: BLOCK` with one concrete recovery action when still blocked.
 
+## Route Confidence Gate
+
+Before executing any route, assign `Route Confidence` (`1-5`) to the selected route.
+
+- `4-5`: continue with selected route.
+- `<4`: reroute to `start`, `plan`, or `research` before execution.
+
+Reroute response contract:
+
+- `Status: REROUTE`
+- `Selected Route: <route>`
+- `Route Confidence: <1-5>`
+- `Fallback Route: <start|plan|research>`
+- `Reason: <single concrete cause>`
+
 ## Plan Route
 
 ```text
@@ -33,6 +48,7 @@ Expected:
 
 - concrete scope
 - profile: `plan`
+- route confidence `>=4` for selected route (otherwise reroute)
 - if `START_CONTEXT` is provided, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request is vague (missing 2+ core fields), reroute to `start` first
 - resolve target plan file in this order:
@@ -80,6 +96,7 @@ $kamiflow-core start <topic>
 Expected:
 
 - profile: `plan`
+- route confidence `>=4` for selected route (otherwise reroute)
 - if `IDEATION_CONTEXT` exists, consume it first and skip duplicate baseline questions
 - otherwise first turn asks 3-5 questions only
 - each question has 3 options + `Other`
@@ -100,6 +117,7 @@ $kamiflow-core research gather evidence for unknowns, or run ideation preset for
 Expected:
 
 - profile: `plan`
+- route confidence `>=4` for selected route (otherwise reroute)
 - when request is vague/inspirational, run ideation preset:
   - 3-5 idea categories, 2-3 ideas per category
   - shortlist exactly 3 tracks: Quick Win, Balanced, Ambitious
@@ -116,6 +134,7 @@ $kamiflow-core build execute only Task <n> from .local/plans/<file>.md, list pla
 Expected:
 
 - profile: `executor`
+- route confidence `>=4` for selected route (otherwise reroute)
 - no execution outside selected task scope
 - build/fix updates `Implementation Tasks` only
 - validation command outcomes
@@ -137,6 +156,7 @@ $kamiflow-core check verify current changes against Acceptance Criteria in .loca
 Expected:
 
 - profile: `review`
+- route confidence `>=4` for selected route (otherwise reroute)
 - findings-first output
 - acceptance criteria status
 - check phase validates/tests Acceptance Criteria

@@ -8,6 +8,8 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 
 - Required mode: `Plan`.
 - If current mode is not `Plan`, return `MODE_MISMATCH` and stop.
+- Route confidence for `start` must be `>=4` before execution.
+- If route confidence is `<4`, return `Status: REROUTE` with fallback route (`start|plan|research`) and stop.
 
 ## Steps
 

@@ -6,10 +6,27 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 
 1. Resolve active non-done plan.
 2. Choose exactly one route (`start|plan|build|check|fix|research`).
-3. Execute one scoped slice.
-4. Mutate plan frontmatter + `WIP Log`.
-5. Run check validations for completed build/fix work.
-6. Respond with compact user guidance.
+3. Assign `Route Confidence` (`1-5`) and reroute when confidence is below `4`.
+4. Execute one scoped slice.
+5. Mutate plan frontmatter + `WIP Log`.
+6. Run check validations for completed build/fix work.
+7. Respond with compact user guidance.
+
+## Route Confidence Gate
+
+- Score route confidence before route execution:
+  - intent-to-route fit
+  - required artifacts exist for that route
+  - unknown/risk level is acceptable
+- Threshold:
+  - `4-5`: execute selected route
+  - `<4`: stop and reroute to `start|plan|research`
+- Reroute response shape:
+  - `Status: REROUTE`
+  - `Selected Route: <route>`
+  - `Route Confidence: <1-5>`
+  - `Fallback Route: <start|plan|research>`
+  - `Reason: <single concrete cause>`
 
 ## Route-to-Profile Matrix
 
@@ -55,6 +72,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `📝` Touch active plan at route start (set current turn context).
 - `📝` Touch active plan again before final response (persist actual outcomes).
 - `📝` During `build`/`fix`, after each completed task/subtask, immediately update checklist state and append timestamped WIP evidence before continuing.
+- `📝` Include route confidence/reroute reason in WIP notes when confidence causes fallback.
 - A valid touch updates `updated_at` and appends a timestamped `WIP Log` line.
 - `.local/` is git-ignored, so plan touches will not appear in `git status`.
 

@@ -63,7 +63,10 @@ try {
     "AP-008",
     "AP-009",
     "AP-010",
-    "AP-011"
+    "AP-011",
+    "AP-012",
+    "AP-013",
+    "AP-014"
   ]) {
     assertIncludes(antiPatterns, antiPatternsFile, token, errors);
   }
@@ -104,6 +107,10 @@ try {
     "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
     "Every route invocation persists plan-state changes directly in markdown",
     "Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.",
+    "## Route Confidence Gate",
+    "Assign `Route Confidence` (`1-5`)",
+    "If route confidence is below `4`, reroute instead of forcing the selected route.",
+    "Route Confidence: <1-5>",
     "Every top-level user request must resolve one active non-done plan",
     "run check validations and report `Check: PASS|BLOCK` before final response",
     "after each completed task/subtask, immediately mutate the active plan file",
@@ -132,6 +139,18 @@ try {
     assertIncludes(buildRef, buildRefFile, token, errors);
   }
 
+  const commandMapFile = "resources/skills/kamiflow-core/references/command-map.md";
+  const commandMap = read(commandMapFile);
+  for (const token of [
+    "## Confidence Gate (Mandatory)",
+    "assign `Route Confidence` (`1-5`)",
+    "Status: REROUTE",
+    "Fallback Route: <start|plan|research>",
+    "Reason: <single concrete cause>"
+  ]) {
+    assertIncludes(commandMap, commandMapFile, token, errors);
+  }
+
   const fixRefFile = "resources/skills/kamiflow-core/references/fix.md";
   const fixRef = read(fixRefFile);
   for (const token of [
@@ -150,6 +169,7 @@ try {
   const smoothGuide = read(smoothGuideFile);
   for (const token of [
     "## Core Sequence",
+    "## Route Confidence Gate",
     "## Route-to-Profile Matrix",
     "## Deterministic Fallback Order",
     "## Phase Scope",
@@ -168,6 +188,8 @@ try {
     "| `build` | `executor` |",
     "| `check` | `review` |",
     "When route execution fails or context is incomplete, use this exact order:",
+    "Assign `Route Confidence` (`1-5`) and reroute when confidence is below `4`.",
+    "Route Confidence: <1-5>",
     "after each completed task/subtask, immediately update checklist state",
     "Build/Fix phase: execute and update `Implementation Tasks`.",
     "Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.",
@@ -211,6 +233,10 @@ try {
     "profile: `executor`",
     "profile: `review`",
     "Recover missing plan via `kfc flow ensure-plan --project .`.",
+    "## Route Confidence Gate",
+    "Status: REROUTE",
+    "Route Confidence: <1-5>",
+    "Fallback Route: <start|plan|research>",
     "if `IDEATION_CONTEXT` exists, consume it first and skip duplicate baseline questions",
     "run ideation preset:"
   ]) {
