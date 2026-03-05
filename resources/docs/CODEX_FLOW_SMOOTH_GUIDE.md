@@ -43,6 +43,7 @@ When route execution fails or context is incomplete, use this exact order:
 ## Phase Scope
 
 - Build/Fix phase: execute and update `Implementation Tasks`.
+- During each Build/Fix loop, update `Technical Solution Diagram` so it stays synchronized with the actual solution architecture.
 - Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.
 - If check is `BLOCK`, amend tasks/criteria and loop `Build/Fix -> Check`.
 
