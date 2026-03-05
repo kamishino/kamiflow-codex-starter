@@ -150,6 +150,8 @@ try {
   const smoothGuide = read(smoothGuideFile);
   for (const token of [
     "## Core Sequence",
+    "## Route-to-Profile Matrix",
+    "## Deterministic Fallback Order",
     "## Phase Scope",
     "## Plan Touch Cadence",
     "## Chat-Only Execution",
@@ -161,6 +163,10 @@ try {
     "## Readability Style",
     "Touch active plan at route start",
     "Touch active plan again before final response",
+    "| `start` | `plan` |",
+    "| `build` | `executor` |",
+    "| `check` | `review` |",
+    "When route execution fails or context is incomplete, use this exact order:",
     "after each completed task/subtask, immediately update checklist state",
     "Build/Fix phase: execute and update `Implementation Tasks`.",
     "Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.",
@@ -169,6 +175,25 @@ try {
     "Do not treat plan as done if archive fails."
   ]) {
     assertIncludes(smoothGuide, smoothGuideFile, token, errors);
+  }
+
+  const routePromptsFile = "resources/docs/ROUTE_PROMPTS.md";
+  const routePrompts = read(routePromptsFile);
+  for (const token of [
+    "## Route Profile Matrix",
+    "Fallback order for all routes:",
+    "| `start` | `plan` |",
+    "| `plan` | `plan` |",
+    "| `build` | `executor` |",
+    "| `fix` | `executor` |",
+    "| `check` | `review` |",
+    "| `research` | `plan` |",
+    "profile: `plan`",
+    "profile: `executor`",
+    "profile: `review`",
+    "Recover missing plan via `kfc flow ensure-plan --project .`."
+  ]) {
+    assertIncludes(routePrompts, routePromptsFile, token, errors);
   }
 
   if (errors.length > 0) {

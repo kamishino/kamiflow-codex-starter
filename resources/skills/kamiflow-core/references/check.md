@@ -33,6 +33,19 @@ Use this route for quality verification and release-readiness decisions.
    - `Doing`: findings and gate decisions
    - `Next`: one concrete action (`fix` or `done`)
 
+## Route Output Contract
+
+- Findings-first output remains required, then compact guidance:
+  - `State`
+  - `Doing`
+  - `Next`
+- Decision must be explicit: `PASS` or `BLOCK`.
+
+## Evidence Contract
+
+- Each acceptance criterion decision must map to concrete validation evidence.
+- If evidence is missing for any criterion, mark that criterion `Unknown` and return `BLOCK`.
+
 ## Output
 
 Use `../templates/check-report.md` shape.

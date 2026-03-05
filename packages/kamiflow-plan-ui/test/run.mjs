@@ -9,7 +9,12 @@ import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
 import { validateParsedPlan } from "../dist/schema/validate-plan.js";
 import { SSEStream } from "../dist/server/sse-stream.js";
 import { detectProjectRoot } from "../dist/lib/project-detect.js";
-import { buildCodexExecArgVariants, runCodexAction, shouldPreferPlanInteractiveMode } from "../dist/lib/codex-runner.js";
+import {
+  buildCodexExecArgVariants,
+  classifyCodexFailure,
+  runCodexAction,
+  shouldPreferPlanInteractiveMode
+} from "../dist/lib/codex-runner.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -351,9 +356,37 @@ await runCase("codex runner does not throw on spawn failures", async () => {
   assert.ok(result.status === "failed" || result.status === "completed");
   if (result.status === "failed") {
     assert.ok(result.error_code === "SPAWN_FAILED" || result.error_code === "CODEX_NOT_FOUND");
+    assert.ok(
+      result.error_class === "environment" ||
+        result.error_class === "configuration" ||
+        result.error_class === "timeout" ||
+        result.error_class === "runtime" ||
+        result.error_class === "unknown"
+    );
+    assert.equal(typeof result.recovery_hint, "string");
+    assert.equal(typeof result.failure_signature, "string");
   } else {
     assert.equal(typeof result.exit_code, "number");
   }
+});
+
+await runCase("codex runner classifies failure classes deterministically", async () => {
+  assert.equal(classifyCodexFailure({ error_code: "CODEX_NOT_FOUND", stderr_tail: "" }), "environment");
+  assert.equal(classifyCodexFailure({ error_code: "TIMEOUT", stderr_tail: "" }), "timeout");
+  assert.equal(
+    classifyCodexFailure({
+      error_code: "NON_ZERO_EXIT",
+      stderr_tail: "error: unexpected argument '--profile' found"
+    }),
+    "configuration"
+  );
+  assert.equal(
+    classifyCodexFailure({
+      error_code: "NON_ZERO_EXIT",
+      stderr_tail: "runtime failure while executing action"
+    }),
+    "runtime"
+  );
 });
 
 await runCase("codex runner enables plan-interactive variants for Plan mode", async () => {
@@ -650,10 +683,13 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("cache-control"));
     assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
     assert.ok(appJsResponse.payload.includes("Flow Snapshot"));
+    assert.ok(appJsResponse.payload.includes("Confidence "));
     assert.ok(appJsResponse.payload.includes("Now"));
     assert.ok(appJsResponse.payload.includes("Plan Status"));
     assert.ok(appJsResponse.payload.includes("Activity"));
     assert.ok(appJsResponse.payload.includes("Evidence"));
+    assert.ok(appJsResponse.payload.includes("Needs evidence"));
+    assert.ok(appJsResponse.payload.includes("Evidence ready"));
     assert.ok(appJsResponse.payload.includes("Next step"));
     assert.ok(appJsResponse.payload.includes("Success "));
     assert.ok(appJsResponse.payload.includes("Fail "));
@@ -683,6 +719,9 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".plan-file-link"));
     assert.ok(stylesResponse.payload.includes(".activity-detail"));
     assert.ok(stylesResponse.payload.includes(".activity-block-activity"));
+    assert.ok(stylesResponse.payload.includes(".activity-block-evidence-missing"));
+    assert.ok(stylesResponse.payload.includes(".activity-evidence-state"));
+    assert.ok(stylesResponse.payload.includes(".activity-confidence-chip"));
     assert.ok(stylesResponse.payload.includes(".journal-filter-group"));
     assert.ok(stylesResponse.payload.includes(".toolbar-field-selected"));
     assert.ok(stylesResponse.payload.includes("--space-4"));

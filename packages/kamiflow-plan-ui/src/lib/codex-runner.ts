@@ -15,6 +15,9 @@ export interface CodexActionResult {
   exit_code: number;
   run_id: string;
   error_code?: "CODEX_NOT_FOUND" | "TIMEOUT" | "SPAWN_FAILED" | "NON_ZERO_EXIT";
+  error_class?: "environment" | "configuration" | "timeout" | "runtime" | "unknown";
+  recovery_hint?: string;
+  failure_signature?: string;
 }
 
 const CODEX_ACTION_TIMEOUT_MS = 5 * 60 * 1000;
@@ -119,6 +122,71 @@ function isPlanModeNegotiationFailure(result: CodexActionResult): boolean {
   }
   const stderr = (result.stderr_tail || "").toLowerCase();
   return PLAN_MODE_NEGOTIATION_ERROR_PATTERNS.some((pattern) => stderr.includes(pattern));
+}
+
+function firstMeaningfulLine(text: string): string {
+  const line = String(text || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .find((item) => item.length > 0);
+  return line ? (line.length > 180 ? line.slice(0, 177) + "..." : line) : "";
+}
+
+export function classifyCodexFailure(
+  input: Pick<CodexActionResult, "error_code" | "stderr_tail">
+): CodexActionResult["error_class"] {
+  if (input.error_code === "CODEX_NOT_FOUND") {
+    return "environment";
+  }
+  if (input.error_code === "TIMEOUT") {
+    return "timeout";
+  }
+  const stderr = String(input.stderr_tail || "").toLowerCase();
+  if (input.error_code === "SPAWN_FAILED") {
+    if (stderr.includes("enoent") || stderr.includes("einval") || stderr.includes("eperm") || stderr.includes("spawn")) {
+      return "environment";
+    }
+    return "runtime";
+  }
+  if (input.error_code === "NON_ZERO_EXIT") {
+    if (PLAN_MODE_NEGOTIATION_ERROR_PATTERNS.some((pattern) => stderr.includes(pattern))) {
+      return "configuration";
+    }
+    if (stderr.includes("unexpected argument") || stderr.includes("unknown option") || stderr.includes("invalid value")) {
+      return "configuration";
+    }
+    return "runtime";
+  }
+  return "unknown";
+}
+
+function recoveryHintForFailure(errorClass: CodexActionResult["error_class"]): string {
+  if (errorClass === "environment") {
+    return "Ensure Codex CLI is installed and executable in PATH; retry in a no-profile shell.";
+  }
+  if (errorClass === "configuration") {
+    return "Retry with fallback codex exec args that avoid unsupported profile/config overrides.";
+  }
+  if (errorClass === "timeout") {
+    return "Retry with a narrower action scope or extend timeout budget.";
+  }
+  if (errorClass === "runtime") {
+    return "Inspect stderr_tail, adjust prompt/inputs, and rerun the same action.";
+  }
+  return "Inspect stderr_tail and route to research if the cause is still unclear.";
+}
+
+function withFailureMetadata(result: CodexActionResult): CodexActionResult {
+  if (result.status !== "failed") {
+    return result;
+  }
+  const errorClass = classifyCodexFailure(result) || "unknown";
+  return {
+    ...result,
+    error_class: errorClass,
+    recovery_hint: recoveryHintForFailure(errorClass),
+    failure_signature: firstMeaningfulLine(result.stderr_tail || result.error_code || "unknown failure")
+  };
 }
 
 function quoteForCmd(arg: string): string {
@@ -248,7 +316,7 @@ export async function runCodexAction(input: CodexActionInput): Promise<CodexActi
     let moveToNextExecutable = false;
     for (let index = 0; index < argVariants.length; index += 1) {
       const args = argVariants[index];
-      const result = await runWithExecutable(exe, args, prompt, run_id);
+      const result = withFailureMetadata(await runWithExecutable(exe, args, prompt, run_id));
       lastResult = result;
       if (result.status === "completed") {
         return result;
@@ -270,7 +338,8 @@ export async function runCodexAction(input: CodexActionInput): Promise<CodexActi
 
   const fallbackArgs = argVariants[argVariants.length - 1] ?? ["exec", "-"];
   return (
-    lastResult ?? {
+    lastResult ??
+    withFailureMetadata({
       status: "failed",
       command: `codex ${fallbackArgs.map((item) => JSON.stringify(item)).join(" ")}`,
       stdout_tail: "",
@@ -278,6 +347,6 @@ export async function runCodexAction(input: CodexActionInput): Promise<CodexActi
       exit_code: -1,
       run_id,
       error_code: "CODEX_NOT_FOUND"
-    }
+    })
   );
 }

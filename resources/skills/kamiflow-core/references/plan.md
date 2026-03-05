@@ -60,6 +60,19 @@ This route should leave no major ambiguity for the build phase.
    - `Doing`: current planning slice
    - `Next`: one concrete next action
 
+## Route Output Contract
+
+- Return compact guidance shape with:
+  - `State`
+  - `Doing`
+  - `Next`
+- When blocked, use strict BLOCK format before compact guidance.
+
+## Evidence Contract
+
+- Planning claims (scope readiness, feasibility, completeness) must map to actual plan markdown content.
+- If any required gate cannot be proven from plan content, mark it `Unknown` and block handoff.
+
 ## Output
 
 Use `../templates/plan-spec.md` shape.

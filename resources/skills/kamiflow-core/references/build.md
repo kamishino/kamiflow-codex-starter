@@ -56,6 +56,19 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `Doing`: implemented slice and validations run
    - `Next`: one concrete next action (normally `check`)
 
+## Route Output Contract
+
+- Return compact guidance shape with:
+  - `State`
+  - `Doing`
+  - `Next`
+- Include explicit `Check: PASS|BLOCK` with evidence before final response.
+
+## Evidence Contract
+
+- Implementation completion claims must cite command output and/or changed file evidence.
+- Missing validation evidence must be labeled `Unknown` (no implicit success claims).
+
 ## Output
 
 Provide:

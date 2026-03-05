@@ -38,6 +38,42 @@ Pick mode before executing route logic:
 - `research` -> `references/research.md`
 - `fix` -> `references/fix.md`
 
+## Trigger Contract
+
+- Trigger this skill for non-trivial workflow requests that need one of:
+  - request clarification and option design (`start`)
+  - decision-complete planning (`plan`)
+  - scoped implementation (`build`)
+  - verification decisions (`check`)
+  - evidence gathering (`research`)
+  - targeted remediation (`fix`)
+- If request is trivial and does not require plan lifecycle handling, do not force this skill.
+
+## Boundaries Contract
+
+- Must:
+  - execute exactly one route per response.
+  - resolve one active non-done plan before route output.
+  - mutate plan state directly in markdown before final response.
+- Must not:
+  - mix `Implementation Tasks` and `Acceptance Criteria` scope incorrectly (`build/fix` vs `check`).
+  - claim PASS, completion, or done without concrete evidence.
+  - require routine user-run commands when agent execution is possible.
+
+## Route Output Contract
+
+- All non-trivial route responses must use compact sections:
+  - `State`
+  - `Doing`
+  - `Next`
+- Route references may define additional route-specific blocks, but compact guidance remains mandatory.
+
+## Evidence Contract
+
+- Every claim must be evidence-backed by command output, repository file state, or explicit user-provided data.
+- If evidence is unavailable or inconclusive, mark status as `Unknown` and reroute to `research` or `plan`.
+- `check` decisions (`PASS|BLOCK`) must include validation evidence.
+
 ## Global Rules
 
 - Keep output concise, structured, and human-readable.

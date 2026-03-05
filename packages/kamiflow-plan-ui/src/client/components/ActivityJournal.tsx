@@ -57,6 +57,33 @@ export function ActivityJournal(props: ActivityJournalProps) {
   const evidenceEvent = props.items.find((item) => Boolean(item.meta?.evidence) || Boolean(item.detail)) || null;
   const evidenceText = compactText(evidenceEvent?.meta?.evidence || evidenceEvent?.detail || "No evidence yet.");
   const evidenceSource = evidenceEvent?.meta?.source || evidenceEvent?.eventLabel || "none";
+  const evidenceMissing = !evidenceEvent || evidenceText.toLowerCase() === "no evidence yet.";
+  const confidenceLevel =
+    currentTaskState === "FAIL"
+      ? "low"
+      : currentTaskState === "SUCCESS" && !evidenceMissing
+        ? "high"
+        : currentTaskState === "RUNNING"
+          ? "medium"
+          : currentTaskState === "SUCCESS"
+            ? "medium"
+            : "unknown";
+  const confidenceLabel =
+    confidenceLevel === "high"
+      ? "High"
+      : confidenceLevel === "medium"
+        ? "Medium"
+        : confidenceLevel === "low"
+          ? "Low"
+          : "Unknown";
+  const confidenceHint =
+    confidenceLevel === "high"
+      ? "Evidence and recent execution are aligned."
+      : confidenceLevel === "medium"
+        ? "Execution is moving; keep validating evidence."
+        : confidenceLevel === "low"
+          ? "Active blockers or failures reduce confidence."
+          : "No recent evidence to score confidence.";
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -80,6 +107,9 @@ export function ActivityJournal(props: ActivityJournalProps) {
                 <Badge class="activity-summary-badge activity-summary-badge-fail" tone="danger">
                   <Icon icon={AlertCircle} />
                   Fail {failCount}
+                </Badge>
+                <Badge class={`activity-summary-badge activity-confidence-chip activity-confidence-${confidenceLevel}`} tone="default">
+                  Confidence {confidenceLabel}
                 </Badge>
               </div>
             </div>
@@ -115,13 +145,20 @@ export function ActivityJournal(props: ActivityJournalProps) {
                   {blockerText ? `Blocker: ${blockerText}` : `Source: ${activitySource}`} | Updated at {activityTime}
                 </small>
               </section>
-              <section class="activity-block activity-block-evidence">
+              <section class={`activity-block activity-block-evidence ${evidenceMissing ? "activity-block-evidence-missing" : "activity-block-evidence-ready"}`}>
                 <p class="activity-block-title">
                   <Icon icon={FileText} />
                   Evidence
                 </p>
-                <p class="activity-block-main">{evidenceText}</p>
-                <small class="activity-block-meta">Source: {evidenceSource}</small>
+                <p class="activity-block-main">
+                  <span class={`activity-evidence-state ${evidenceMissing ? "activity-evidence-state-missing" : "activity-evidence-state-ready"}`}>
+                    {evidenceMissing ? "Needs evidence" : "Evidence ready"}
+                  </span>
+                  <span>{evidenceText}</span>
+                </p>
+                <small class="activity-block-meta">
+                  Source: {evidenceSource} | Confidence note: {confidenceHint}
+                </small>
               </section>
             </div>
           </CardContent>

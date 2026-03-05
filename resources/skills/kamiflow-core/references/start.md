@@ -66,6 +66,19 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
    - write `Start Summary` section
    - write `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 
+## Route Output Contract
+
+- First turn: questions only (with options).
+- Final turn: compact guidance shape:
+  - `State`: clarity + route decision
+  - `Doing`: analysis and scored options
+  - `Next`: one exact `Run next:` command
+
+## Evidence Contract
+
+- Base recommendations on user answers and explicit constraints.
+- If required context is missing, mark unresolved parts as `Unknown` and continue clarification instead of forcing a recommendation.
+
 ## Output
 
 Use `../templates/start-report.md` shape.

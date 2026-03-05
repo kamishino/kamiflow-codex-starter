@@ -42,6 +42,19 @@ Use this route for focused issue resolution with minimal scope.
    - if unresolved checklist items remain, continue `fix/build -> check` iteration (do not hand off to done).
 14. End with concise next-step guidance; do not require verbose response footer fields.
 
+## Route Output Contract
+
+- Return compact guidance shape with:
+  - `State`
+  - `Doing`
+  - `Next`
+- Include explicit `Check: PASS|BLOCK` with evidence before final response.
+
+## Evidence Contract
+
+- Root cause and fix-resolution claims must cite concrete evidence.
+- If verification is incomplete, mark unresolved parts as `Unknown`.
+
 ## Output
 
 Provide:

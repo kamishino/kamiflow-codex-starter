@@ -129,6 +129,28 @@ Server resolution:
 - Update WIP log in the plan each cycle.
 - If scope/risk increases, reroute to `plan` or `research`.
 
+## Activity Signal Semantics
+
+KFP Activity panel is observer-first; use it as evidence, not control.
+
+- `Confidence High`: latest execution is successful and evidence is present.
+- `Confidence Medium`: execution is running/successful but evidence is partial.
+- `Confidence Low`: failures/blockers exist in current route cycle.
+- `Confidence Unknown`: no recent evidence to score.
+
+Failure-class hints from Codex events:
+
+- `error_class: environment`: CLI availability/shell spawn/runtime environment issue.
+- `error_class: configuration`: unsupported profile/config flags or mode negotiation mismatch.
+- `error_class: timeout`: execution exceeded timeout budget.
+- `error_class: runtime`: action ran but failed from prompt/input/runtime behavior.
+- `error_class: unknown`: no deterministic classification; inspect stderr and route to `research`.
+
+Evidence framing:
+
+- `Evidence ready`: compact, concrete evidence exists for current cycle.
+- `Needs evidence`: no reliable evidence found; treat claims as `Unknown` until validated.
+
 ## Fast Troubleshooting
 
 ### Run in KFC Repo

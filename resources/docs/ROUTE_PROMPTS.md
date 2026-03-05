@@ -3,6 +3,26 @@
 Copy/paste prompts for `kamiflow-core`.
 For deterministic execution behavior, also follow `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`.
 
+## Route Profile Matrix
+
+Use these defaults unless a higher-priority contract overrides them:
+
+| Route | Profile | Intent | Default Next |
+| --- | --- | --- | --- |
+| `start` | `plan` | clarify and score options | `plan` |
+| `plan` | `plan` | build-ready specification | `build` |
+| `build` | `executor` | implement scoped tasks | `check` |
+| `fix` | `executor` | resolve blockers from check findings | `check` |
+| `check` | `review` | verify acceptance criteria and decide PASS/BLOCK | `fix` or `done` |
+| `research` | `plan` | gather evidence and remove unknowns | `plan` |
+
+Fallback order for all routes:
+
+1. Reuse active plan.
+2. Recover missing plan via `kfc flow ensure-plan --project .`.
+3. Re-read contracts (`AGENTS.md`, `.kfc/CODEX_READY.md` when present).
+4. Return `Status: BLOCK` with one concrete recovery action when still blocked.
+
 ## Plan Route
 
 ```text
@@ -12,6 +32,7 @@ $kamiflow-core plan check the .local/plans/<file>.md and produce a decision-comp
 Expected:
 
 - concrete scope
+- profile: `plan`
 - if `START_CONTEXT` is provided, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request is vague (missing 2+ core fields), reroute to `start` first
 - resolve target plan file in this order:
@@ -58,6 +79,7 @@ $kamiflow-core start <topic>
 
 Expected:
 
+- profile: `plan`
 - first turn asks 3-5 questions only
 - each question has 3 options + `Other`
 - second turn (after answers) includes:
@@ -76,6 +98,7 @@ $kamiflow-core build execute only Task <n> from .local/plans/<file>.md, list pla
 
 Expected:
 
+- profile: `executor`
 - no execution outside selected task scope
 - build/fix updates `Implementation Tasks` only
 - validation command outcomes
@@ -96,6 +119,7 @@ $kamiflow-core check verify current changes against Acceptance Criteria in .loca
 
 Expected:
 
+- profile: `review`
 - findings-first output
 - acceptance criteria status
 - check phase validates/tests Acceptance Criteria

@@ -11,6 +11,35 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 5. Run check validations for completed build/fix work.
 6. Respond with compact user guidance.
 
+## Route-to-Profile Matrix
+
+Use one default profile per route to keep behavior stable.
+
+| Route | Default Profile | Primary Intent | Default Next |
+| --- | --- | --- | --- |
+| `start` | `plan` | clarify request and produce scored options | `plan` |
+| `plan` | `plan` | produce decision-complete build spec | `build` |
+| `build` | `executor` | execute scoped implementation tasks | `check` |
+| `fix` | `executor` | resolve check blockers in scoped tasks | `check` |
+| `check` | `review` | evaluate acceptance evidence and decide PASS/BLOCK | `fix` or `done` |
+| `research` | `plan` | gather evidence and reduce unknowns | `plan` |
+
+Notes:
+
+- `plan` profile prioritizes clarification, constraints, and spec quality.
+- `executor` profile prioritizes deterministic edits + concrete evidence.
+- `review` profile prioritizes findings-first verification and decision clarity.
+
+## Deterministic Fallback Order
+
+When route execution fails or context is incomplete, use this exact order:
+
+1. Resolve active plan from `.local/plans/*.md` and continue on that file.
+2. If no active plan exists, recover with `kfc flow ensure-plan --project .`.
+3. Re-read `AGENTS.md` and `.kfc/CODEX_READY.md` (if present) before rerouting.
+4. If shell/profile startup crashes, rerun in no-profile/non-login shell.
+5. If route remains blocked, return `Status: BLOCK` with one concrete recovery step.
+
 ## Phase Scope
 
 - Build/Fix phase: execute and update `Implementation Tasks`.

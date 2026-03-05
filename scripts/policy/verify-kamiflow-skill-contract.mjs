@@ -15,6 +15,12 @@ const RULES = [
       "Current Mode: Plan|Build",
       "Reason: <one line>",
       "Instruction: Switch mode and rerun the same command.",
+      "## Trigger Contract",
+      "## Boundaries Contract",
+      "## Route Output Contract",
+      "## Evidence Contract",
+      "All non-trivial route responses must use compact sections:",
+      "Must not:",
       "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
       "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
       "## Smooth Flow Checklist",
@@ -30,6 +36,8 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/start.md",
     required: [
+      "## Route Output Contract",
+      "## Evidence Contract",
       "START_CONTEXT",
       "END_START_CONTEXT",
       "Run next:",
@@ -40,6 +48,8 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/plan.md",
     required: [
+      "## Route Output Contract",
+      "## Evidence Contract",
       "Status: BLOCK",
       "Recovery: create .local/plans/<date-seq>-plan.md from template",
       "Expected: plan markdown exists and is writable",
@@ -55,6 +65,8 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/build.md",
     required: [
+      "## Route Output Contract",
+      "## Evidence Contract",
       "active non-done plan",
       "Status: BLOCK",
       "Recovery: create .local/plans/<date-seq>-build.md from template",
@@ -73,6 +85,8 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/check.md",
     required: [
+      "## Route Output Contract",
+      "## Evidence Contract",
       "Persist check decision by direct markdown mutation",
       "Apply archive gate:",
       "Check scope is Acceptance Criteria validation/testing from current build output.",
@@ -98,6 +112,8 @@ const RULES = [
   {
     file: "resources/skills/kamiflow-core/references/fix.md",
     required: [
+      "## Route Output Contract",
+      "## Evidence Contract",
       "active non-done plan",
       "Status: BLOCK",
       "Recovery: create .local/plans/<date-seq>-fix.md from template",
