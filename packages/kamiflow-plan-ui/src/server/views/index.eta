@@ -53,11 +53,13 @@
     <div class="content-grid">
       <main class="main">
         <section class="panel" id="timeline-panel">
+          <p class="panel-kicker">1. Now</p>
           <h2>Phase Timeline</h2>
           <div id="workflow-rail" class="workflow-rail"></div>
         </section>
 
         <section class="panel" id="snapshot-panel">
+          <p class="panel-kicker">2. Plan Status</p>
           <h2>Implementation Plan Status</h2>
           <div id="work-surface"></div>
         </section>
@@ -65,14 +67,19 @@
 
       <section class="activity panel journal">
         <div class="journal-header">
-          <h2>Activity</h2>
-          <label for="activity-filter" class="journal-filter-label">Filter</label>
-          <select id="activity-filter">
-            <option value="all">All</option>
-            <option value="plan">Plan</option>
-            <option value="codex">Codex</option>
-            <option value="system">System</option>
-          </select>
+          <div>
+            <p class="panel-kicker">3. Activity</p>
+            <h2>Activity Stream</h2>
+          </div>
+          <div class="journal-filter-group">
+            <label for="activity-filter" class="journal-filter-label">Filter</label>
+            <select id="activity-filter">
+              <option value="all">All</option>
+              <option value="plan">Plan</option>
+              <option value="codex">Codex</option>
+              <option value="system">System</option>
+            </select>
+          </div>
         </div>
         <ul id="activity-feed"></ul>
       </section>

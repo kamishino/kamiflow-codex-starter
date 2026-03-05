@@ -21,6 +21,8 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
   const index = stages.findIndex((stage) => stage.name === current);
   const currentStage = index >= 0 ? stages[index] : stages[0];
   const stepStates = buildTimelineStepStates(current);
+  const nextCommand = props.detail.summary.next_command || "stay";
+  const nextMode = props.detail.summary.next_mode || "Plan";
 
   function stateLabel(state: TimelineStepState): string {
     if (state === "done") {
@@ -38,9 +40,14 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
         <p class="phase-current-kicker">Current focus</p>
         <div class="phase-current-head">
           <strong class="phase-current-name">{currentStage.name}</strong>
-          <span class="phase-current-chip">{props.detail.summary.next_command || "stay"} next</span>
+          <span class="phase-current-chip">{nextCommand} next</span>
         </div>
         <p class="phase-current-description">{currentStage.hint}</p>
+        <p class="phase-next-cue">
+          <span class="phase-next-label">Next step</span>
+          <span class="inline-code-chip">{nextCommand}</span>
+          <span class="phase-next-mode">in {nextMode} mode</span>
+        </p>
       </div>
       <ol class="phase-timeline" role="list" aria-label="Phase timeline">
         {stages.map((stage, i) => {

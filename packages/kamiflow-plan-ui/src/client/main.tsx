@@ -343,10 +343,29 @@ function renderProjectsList(projects: Array<{ project_id: string; project_dir: s
   }
 }
 
-function firstVisiblePlanId(plans: PlanSummary[]): string | null {
-  const visiblePlans = filterPlansByMode(plans, currentPlanFilter());
+function firstVisiblePlanId(plans: PlanSummary[], mode: string): string | null {
+  const visiblePlans = filterPlansByMode(plans, mode);
   const sorted = sortPlansByRecency(visiblePlans);
   return sorted.length ? sorted[0].plan_id : null;
+}
+
+function resolveFallbackSelection(plans: PlanSummary[]): { planId: string | null; filterMode?: "active" | "done" | "all" } {
+  const mode = currentPlanFilter();
+  const primary = firstVisiblePlanId(plans, mode);
+  if (primary) {
+    return { planId: primary };
+  }
+  if (mode === "active") {
+    const done = firstVisiblePlanId(plans, "done");
+    if (done) {
+      return { planId: done, filterMode: "done" };
+    }
+  }
+  const any = firstVisiblePlanId(plans, "all");
+  if (any) {
+    return { planId: any, filterMode: mode === "active" ? "all" : undefined };
+  }
+  return { planId: null };
 }
 
 function clearPlanSearch(): void {
@@ -429,8 +448,11 @@ async function loadList(): Promise<void> {
     return;
   }
 
-  const includeDone = currentPlanFilter() !== "active";
+  const includeDone = true;
   currentPlans = sortPlansByRecency(await fetchPlans(projectId, includeDone));
+  if (currentPlanFilter() === "active" && !filterPlansByMode(currentPlans, "active").length && filterPlansByMode(currentPlans, "done").length) {
+    filterEl.value = "done";
+  }
   renderPlanSearchResults();
   syncPlanSelectionHelp();
 }
@@ -486,7 +508,7 @@ async function refreshFromRoute(): Promise<void> {
   await loadList();
   const routeFromHash = parseRoute(location.hash || "");
   const projectId = currentProjectId();
-  const visiblePlanId = firstVisiblePlanId(currentPlans);
+  const fallback = resolveFallbackSelection(currentPlans);
 
   if (!projectId) {
     navigateToPlan("", null, "replace");
@@ -495,16 +517,24 @@ async function refreshFromRoute(): Promise<void> {
   }
 
   if (!routeFromHash || routeFromHash.projectId !== projectId) {
-    if (visiblePlanId) {
-      navigateToPlan(projectId, visiblePlanId, "replace");
+    if (fallback.filterMode && filterEl.value !== fallback.filterMode) {
+      filterEl.value = fallback.filterMode;
+      renderPlanSearchResults();
+    }
+    if (fallback.planId) {
+      navigateToPlan(projectId, fallback.planId, "replace");
     } else {
       navigateToPlan("", null, "replace");
     }
   } else {
     const exists = currentPlans.some((item) => item.plan_id === routeFromHash.planId);
     if (!exists) {
-      if (visiblePlanId) {
-        navigateToPlan(projectId, visiblePlanId, "replace");
+      if (fallback.filterMode && filterEl.value !== fallback.filterMode) {
+        filterEl.value = fallback.filterMode;
+        renderPlanSearchResults();
+      }
+      if (fallback.planId) {
+        navigateToPlan(projectId, fallback.planId, "replace");
       } else {
         navigateToPlan("", null, "replace");
       }

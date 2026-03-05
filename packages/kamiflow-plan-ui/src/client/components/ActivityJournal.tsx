@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock3, FileText, Info, ShieldAlert, TriangleAlert } from "lucide-preact";
+import { AlertCircle, CheckCircle2, Clock3, FileText, Info, ListChecks, TriangleAlert } from "lucide-preact";
 import type { ActivityFilter, ActivityItem } from "../types";
 import { Badge } from "../ui/Badge";
 import { Card, CardContent } from "../ui/Card";
@@ -11,6 +11,21 @@ interface ActivityJournalProps {
 }
 
 export function ActivityJournal(props: ActivityJournalProps) {
+  function compactText(value: string, max = 120): string {
+    const singleLine = String(value || "").replace(/\s+/g, " ").trim();
+    if (!singleLine) {
+      return "";
+    }
+    return singleLine.length > max ? singleLine.slice(0, max - 3) + "..." : singleLine;
+  }
+
+  function runStateLabel(state: string): string {
+    if (state === "SUCCESS") return "Success";
+    if (state === "FAIL") return "Blocked";
+    if (state === "RUNNING") return "Running";
+    return "Idle";
+  }
+
   const successCount = props.items.filter((item) => item.tone === "ok").length;
   const failCount = props.items.filter((item) => item.tone === "error").length;
   const latestNowEvent =
@@ -27,16 +42,20 @@ export function ActivityJournal(props: ActivityJournalProps) {
           ? "FAIL"
           : "RUNNING"
       : "IDLE";
-  const currentTaskMessage = latestNowEvent?.message || "No current task/subtask event.";
+  const currentTaskMessage = compactText(latestNowEvent?.message || "No current task/subtask event.");
   const currentTaskTime = latestNowEvent?.ts ? formatClock(latestNowEvent.ts) : "-";
   const latestPhaseEvent = props.items.find((item) => Boolean(item.meta?.phase)) || null;
   const phaseLabel = latestPhaseEvent?.meta?.phase || "Unknown";
   const phaseTime = latestPhaseEvent?.ts ? formatClock(latestPhaseEvent.ts) : "-";
+  const latestActivityEvent =
+    props.items.find((item) => item.eventType.startsWith("codex_run_") || item.eventType.startsWith("plan_")) || null;
   const blockerEvent = props.items.find((item) => Boolean(item.meta?.blocker) || item.tone === "error") || null;
-  const blockerText = blockerEvent?.meta?.blocker || blockerEvent?.message || "No active blockers.";
-  const blockerSource = blockerEvent?.meta?.source || blockerEvent?.eventLabel || "none";
+  const blockerText = compactText(blockerEvent?.meta?.blocker || blockerEvent?.message || "", 96);
+  const activityText = compactText(latestActivityEvent?.message || "No recent activity events.");
+  const activitySource = latestActivityEvent?.meta?.source || latestActivityEvent?.eventLabel || "none";
+  const activityTime = latestActivityEvent?.ts ? formatClock(latestActivityEvent.ts) : "-";
   const evidenceEvent = props.items.find((item) => Boolean(item.meta?.evidence) || Boolean(item.detail)) || null;
-  const evidenceText = evidenceEvent?.meta?.evidence || evidenceEvent?.detail || "No evidence yet.";
+  const evidenceText = compactText(evidenceEvent?.meta?.evidence || evidenceEvent?.detail || "No evidence yet.");
   const evidenceSource = evidenceEvent?.meta?.source || evidenceEvent?.eventLabel || "none";
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
@@ -56,11 +75,11 @@ export function ActivityJournal(props: ActivityJournalProps) {
               <div class="activity-overview-metrics">
                 <Badge class="activity-summary-badge activity-summary-badge-success" tone="success">
                   <Icon icon={CheckCircle2} />
-                  SUCCESS {successCount}
+                  Success {successCount}
                 </Badge>
                 <Badge class="activity-summary-badge activity-summary-badge-fail" tone="danger">
                   <Icon icon={AlertCircle} />
-                  FAIL {failCount}
+                  Fail {failCount}
                 </Badge>
               </div>
             </div>
@@ -72,7 +91,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
                 </p>
                 <p class="activity-block-main">
                   <span class={`activity-summary-state activity-summary-state-${currentTaskState.toLowerCase()}`}>
-                    {currentTaskState}
+                    {runStateLabel(currentTaskState)}
                   </span>
                   <span class="activity-summary-current-message">{currentTaskMessage}</span>
                 </p>
@@ -81,18 +100,20 @@ export function ActivityJournal(props: ActivityJournalProps) {
               <section class="activity-block activity-block-phase">
                 <p class="activity-block-title">
                   <Icon icon={CheckCircle2} />
-                  Phase
+                  Plan Status
                 </p>
                 <p class="activity-block-main">{phaseLabel}</p>
                 <small class="activity-block-meta">Last transition {phaseTime}</small>
               </section>
-              <section class="activity-block activity-block-blockers">
+              <section class="activity-block activity-block-activity">
                 <p class="activity-block-title">
-                  <Icon icon={ShieldAlert} />
-                  Blockers
+                  <Icon icon={ListChecks} />
+                  Activity
                 </p>
-                <p class="activity-block-main">{blockerText}</p>
-                <small class="activity-block-meta">Source: {blockerSource}</small>
+                <p class="activity-block-main">{activityText}</p>
+                <small class="activity-block-meta">
+                  {blockerText ? `Blocker: ${blockerText}` : `Source: ${activitySource}`} | Updated at {activityTime}
+                </small>
               </section>
               <section class="activity-block activity-block-evidence">
                 <p class="activity-block-title">

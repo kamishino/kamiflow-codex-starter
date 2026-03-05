@@ -425,14 +425,25 @@ textarea {
   line-height: var(--lh-tight);
 }
 
+.panel-kicker {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
 #timeline-panel {
   order: 1;
   grid-column: 1 / -1;
+  border-top: 4px solid var(--border-info);
 }
 
 #snapshot-panel {
   order: 2;
   grid-column: 1 / -1;
+  border-top: 4px solid var(--border-success);
 }
 
 .workflow-rail {
@@ -486,6 +497,25 @@ textarea {
   margin: var(--space-2) 0 0;
   font-size: var(--text-caption);
   color: var(--text-2);
+}
+
+.phase-next-cue {
+  margin: var(--space-2) 0 0;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  font-size: var(--text-caption);
+  color: var(--text-2);
+}
+
+.phase-next-label {
+  font-weight: 700;
+  color: var(--text-4);
+}
+
+.phase-next-mode {
+  color: var(--muted-foreground);
 }
 
 .phase-timeline {
@@ -908,15 +938,22 @@ textarea {
   padding: var(--space-4);
   max-height: calc(100vh - 32px);
   overflow: auto;
+  border-top: 4px solid var(--border-warning);
 }
 
 .journal-header {
   display: grid;
   grid-template-columns: 1fr auto;
-  align-items: center;
-  column-gap: var(--space-2);
+  align-items: start;
+  column-gap: var(--space-3);
   row-gap: var(--space-1);
   margin-bottom: var(--space-3);
+}
+
+.journal-filter-group {
+  display: grid;
+  justify-items: end;
+  gap: var(--space-1);
 }
 
 .journal-filter-label {
@@ -1034,7 +1071,7 @@ textarea {
   border-color: var(--border-success);
 }
 
-.activity-block-blockers {
+.activity-block-activity {
   border-color: var(--border-warning);
   background: var(--warning-soft);
 }
@@ -1548,6 +1585,10 @@ pre {
 
   .journal-header {
     grid-template-columns: 1fr;
+  }
+
+  .journal-filter-group {
+    justify-items: start;
   }
 
   .phase-current-head {

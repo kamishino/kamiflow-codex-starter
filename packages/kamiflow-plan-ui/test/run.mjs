@@ -622,7 +622,10 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("Implementation Plan Status"));
     assert.ok(!indexResponse.payload.includes("Next Step"));
     assert.ok(!indexResponse.payload.includes("Plan Health"));
-    assert.ok(indexResponse.payload.includes("Activity"));
+    assert.ok(indexResponse.payload.includes("Activity Stream"));
+    assert.ok(indexResponse.payload.includes("1. Now"));
+    assert.ok(indexResponse.payload.includes("2. Plan Status"));
+    assert.ok(indexResponse.payload.includes("3. Activity"));
 
     const appJsResponse = await server.inject({
       method: "GET",
@@ -648,11 +651,12 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
     assert.ok(appJsResponse.payload.includes("Flow Snapshot"));
     assert.ok(appJsResponse.payload.includes("Now"));
-    assert.ok(appJsResponse.payload.includes("Phase"));
-    assert.ok(appJsResponse.payload.includes("Blockers"));
+    assert.ok(appJsResponse.payload.includes("Plan Status"));
+    assert.ok(appJsResponse.payload.includes("Activity"));
     assert.ok(appJsResponse.payload.includes("Evidence"));
-    assert.ok(appJsResponse.payload.includes("SUCCESS "));
-    assert.ok(appJsResponse.payload.includes("FAIL "));
+    assert.ok(appJsResponse.payload.includes("Next step"));
+    assert.ok(appJsResponse.payload.includes("Success "));
+    assert.ok(appJsResponse.payload.includes("Fail "));
     assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
     assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
 
@@ -670,12 +674,16 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
     assert.ok(stylesResponse.payload.includes(".phase-current-summary"));
+    assert.ok(stylesResponse.payload.includes(".phase-next-cue"));
     assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
+    assert.ok(stylesResponse.payload.includes(".panel-kicker"));
     assert.ok(stylesResponse.payload.includes(".snapshot-stack"));
     assert.ok(stylesResponse.payload.includes(".plan-check"));
     assert.ok(stylesResponse.payload.includes(".inline-code-chip"));
     assert.ok(stylesResponse.payload.includes(".plan-file-link"));
     assert.ok(stylesResponse.payload.includes(".activity-detail"));
+    assert.ok(stylesResponse.payload.includes(".activity-block-activity"));
+    assert.ok(stylesResponse.payload.includes(".journal-filter-group"));
     assert.ok(stylesResponse.payload.includes(".toolbar-field-selected"));
     assert.ok(stylesResponse.payload.includes("--space-4"));
     assert.ok(stylesResponse.payload.includes("@supports (color: oklch"));
