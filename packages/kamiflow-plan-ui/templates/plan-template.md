@@ -6,6 +6,7 @@ decision: NO_GO
 selected_mode: Plan
 next_mode: Plan
 next_command: plan
+diagram_mode: auto
 updated_at: 2026-03-01
 ---
 

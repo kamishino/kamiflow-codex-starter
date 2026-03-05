@@ -22,6 +22,7 @@ decision: NO_GO
 selected_mode: Plan
 next_mode: Plan
 next_command: plan
+diagram_mode: auto
 updated_at: 2026-03-01
 ---
 
@@ -189,6 +190,7 @@ function materializeTemplate(template, targetPath, options = {}) {
   let next = String(template || "");
   next = updateFrontmatterField(next, "plan_id", planId);
   next = updateFrontmatterField(next, "title", identity.title);
+  next = updateFrontmatterField(next, "diagram_mode", "auto");
   next = updateFrontmatterField(next, "updated_at", toIsoNow());
   next = ensureTechnicalSolutionDiagramSection(next, { title: identity.title }).markdown;
   return next;

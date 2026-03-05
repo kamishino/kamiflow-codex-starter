@@ -1,5 +1,8 @@
+import { resolveDiagramMode } from "./diagram-mode.js";
+
 export interface DiagramPlanSummaryInput {
   plan_id: string;
+  diagram_mode?: string;
 }
 
 export interface DiagramPlanInput {
@@ -65,7 +68,7 @@ export interface DiagramSummaryTabModel {
 export type PlanDiagramTabModel = DiagramMermaidTabModel | DiagramSummaryTabModel;
 
 export interface PlanDiagramTabsModel {
-  default_tab: "technical";
+  default_tab: "technical" | "tasks" | "summary";
   tabs: PlanDiagramTabModel[];
 }
 
@@ -355,45 +358,63 @@ export function buildFallbackSummaryModel(input: DiagramPlanInput): FallbackSumm
 }
 
 export function buildPlanDiagramTabsModel(input: DiagramPlanInput): PlanDiagramTabsModel {
+  const mode = resolveDiagramMode(input.summary.diagram_mode).mode;
   const technical = buildTechnicalSolutionDiagramModel(input);
   const tasks = buildTasksSubtasksDiagramModel(input);
   const summary = buildFallbackSummaryModel(input);
+
+  const tabs: PlanDiagramTabModel[] = [];
+  const canShowTechnical = mode === "required" || (mode === "auto" && technical.content_state === "ready");
+
+  if (canShowTechnical) {
+    tabs.push({
+      key: "technical",
+      label: "Technical",
+      kind: "mermaid",
+      status: technical.content_state,
+      status_message: technical.state_message,
+      source_label: technical.source_type === "section" ? `From ${technical.section_name}` : "Derived placeholder",
+      mermaid_source: technical.mermaid_source,
+      mermaid_render: technical.mermaid_render,
+      warnings: technical.warnings
+    });
+  }
+
+  tabs.push({
+    key: "tasks",
+    label: "Tasks/Subtasks",
+    kind: "mermaid",
+    status: tasks.content_state,
+    status_message: tasks.state_message,
+    source_label: tasks.section_name,
+    mermaid_source: tasks.mermaid_source,
+    mermaid_render: tasks.mermaid_render,
+    warnings: tasks.warnings
+  });
+
+  tabs.push({
+    key: "summary",
+    label: "Fallback Summary",
+    kind: "summary",
+    status: summary.content_state,
+    status_message: summary.state_message,
+    source_label: summary.section_name,
+    summary_lines: summary.summary_lines,
+    warnings: summary.warnings
+  });
+
+  const defaultTab =
+    mode === "required"
+      ? "technical"
+      : tasks.content_state === "ready"
+        ? "tasks"
+        : summary.content_state === "ready"
+          ? "summary"
+          : (tabs[0]?.key ?? "tasks");
+
   return {
-    default_tab: "technical",
-    tabs: [
-      {
-        key: "technical",
-        label: "Technical",
-        kind: "mermaid",
-        status: technical.content_state,
-        status_message: technical.state_message,
-        source_label: technical.source_type === "section" ? `From ${technical.section_name}` : "Derived placeholder",
-        mermaid_source: technical.mermaid_source,
-        mermaid_render: technical.mermaid_render,
-        warnings: technical.warnings
-      },
-      {
-        key: "tasks",
-        label: "Tasks/Subtasks",
-        kind: "mermaid",
-        status: tasks.content_state,
-        status_message: tasks.state_message,
-        source_label: tasks.section_name,
-        mermaid_source: tasks.mermaid_source,
-        mermaid_render: tasks.mermaid_render,
-        warnings: tasks.warnings
-      },
-      {
-        key: "summary",
-        label: "Fallback Summary",
-        kind: "summary",
-        status: summary.content_state,
-        status_message: summary.state_message,
-        source_label: summary.section_name,
-        summary_lines: summary.summary_lines,
-        warnings: summary.warnings
-      }
-    ]
+    default_tab: defaultTab,
+    tabs
   };
 }
 

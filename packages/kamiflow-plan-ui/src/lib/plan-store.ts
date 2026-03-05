@@ -3,6 +3,7 @@ import path from "node:path";
 import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
 import { resolveDonePlansDir, resolvePlansDir } from "./paths.js";
+import { resolveDiagramMode } from "./diagram-mode.js";
 import type { ParsedPlan, PlanRecord, PlanSummary } from "../types.js";
 
 function toSummary(parsed: ParsedPlan, errors: string[], archivedAt?: string): PlanSummary {
@@ -18,6 +19,7 @@ function toSummary(parsed: ParsedPlan, errors: string[], archivedAt?: string): P
     selected_mode: parsed.frontmatter.selected_mode ?? "unknown",
     next_mode: parsed.frontmatter.next_mode ?? "unknown",
     next_command: parsed.frontmatter.next_command ?? "unknown",
+    diagram_mode: resolveDiagramMode(parsed.frontmatter.diagram_mode).mode,
     updated_at: parsed.frontmatter.updated_at ?? "",
     file_path: parsed.filePath,
     is_valid: errors.length === 0,
@@ -79,6 +81,7 @@ export async function loadPlans(projectDir, options?: { includeDone?: boolean })
           selected_mode: "unknown",
           next_mode: "unknown",
           next_command: "unknown",
+          diagram_mode: "required",
           updated_at: "",
           file_path: filePath,
           is_valid: false,

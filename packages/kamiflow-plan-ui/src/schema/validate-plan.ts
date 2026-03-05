@@ -1,5 +1,6 @@
 import { REQUIRED_FRONTMATTER_FIELDS, REQUIRED_SECTIONS } from "../constants.js";
 import type { ParsedPlan } from "../types.js";
+import { resolveDiagramMode } from "../lib/diagram-mode.js";
 
 function parseStartSummary(sectionText: string): Record<string, string> {
   const lines = sectionText.split(/\r?\n/);
@@ -16,6 +17,7 @@ function parseStartSummary(sectionText: string): Record<string, string> {
 
 export function validateParsedPlan(plan: ParsedPlan) {
   const errors = [];
+  const diagramMode = resolveDiagramMode(plan.frontmatter.diagram_mode);
 
   for (const key of REQUIRED_FRONTMATTER_FIELDS) {
     const value = plan.frontmatter[key];
@@ -25,12 +27,26 @@ export function validateParsedPlan(plan: ParsedPlan) {
   }
 
   for (const section of REQUIRED_SECTIONS) {
+    if (section === "Technical Solution Diagram" && diagramMode.mode !== "required") {
+      continue;
+    }
     if (!Object.prototype.hasOwnProperty.call(plan.sections, section)) {
       errors.push(`Missing section: ${section}`);
       continue;
     }
     if (plan.sections[section].trim().length === 0) {
       errors.push(`Empty section: ${section}`);
+    }
+  }
+
+  if (!diagramMode.valid) {
+    errors.push("`diagram_mode` must be required, auto, or hidden.");
+  }
+
+  if (diagramMode.mode === "required") {
+    const technical = String(plan.sections["Technical Solution Diagram"] || "").trim();
+    if (!/```mermaid[\s\S]*?```/i.test(technical)) {
+      errors.push("`Technical Solution Diagram` must include a Mermaid block when `diagram_mode` is required.");
     }
   }
 

@@ -34,9 +34,10 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `Recovery: update plan via `$kamiflow-core plan` and rerun build`
    - `Expected: readiness gates pass in plan markdown`
 5. Confirm required plan or scope exists and map to the resolved plan file.
-6. Ensure `Technical Solution Diagram` section exists before implementing:
-   - if missing, backfill section with a Mermaid diagram derived from current plan context/tasks.
-   - keep this section updated when implementation changes the solution path.
+6. Follow `diagram_mode` before implementing:
+   - `required`: ensure `Technical Solution Diagram` section exists with Mermaid content.
+   - `auto|hidden`: Technical section is optional; keep Tasks/Subtasks updated for fallback UX.
+   - if a Technical section already exists, keep it synchronized when solution path changes.
 7. Select one concrete task slice from the plan.
    - Build/Fix scope is `Implementation Tasks` only.
    - Do not mark `Acceptance Criteria` complete in build unless explicitly converting validated evidence from check route.
@@ -46,7 +47,7 @@ Use this route to execute an approved plan in small, verifiable slices.
 11. Summarize what changed and why.
 12. Persist build phase/progress via direct markdown mutation:
    - frontmatter: `lifecycle_phase: build`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
-   - sections: keep `Technical Solution Diagram` synchronized with actual implementation direction
+   - sections: keep `Technical Solution Diagram` synchronized when `diagram_mode: required` (or when present)
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
    - during multi-step implementation, after each completed task/subtask update checklist + timestamped WIP evidence before the next subtask
@@ -90,7 +91,7 @@ Provide:
 - A concrete target plan file is resolved before execution begins.
 - Readiness gate in markdown passes before implementation starts.
 - Build action is blocked when Start Summary gate is not satisfied.
-- `Technical Solution Diagram` section is present before implementation progress is reported.
+- Technical Solution Diagram requirement is enforced only when `diagram_mode: required`.
 - Claims are evidence-backed or explicitly marked `Unknown`.
 - Plan file is mutated directly before response is returned.
 - Handoff metadata is persisted in plan frontmatter.

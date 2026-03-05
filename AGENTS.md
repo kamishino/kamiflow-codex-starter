@@ -90,7 +90,9 @@ This repository has four active scopes:
 - Route discipline:
 - Resolve active plan first, then execute exactly one route (`start|plan|build|check|fix|research`) per response.
 - Build/Fix route scope: mutate and complete `Implementation Tasks` only; do not treat Acceptance Criteria as build-phase completion evidence.
-- `Technical Solution Diagram` is mandatory in plan files and must reflect the current architecture logic selected for implementation.
+- `Technical Solution Diagram` policy is controlled by `diagram_mode` (`required|auto|hidden`).
+- `diagram_mode: required` means the Mermaid section is mandatory and must reflect implementation.
+- `diagram_mode: auto|hidden` means Technical diagram is optional; KFP should fall back to Tasks/Subtasks when absent.
 - Check route scope: verify/test `Acceptance Criteria` and decide PASS/BLOCK from evidence.
 - After finishing implementation in a `build`/`fix` slice, run check validations before final response and report `Check: PASS|BLOCK` with evidence.
 - During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped `WIP Log` evidence) before starting the next subtask.

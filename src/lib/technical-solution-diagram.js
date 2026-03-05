@@ -5,6 +5,44 @@ const SECTION_CANDIDATES = [
   "Implementation Flow"
 ];
 
+function resolveDiagramMode(markdown) {
+  const text = String(markdown || "");
+  if (!text.startsWith("---")) {
+    return "required";
+  }
+  const lines = text.split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return "required";
+  }
+  for (let i = 1; i < endIdx; i += 1) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const sep = trimmed.indexOf(":");
+    if (sep <= 0) {
+      continue;
+    }
+    const key = trimmed.slice(0, sep).trim().toLowerCase();
+    if (key !== "diagram_mode") {
+      continue;
+    }
+    const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+    if (value === "auto" || value === "hidden" || value === "required") {
+      return value;
+    }
+    return "required";
+  }
+  return "required";
+}
+
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -101,6 +139,10 @@ function resolveInsertPoint(markdown) {
 export function ensureTechnicalSolutionDiagramSection(markdown, options = {}) {
   const raw = String(markdown || "");
   if (!raw.trim()) {
+    return { markdown: raw, changed: false };
+  }
+  const diagramMode = resolveDiagramMode(raw);
+  if (diagramMode !== "required") {
     return { markdown: raw, changed: false };
   }
   if (hasExistingTechnicalSection(raw)) {

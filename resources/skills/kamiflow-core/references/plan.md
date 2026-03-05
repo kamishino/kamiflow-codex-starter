@@ -36,10 +36,10 @@ This route should leave no major ambiguity for the build phase.
 10. Split work into ordered file-level tasks.
 11. Identify risks and fallback strategy.
 12. Resolve high-impact open decisions before handoff.
-13. Ensure `Technical Solution Diagram` section exists and is populated:
-   - heading: `## Technical Solution Diagram`
-   - include a ```mermaid block representing chosen solution logic
-   - if section is missing, add it before build handoff
+13. Set and enforce `diagram_mode` policy in frontmatter:
+   - allowed values: `required|auto|hidden`
+   - `required`: ensure `## Technical Solution Diagram` exists with a ```mermaid block representing chosen solution logic
+   - `auto|hidden`: Technical section is optional; KFP falls back to Tasks/Subtasks when missing
 14. Ensure `Start Summary` is present in plan file and non-placeholder:
    - if request is vague -> `Required: yes` with concrete values
    - if not vague -> `Required: no` with clear reason
@@ -49,7 +49,7 @@ This route should leave no major ambiguity for the build phase.
    - acceptance criteria are testable
    - validation commands are runnable
    - no unresolved high-impact open decisions remain
-   - Technical Solution Diagram section exists with Mermaid content
+   - if `diagram_mode: required`, Technical Solution Diagram section exists with Mermaid content
    - Start Summary fields are non-placeholder
 16. Set plan handoff metadata for build readiness:
    - `decision: GO`
@@ -57,7 +57,7 @@ This route should leave no major ambiguity for the build phase.
    - `next_mode: Build`
 17. Persist plan phase/handoff update by direct markdown mutation:
    - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`
-   - sections: ensure `Technical Solution Diagram` block remains present
+   - sections: keep Technical Solution Diagram aligned when `diagram_mode: required` (or when the section already exists)
    - `WIP Log`: `Status`, `Blockers`, `Next step`
 18. Resolve next-step narrative from mutated frontmatter and checklist state.
 19. End with concise next-step guidance; do not require verbose response footer fields.

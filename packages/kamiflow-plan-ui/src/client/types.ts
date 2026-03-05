@@ -16,6 +16,7 @@ export interface PlanSummary {
   selected_mode: string;
   next_mode: string;
   next_command: string;
+  diagram_mode?: string;
   updated_at: string;
   project_id?: string;
   is_valid?: boolean;

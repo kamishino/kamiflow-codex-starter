@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { ParsedPlan } from "../types.js";
+import { resolveDiagramMode } from "../lib/diagram-mode.js";
 
 function parseSimpleFrontmatter(yamlBlock) {
   const data = {};
@@ -120,7 +121,8 @@ function buildDefaultTechnicalSolutionSection(frontmatter, sections) {
 export function parsePlanFileContent(markdown, filePath = "<memory>") {
   const { frontmatter, body } = extractFrontmatter(markdown);
   const sections = parseSections(body);
-  if (!hasTechnicalSolutionDiagramSection(sections)) {
+  const diagramMode = resolveDiagramMode(frontmatter["diagram_mode"]).mode;
+  if (diagramMode === "required" && !hasTechnicalSolutionDiagramSection(sections)) {
     sections["Technical Solution Diagram"] = buildDefaultTechnicalSolutionSection(frontmatter, sections);
   }
   const parsed: ParsedPlan = {

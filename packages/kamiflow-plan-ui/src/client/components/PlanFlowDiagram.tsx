@@ -92,9 +92,15 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
   }, [model, selectedTab]);
 
   useEffect(() => {
-    setSelectedTab("technical");
+    setSelectedTab(model.default_tab);
     setRenderAttempt(0);
-  }, [props.detail.summary.plan_id, props.detail.summary.updated_at]);
+  }, [model.default_tab, props.detail.summary.plan_id, props.detail.summary.updated_at]);
+
+  useEffect(() => {
+    if (!model.tabs.some((item) => item.key === selectedTab)) {
+      setSelectedTab(model.default_tab);
+    }
+  }, [model, model.default_tab, selectedTab]);
 
   useEffect(() => {
     let disposed = false;
@@ -254,6 +260,7 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
         <div class="implementation-flow-tabs" role="tablist" aria-label="Diagram tabs">
           {model.tabs.map((tab) => (
             <button
+              key={tab.key}
               type="button"
               role="tab"
               aria-selected={tab.key === activeTab.key}

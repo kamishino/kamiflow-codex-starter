@@ -43,7 +43,8 @@ flowchart LR
 ## Plan Lifecycle Mutation
 - Plan file path: `.local/plans/<active-plan>.md` (reuse-first; create only when required)
 - Frontmatter updates: `request_id`, `parent_plan_id`, `lifecycle_phase`, `updated_at`, `decision`, `next_command`, `next_mode`
-- Section updates: keep `Technical Solution Diagram` present and aligned with chosen solution.
+- Frontmatter policy: set `diagram_mode` as `required|auto|hidden`.
+- Section updates: enforce Technical Solution Diagram only when `diagram_mode: required`; otherwise keep Tasks/Subtasks current for fallback.
 - WIP Log updates: `Status`, `Blockers`, `Next step`
 
 ## Optional Response Handoff (Compact)

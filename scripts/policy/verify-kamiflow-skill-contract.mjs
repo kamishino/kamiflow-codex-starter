@@ -62,7 +62,8 @@ const RULES = [
       "lifecycle_phase: plan",
       "active non-done plan",
       "Final response should use compact guidance shape",
-      "Ensure `Technical Solution Diagram` section exists and is populated",
+      "Set and enforce `diagram_mode` policy in frontmatter",
+      "allowed values: `required|auto|hidden`",
       "Technical Solution Diagram section exists with Mermaid content"
     ]
   },
@@ -84,8 +85,8 @@ const RULES = [
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
       "do not require verbose response footer fields",
       "Final response should use compact guidance shape",
-      "Ensure `Technical Solution Diagram` section exists before implementing",
-      "keep `Technical Solution Diagram` synchronized with actual implementation direction"
+      "Follow `diagram_mode` before implementing",
+      "keep `Technical Solution Diagram` synchronized when `diagram_mode: required`"
     ]
   },
   {

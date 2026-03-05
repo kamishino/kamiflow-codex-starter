@@ -59,16 +59,16 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 - `Alternatives Considered`
 - `Pre-mortem Risk`
 - `Handoff Confidence`
-13. Persist initial `Technical Solution Diagram` section in target plan markdown:
-- heading must be `## Technical Solution Diagram`
-- include one ```mermaid block that captures selected solution logic at high level
-- do not leave the section missing when handoff route is `plan` or `build`
+13. Persist `diagram_mode` in target plan markdown and apply policy:
+- set `diagram_mode: required|auto|hidden`
+- when `required`, include `## Technical Solution Diagram` with one ```mermaid block that captures selected solution logic
+- when `auto|hidden`, Technical section may be omitted (KFP falls back to Tasks/Subtasks)
 14. End with one handoff route: `plan`, `build`, or `research`.
 15. Include concise next-step guidance when useful; do not require verbose response footer fields.
 16. Persist direct plan-file mutation before final output:
    - set frontmatter: `lifecycle_phase: start`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
    - write `Start Summary` section
-   - write `Technical Solution Diagram` section with mermaid content
+   - when `diagram_mode: required`, write `Technical Solution Diagram` section with mermaid content
    - write `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 
 ## Route Output Contract
@@ -96,7 +96,7 @@ Use `../templates/start-report.md` shape.
 - `START_CONTEXT` block is present.
 - `Run next:` command is present and executable.
 - Start Summary payload is complete and non-placeholder.
-- `Technical Solution Diagram` section exists with mermaid content before handoff.
+- Technical Solution Diagram content exists before handoff when `diagram_mode: required`.
 - One clear handoff route selected.
 - Active plan file is resolved (or created only when required) before response completes.
 - Handoff metadata is persisted in plan frontmatter.
