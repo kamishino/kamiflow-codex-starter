@@ -42,7 +42,7 @@ flow options:
   kfc flow next --project <path> --plan <path|plan_id> --style narrative
 
 run options:
-  kfc run [--project <path>] [--skip-ready]
+  kfc run [--project <path>] [--skip-ready] [--route <start|plan|build|check|fix|research>] [--max-steps <n>] [--timeout-ms <n>]
 
 client options:
   kfc client [--goal <text>] [--project <path>] [--force] [--skip-serve-check]

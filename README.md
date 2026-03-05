@@ -33,7 +33,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc client done` (cleanup)
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
-- `kfc run` (auto-runs `flow ensure-plan`, then `flow ready`)
+- `kfc run` (guardrails + deterministic route loop with Codex execution and runlog evidence)
 - `kf` is an alias for `kfc`
 
 Global option: `--cwd <path>`
