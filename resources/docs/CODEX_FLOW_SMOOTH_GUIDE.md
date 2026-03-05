@@ -97,3 +97,10 @@ When route execution fails or context is incomplete, use this exact order:
 - `✨` Emoji is allowed for human-facing markdown cues and section scanning.
 - `⚙️` Keep machine-readable fields plain and deterministic (no emoji in command literals or strict contract keys).
 - `🧩` Use emoji sparingly and consistently to improve comprehension, not decoration.
+
+## Multi-Agent Orchestration
+
+- Use multi-agent mode only when slices are independent and ownership is explicit.
+- Recommended role loop: `Lead -> Explorer(s) -> Worker(s) -> Reviewer -> Lead`.
+- Keep one route per response even when sub-agents run in parallel.
+- For detailed patterns and tool mapping, use `resources/docs/CODEX_MULTI_AGENT_ORCHESTRATION.md`.

@@ -161,6 +161,7 @@ try {
     "## Completion Safety",
     "## Recovery Shortcuts",
     "## Readability Style",
+    "## Multi-Agent Orchestration",
     "Touch active plan at route start",
     "Touch active plan again before final response",
     "| `start` | `plan` |",
@@ -172,9 +173,27 @@ try {
     "Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.",
     "Check: PASS",
     "Emoji is allowed for human-facing markdown cues",
-    "Do not treat plan as done if archive fails."
+    "Do not treat plan as done if archive fails.",
+    "Lead -> Explorer(s) -> Worker(s) -> Reviewer -> Lead"
   ]) {
     assertIncludes(smoothGuide, smoothGuideFile, token, errors);
+  }
+
+  const orchestrationFile = "resources/docs/CODEX_MULTI_AGENT_ORCHESTRATION.md";
+  const orchestration = read(orchestrationFile);
+  for (const token of [
+    "## When To Use Multi-Agent",
+    "## Role Pattern",
+    "## Orchestration Loop",
+    "## Tool Mapping",
+    "spawn_agent",
+    "send_input",
+    "wait",
+    "close_agent",
+    "one route per response",
+    "State/Doing/Next"
+  ]) {
+    assertIncludes(orchestration, orchestrationFile, token, errors);
   }
 
   const routePromptsFile = "resources/docs/ROUTE_PROMPTS.md";

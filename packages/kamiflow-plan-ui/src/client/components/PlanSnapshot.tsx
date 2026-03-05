@@ -1,6 +1,6 @@
 import { ClipboardCheck, Gauge, ListTodo } from "lucide-preact";
 import type { PlanDetail } from "../types";
-import { parseChecklist } from "../utils";
+import { collectChecklistLeaves, parseChecklistTree } from "../utils";
 import { renderInlineMarkdown } from "../lib/inline-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Icon } from "../ui/Icon";
@@ -15,15 +15,38 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
   const detail = props.detail;
   const summary = detail.summary;
   const projectDir = props.projectDir;
-  const tasks = parseChecklist(detail.sections["Implementation Tasks"]);
-  const acs = parseChecklist(detail.sections["Acceptance Criteria"]);
-  const tasksDone = tasks.filter((item) => item.checked).length;
-  const acsDone = acs.filter((item) => item.checked).length;
-  const totalChecklist = tasks.length + acs.length;
+  const tasksTree = parseChecklistTree(detail.sections["Implementation Tasks"]);
+  const acsTree = parseChecklistTree(detail.sections["Acceptance Criteria"]);
+  const taskLeaves = collectChecklistLeaves(tasksTree);
+  const acLeaves = collectChecklistLeaves(acsTree);
+  const tasksDone = taskLeaves.filter((item) => item.checked).length;
+  const acsDone = acLeaves.filter((item) => item.checked).length;
+  const totalChecklist = taskLeaves.length + acLeaves.length;
   const completedChecklist = tasksDone + acsDone;
   const completion = totalChecklist > 0 ? Math.round((completedChecklist / totalChecklist) * 100) : 0;
-  const tasksProgress = tasks.length > 0 ? Math.round((tasksDone / tasks.length) * 100) : 0;
-  const acceptanceProgress = acs.length > 0 ? Math.round((acsDone / acs.length) * 100) : 0;
+  const tasksProgress = taskLeaves.length > 0 ? Math.round((tasksDone / taskLeaves.length) * 100) : 0;
+  const acceptanceProgress = acLeaves.length > 0 ? Math.round((acsDone / acLeaves.length) * 100) : 0;
+
+  function renderChecklistNodes(
+    nodes: Array<{ checked: boolean; text: string; children: any[] }>,
+    depth = 0,
+    pathPrefix = "node"
+  ) {
+    return nodes.map((item, index) => {
+      const key = `${pathPrefix}-${index}`;
+      return (
+        <div class="checklist-node" key={key}>
+          <label class="checklist-item checklist-item-nested" style={{ paddingInlineStart: `${depth * 16}px` }}>
+            <input class="plan-check" type="checkbox" checked={item.checked} disabled />
+            <span class="checklist-text">{renderInlineMarkdown(item.text, { projectDir, enableFileLinks: true })}</span>
+          </label>
+          {item.children.length ? (
+            <div class="checklist-children">{renderChecklistNodes(item.children, depth + 1, key)}</div>
+          ) : null}
+        </div>
+      );
+    });
+  }
 
   function progressScale(
     label: string,
@@ -68,8 +91,8 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
         </CardHeader>
         <CardContent>
           <div class="progress-scale-row">
-            {progressScale("Tasks", tasksProgress, tasksDone, tasks.length, ListTodo, "tasks")}
-            {progressScale("Acceptance", acceptanceProgress, acsDone, acs.length, ClipboardCheck, "acceptance")}
+            {progressScale("Tasks", tasksProgress, tasksDone, taskLeaves.length, ListTodo, "tasks")}
+            {progressScale("Acceptance", acceptanceProgress, acsDone, acLeaves.length, ClipboardCheck, "acceptance")}
             {progressScale("Completion", completion, completedChecklist, totalChecklist, Gauge, "completion")}
           </div>
         </CardContent>
@@ -86,15 +109,8 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           </CardHeader>
           <CardContent>
             <ScrollArea class="checklist-box" id="task-box">
-              {tasks.length ? (
-                tasks.map((item) => (
-                  <label class="checklist-item">
-                    <input class="plan-check" type="checkbox" checked={item.checked} disabled />
-                    <span class="checklist-text">
-                      {renderInlineMarkdown(item.text, { projectDir, enableFileLinks: true })}
-                    </span>
-                  </label>
-                ))
+              {tasksTree.length ? (
+                <div class="checklist-tree">{renderChecklistNodes(tasksTree, 0, "task")}</div>
               ) : (
                 <small>No task checklist found.</small>
               )}
@@ -111,15 +127,8 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           </CardHeader>
           <CardContent>
             <ScrollArea class="checklist-box" id="ac-box">
-              {acs.length ? (
-                acs.map((item) => (
-                  <label class="checklist-item">
-                    <input class="plan-check" type="checkbox" checked={item.checked} disabled />
-                    <span class="checklist-text">
-                      {renderInlineMarkdown(item.text, { projectDir, enableFileLinks: true })}
-                    </span>
-                  </label>
-                ))
+              {acsTree.length ? (
+                <div class="checklist-tree">{renderChecklistNodes(acsTree, 0, "ac")}</div>
               ) : (
                 <small>No acceptance checklist found.</small>
               )}

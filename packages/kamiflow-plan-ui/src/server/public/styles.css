@@ -838,6 +838,25 @@ textarea {
   min-height: var(--space-6);
 }
 
+.checklist-tree {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.checklist-node {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.checklist-item-nested {
+  margin-bottom: 0;
+}
+
+.checklist-children {
+  display: grid;
+  gap: var(--space-1);
+}
+
 .checklist-box input[type="checkbox"] {
   width: var(--space-4);
   height: var(--space-4);

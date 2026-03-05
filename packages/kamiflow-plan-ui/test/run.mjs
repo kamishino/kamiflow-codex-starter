@@ -674,6 +674,10 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
     assert.ok(appJsResponse.payload.includes("phase-current-summary"));
     assert.ok(appJsResponse.payload.includes("snapshot-stack"));
+    assert.ok(appJsResponse.payload.includes("parseChecklistTree"));
+    assert.ok(appJsResponse.payload.includes("collectChecklistLeaves"));
+    assert.ok(appJsResponse.payload.includes("checklist-item-nested"));
+    assert.ok(appJsResponse.payload.includes("checklist-children"));
     assert.ok(appJsResponse.payload.includes("Completed"));
     assert.ok(appJsResponse.payload.includes("Brainstorm"));
     assert.ok(appJsResponse.payload.includes("plan-check"));
@@ -715,6 +719,8 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".panel-kicker"));
     assert.ok(stylesResponse.payload.includes(".snapshot-stack"));
     assert.ok(stylesResponse.payload.includes(".plan-check"));
+    assert.ok(stylesResponse.payload.includes(".checklist-item-nested"));
+    assert.ok(stylesResponse.payload.includes(".checklist-children"));
     assert.ok(stylesResponse.payload.includes(".inline-code-chip"));
     assert.ok(stylesResponse.payload.includes(".plan-file-link"));
     assert.ok(stylesResponse.payload.includes(".activity-detail"));

@@ -84,20 +84,76 @@ export interface ChecklistItem {
   text: string;
 }
 
-export function parseChecklist(sectionText: string): ChecklistItem[] {
+export interface ChecklistNode extends ChecklistItem {
+  depth: number;
+  children: ChecklistNode[];
+}
+
+function indentWidth(raw: string): number {
+  return raw.replace(/\t/g, "  ").length;
+}
+
+export function parseChecklistTree(sectionText: string): ChecklistNode[] {
   const lines = String(sectionText || "").split(/\r?\n/);
-  const items: ChecklistItem[] = [];
+  const roots: ChecklistNode[] = [];
+  const nodeStack: ChecklistNode[] = [];
+  const indentStack: number[] = [];
   for (const line of lines) {
-    const match = line.match(/^- \[( |x|X)\]\s*(.+)$/);
+    const match = line.match(/^(\s*)[-*+]\s\[( |x|X)\]\s*(.+)$/);
     if (!match) {
       continue;
     }
-    items.push({
-      checked: match[1].toLowerCase() === "x",
-      text: match[2]
-    });
+    const indent = indentWidth(match[1]);
+    const node: ChecklistNode = {
+      checked: match[2].toLowerCase() === "x",
+      text: match[3],
+      depth: 0,
+      children: []
+    };
+    while (indentStack.length > 0 && indent <= indentStack[indentStack.length - 1]) {
+      indentStack.pop();
+      nodeStack.pop();
+    }
+    const parent = nodeStack.length ? nodeStack[nodeStack.length - 1] : null;
+    node.depth = parent ? parent.depth + 1 : 0;
+    if (parent) {
+      parent.children.push(node);
+    } else {
+      roots.push(node);
+    }
+    indentStack.push(indent);
+    nodeStack.push(node);
   }
+  return roots;
+}
+
+function flattenChecklistTree(nodes: ChecklistNode[], leavesOnly = false): ChecklistItem[] {
+  const items: ChecklistItem[] = [];
+  const walk = (list: ChecklistNode[]) => {
+    for (const node of list) {
+      const isLeaf = node.children.length === 0;
+      if (!leavesOnly || isLeaf) {
+        items.push({ checked: node.checked, text: node.text });
+      }
+      if (!isLeaf) {
+        walk(node.children);
+      }
+    }
+  };
+  walk(nodes);
   return items;
+}
+
+export function collectChecklistLeaves(nodes: ChecklistNode[]): ChecklistItem[] {
+  return flattenChecklistTree(nodes, true);
+}
+
+export function parseChecklist(sectionText: string): ChecklistItem[] {
+  const tree = parseChecklistTree(sectionText);
+  if (!tree.length) {
+    return [];
+  }
+  return flattenChecklistTree(tree, false);
 }
 
 export function parseSummarySection(sectionText: string): Record<string, string> {
