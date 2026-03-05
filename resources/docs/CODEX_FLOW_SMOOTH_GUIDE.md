@@ -60,6 +60,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `🤝` Do not push routine CLI steps back to the user when the agent can run them.
 - `🧱` If execution is blocked by environment boundaries, report the blocker and request the smallest possible user action.
 - `👀` KFP stays observer-first: direct UI/API Codex execution is disabled; Activity Stream relies on plan + run-log (`.local/runs/*.jsonl`) events.
+- `🧠` Diagram policy: Mermaid/flow visuals are derived from canonical plan markdown; never treat diagrams as writable execution state.
 
 ## Compact Response Shape
 

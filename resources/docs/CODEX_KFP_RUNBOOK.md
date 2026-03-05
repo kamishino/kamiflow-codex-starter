@@ -136,6 +136,7 @@ KFP Activity panel is observer-first; use it as evidence, not control.
 - Direct `POST /api/codex/action` controls are intentionally disabled (`CODEX_ACTION_DISABLED`).
 - Runtime liveness should come from `.local/runs/<plan-id>.jsonl` updates streamed as `runlog_*` SSE events.
 - Preferred control plane is chat-driven Codex execution; KFP remains read/observe oriented.
+- Mermaid/flow diagrams in KFP are derived from canonical plan markdown state; they are never the execution source of truth.
 
 - `Confidence High`: latest execution is successful and evidence is present.
 - `Confidence Medium`: execution is running/successful but evidence is partial.

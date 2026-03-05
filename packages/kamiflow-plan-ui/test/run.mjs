@@ -15,6 +15,7 @@ import {
   runCodexAction,
   shouldPreferPlanInteractiveMode
 } from "../dist/lib/codex-runner.js";
+import { buildPlanDiagramModel } from "../dist/lib/plan-diagram.js";
 import { readRunlogSignal } from "../dist/lib/runlog.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -474,6 +475,36 @@ await runCase("runlog parser extracts runtime signal from latest jsonl entry", a
   });
 });
 
+await runCase("plan diagram model is deterministic from canonical plan state", async () => {
+  const input = {
+    summary: {
+      plan_id: "PLAN-TEST-DIAGRAM-001",
+      status: "in_progress",
+      decision: "NO_GO",
+      selected_mode: "Build",
+      next_mode: "Build",
+      next_command: "fix"
+    },
+    sections: {
+      "Start Summary": "- Required: no\n- Reason: clear scope",
+      "Implementation Tasks": "- [x] Task A\n- [ ] Task B",
+      "Acceptance Criteria": "- [x] AC1\n- [ ] AC2\n- [ ] AC3"
+    }
+  };
+  const first = buildPlanDiagramModel(input);
+  const second = buildPlanDiagramModel(input);
+  assert.equal(first.current_phase, "Build");
+  assert.equal(first.tasks.done, 1);
+  assert.equal(first.tasks.total, 2);
+  assert.equal(first.acceptance.done, 1);
+  assert.equal(first.acceptance.total, 3);
+  assert.equal(first.decision, "NO_GO");
+  assert.equal(first.next_command, "fix");
+  assert.equal(first.mermaid, second.mermaid);
+  assert.ok(first.mermaid.includes("derived_from_plan_state=true"));
+  assert.ok(first.mermaid.includes("check -- BLOCK --> fix --> check"));
+});
+
 await runCase("api returns plan list (when server deps are installed)", async () => {
   let createServer;
   try {
@@ -720,6 +751,9 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("cache-control"));
     assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
     assert.ok(appJsResponse.payload.includes("Flow Snapshot"));
+    assert.ok(appJsResponse.payload.includes("Derived Flow Diagram"));
+    assert.ok(appJsResponse.payload.includes("View Mermaid source"));
+    assert.ok(appJsResponse.payload.includes("buildPlanDiagramModel"));
     assert.ok(appJsResponse.payload.includes("Confidence "));
     assert.ok(appJsResponse.payload.includes("Now"));
     assert.ok(appJsResponse.payload.includes("Plan Status"));
@@ -751,6 +785,9 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
     assert.ok(stylesResponse.payload.includes(".panel-kicker"));
     assert.ok(stylesResponse.payload.includes(".snapshot-stack"));
+    assert.ok(stylesResponse.payload.includes(".plan-flow-card"));
+    assert.ok(stylesResponse.payload.includes(".plan-flow-track"));
+    assert.ok(stylesResponse.payload.includes(".plan-mermaid-code"));
     assert.ok(stylesResponse.payload.includes(".plan-check"));
     assert.ok(stylesResponse.payload.includes(".checklist-item-nested"));
     assert.ok(stylesResponse.payload.includes(".checklist-children"));
