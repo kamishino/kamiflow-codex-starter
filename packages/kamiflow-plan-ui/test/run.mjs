@@ -643,7 +643,11 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("_ts="));
     assert.ok(appJsResponse.payload.includes("cache-control"));
     assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
-    assert.ok(appJsResponse.payload.includes("Current Task/Subtask"));
+    assert.ok(appJsResponse.payload.includes("Flow Snapshot"));
+    assert.ok(appJsResponse.payload.includes("Now"));
+    assert.ok(appJsResponse.payload.includes("Phase"));
+    assert.ok(appJsResponse.payload.includes("Blockers"));
+    assert.ok(appJsResponse.payload.includes("Evidence"));
     assert.ok(appJsResponse.payload.includes("SUCCESS "));
     assert.ok(appJsResponse.payload.includes("FAIL "));
     assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
@@ -657,6 +661,8 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".journal-header"));
     assert.ok(stylesResponse.payload.includes(".empty-state"));
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
+    assert.ok(stylesResponse.payload.includes(".activity-overview-grid"));
+    assert.ok(stylesResponse.payload.includes(".activity-block"));
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
     assert.ok(stylesResponse.payload.includes(".phase-current-summary"));

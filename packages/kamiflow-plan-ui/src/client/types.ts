@@ -42,6 +42,15 @@ export interface RouteInfo {
 
 export type ActivityTone = "info" | "ok" | "warn" | "error";
 export type ActivityFilter = "all" | "plan" | "codex" | "system";
+export type ActivityRunState = "RUNNING" | "SUCCESS" | "FAIL" | "IDLE";
+
+export interface ActivityMeta {
+  run_state?: ActivityRunState;
+  phase?: string;
+  blocker?: string;
+  evidence?: string;
+  source?: string;
+}
 
 export interface ActivityItem {
   eventType: string;
@@ -50,6 +59,7 @@ export interface ActivityItem {
   message: string;
   detail: string;
   ts: string;
+  meta?: ActivityMeta;
 }
 
 export interface StartGateResult {

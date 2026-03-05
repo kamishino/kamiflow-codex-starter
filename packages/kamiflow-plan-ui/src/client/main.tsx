@@ -6,8 +6,8 @@ import { EmptyPanelCard } from "./components/EmptyPanelCard";
 import { PlanSnapshot } from "./components/PlanSnapshot";
 import { WorkflowTimeline } from "./components/WorkflowTimeline";
 import { activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
-import type { ActivityItem, PlanSummary } from "./types";
-import { activityTone, formatEventLabel, nowIso, parseRoute } from "./utils";
+import type { ActivityItem, ActivityMeta, PlanSummary } from "./types";
+import { activityTone, deriveStage, formatEventLabel, nowIso, parseRoute } from "./utils";
 
 const projectEl = document.querySelector<HTMLSelectElement>("#project-filter");
 const filterEl = document.querySelector<HTMLSelectElement>("#plan-filter");
@@ -56,6 +56,7 @@ let projectDirById = new Map<string, string>();
 let planSearchQuery = "";
 let projectsLoaded = false;
 let suppressHashChange = false;
+let lastKnownPhase = "";
 
 function currentPlanFilter(): string {
   return filterEl.value || "active";
@@ -213,14 +214,54 @@ function loadPersistedActivity(): void {
   }
 }
 
-function addActivity(eventType: string, message: string, detailText = ""): void {
+function summarizeEvidence(text: string): string {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) {
+    return "";
+  }
+  const firstLine = trimmed.split(/\r?\n/).find((line) => line.trim().length > 0) || trimmed;
+  return firstLine.length > 180 ? firstLine.slice(0, 177) + "..." : firstLine;
+}
+
+function phaseFromActionType(actionType: string | undefined): string {
+  const normalized = String(actionType || "").toLowerCase();
+  if (normalized === "start") return "Brainstorm";
+  if (normalized === "plan" || normalized === "research") return "Plan";
+  if (normalized === "build" || normalized === "fix") return "Build";
+  if (normalized === "check") return "Check";
+  return "";
+}
+
+function phaseFromPlanEventPayload(payload: any): string {
+  const summary = payload?.summary;
+  if (!summary || !detail.value) {
+    return "";
+  }
+  try {
+    const phase = deriveStage(summary, detail.value);
+    return String(phase || "");
+  } catch {
+    return "";
+  }
+}
+
+function parseJsonPayload(payloadText: string): any {
+  try {
+    return JSON.parse(payloadText || "{}");
+  } catch {
+    return null;
+  }
+}
+
+function addActivity(eventType: string, message: string, detailText = "", meta?: ActivityMeta): void {
   const entry: ActivityItem = {
     eventType,
     eventLabel: formatEventLabel(eventType),
     tone: activityTone(eventType),
     message,
     detail: detailText,
-    ts: nowIso()
+    ts: nowIso(),
+    meta
   };
   activityItems.value = [entry, ...activityItems.value].slice(0, ACTIVITY_MAX_ITEMS);
   persistActivity();
@@ -399,6 +440,7 @@ async function loadDetail(): Promise<void> {
   }
 
   detail.value = fetchedDetail;
+  lastKnownPhase = deriveStage(fetchedDetail.summary, fetchedDetail);
   emptyPanelState.value = null;
   renderPlanSearchResults();
   syncPlanSelectionHelp();
@@ -555,14 +597,43 @@ function attachStream(projectId: string, planId: string): void {
 
   currentStream.addEventListener("resync_required", () => {
     setStatus("Stream replay unavailable. Full resync.");
-    addActivity("resync_required", "SSE replay unavailable", "full resync triggered");
+    addActivity("resync_required", "SSE replay unavailable", "full resync triggered", {
+      run_state: "IDLE",
+      phase: lastKnownPhase || undefined,
+      evidence: "stream replay unavailable",
+      source: "system"
+    });
     void refreshFromRoute();
   });
 
   for (const eventType of ["plan_updated", "plan_deleted", "plan_invalid", "plan_archived"]) {
     currentStream.addEventListener(eventType, (evt) => {
-      const payload = (evt as MessageEvent).data || "";
-      addActivity(eventType, "Plan event received", payload);
+      const payloadText = (evt as MessageEvent).data || "{}";
+      const payload = parseJsonPayload(payloadText);
+      const derivedPhase = phaseFromPlanEventPayload(payload);
+      if (derivedPhase) {
+        lastKnownPhase = derivedPhase;
+      }
+      const message =
+        eventType === "plan_updated" && derivedPhase
+          ? `PHASE ${derivedPhase}`
+          : eventType === "plan_archived"
+            ? "Plan archived"
+            : eventType === "plan_invalid"
+              ? "Plan invalid"
+              : "Plan event received";
+      const blocker = eventType === "plan_invalid" ? "Plan validation failed." : "";
+      const summary = payload?.summary;
+      const evidence = summary
+        ? summarizeEvidence(`status=${summary.status || "-"} decision=${summary.decision || "-"} next=${summary.next_command || "-"}`)
+        : summarizeEvidence(payloadText);
+      addActivity(eventType, message, payloadText, {
+        run_state: "IDLE",
+        phase: derivedPhase || lastKnownPhase || undefined,
+        blocker: blocker || undefined,
+        evidence: evidence || undefined,
+        source: "plan"
+      });
       setStatus("Live update received: " + eventType);
       void refreshFromRoute();
     });
@@ -578,7 +649,20 @@ function attachStream(projectId: string, planId: string): void {
         payload = {};
       }
       const summary = summarizeCodexRunEvent(eventType, payload);
-      addActivity(eventType, summary.message, summary.detail || payloadText);
+      const derivedPhase = phaseFromActionType(payload.action_type);
+      if (derivedPhase) {
+        lastKnownPhase = derivedPhase;
+      }
+      const runState = eventType === "codex_run_started" ? "RUNNING" : eventType === "codex_run_completed" ? "SUCCESS" : "FAIL";
+      const blocker = runState === "FAIL" ? summarizeEvidence(payload.stderr_tail || payload.stdout_tail || "Codex run failed.") : "";
+      const evidence = summarizeEvidence(summary.detail || payload.stdout_tail || payload.stderr_tail || payloadText);
+      addActivity(eventType, summary.message, summary.detail || payloadText, {
+        run_state: runState,
+        phase: derivedPhase || lastKnownPhase || undefined,
+        blocker: blocker || undefined,
+        evidence: evidence || undefined,
+        source: payload.action_type ? `codex:${payload.action_type}` : "codex"
+      });
       setStatus("Codex run event: " + summary.message);
     });
   }

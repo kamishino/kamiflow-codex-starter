@@ -948,6 +948,94 @@ textarea {
   background: var(--surface-3);
 }
 
+.activity-overview-item {
+  list-style: none;
+}
+
+.activity-overview-card {
+  border-color: var(--border-info);
+  background: var(--surface-3);
+}
+
+.activity-overview-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.activity-overview-head strong {
+  font-size: var(--text-body);
+}
+
+.activity-overview-metrics {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.activity-overview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2);
+}
+
+.activity-block {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-block-title {
+  margin: var(--space-0);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.activity-block-main {
+  margin: var(--space-0);
+  color: var(--foreground);
+  font-size: var(--text-body);
+  line-height: var(--lh-normal);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.activity-block-meta {
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+}
+
+.activity-block-now {
+  border-color: var(--border-info);
+}
+
+.activity-block-phase {
+  border-color: var(--border-success);
+}
+
+.activity-block-blockers {
+  border-color: var(--border-warning);
+  background: var(--warning-soft);
+}
+
+.activity-block-evidence {
+  border-color: var(--border-soft);
+}
+
 .activity-summary-head {
   display: flex;
   align-items: flex-start;
@@ -1469,6 +1557,12 @@ pre {
   #activity-filter {
     justify-self: start;
     text-align: left;
+  }
+}
+
+@media (min-width: 861px) {
+  .activity-overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
