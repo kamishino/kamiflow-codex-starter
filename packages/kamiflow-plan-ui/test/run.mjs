@@ -15,7 +15,7 @@ import {
   runCodexAction,
   shouldPreferPlanInteractiveMode
 } from "../dist/lib/codex-runner.js";
-import { buildImplementationFlowModel } from "../dist/lib/plan-diagram.js";
+import { buildTechnicalSolutionDiagramModel } from "../dist/lib/plan-diagram.js";
 import { readRunlogSignal } from "../dist/lib/runlog.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -475,38 +475,36 @@ await runCase("runlog parser extracts runtime signal from latest jsonl entry", a
   });
 });
 
-await runCase("implementation flow model binds mermaid section to implementation tasks", async () => {
+await runCase("technical solution diagram model reads mermaid from solution section", async () => {
   const input = {
     summary: {
       plan_id: "PLAN-TEST-DIAGRAM-001"
     },
     sections: {
       "Implementation Tasks": "- [x] T1 Prepare API\n- [ ] T2 Render UI",
-      "Implementation Flow": "```mermaid\nflowchart TD\nT1 --> T2\n```"
+      "Technical Solution Diagram": "```mermaid\nflowchart TD\nIDEA --> API --> UI\n```"
     }
   };
-  const first = buildImplementationFlowModel(input);
-  const second = buildImplementationFlowModel(input);
+  const first = buildTechnicalSolutionDiagramModel(input);
+  const second = buildTechnicalSolutionDiagramModel(input);
   assert.equal(first.source_type, "section");
-  assert.equal(first.tasks.length, 2);
-  assert.equal(first.tasks[0].id, "T1");
-  assert.equal(first.tasks[1].id, "T2");
-  assert.equal(first.warnings.length, 0);
-  assert.equal(first.mermaid, second.mermaid);
-  assert.ok(first.mermaid.includes("T1 --> T2"));
+  assert.equal(first.section_name, "Technical Solution Diagram");
+  assert.equal(first.mermaid_source, second.mermaid_source);
+  assert.ok(first.mermaid_source.includes("IDEA --> API --> UI"));
+  assert.ok(first.mermaid_render.includes("flowchart LR"));
+  assert.ok(first.warnings.some((item) => item.includes("landscape")));
 });
 
-await runCase("implementation flow model derives fallback mermaid from tasks", async () => {
-  const model = buildImplementationFlowModel({
+await runCase("technical solution diagram model derives placeholder when section is missing", async () => {
+  const model = buildTechnicalSolutionDiagramModel({
     summary: { plan_id: "PLAN-TEST-DIAGRAM-002" },
     sections: {
       "Implementation Tasks": "- [ ] Task One\n- [x] Task Two"
     }
   });
   assert.equal(model.source_type, "derived");
-  assert.ok(model.mermaid.includes("derived_from_implementation_tasks=true"));
-  assert.ok(model.mermaid.includes("T1"));
-  assert.ok(model.mermaid.includes("T2"));
+  assert.ok(model.mermaid_render.includes("derived_solution_placeholder=true"));
+  assert.ok(model.mermaid_source.includes("Start Implementation") || model.mermaid_source.includes("Selected Solution"));
   assert.ok(model.warnings.length >= 1);
 });
 
@@ -756,10 +754,12 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("cache-control"));
     assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
     assert.ok(appJsResponse.payload.includes("Flow Snapshot"));
-    assert.ok(appJsResponse.payload.includes("Implementation Flow"));
+    assert.ok(appJsResponse.payload.includes("Technical Solution Diagram"));
     assert.ok(appJsResponse.payload.includes("View Mermaid source"));
-    assert.ok(appJsResponse.payload.includes("buildImplementationFlowModel"));
+    assert.ok(appJsResponse.payload.includes("buildTechnicalSolutionDiagramModel"));
     assert.ok(appJsResponse.payload.includes("cdn.jsdelivr.net/npm/mermaid"));
+    assert.ok(appJsResponse.payload.includes("svg-pan-zoom"));
+    assert.ok(appJsResponse.payload.includes("Pan/Zoom"));
     assert.ok(appJsResponse.payload.includes("work-surface-stack"));
     assert.ok(appJsResponse.payload.includes("Confidence "));
     assert.ok(appJsResponse.payload.includes("Now"));
@@ -795,6 +795,8 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".implementation-flow-card"));
     assert.ok(stylesResponse.payload.includes(".implementation-flow-mermaid"));
     assert.ok(stylesResponse.payload.includes(".implementation-flow-warning"));
+    assert.ok(stylesResponse.payload.includes(".implementation-flow-toolbar"));
+    assert.ok(stylesResponse.payload.includes(".implementation-flow-button"));
     assert.ok(stylesResponse.payload.includes(".plan-check"));
     assert.ok(stylesResponse.payload.includes(".checklist-item-nested"));
     assert.ok(stylesResponse.payload.includes(".checklist-children"));

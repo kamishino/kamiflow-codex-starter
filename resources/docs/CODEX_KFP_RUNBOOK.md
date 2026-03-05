@@ -136,8 +136,10 @@ KFP Activity panel is observer-first; use it as evidence, not control.
 - Direct `POST /api/codex/action` controls are intentionally disabled (`CODEX_ACTION_DISABLED`).
 - Runtime liveness should come from `.local/runs/<plan-id>.jsonl` updates streamed as `runlog_*` SSE events.
 - Preferred control plane is chat-driven Codex execution; KFP remains read/observe oriented.
-- Mermaid/flow diagrams in KFP should be shown in a dedicated **Implementation Flow** section (task logic), not embedded inside PlanSnapshot status visualization.
-- `Implementation Flow` can contain a ```mermaid code block; if missing, KFP may derive a fallback flow from `Implementation Tasks`.
+- Mermaid/flow diagrams in KFP should be shown in a dedicated **Technical Solution Diagram** section, not embedded inside PlanSnapshot status visualization.
+- `Technical Solution Diagram` should contain a ```mermaid code block to persist chosen solution logic for future sessions/models.
+- KFP may render a minimal derived placeholder when the section/block is missing, but canonical solution intent must come from plan markdown.
+- KFP attempts pan/zoom controls via `svg-pan-zoom`; if unavailable, it falls back to static Mermaid rendering.
 - Mermaid visualization is for humans; canonical execution truth is still plan markdown frontmatter + checklist sections.
 
 - `Confidence High`: latest execution is successful and evidence is present.

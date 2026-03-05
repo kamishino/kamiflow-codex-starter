@@ -7,23 +7,21 @@ export interface DiagramPlanInput {
   sections: Record<string, string>;
 }
 
-export interface ImplementationTaskNode {
-  id: string;
-  label: string;
-  checked: boolean;
-}
-
-export interface PlanDiagramModel {
+export interface TechnicalSolutionDiagramModel {
   plan_id: string;
+  section_name: string;
   source_type: "section" | "derived";
-  tasks: ImplementationTaskNode[];
-  mermaid: string;
+  mermaid_source: string;
+  mermaid_render: string;
   warnings: string[];
 }
 
-function escapeMermaidText(value: string): string {
-  return String(value || "").replace(/"/g, '\\"').replace(/\r?\n/g, " ");
-}
+const SECTION_CANDIDATES = [
+  "Technical Solution Diagram",
+  "Solution Diagram",
+  "Technical Solution",
+  "Implementation Flow"
+] as const;
 
 function extractMermaidBlock(sectionText: string): string {
   const text = String(sectionText || "");
@@ -31,105 +29,102 @@ function extractMermaidBlock(sectionText: string): string {
   return match?.[1]?.trim() || "";
 }
 
-function parseImplementationTasks(sectionText: string): ImplementationTaskNode[] {
-  const lines = String(sectionText || "").split(/\r?\n/);
-  const items: ImplementationTaskNode[] = [];
-  for (const line of lines) {
-    const match = line.match(/^(\s*)[-*+]\s\[( |x|X)\]\s*(.+)$/);
-    if (!match) {
-      continue;
+function findSection(sections: Record<string, string>): { name: string; text: string } | null {
+  for (const name of SECTION_CANDIDATES) {
+    if (sections[name]) {
+      return { name, text: sections[name] };
     }
-    const checked = match[2].toLowerCase() === "x";
-    const raw = String(match[3] || "").trim();
-    const explicitId = raw.match(/\b(T\d+)\b/i)?.[1]?.toUpperCase();
-    const id = explicitId || `T${items.length + 1}`;
-    const label = raw
-      .replace(new RegExp(`\\b${id}\\b`, "ig"), "")
-      .replace(/^[\[\]\-:()#\s]+/, "")
-      .trim();
-    items.push({
-      id,
-      label: label || `Task ${items.length + 1}`,
-      checked
-    });
   }
-  return items;
+  return null;
 }
 
-function extractTaskRefsFromMermaid(source: string): string[] {
-  const ids = new Set<string>();
-  const matches = String(source || "").match(/\bT\d+\b/gi) || [];
-  for (const item of matches) {
-    ids.add(item.toUpperCase());
-  }
-  return [...ids];
+function buildFallbackMermaid(): string {
+  return [
+    "flowchart LR",
+    "  %% derived_solution_placeholder=true",
+    '  IDEA["Selected Solution"] --> DESIGN["Technical Design"] --> BUILD["Implementation"] --> CHECK["Validation"]'
+  ].join("\n");
 }
 
-function buildDerivedMermaid(tasks: ImplementationTaskNode[]): string {
-  const lines: string[] = [];
-  lines.push("flowchart TD");
-  lines.push("  %% derived_from_implementation_tasks=true");
-  lines.push("  classDef done fill:#ecfdf3,stroke:#16a34a,color:#14532d,stroke-width:1px;");
-  lines.push("  classDef todo fill:#f8fafc,stroke:#94a3b8,color:#334155,stroke-width:1px;");
-  lines.push('  START["Start Implementation"]:::done');
-
-  if (tasks.length === 0) {
-    lines.push('  EMPTY["No implementation tasks found"]:::todo');
-    lines.push("  START --> EMPTY");
-    return lines.join("\n");
+function forceLandscapeOrientation(source: string): { mermaid: string; changed: boolean } {
+  const text = String(source || "").trim();
+  if (!text) {
+    return { mermaid: "", changed: false };
   }
 
-  for (const task of tasks) {
-    const className = task.checked ? "done" : "todo";
-    lines.push(`  ${task.id}["${escapeMermaidText(`${task.id}: ${task.label}`)}"]:::${className}`);
-  }
+  const lines = text.split(/\r?\n/);
+  let changed = false;
+  const next = [...lines];
 
-  lines.push(`  START --> ${tasks[0].id}`);
-  for (let index = 0; index < tasks.length - 1; index += 1) {
-    lines.push(`  ${tasks[index].id} --> ${tasks[index + 1].id}`);
-  }
-  lines.push(`  ${tasks[tasks.length - 1].id} --> DONE["Done"]:::todo`);
-  return lines.join("\n");
-}
-
-export function buildImplementationFlowModel(input: DiagramPlanInput): PlanDiagramModel {
-  const tasks = parseImplementationTasks(input.sections["Implementation Tasks"]);
-  const taskIds = tasks.map((item) => item.id);
-  const flowSection = input.sections["Implementation Flow"] || "";
-  const mermaidFromSection = extractMermaidBlock(flowSection);
-  const warnings: string[] = [];
-
-  let mermaid = mermaidFromSection;
-  let source_type: "section" | "derived" = "section";
-
-  if (!mermaid) {
-    mermaid = buildDerivedMermaid(tasks);
-    source_type = "derived";
-    warnings.push("No Mermaid code block found in `Implementation Flow`; using derived flow from Implementation Tasks.");
+  const flowIndex = lines.findIndex((line) => /^\s*(flowchart|graph)\b/i.test(line));
+  if (flowIndex >= 0) {
+    const original = lines[flowIndex];
+    const normalized = original.replace(/\s+/g, " ").trim();
+    if (/(flowchart|graph)\s+(TD|TB|BT)\b/i.test(normalized)) {
+      next[flowIndex] = normalized.replace(/\b(TD|TB|BT)\b/i, "LR");
+      changed = true;
+    } else if (/^(flowchart|graph)\s*$/i.test(normalized)) {
+      next[flowIndex] = `${normalized} LR`;
+      changed = true;
+    }
   } else {
-    const refs = extractTaskRefsFromMermaid(mermaid);
-    if (refs.length === 0) {
-      warnings.push("Mermaid flow has no task references (expected IDs like T1, T2...).");
-    } else {
-      const unknownRefs = refs.filter((ref) => !taskIds.includes(ref));
-      if (unknownRefs.length > 0) {
-        warnings.push(`Mermaid references unknown task IDs: ${unknownRefs.join(", ")}.`);
-      }
-      const missingRefs = taskIds.filter((id) => !refs.includes(id));
-      if (missingRefs.length > 0) {
-        warnings.push(`Implementation Tasks missing in Mermaid flow: ${missingRefs.join(", ")}.`);
-      }
-    }
+    next.unshift("flowchart LR");
+    changed = true;
+  }
+
+  return { mermaid: next.join("\n"), changed };
+}
+
+export function buildTechnicalSolutionDiagramModel(input: DiagramPlanInput): TechnicalSolutionDiagramModel {
+  const warnings: string[] = [];
+  const section = findSection(input.sections);
+
+  if (!section) {
+    const fallback = buildFallbackMermaid();
+    warnings.push(
+      "No `Technical Solution Diagram` section found. Add a ```mermaid block under that section to persist solution logic."
+    );
+    return {
+      plan_id: input.summary.plan_id,
+      section_name: "Technical Solution Diagram",
+      source_type: "derived",
+      mermaid_source: fallback,
+      mermaid_render: fallback,
+      warnings
+    };
+  }
+
+  const source = extractMermaidBlock(section.text);
+  if (!source) {
+    const fallback = buildFallbackMermaid();
+    warnings.push(
+      `Section \`${section.name}\` has no Mermaid block. Add \`\`\`mermaid ... \`\`\` to store solution logic in plan markdown.`
+    );
+    return {
+      plan_id: input.summary.plan_id,
+      section_name: section.name,
+      source_type: "derived",
+      mermaid_source: fallback,
+      mermaid_render: fallback,
+      warnings
+    };
+  }
+
+  const normalized = forceLandscapeOrientation(source);
+  if (normalized.changed) {
+    warnings.push("Mermaid render normalized to landscape orientation (LR) for 16:9 viewing.");
   }
 
   return {
     plan_id: input.summary.plan_id,
-    source_type,
-    tasks,
-    mermaid,
+    section_name: section.name,
+    source_type: "section",
+    mermaid_source: source,
+    mermaid_render: normalized.mermaid || source,
     warnings
   };
 }
 
-// Backward compatibility for previous imports/tests.
-export const buildPlanDiagramModel = buildImplementationFlowModel;
+// Backward-compatible aliases for existing imports/tests.
+export const buildImplementationFlowModel = buildTechnicalSolutionDiagramModel;
+export const buildPlanDiagramModel = buildTechnicalSolutionDiagramModel;
