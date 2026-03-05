@@ -41,12 +41,14 @@ const RULES = [
       "## Evidence Contract",
       "START_CONTEXT",
       "END_START_CONTEXT",
+      "If `IDEATION_CONTEXT` is present from prior `research`, consume it directly and skip duplicate discovery questions.",
       "Run next:",
       "YYYY-MM-DD-<seq>-start.md",
       "Required: yes|no",
       "Technical Solution Diagram",
       "write `Technical Solution Diagram` section with mermaid content",
-      "Run Diagram Need Decision immediately after user answers"
+      "Run Diagram Need Decision immediately after user answers",
+      "First turn contains only questions with options when `IDEATION_CONTEXT` is absent."
     ]
   },
   {
@@ -116,7 +118,12 @@ const RULES = [
       "Persist handoff phase by direct markdown mutation",
       "Mark unknown claims as `Unknown` when evidence is insufficient; do not guess.",
       "Resolve next-step narrative from mutated state.",
-      "do not require verbose response footer fields"
+      "do not require verbose response footer fields",
+      "Optional ideation preset",
+      "IDEATION_CONTEXT",
+      "END_IDEATION_CONTEXT",
+      "Idea Categories (3-5)",
+      "Top Shortlist (Quick Win, Balanced, Ambitious)"
     ]
   },
   {

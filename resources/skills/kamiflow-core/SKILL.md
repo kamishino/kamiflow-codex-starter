@@ -46,6 +46,7 @@ Pick mode before executing route logic:
   - scoped implementation (`build`)
   - verification decisions (`check`)
   - evidence gathering (`research`)
+  - optional feature ideation/inspiration discovery (`research` ideation preset)
   - targeted remediation (`fix`)
 - If request is trivial and does not require plan lifecycle handling, do not force this skill.
 
@@ -81,6 +82,7 @@ Pick mode before executing route logic:
 - Emoji is allowed in human-facing markdown summaries/docs when it improves readability.
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
+- For vague feature-discovery requests, prefer `research` ideation preset before `start`.
 - If mode does not satisfy route requirements, do not continue.
 - Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
 - Every top-level user request must resolve one active non-done plan in `.local/plans` before route output.

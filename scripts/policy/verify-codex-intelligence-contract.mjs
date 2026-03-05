@@ -210,7 +210,9 @@ try {
     "profile: `plan`",
     "profile: `executor`",
     "profile: `review`",
-    "Recover missing plan via `kfc flow ensure-plan --project .`."
+    "Recover missing plan via `kfc flow ensure-plan --project .`.",
+    "if `IDEATION_CONTEXT` exists, consume it first and skip duplicate baseline questions",
+    "run ideation preset:"
   ]) {
     assertIncludes(routePrompts, routePromptsFile, token, errors);
   }

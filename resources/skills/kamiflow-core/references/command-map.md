@@ -8,6 +8,7 @@ Select exactly one route:
 
 1. `start`
 - Triggers: new idea, vague concept, "thinking about building", "what should we build".
+- If request is feature-discovery/inspiration and still broad, run `research` with ideation preset first.
 - Required mode: `Plan`
 - Output: start report.
 - Next: `plan (Plan)` or `build (Build)` or `research (Plan)`.
@@ -31,9 +32,9 @@ Select exactly one route:
 - Next: `fix (Build)` or `done`.
 
 5. `research`
-- Triggers: unknown domain, risky change, unclear constraints, missing facts.
+- Triggers: unknown domain, risky change, unclear constraints, missing facts, feature ideation/inspiration discovery.
 - Required mode: `Plan`
-- Output: research brief with decision recommendation.
+- Output: research brief with decision recommendation (or ideation brief when preset is selected).
 - Next: `plan (Plan)` or `start (Plan)`.
 
 6. `fix`

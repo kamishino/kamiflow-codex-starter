@@ -14,7 +14,7 @@ Use these defaults unless a higher-priority contract overrides them:
 | `build` | `executor` | implement scoped tasks | `check` |
 | `fix` | `executor` | resolve blockers from check findings | `check` |
 | `check` | `review` | verify acceptance criteria and decide PASS/BLOCK | `fix` or `done` |
-| `research` | `plan` | gather evidence and remove unknowns | `plan` |
+| `research` | `plan` | gather evidence and remove unknowns (or run ideation preset) | `plan` |
 
 Fallback order for all routes:
 
@@ -80,7 +80,8 @@ $kamiflow-core start <topic>
 Expected:
 
 - profile: `plan`
-- first turn asks 3-5 questions only
+- if `IDEATION_CONTEXT` exists, consume it first and skip duplicate baseline questions
+- otherwise first turn asks 3-5 questions only
 - each question has 3 options + `Other`
 - second turn (after answers) includes:
   - problem analysis (problem, root causes, constraints)
@@ -89,6 +90,22 @@ Expected:
   - scored recommendation with one selected best solution
 - includes `START_CONTEXT` block
 - ends with exact `Run next:` command for `plan` and active-plan handoff
+
+## Research Route
+
+```text
+$kamiflow-core research gather evidence for unknowns, or run ideation preset for vague feature discovery.
+```
+
+Expected:
+
+- profile: `plan`
+- when request is vague/inspirational, run ideation preset:
+  - 3-5 idea categories, 2-3 ideas per category
+  - shortlist exactly 3 tracks: Quick Win, Balanced, Ambitious
+  - include `IDEATION_CONTEXT` block for `start`/`plan` handoff
+- mark unknown claims as `Unknown` instead of guessing
+- persist plan handoff metadata and provide next route guidance
 
 ## Build Route
 

@@ -16,10 +16,10 @@ This route should leave no major ambiguity for the build phase.
    - Implementation Tasks
    - Acceptance Criteria
    - Validation Commands
-2. If `START_CONTEXT` is present:
-   - consume it directly
+2. If `START_CONTEXT` or `IDEATION_CONTEXT` is present:
+   - consume provided context directly
    - do not re-ask baseline clarification questions.
-3. If `START_CONTEXT` is not present and 2+ core fields are missing, require `start` first and do not proceed to build-ready handoff.
+3. If both `START_CONTEXT` and `IDEATION_CONTEXT` are absent and 2+ core fields are missing, require `start` first and do not proceed to build-ready handoff.
 4. Resolve target plan file using this exact order:
    1. user-provided file path
    2. active non-done plan
@@ -92,7 +92,7 @@ When ready, ensure handoff fields are persisted in plan frontmatter (`decision: 
 ## Exit Criteria
 
 - Scope, tasks, and acceptance criteria are concrete and testable.
-- `START_CONTEXT` handoff is consumed when provided.
+- `START_CONTEXT`/`IDEATION_CONTEXT` handoff is consumed when provided.
 - A concrete active plan file is resolved (or created only when required) before planning output.
 - Start Summary is present and consistent with request clarity.
 - No unresolved high-impact open decisions remain.

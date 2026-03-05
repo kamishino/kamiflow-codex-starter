@@ -22,13 +22,14 @@ Use one default profile per route to keep behavior stable.
 | `build` | `executor` | execute scoped implementation tasks | `check` |
 | `fix` | `executor` | resolve check blockers in scoped tasks | `check` |
 | `check` | `review` | evaluate acceptance evidence and decide PASS/BLOCK | `fix` or `done` |
-| `research` | `plan` | gather evidence and reduce unknowns | `plan` |
+| `research` | `plan` | gather evidence/reduce unknowns, or run ideation preset for vague feature discovery | `plan` |
 
 Notes:
 
 - `plan` profile prioritizes clarification, constraints, and spec quality.
 - `executor` profile prioritizes deterministic edits + concrete evidence.
 - `review` profile prioritizes findings-first verification and decision clarity.
+- For vague feature requests asking for inspiration/what-to-build-next, use `research` ideation preset before `start`.
 
 ## Deterministic Fallback Order
 

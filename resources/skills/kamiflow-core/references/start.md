@@ -11,33 +11,34 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 
 ## Steps
 
-1. First turn asks 3-5 clarifying questions only, then wait for answers.
-2. Each question must include:
+1. If `IDEATION_CONTEXT` is present from prior `research`, consume it directly and skip duplicate discovery questions.
+2. If no `IDEATION_CONTEXT` is available, first turn asks 3-5 clarifying questions only, then wait for answers.
+3. Each question must include:
 - 3 suggested answers
 - 1 free-form `Other` option
-3. After answers, write a concise **Problem Analysis**:
+4. After answers (or after consuming `IDEATION_CONTEXT`), write a concise **Problem Analysis**:
 - core problem statement
 - root causes (top 2-3)
 - target user and constraints
-4. Assign a **Clarity Score** (`1-5`) for problem understanding.
+5. Assign a **Clarity Score** (`1-5`) for problem understanding.
 - `1-3`: still unclear -> ask follow-up clarification questions (do not finalize recommendations yet)
 - `4-5`: clear enough -> continue to option design
-5. Produce exactly 3 solution tracks:
+6. Produce exactly 3 solution tracks:
 - Quick Win
 - Balanced
 - Ambitious
-6. Score each track on `1-5`:
+7. Score each track on `1-5`:
 - impact
 - feasibility
 - effort (5 is easiest/fastest)
 - confidence
-7. Compute total `/20` and label:
+8. Compute total `/20` and label:
 - Go: 16-20
 - Maybe: 11-15
 - Kill: <=10
-8. Pick one **Best Solution** and provide rationale with key tradeoffs.
-9. Add a pre-mortem for Best Solution.
-10. Produce `START_CONTEXT` block for `plan` handoff:
+9. Pick one **Best Solution** and provide rationale with key tradeoffs.
+10. Add a pre-mortem for Best Solution.
+11. Produce `START_CONTEXT` block for `plan` handoff:
 - `topic`
 - `target_user`
 - `success_30d`
@@ -48,28 +49,28 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 - `handoff_confidence`
 - `recommended_route`
    - include explicit block markers: `START_CONTEXT` and `END_START_CONTEXT`
-11. Emit one exact `Run next:` command for `plan`.
+12. Emit one exact `Run next:` command for `plan`.
    - resolve an active non-done plan before final output.
    - create a new plan file only when no active plan exists or scope must be split.
    - when creating: use naming pattern `YYYY-MM-DD-<seq>-start.md`.
-12. Produce `Start Summary` fields for plan persistence:
+13. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`
 - `Reason`
 - `Selected Idea`
 - `Alternatives Considered`
 - `Pre-mortem Risk`
 - `Handoff Confidence`
-13. Run Diagram Need Decision immediately after user answers:
+14. Run Diagram Need Decision immediately after user answers (or IDEATION_CONTEXT ingestion):
 - if chosen solution needs architecture/flow explanation, mark diagram as needed.
 - if needed, set `diagram_mode: required` and make sure Mermaid content is written in plan markdown.
 - if not needed, set `diagram_mode: auto` (or `hidden` only when explicitly requested).
-14. Persist `diagram_mode` in target plan markdown and apply policy:
+15. Persist `diagram_mode` in target plan markdown and apply policy:
 - set `diagram_mode: required|auto|hidden`
 - when `required`, include `## Technical Solution Diagram` with one ```mermaid block that captures selected solution logic
 - when `auto|hidden`, Technical section may be omitted (KFP falls back to Tasks/Subtasks)
-15. End with one handoff route: `plan`, `build`, or `research`.
-16. Include concise next-step guidance when useful; do not require verbose response footer fields.
-17. Persist direct plan-file mutation before final output:
+16. End with one handoff route: `plan`, `build`, or `research`.
+17. Include concise next-step guidance when useful; do not require verbose response footer fields.
+18. Persist direct plan-file mutation before final output:
    - set frontmatter: `lifecycle_phase: start`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
    - write `Start Summary` section
    - when `diagram_mode: required`, write `Technical Solution Diagram` section with mermaid content
@@ -77,7 +78,9 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 
 ## Route Output Contract
 
-- First turn: questions only (with options).
+- First turn:
+  - if `IDEATION_CONTEXT` exists: concise context confirmation + proceed to scored options.
+  - otherwise: questions only (with options).
 - Final turn: compact guidance shape:
   - `State`: clarity + route decision
   - `Doing`: analysis and scored options
@@ -94,7 +97,8 @@ Use `../templates/start-report.md` shape.
 
 ## Exit Criteria
 
-- First turn contains only questions with options.
+- First turn contains only questions with options when `IDEATION_CONTEXT` is absent.
+- If `IDEATION_CONTEXT` exists, start route must consume it and avoid duplicate baseline questions.
 - Final turn includes Problem Analysis + Clarity Score + exactly 3 tracks (Quick Win/Balanced/Ambitious).
 - Final turn uses compact numbered option cards (no wide markdown table).
 - `START_CONTEXT` block is present.
