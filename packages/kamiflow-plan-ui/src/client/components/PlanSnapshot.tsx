@@ -2,7 +2,6 @@ import { ClipboardCheck, Gauge, ListTodo } from "lucide-preact";
 import type { PlanDetail } from "../types";
 import { collectChecklistLeaves, parseChecklistTree } from "../utils";
 import { renderInlineMarkdown } from "../lib/inline-markdown";
-import { PlanFlowDiagram } from "./PlanFlowDiagram";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Icon } from "../ui/Icon";
 import { ScrollArea } from "../ui/ScrollArea";
@@ -98,8 +97,6 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           </div>
         </CardContent>
       </Card>
-
-      <PlanFlowDiagram detail={detail} />
 
       <p class="snapshot-section-label">Execution Checklists</p>
       <div class="snapshot-column">

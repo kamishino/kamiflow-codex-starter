@@ -3,6 +3,7 @@ import { render } from "preact";
 import { fetchPlanDetail, fetchPlans, fetchProjects } from "./api";
 import { ActivityJournal } from "./components/ActivityJournal";
 import { EmptyPanelCard } from "./components/EmptyPanelCard";
+import { ImplementationFlowPanel } from "./components/PlanFlowDiagram";
 import { PlanSnapshot } from "./components/PlanSnapshot";
 import { WorkflowTimeline } from "./components/WorkflowTimeline";
 import { activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
@@ -914,10 +915,13 @@ effect(() => {
 
   render(<WorkflowTimeline detail={activeDetail} />, workflowEl);
   render(
-    <PlanSnapshot
-      detail={activeDetail}
-      projectDir={projectDirById.get(activeDetail.summary.project_id || currentProjectId()) || ""}
-    />,
+    <div class="work-surface-stack">
+      <ImplementationFlowPanel detail={activeDetail} />
+      <PlanSnapshot
+        detail={activeDetail}
+        projectDir={projectDirById.get(activeDetail.summary.project_id || currentProjectId()) || ""}
+      />
+    </div>,
     workEl
   );
 });
