@@ -137,4 +137,5 @@ Server resolution:
 - If direct lifecycle is not possible (permissions/runtime issue), use fallback commands: `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.
 - Skill/rules mismatch after edits: run `npm run codex:sync -- --profile dogfood --force` and restart Codex CLI.
 - Runtime skill still shows old commands: run `npm run codex:sync:skills -- --force` and restart Codex CLI.
+- `request_user_input` unavailable in a Codex action run: use `mode_hint: Plan` (or include `request_user_input` in the action prompt). KFP now auto-tries Plan-profile/config variants first, then falls back to `codex exec -` if those flags are unsupported.
 - Build route blocked: check `resources/docs/PLAN_CONTRACT_V1.md` build readiness gate.

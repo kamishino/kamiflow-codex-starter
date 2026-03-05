@@ -60,7 +60,11 @@ Expected:
 
 - first turn asks 3-5 questions only
 - each question has 3 options + `Other`
-- second turn (after answers) returns numbered idea cards
+- second turn (after answers) includes:
+  - problem analysis (problem, root causes, constraints)
+  - clarity score (1-5) gate
+  - exactly 3 tracks: Quick Win, Balanced, Ambitious
+  - scored recommendation with one selected best solution
 - includes `START_CONTEXT` block
 - ends with exact `Run next:` command for `plan` and active-plan handoff
 

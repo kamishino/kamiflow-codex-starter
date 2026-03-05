@@ -18,6 +18,21 @@ export interface CodexActionResult {
 }
 
 const CODEX_ACTION_TIMEOUT_MS = 5 * 60 * 1000;
+const REQUEST_USER_INPUT_PATTERN = /\brequest_user_input\b/i;
+const PLAN_MODE_NEGOTIATION_ERROR_PATTERNS = [
+  "unexpected argument '--profile'",
+  "unexpected argument '--config'",
+  "unexpected argument '-c'",
+  "unknown option '--profile'",
+  "unknown option '--config'",
+  "unknown option '-c'",
+  "no profile named",
+  "profile not found",
+  "invalid value for '--profile'",
+  "unknown field `features.collaboration_modes`",
+  "unknown field `features.default_mode_request_user_input`",
+  "failed to parse config override"
+];
 
 function tail(text: string, maxChars = 4000): string {
   if (text.length <= maxChars) {
@@ -26,12 +41,58 @@ function tail(text: string, maxChars = 4000): string {
   return text.slice(text.length - maxChars);
 }
 
+function applyPlanModePromptHint(prompt: string): string {
+  if (REQUEST_USER_INPUT_PATTERN.test(prompt)) {
+    return prompt;
+  }
+  return `${prompt}\n\nIf requirements are unclear, use request_user_input with 1-3 short multiple-choice questions.`;
+}
+
+export function shouldPreferPlanInteractiveMode(input: Pick<CodexActionInput, "mode_hint" | "prompt">): boolean {
+  if (input.mode_hint === "Plan") {
+    return true;
+  }
+  if (typeof input.prompt === "string" && REQUEST_USER_INPUT_PATTERN.test(input.prompt)) {
+    return true;
+  }
+  return false;
+}
+
+export function buildCodexExecArgVariants(input: CodexActionInput): string[][] {
+  const defaultVariant = ["exec", "-"];
+  if (!shouldPreferPlanInteractiveMode(input)) {
+    return [defaultVariant];
+  }
+  return [
+    [
+      "exec",
+      "--profile",
+      "plan",
+      "-c",
+      "features.collaboration_modes=true",
+      "-c",
+      "features.default_mode_request_user_input=true",
+      "-"
+    ],
+    ["exec", "-c", "features.collaboration_modes=true", "-c", "features.default_mode_request_user_input=true", "-"],
+    ["exec", "--profile", "plan", "-"],
+    defaultVariant
+  ];
+}
+
 function buildPrompt(input: CodexActionInput): string {
   if (input.prompt && input.prompt.trim().length > 0) {
+    if (shouldPreferPlanInteractiveMode(input)) {
+      return applyPlanModePromptHint(input.prompt);
+    }
     return input.prompt;
   }
   const mode = input.mode_hint ? ` Mode: ${input.mode_hint}.` : "";
-  return `Plan ${input.plan_id}. Execute action: ${input.action_type}.${mode}`;
+  const basePrompt = `Plan ${input.plan_id}. Execute action: ${input.action_type}.${mode}`;
+  if (shouldPreferPlanInteractiveMode(input)) {
+    return applyPlanModePromptHint(basePrompt);
+  }
+  return basePrompt;
 }
 
 function codexExecutableCandidates(): string[] {
@@ -50,6 +111,14 @@ function shouldTryNextCandidate(result: CodexActionResult): boolean {
     return stderr.includes("spawn") && (stderr.includes("enoent") || stderr.includes("einval"));
   }
   return false;
+}
+
+function isPlanModeNegotiationFailure(result: CodexActionResult): boolean {
+  if (result.error_code !== "NON_ZERO_EXIT") {
+    return false;
+  }
+  const stderr = (result.stderr_tail || "").toLowerCase();
+  return PLAN_MODE_NEGOTIATION_ERROR_PATTERNS.some((pattern) => stderr.includes(pattern));
 }
 
 function quoteForCmd(arg: string): string {
@@ -170,26 +239,40 @@ async function runWithExecutable(
 
 export async function runCodexAction(input: CodexActionInput): Promise<CodexActionResult> {
   const prompt = buildPrompt(input);
-  const args = ["exec", "-"];
+  const argVariants = buildCodexExecArgVariants(input);
   const run_id = `run_${Date.now()}`;
   const candidates = codexExecutableCandidates();
   let lastResult: CodexActionResult | null = null;
 
   for (const exe of candidates) {
-    const result = await runWithExecutable(exe, args, prompt, run_id);
-    lastResult = result;
-    if (result.status === "completed") {
+    let moveToNextExecutable = false;
+    for (let index = 0; index < argVariants.length; index += 1) {
+      const args = argVariants[index];
+      const result = await runWithExecutable(exe, args, prompt, run_id);
+      lastResult = result;
+      if (result.status === "completed") {
+        return result;
+      }
+      if (shouldTryNextCandidate(result)) {
+        moveToNextExecutable = true;
+        break;
+      }
+      const hasMoreVariants = index < argVariants.length - 1;
+      if (hasMoreVariants && isPlanModeNegotiationFailure(result)) {
+        continue;
+      }
       return result;
     }
-    if (!shouldTryNextCandidate(result)) {
-      return result;
+    if (!moveToNextExecutable && lastResult) {
+      return lastResult;
     }
   }
 
+  const fallbackArgs = argVariants[argVariants.length - 1] ?? ["exec", "-"];
   return (
     lastResult ?? {
       status: "failed",
-      command: `codex ${args.map((item) => JSON.stringify(item)).join(" ")}`,
+      command: `codex ${fallbackArgs.map((item) => JSON.stringify(item)).join(" ")}`,
       stdout_tail: "",
       stderr_tail: "No executable candidate available.",
       exit_code: -1,

@@ -2,6 +2,7 @@
 
 Use this route when the request is still fuzzy and needs direction.
 The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
+Treat this as the **Brainstorm phase**: analyze the problem, compare options, choose one best direction.
 
 ## Entry Gate
 
@@ -14,24 +15,29 @@ The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 2. Each question must include:
 - 3 suggested answers
 - 1 free-form `Other` option
-3. After answers, generate 7-10 ideas:
-- 2-3 safe
-- 2-3 lateral
-- 2-3 moonshot
-4. Score each idea on 1-5:
+3. After answers, write a concise **Problem Analysis**:
+- core problem statement
+- root causes (top 2-3)
+- target user and constraints
+4. Assign a **Clarity Score** (`1-5`) for problem understanding.
+- `1-3`: still unclear -> ask follow-up clarification questions (do not finalize recommendations yet)
+- `4-5`: clear enough -> continue to option design
+5. Produce exactly 3 solution tracks:
+- Quick Win
+- Balanced
+- Ambitious
+6. Score each track on `1-5`:
 - impact
 - feasibility
-- effort (5 is fastest/easiest)
-5. Compute total score `/15` and classify:
-- Go: 12-15
-- Maybe: 8-11
-- Kill: <8
-6. Recommend top 3:
-- Best Bet
-- Dark Horse
-- Quick Win
-7. Add a pre-mortem for Best Bet.
-8. Produce `START_CONTEXT` block for `plan` handoff:
+- effort (5 is easiest/fastest)
+- confidence
+7. Compute total `/20` and label:
+- Go: 16-20
+- Maybe: 11-15
+- Kill: <=10
+8. Pick one **Best Solution** and provide rationale with key tradeoffs.
+9. Add a pre-mortem for Best Solution.
+10. Produce `START_CONTEXT` block for `plan` handoff:
 - `topic`
 - `target_user`
 - `success_30d`
@@ -42,20 +48,20 @@ The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 - `handoff_confidence`
 - `recommended_route`
    - include explicit block markers: `START_CONTEXT` and `END_START_CONTEXT`
-9. Emit one exact `Run next:` command for `plan`.
+11. Emit one exact `Run next:` command for `plan`.
    - resolve an active non-done plan before final output.
    - create a new plan file only when no active plan exists or scope must be split.
    - when creating: use naming pattern `YYYY-MM-DD-<seq>-start.md`.
-10. Produce `Start Summary` fields for plan persistence:
+12. Produce `Start Summary` fields for plan persistence:
 - `Required: yes|no`
 - `Reason`
 - `Selected Idea`
 - `Alternatives Considered`
 - `Pre-mortem Risk`
 - `Handoff Confidence`
-11. End with one handoff route: `plan`, `build`, or `research`.
-12. Include concise next-step guidance when useful; do not require verbose response footer fields.
-13. Persist direct plan-file mutation before final output:
+13. End with one handoff route: `plan`, `build`, or `research`.
+14. Include concise next-step guidance when useful; do not require verbose response footer fields.
+15. Persist direct plan-file mutation before final output:
    - set frontmatter: `lifecycle_phase: start`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
    - write `Start Summary` section
    - write `WIP Log` lines (`Status`, `Blockers`, `Next step`)
@@ -67,7 +73,8 @@ Use `../templates/start-report.md` shape.
 ## Exit Criteria
 
 - First turn contains only questions with options.
-- Final turn uses compact numbered idea cards (no wide markdown table).
+- Final turn includes Problem Analysis + Clarity Score + exactly 3 tracks (Quick Win/Balanced/Ambitious).
+- Final turn uses compact numbered option cards (no wide markdown table).
 - `START_CONTEXT` block is present.
 - `Run next:` command is present and executable.
 - Start Summary payload is complete and non-placeholder.

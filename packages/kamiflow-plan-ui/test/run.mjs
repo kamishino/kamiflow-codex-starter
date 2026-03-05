@@ -9,7 +9,7 @@ import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
 import { validateParsedPlan } from "../dist/schema/validate-plan.js";
 import { SSEStream } from "../dist/server/sse-stream.js";
 import { detectProjectRoot } from "../dist/lib/project-detect.js";
-import { runCodexAction } from "../dist/lib/codex-runner.js";
+import { buildCodexExecArgVariants, runCodexAction, shouldPreferPlanInteractiveMode } from "../dist/lib/codex-runner.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -354,6 +354,53 @@ await runCase("codex runner does not throw on spawn failures", async () => {
   } else {
     assert.equal(typeof result.exit_code, "number");
   }
+});
+
+await runCase("codex runner enables plan-interactive variants for Plan mode", async () => {
+  const variants = buildCodexExecArgVariants({
+    plan_id: "PLAN-TEST-002",
+    action_type: "plan",
+    mode_hint: "Plan"
+  });
+  assert.ok(variants.length >= 2);
+  assert.deepEqual(variants.at(-1), ["exec", "-"]);
+  assert.ok(variants[0].includes("--profile") || variants[0].includes("-c"));
+  assert.equal(shouldPreferPlanInteractiveMode({ mode_hint: "Plan" }), true);
+});
+
+await runCase("codex runner enables plan-interactive variants when prompt references request_user_input", async () => {
+  const variants = buildCodexExecArgVariants({
+    plan_id: "PLAN-TEST-003",
+    action_type: "build",
+    mode_hint: "Build",
+    prompt: "Please call request_user_input for clarification before build."
+  });
+  assert.ok(variants.length >= 2);
+  assert.deepEqual(variants.at(-1), ["exec", "-"]);
+  assert.equal(
+    shouldPreferPlanInteractiveMode({
+      mode_hint: "Build",
+      prompt: "Use request_user_input when you need clarification."
+    }),
+    true
+  );
+});
+
+await runCase("codex runner keeps default args when no plan-interactive hint is present", async () => {
+  const variants = buildCodexExecArgVariants({
+    plan_id: "PLAN-TEST-004",
+    action_type: "build",
+    mode_hint: "Build",
+    prompt: "Implement task 1 and run acceptance checks."
+  });
+  assert.deepEqual(variants, [["exec", "-"]]);
+  assert.equal(
+    shouldPreferPlanInteractiveMode({
+      mode_hint: "Build",
+      prompt: "Implement task 2."
+    }),
+    false
+  );
 });
 
 await runCase("api returns plan list (when server deps are installed)", async () => {

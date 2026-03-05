@@ -23,19 +23,25 @@ Q3. <question>
 
 ### Problem Frame
 - Problem:
+- Root causes:
 - Target user:
 - Success in 30 days:
 - Constraints:
 
-### Top Ideas (Scored)
-1) <idea> - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Total </15>, Verdict: Go|Maybe|Kill
-2) <idea> - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Total </15>, Verdict: Go|Maybe|Kill
-3) <idea> - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Total </15>, Verdict: Go|Maybe|Kill
+### Clarity Gate
+- Clarity score (1-5):
+- If score <= 3: ask follow-up questions before selecting options.
+- If score >= 4: proceed to option selection.
+
+### Solution Tracks (Scored)
+1) Quick Win - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Confidence <1-5>, Total </20>, Verdict: Go|Maybe|Kill
+2) Balanced - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Confidence <1-5>, Total </20>, Verdict: Go|Maybe|Kill
+3) Ambitious - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Confidence <1-5>, Total </20>, Verdict: Go|Maybe|Kill
 
 ### Recommendations
-- Best Bet: <idea + why>
-- Dark Horse: <idea + why>
-- Quick Win: <idea + why>
+- Best Solution: <Quick Win|Balanced|Ambitious + why>
+- Tradeoffs: <what you gain vs what you accept>
+- Runner-up option: <second-best + why>
 
 ### Pre-Mortem (Best Bet)
 - Likely failure:
