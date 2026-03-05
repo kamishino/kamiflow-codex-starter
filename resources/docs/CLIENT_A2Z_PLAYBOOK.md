@@ -22,6 +22,7 @@ kfc client doctor --project . --fix
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
 This generates `.kfc/CODEX_READY.md` for Codex handoff.
+Client bootstrap includes one smart-recovery cycle and prints `Onboarding Status: PASS|BLOCK` with `Error Code: CLIENT_*`.
 
 ## Workflow Contract
 
@@ -36,6 +37,7 @@ This generates `.kfc/CODEX_READY.md` for Codex handoff.
 - Touch active plan markdown at route start and before final response.
 - If route behavior looks inconsistent, run `kfc client doctor --project . --fix`.
 - If needed, rerun `kfc client --force`.
+- For onboarding/bootstrap block states, always follow the printed `Recovery:` command and keep the `Error Code` in your report.
 
 3. Build Slice Loop
 - Execute one task slice at a time.

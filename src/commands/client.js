@@ -13,6 +13,12 @@ import {
   validateConfig
 } from "../lib/config.js";
 import {
+  CLIENT_ONBOARDING_CODES,
+  buildClientOnboardingPassPayload,
+  classifyClientOnboardingFailure,
+  createClientOnboardingError
+} from "../lib/client-onboarding-recovery.js";
+import {
   DEFAULT_RULES_PROFILE,
   RULES_FILE_NAME,
   VALID_RULES_PROFILES,
@@ -56,6 +62,7 @@ function usage() {
   info("  kfc client bootstrap --project . --profile client --port 4310");
   info("  kfc client doctor --project .");
   info("  kfc client doctor --project . --fix");
+  info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle by default.");
 }
 
 function parseMajorVersion(version) {
@@ -289,6 +296,26 @@ function printClientNextCommandHints() {
   info("Next: kfc flow ensure-plan --project .");
   info("Then: kfc flow ready --project .");
   info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
+}
+
+function printClientOnboardingPass(recoveryUsed) {
+  const payload = buildClientOnboardingPassPayload(recoveryUsed);
+  info(`Onboarding Status: ${payload.status}`);
+  info(`Error Code: ${payload.error_code}`);
+  info(`Reason: ${payload.reason}`);
+  info(`Recovery: ${payload.recovery}`);
+  const [step1, step2, step3] = payload.next_steps;
+  if (step1) info(`Next: ${step1}`);
+  if (step2) info(`Then: ${step2}`);
+  if (step3) info(`Then: ${step3}`);
+}
+
+function printClientOnboardingBlock(errorLike) {
+  const payload = classifyClientOnboardingFailure(errorLike);
+  error("Onboarding Status: BLOCK");
+  error(`Error Code: ${payload.error_code}`);
+  error(`Reason: ${payload.reason}`);
+  error(`Recovery: ${payload.recovery}`);
 }
 
 function resolveClientReadyPath(projectDir) {
@@ -680,28 +707,62 @@ async function runServeHealthCheck(projectDir, port) {
   }
 }
 
-async function runBootstrap(options) {
+async function runBootstrapOnce(options) {
   const preflightOk = await assertProjectPreflight(options.project);
   if (!preflightOk) {
-    return 1;
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED,
+      "Client preflight checks failed.",
+      "kfc client doctor --project . --fix"
+    );
   }
 
-  const configResult = await ensureProjectConfig({
-    projectDir: options.project,
-    explicitProfile: options.profile,
-    force: options.force
-  });
+  let configResult;
+  try {
+    configResult = await ensureProjectConfig({
+      projectDir: options.project,
+      explicitProfile: options.profile,
+      force: options.force
+    });
+  } catch (err) {
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.CONFIG_INVALID,
+      err instanceof Error ? err.message : String(err),
+      "kfc client bootstrap --project . --force"
+    );
+  }
 
-  await ensurePlanUi(options.project);
-  await ensureProjectRules({
-    projectDir: options.project,
-    profileName: configResult.selectedProfile,
-    force: options.force
-  });
+  try {
+    await ensurePlanUi(options.project);
+  } catch (err) {
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.PLAN_UI_MISSING,
+      err instanceof Error ? err.message : String(err),
+      "kfc client bootstrap --project . --force"
+    );
+  }
+
+  try {
+    await ensureProjectRules({
+      projectDir: options.project,
+      profileName: configResult.selectedProfile,
+      force: options.force
+    });
+  } catch (err) {
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED,
+      err instanceof Error ? err.message : String(err),
+      "kfc client bootstrap --project . --force"
+    );
+  }
 
   const doctorCode = await runDoctor({ cwd: options.project, args: [] });
   if (doctorCode !== 0) {
-    throw new Error("`kfc doctor` failed.");
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.DOCTOR_FAILED,
+      "`kfc doctor` failed.",
+      "kfc client doctor --project . --fix"
+    );
   }
 
   const ensurePlanCode = await runFlow({
@@ -709,7 +770,11 @@ async function runBootstrap(options) {
     args: ["ensure-plan", "--project", options.project]
   });
   if (ensurePlanCode !== 0) {
-    throw new Error("`kfc flow ensure-plan` failed.");
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED,
+      "`kfc flow ensure-plan` failed.",
+      "kfc flow ensure-plan --project ."
+    );
   }
 
   const validateCode = await runPlan({
@@ -717,13 +782,25 @@ async function runBootstrap(options) {
     args: ["validate", "--project", options.project]
   });
   if (validateCode !== 0) {
-    throw new Error("`kfc plan validate` failed.");
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED,
+      "`kfc plan validate` failed.",
+      "kfc plan validate --project ."
+    );
   }
 
   if (options.skipServeCheck) {
     warn("Skipped serve health check (--skip-serve-check). Verification is partial.");
   } else {
-    await runServeHealthCheck(options.project, options.port);
+    try {
+      await runServeHealthCheck(options.project, options.port);
+    } catch (err) {
+      throw createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED,
+        err instanceof Error ? err.message : String(err),
+        "kfc client bootstrap --project . --force --skip-serve-check"
+      );
+    }
     info(`Health check OK: http://127.0.0.1:${options.port}/api/health`);
   }
 
@@ -732,7 +809,43 @@ async function runBootstrap(options) {
   printClientNextCommandHints();
   info("Cleanup command after completion: kfc client done");
   info("Next steps in this client repo should use `kfc ...` commands.");
-  return 0;
+}
+
+async function runBootstrapWithSmartRecovery(options) {
+  try {
+    await runBootstrapOnce(options);
+    printClientOnboardingPass(false);
+    return 0;
+  } catch (initialErr) {
+    const first = classifyClientOnboardingFailure(initialErr);
+    warn(
+      `Onboarding bootstrap blocked (${first.error_code}). Running one smart recovery cycle via \`kfc client doctor --project . --fix\`.`
+    );
+
+    const doctorFixCode = await runClientDoctorOnly({
+      ...options,
+      fix: true
+    });
+    if (doctorFixCode !== 0) {
+      printClientOnboardingBlock(
+        createClientOnboardingError(
+          CLIENT_ONBOARDING_CODES.SMART_RECOVERY_FAILED,
+          `Smart recovery failed after initial bootstrap error (${first.error_code}).`,
+          "kfc client doctor --project . --fix"
+        )
+      );
+      return 1;
+    }
+
+    try {
+      await runBootstrapOnce({ ...options, force: true });
+      printClientOnboardingPass(true);
+      return 0;
+    } catch (retryErr) {
+      printClientOnboardingBlock(retryErr);
+      return 1;
+    }
+  }
 }
 
 async function runClientDoctorOnly(options) {
@@ -749,12 +862,14 @@ async function runClientDoctorOnly(options) {
   }
 
   warn("Client diagnostics reported failures. Applying `kfc client bootstrap --force` remediation.");
-  const bootstrapCode = await runBootstrap({
-    ...options,
-    force: true
-  });
-  if (bootstrapCode !== 0) {
-    return bootstrapCode;
+  try {
+    await runBootstrapOnce({
+      ...options,
+      force: true
+    });
+  } catch (err) {
+    printClientOnboardingBlock(err);
+    return 1;
   }
 
   info("Re-running client diagnostics after remediation.");
@@ -833,22 +948,36 @@ async function runClientDoctorChecks(options) {
 async function runClientStart(options) {
   const readyPath = resolveClientReadyPath(options.project);
   if (fs.existsSync(readyPath) && !options.force) {
-    throw new Error(
-      `Ready file already exists: ${readyPath}. Use --force to regenerate or run \`kfc client done --project .\` first.`
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS,
+      `Ready file already exists: ${readyPath}. Use --force to regenerate or run \`kfc client done --project .\` first.`,
+      "kfc client done --project ."
     );
   }
 
-  const bootstrapCode = await runBootstrap(options);
+  const bootstrapCode = await runBootstrapWithSmartRecovery(options);
   if (bootstrapCode !== 0) {
     return bootstrapCode;
   }
 
-  const ready = await createClientReadyArtifacts({
-    projectDir: options.project,
-    force: options.force,
-    goal: options.goal,
-    profileName: options.profile || "client"
-  });
+  let ready;
+  try {
+    ready = await createClientReadyArtifacts({
+      projectDir: options.project,
+      force: options.force,
+      goal: options.goal,
+      profileName: options.profile || "client"
+    });
+  } catch (err) {
+    printClientOnboardingBlock(
+      createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.READY_ARTIFACT_FAILED,
+        err instanceof Error ? err.message : String(err),
+        "kfc flow ensure-plan --project ."
+      )
+    );
+    return 1;
+  }
 
   info(`Ready file: ${ready.readyPath}`);
   info("Tell Codex: read .kfc/CODEX_READY.md and execute the mission.");
@@ -889,7 +1018,7 @@ export async function runClient(options) {
     try {
       return await runClientStart(parsed);
     } catch (err) {
-      error(err instanceof Error ? err.message : String(err));
+      printClientOnboardingBlock(err);
       return 1;
     }
   }
@@ -899,12 +1028,7 @@ export async function runClient(options) {
   }
 
   if (parsed.subcommand === "bootstrap") {
-    try {
-      return await runBootstrap(parsed);
-    } catch (err) {
-      error(err instanceof Error ? err.message : String(err));
-      return 1;
-    }
+    return await runBootstrapWithSmartRecovery(parsed);
   }
 
   if (parsed.subcommand === "done") {

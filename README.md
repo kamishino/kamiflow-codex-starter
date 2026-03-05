@@ -29,7 +29,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc doctor`
 - `kfc plan init|serve|validate`
 - `kfc flow ensure-plan|ready|apply|next`
-- `kfc client` (default client setup + Codex-ready handoff)
+- `kfc client` (default client setup + Codex-ready handoff + one smart-recovery cycle)
 - `kfc client done` (cleanup)
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)

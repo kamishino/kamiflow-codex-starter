@@ -37,6 +37,11 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
+`kfc client --force` now runs one smart-recovery cycle by default and prints:
+- `Onboarding Status: PASS|BLOCK`
+- `Error Code: CLIENT_*`
+- `Recovery: <exact command>` when blocked
+
 Low-level equivalent (only when you need manual bootstrap control):
 
 ```bash
@@ -90,6 +95,7 @@ kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merg
 - Missing plan UI: rerun `kfc client --force`.
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
 - Flow behavior mismatch: run `kfc client doctor --project . --fix`.
+- If onboarding reports `Onboarding Status: BLOCK`, follow the printed `Recovery:` command exactly.
 - Rules mismatch: rerun `kfc client --force`.
 - Cannot find local Codex sessions folder: run `kfc session where`.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.

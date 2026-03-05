@@ -16,13 +16,22 @@ const REQUIRED_PATTERNS = [
 
 const FILE_SPECIFIC_PATTERNS = {
   "resources/docs/QUICKSTART.md": [
-    { label: "no reminder loop guidance", regex: /no user reminder loop/i }
+    { label: "no reminder loop guidance", regex: /no user reminder loop/i },
+    { label: "smart recovery guidance", regex: /smart-recovery cycle/i },
+    { label: "onboarding status guidance", regex: /Onboarding Status:\s*PASS\|BLOCK/i }
   ],
   "resources/docs/CLIENT_KICKOFF_PROMPT.md": [
-    { label: "plan touch cadence", regex: /Touch active plan markdown twice per request/i }
+    { label: "plan touch cadence", regex: /Touch active plan markdown twice per request/i },
+    { label: "onboarding error code guidance", regex: /Error Code:\s*CLIENT_/i }
   ],
   "resources/docs/CLIENT_A2Z_PLAYBOOK.md": [
-    { label: "plan touch cadence", regex: /Touch active plan markdown at route start and before final response/i }
+    { label: "plan touch cadence", regex: /Touch active plan markdown at route start and before final response/i },
+    { label: "smart recovery guidance", regex: /smart-recovery cycle/i }
+  ],
+  "src/commands/client.js": [
+    { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
+    { label: "structured onboarding error code output", regex: /Error Code:/ },
+    { label: "smart recovery execution", regex: /smart recovery cycle/i }
   ]
 };
 
@@ -30,7 +39,8 @@ const TARGET_FILES = [
   "README.md",
   "resources/docs/QUICKSTART.md",
   "resources/docs/CLIENT_KICKOFF_PROMPT.md",
-  "resources/docs/CLIENT_A2Z_PLAYBOOK.md"
+  "resources/docs/CLIENT_A2Z_PLAYBOOK.md",
+  "src/commands/client.js"
 ];
 
 function verifyFile(relPath) {
