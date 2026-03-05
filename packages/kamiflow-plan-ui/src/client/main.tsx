@@ -58,6 +58,29 @@ let projectsLoaded = false;
 let suppressHashChange = false;
 let lastKnownPhase = "";
 
+function parseUpdatedAtMs(value: string): number {
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function sortPlansByRecency(plans: PlanSummary[]): PlanSummary[] {
+  return [...plans].sort((a, b) => {
+    const diff = parseUpdatedAtMs(b.updated_at) - parseUpdatedAtMs(a.updated_at);
+    if (diff !== 0) {
+      return diff;
+    }
+    return String(a.plan_id || "").localeCompare(String(b.plan_id || ""));
+  });
+}
+
+function selectedPlanDisplayLabel(summary: Partial<PlanSummary> | null | undefined): string {
+  if (!summary?.plan_id) {
+    return "";
+  }
+  const title = summary.title ? ` - ${summary.title}` : "";
+  return `${summary.plan_id}${title}`;
+}
+
 function currentPlanFilter(): string {
   return filterEl.value || "active";
 }
@@ -108,18 +131,28 @@ function selectedRoutePlanId(): string {
 function syncPlanSelectionHelp(): void {
   const routeFromHash = parseRoute(location.hash || "");
   const selectedPlanId = routeFromHash?.planId || "";
+  const canSyncInput = planSearchResultsEl.hidden && document.activeElement !== planSearchInputEl;
   if (!selectedPlanId) {
     planSelectionHelpEl.textContent = "Selected plan: none. Use Plan Picker to choose one.";
+    if (canSyncInput) {
+      planSearchQuery = "";
+      planSearchInputEl.value = "";
+    }
     return;
   }
 
   const fromList = currentPlans.find((item) => item.plan_id === selectedPlanId);
   const fromDetail = detail.value?.summary?.plan_id === selectedPlanId ? detail.value.summary : null;
   const selected = fromList || fromDetail;
+  const displayLabel = selectedPlanDisplayLabel(selected);
   const title = selected?.title ? ` - ${selected.title}` : "";
   const status = selected?.status ? ` | ${selected.status}` : "";
   const nextCommand = selected?.next_command ? ` | next: ${selected.next_command}` : "";
   planSelectionHelpEl.textContent = `Selected plan: ${selectedPlanId}${title}${status}${nextCommand}`;
+  if (canSyncInput) {
+    planSearchQuery = "";
+    planSearchInputEl.value = displayLabel;
+  }
 }
 
 function openPlanPicker(): void {
@@ -312,7 +345,8 @@ function renderProjectsList(projects: Array<{ project_id: string; project_dir: s
 
 function firstVisiblePlanId(plans: PlanSummary[]): string | null {
   const visiblePlans = filterPlansByMode(plans, currentPlanFilter());
-  return visiblePlans.length ? visiblePlans[0].plan_id : null;
+  const sorted = sortPlansByRecency(visiblePlans);
+  return sorted.length ? sorted[0].plan_id : null;
 }
 
 function clearPlanSearch(): void {
@@ -338,6 +372,7 @@ function renderPlanSearchResults(): void {
   const mode = currentPlanFilter();
   const visiblePlans = filterPlansByMode(currentPlans, mode);
   const filtered = filterPlansByQuery(visiblePlans, planSearchQuery);
+  const sorted = sortPlansByRecency(filtered);
   const selectedPlanId = selectedRoutePlanId();
 
   if (!visiblePlans.length) {
@@ -360,7 +395,7 @@ function renderPlanSearchResults(): void {
     return;
   }
 
-  planSearchResultsEl.innerHTML = filtered
+  planSearchResultsEl.innerHTML = sorted
     .slice(0, PLAN_PICKER_MAX_RESULTS)
     .map((item) => {
       const archived = item.is_archived ? "[archived]" : "";
@@ -395,7 +430,7 @@ async function loadList(): Promise<void> {
   }
 
   const includeDone = currentPlanFilter() !== "active";
-  currentPlans = await fetchPlans(projectId, includeDone);
+  currentPlans = sortPlansByRecency(await fetchPlans(projectId, includeDone));
   renderPlanSearchResults();
   syncPlanSelectionHelp();
 }

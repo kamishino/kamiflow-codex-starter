@@ -40,7 +40,7 @@
         <div class="toolbar-field toolbar-field-plan" id="plan-picker-wrap">
           <label for="plan-search-input">Plan Picker</label>
           <div class="plan-search-wrap">
-            <input id="plan-search-input" type="text" placeholder="Type plan ID/title or click to browse" autocomplete="off" />
+            <input id="plan-search-input" type="text" placeholder="No selected plan. Click to browse or type to filter." autocomplete="off" />
           </div>
           <div id="plan-search-results" class="plan-search-results" hidden></div>
         </div>

@@ -611,6 +611,7 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("plan-search-input"));
     assert.ok(indexResponse.payload.includes("plan-selection-help"));
     assert.ok(indexResponse.payload.includes("plan-search-results"));
+    assert.ok(indexResponse.payload.includes("No selected plan. Click to browse or type to filter."));
     assert.ok(indexResponse.payload.includes("Plan Picker"));
     assert.ok(indexResponse.payload.includes("Plan View"));
     assert.ok(!indexResponse.payload.includes("workspace-badge"));
@@ -630,6 +631,8 @@ updated_at: 2026-03-01
     assert.equal(appJsResponse.statusCode, 200);
     assert.ok(appJsResponse.payload.includes("No plan selected."));
     assert.ok(appJsResponse.payload.includes("toolbar plan picker"));
+    assert.ok(appJsResponse.payload.includes("sortPlansByRecency"));
+    assert.ok(appJsResponse.payload.includes("selectedPlanDisplayLabel"));
     assert.ok(appJsResponse.payload.includes("activity-tag"));
     assert.ok(appJsResponse.payload.includes("phase-step-\" + state"));
     assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
@@ -673,6 +676,7 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".inline-code-chip"));
     assert.ok(stylesResponse.payload.includes(".plan-file-link"));
     assert.ok(stylesResponse.payload.includes(".activity-detail"));
+    assert.ok(stylesResponse.payload.includes(".toolbar-field-selected"));
     assert.ok(stylesResponse.payload.includes("--space-4"));
     assert.ok(stylesResponse.payload.includes("@supports (color: oklch"));
     assert.ok(stylesResponse.payload.includes("@media (prefers-reduced-motion: reduce)"));
