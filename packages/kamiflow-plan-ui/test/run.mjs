@@ -611,6 +611,8 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("plan-search-input"));
     assert.ok(indexResponse.payload.includes("plan-selection-help"));
     assert.ok(indexResponse.payload.includes("plan-search-results"));
+    assert.ok(indexResponse.payload.includes("Plan Picker"));
+    assert.ok(indexResponse.payload.includes("Plan View"));
     assert.ok(!indexResponse.payload.includes("workspace-badge"));
     assert.ok(!indexResponse.payload.includes("project-badge"));
     assert.ok(!indexResponse.payload.includes("api-badge"));
@@ -631,6 +633,8 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("activity-tag"));
     assert.ok(appJsResponse.payload.includes("phase-step-\" + state"));
     assert.ok(appJsResponse.payload.includes("phase-badge-\" + state"));
+    assert.ok(appJsResponse.payload.includes("phase-current-summary"));
+    assert.ok(appJsResponse.payload.includes("snapshot-stack"));
     assert.ok(appJsResponse.payload.includes("Completed"));
     assert.ok(appJsResponse.payload.includes("Brainstorm"));
     assert.ok(appJsResponse.payload.includes("plan-check"));
@@ -655,10 +659,13 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
+    assert.ok(stylesResponse.payload.includes(".phase-current-summary"));
     assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
+    assert.ok(stylesResponse.payload.includes(".snapshot-stack"));
     assert.ok(stylesResponse.payload.includes(".plan-check"));
     assert.ok(stylesResponse.payload.includes(".inline-code-chip"));
     assert.ok(stylesResponse.payload.includes(".plan-file-link"));
+    assert.ok(stylesResponse.payload.includes(".activity-detail"));
     assert.ok(stylesResponse.payload.includes("--space-4"));
     assert.ok(stylesResponse.payload.includes("@supports (color: oklch"));
     assert.ok(stylesResponse.payload.includes("@media (prefers-reduced-motion: reduce)"));

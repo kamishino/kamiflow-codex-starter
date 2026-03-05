@@ -64,7 +64,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
               <span class={`activity-summary-state activity-summary-state-${currentTaskState.toLowerCase()}`}>
                 {currentTaskState}
               </span>
-              {currentTaskMessage}
+              <span class="activity-summary-current-message">{currentTaskMessage}</span>
             </p>
           </CardContent>
         </Card>
@@ -84,7 +84,12 @@ export function ActivityJournal(props: ActivityJournalProps) {
                 </Badge>
               </div>
               <div class="activity-message">{item.message}</div>
-              {item.detail ? <pre>{item.detail}</pre> : null}
+              {item.detail ? (
+                <details class="activity-detail">
+                  <summary>View detail</summary>
+                  <pre>{item.detail}</pre>
+                </details>
+              ) : null}
             </CardContent>
           </Card>
         </li>

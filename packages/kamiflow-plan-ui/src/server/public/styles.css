@@ -262,7 +262,7 @@ samp,
 .toolbar-field-selected {
   grid-area: selected;
   padding: var(--space-2) var(--space-3);
-  border: 1px dashed var(--border);
+  border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
 }
@@ -289,6 +289,7 @@ samp,
   display: block;
   margin: var(--space-0);
   font-size: var(--text-caption);
+  line-height: var(--lh-relaxed);
   color: var(--muted-foreground);
 }
 
@@ -434,6 +435,55 @@ textarea {
 
 .workflow-rail {
   display: block;
+}
+
+.phase-stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.phase-current-summary {
+  border: 1px solid var(--border-info);
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  padding: var(--space-3);
+}
+
+.phase-current-kicker {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.phase-current-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.phase-current-name {
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: var(--lh-tight);
+}
+
+.phase-current-chip {
+  border: 1px solid var(--border-info);
+  border-radius: var(--radius-pill);
+  background: var(--semantic-info-soft);
+  color: var(--semantic-info);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-caption);
+  font-weight: 600;
+}
+
+.phase-current-description {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-caption);
+  color: var(--text-2);
 }
 
 .phase-timeline {
@@ -602,6 +652,34 @@ textarea {
   gap: var(--space-3);
 }
 
+.snapshot-stack {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.snapshot-progress-card {
+  border-color: var(--border-info);
+}
+
+.snapshot-progress-header {
+  gap: var(--space-1);
+}
+
+.snapshot-progress-copy {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
+}
+
+.snapshot-section-label {
+  margin: 0;
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
 .meta-inline-row {
   display: flex;
   flex-wrap: wrap;
@@ -622,6 +700,11 @@ textarea {
   margin-right: var(--space-1);
   font-weight: 700;
   color: var(--foreground);
+}
+
+.meta-inline-row-muted {
+  background: var(--surface-1);
+  border-style: dashed;
 }
 
 .progress-scale-row {
@@ -897,6 +980,10 @@ textarea {
   gap: var(--space-2);
 }
 
+.activity-summary-current-message {
+  line-height: var(--lh-relaxed);
+}
+
 .activity-summary-state {
   display: inline-flex;
   align-items: center;
@@ -982,6 +1069,7 @@ textarea {
 .activity-message {
   margin-top: var(--space-1);
   font-size: var(--text-body);
+  line-height: var(--lh-normal);
 }
 
 pre {
@@ -994,6 +1082,17 @@ pre {
   max-height: 160px;
   overflow: auto;
   font-size: var(--text-caption);
+}
+
+.activity-detail {
+  margin-top: var(--space-2);
+}
+
+.activity-detail summary {
+  cursor: pointer;
+  font-size: var(--text-caption);
+  color: var(--semantic-info);
+  font-weight: 600;
 }
 
 .guardrail-list {
@@ -1359,6 +1458,11 @@ pre {
 
   .journal-header {
     grid-template-columns: 1fr;
+  }
+
+  .phase-current-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .journal-filter-label,

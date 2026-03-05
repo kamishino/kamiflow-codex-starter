@@ -19,6 +19,7 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
   ] as const;
   const current = deriveStage(props.detail.summary, props.detail);
   const index = stages.findIndex((stage) => stage.name === current);
+  const currentStage = index >= 0 ? stages[index] : stages[0];
   const stepStates = buildTimelineStepStates(current);
 
   function stateLabel(state: TimelineStepState): string {
@@ -26,35 +27,45 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
       return "Completed";
     }
     if (state === "current") {
-      return "Current";
+      return "Active";
     }
     return "Next";
   }
 
   return (
-    <ol class="phase-timeline" role="list" aria-label="Phase timeline">
-      {stages.map((stage, i) => {
-        const state = stepStates[i];
-        return (
-          <li class={cn("phase-step", "phase-step-" + state)} data-stage={stage.name.toLowerCase()} data-state={state}>
-            {i < stages.length - 1 ? (
-              <span class={cn("phase-connector", i < index ? "phase-connector-done" : "")} aria-hidden="true" />
-            ) : null}
-            <span class="phase-node" aria-hidden="true">
-              <Icon icon={stage.icon} class="phase-node-icon" />
-            </span>
-            <div class="phase-content">
-              <div class="phase-title-row">
-                <h3 class="phase-title" aria-current={state === "current" ? "step" : undefined}>
-                  {stage.name}
-                </h3>
-                <span class={cn("phase-badge", "phase-badge-" + state)}>{stateLabel(state)}</span>
+    <div class="phase-stack">
+      <div class="phase-current-summary">
+        <p class="phase-current-kicker">Current focus</p>
+        <div class="phase-current-head">
+          <strong class="phase-current-name">{currentStage.name}</strong>
+          <span class="phase-current-chip">{props.detail.summary.next_command || "stay"} next</span>
+        </div>
+        <p class="phase-current-description">{currentStage.hint}</p>
+      </div>
+      <ol class="phase-timeline" role="list" aria-label="Phase timeline">
+        {stages.map((stage, i) => {
+          const state = stepStates[i];
+          return (
+            <li class={cn("phase-step", "phase-step-" + state)} data-stage={stage.name.toLowerCase()} data-state={state}>
+              {i < stages.length - 1 ? (
+                <span class={cn("phase-connector", i < index ? "phase-connector-done" : "")} aria-hidden="true" />
+              ) : null}
+              <span class="phase-node" aria-hidden="true">
+                <Icon icon={stage.icon} class="phase-node-icon" />
+              </span>
+              <div class="phase-content">
+                <div class="phase-title-row">
+                  <h3 class="phase-title" aria-current={state === "current" ? "step" : undefined}>
+                    {stage.name}
+                  </h3>
+                  <span class={cn("phase-badge", "phase-badge-" + state)}>{stateLabel(state)}</span>
+                </div>
+                <CardDescription class="phase-hint">{stage.hint}</CardDescription>
               </div>
-              <CardDescription class="phase-hint">{stage.hint}</CardDescription>
-            </div>
-          </li>
-        );
-      })}
-    </ol>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

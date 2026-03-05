@@ -30,7 +30,7 @@
           <select id="project-filter"></select>
         </div>
         <div class="toolbar-field toolbar-field-compact toolbar-field-view">
-          <label for="plan-filter">View</label>
+          <label for="plan-filter">Plan View</label>
           <select id="plan-filter">
             <option value="active">Active</option>
             <option value="done">Done</option>
@@ -38,9 +38,9 @@
           </select>
         </div>
         <div class="toolbar-field toolbar-field-plan" id="plan-picker-wrap">
-          <label for="plan-search-input">Plan</label>
+          <label for="plan-search-input">Plan Picker</label>
           <div class="plan-search-wrap">
-            <input id="plan-search-input" type="text" placeholder="Click to browse or type to filter plans" autocomplete="off" />
+            <input id="plan-search-input" type="text" placeholder="Type plan ID/title or click to browse" autocomplete="off" />
           </div>
           <div id="plan-search-results" class="plan-search-results" hidden></div>
         </div>

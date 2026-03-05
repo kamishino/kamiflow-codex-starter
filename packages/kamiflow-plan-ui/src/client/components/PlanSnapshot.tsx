@@ -60,34 +60,22 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
   }
 
   return (
-    <>
-      <div class="meta-inline-row">
-        <span>
-          <strong>Plan</strong> {summary.plan_id}
-        </span>
-        <span>
-          <strong>Status</strong> {summary.status}
-        </span>
-        <span>
-          <strong>Decision</strong> {summary.decision}
-        </span>
-        <span>
-          <strong>Mode</strong> {summary.selected_mode}
-        </span>
-        <span>
-          <strong>Next</strong> {summary.next_command}/{summary.next_mode}
-        </span>
-        <span>
-          <strong>Updated</strong> {summary.updated_at}
-        </span>
-      </div>
+    <div class="snapshot-stack">
+      <Card class="snapshot-progress-card">
+        <CardHeader class="snapshot-progress-header">
+          <CardTitle>Progress Overview</CardTitle>
+          <p class="snapshot-progress-copy">Track execution progress first, then review checklist details.</p>
+        </CardHeader>
+        <CardContent>
+          <div class="progress-scale-row">
+            {progressScale("Tasks", tasksProgress, tasksDone, tasks.length, ListTodo, "tasks")}
+            {progressScale("Acceptance", acceptanceProgress, acsDone, acs.length, ClipboardCheck, "acceptance")}
+            {progressScale("Completion", completion, completedChecklist, totalChecklist, Gauge, "completion")}
+          </div>
+        </CardContent>
+      </Card>
 
-      <div class="progress-scale-row">
-        {progressScale("Tasks", tasksProgress, tasksDone, tasks.length, ListTodo, "tasks")}
-        {progressScale("Acceptance", acceptanceProgress, acsDone, acs.length, ClipboardCheck, "acceptance")}
-        {progressScale("Completion", completion, completedChecklist, totalChecklist, Gauge, "completion")}
-      </div>
-
+      <p class="snapshot-section-label">Execution Checklists</p>
       <div class="snapshot-column">
         <Card>
           <CardHeader>
@@ -139,6 +127,27 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
           </CardContent>
         </Card>
       </div>
-    </>
+
+      <div class="meta-inline-row meta-inline-row-muted">
+        <span>
+          <strong>Plan</strong> {summary.plan_id}
+        </span>
+        <span>
+          <strong>Status</strong> {summary.status}
+        </span>
+        <span>
+          <strong>Decision</strong> {summary.decision}
+        </span>
+        <span>
+          <strong>Mode</strong> {summary.selected_mode}
+        </span>
+        <span>
+          <strong>Next</strong> {summary.next_command}/{summary.next_mode}
+        </span>
+        <span>
+          <strong>Updated</strong> {summary.updated_at}
+        </span>
+      </div>
+    </div>
   );
 }

@@ -108,7 +108,7 @@ function syncPlanSelectionHelp(): void {
   const routeFromHash = parseRoute(location.hash || "");
   const selectedPlanId = routeFromHash?.planId || "";
   if (!selectedPlanId) {
-    planSelectionHelpEl.textContent = "Selected plan: none.";
+    planSelectionHelpEl.textContent = "Selected plan: none. Use Plan Picker to choose one.";
     return;
   }
 
@@ -116,7 +116,9 @@ function syncPlanSelectionHelp(): void {
   const fromDetail = detail.value?.summary?.plan_id === selectedPlanId ? detail.value.summary : null;
   const selected = fromList || fromDetail;
   const title = selected?.title ? ` - ${selected.title}` : "";
-  planSelectionHelpEl.textContent = `Selected plan: ${selectedPlanId}${title}`;
+  const status = selected?.status ? ` | ${selected.status}` : "";
+  const nextCommand = selected?.next_command ? ` | next: ${selected.next_command}` : "";
+  planSelectionHelpEl.textContent = `Selected plan: ${selectedPlanId}${title}${status}${nextCommand}`;
 }
 
 function openPlanPicker(): void {
