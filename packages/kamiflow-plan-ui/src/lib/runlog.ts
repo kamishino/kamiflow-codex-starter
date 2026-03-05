@@ -15,6 +15,11 @@ export interface RunlogSignal {
   message: string;
   detail: string;
   evidence?: string;
+  guardrail?: string;
+  route_confidence?: number;
+  fallback_route?: string;
+  selected_route?: string;
+  recovery_step?: string;
 }
 
 function compactLine(value: string, max = 200): string {
@@ -168,6 +173,11 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
     source: entry?.source ? String(entry.source) : "runlog",
     message: derivedMessage,
     detail,
-    evidence: evidence || undefined
+    evidence: evidence || undefined,
+    guardrail: entry?.guardrail ? String(entry.guardrail) : undefined,
+    route_confidence: Number.isFinite(Number(entry?.route_confidence)) ? Number(entry.route_confidence) : undefined,
+    fallback_route: entry?.fallback_route ? String(entry.fallback_route) : undefined,
+    selected_route: entry?.selected_route ? String(entry.selected_route) : undefined,
+    recovery_step: entry?.recovery_step ? compactLine(String(entry.recovery_step), 300) : undefined
   };
 }

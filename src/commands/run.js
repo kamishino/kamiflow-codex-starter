@@ -8,6 +8,7 @@ import {
 } from "../lib/config.js";
 import { runCodexAction } from "../lib/codex-runner.js";
 import { error, info } from "../lib/logger.js";
+import { evaluateRoutePreflight, normalizeBlockers } from "../lib/plan-lifecycle.js";
 import { runFlow } from "./flow.js";
 
 const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "research"]);
@@ -260,6 +261,18 @@ function summarizeRouteOutcome(route, planRecord) {
   return { state: "IDLE", message: `Route ${route} completed without explicit handoff change.` };
 }
 
+function buildPlanSignature(planRecord) {
+  const fm = planRecord?.frontmatter || {};
+  return [
+    String(planRecord?.updatedAt || ""),
+    String(fm.lifecycle_phase || ""),
+    String(fm.status || ""),
+    String(fm.decision || ""),
+    String(fm.next_command || ""),
+    String(fm.next_mode || "")
+  ].join("|");
+}
+
 async function appendRunlog(projectDir, planId, entry) {
   const runsDir = resolveRunsDir(projectDir);
   await fs.mkdir(runsDir, { recursive: true });
@@ -340,7 +353,7 @@ export async function runWorkflow(options) {
 
   const runId = `run_${Date.now()}`;
   let currentRoute = parsed.route || normalizeRoute(activePlan.frontmatter.next_command) || "plan";
-  let previousSignature = `${activePlan.updatedAt}|${currentRoute}`;
+  let previousPlanSignature = buildPlanSignature(activePlan);
   let lastOutcomeMessage = "";
 
   info(`Run orchestrator started: plan=${activePlan.planId}, route=${currentRoute}, max_steps=${parsed.maxSteps}`);
@@ -350,6 +363,53 @@ export async function runWorkflow(options) {
       return 0;
     }
 
+    const preflight = evaluateRoutePreflight(activePlan, currentRoute);
+    if (!preflight.ok) {
+      if (preflight.route_confidence < 4 && preflight.fallback_route && preflight.fallback_route !== currentRoute) {
+        await appendRunlog(parsed.project, activePlan.planId, {
+          event_type: "runlog_updated",
+          status: "reroute",
+          run_id: runId,
+          plan_id: activePlan.planId,
+          action_type: currentRoute,
+          source: "kfc-run",
+          guardrail: preflight.guardrail || "transition_guard",
+          route_confidence: preflight.route_confidence,
+          fallback_route: preflight.fallback_route,
+          selected_route: currentRoute,
+          recovery_step: preflight.recovery || "",
+          message: `REROUTE ${currentRoute.toUpperCase()} -> ${String(preflight.fallback_route).toUpperCase()}`,
+          detail: compactText(preflight.reason || "Route confidence below threshold.", 500),
+          updated_at: new Date().toISOString()
+        });
+        currentRoute = normalizeRoute(preflight.fallback_route) || "plan";
+        continue;
+      }
+
+      await appendRunlog(parsed.project, activePlan.planId, {
+        event_type: "codex_run_failed",
+        status: "blocked",
+        run_id: runId,
+        plan_id: activePlan.planId,
+        action_type: currentRoute,
+        source: "kfc-run",
+        error_code: preflight.error_code || "FLOW_GUARD_BLOCKED",
+        guardrail: preflight.guardrail || "transition_guard",
+        route_confidence: preflight.route_confidence,
+        fallback_route: preflight.fallback_route || "",
+        selected_route: currentRoute,
+        recovery_step: preflight.recovery || "",
+        message: compactText(preflight.reason || "Flow guardrail blocked route execution.", 140),
+        detail: compactText(preflight.recovery || preflight.reason || "", 600),
+        updated_at: new Date().toISOString()
+      });
+      error(`Flow guardrail blocked route ${currentRoute} (${preflight.error_code || "FLOW_GUARD_BLOCKED"}).`);
+      if (preflight.recovery) {
+        error(`Recovery: ${preflight.recovery}`);
+      }
+      return 1;
+    }
+
     await appendRunlog(parsed.project, activePlan.planId, {
       event_type: "codex_run_started",
       status: "started",
@@ -357,6 +417,11 @@ export async function runWorkflow(options) {
       plan_id: activePlan.planId,
       action_type: currentRoute,
       source: "kfc-run",
+      guardrail: preflight.guardrail || "route_alignment",
+      route_confidence: preflight.route_confidence,
+      fallback_route: preflight.fallback_route || "",
+      selected_route: currentRoute,
+      recovery_step: "",
       message: `RUNNING ${currentRoute.toUpperCase()}`,
       detail: `step ${step}/${parsed.maxSteps}`,
       updated_at: new Date().toISOString()
@@ -392,6 +457,11 @@ export async function runWorkflow(options) {
         error_code: actionResult.error_code,
         error_class: actionResult.error_class || "unknown",
         recovery_hint: actionResult.recovery_hint || "",
+        guardrail: preflight.guardrail || "execution",
+        route_confidence: preflight.route_confidence,
+        fallback_route: preflight.fallback_route || "",
+        selected_route: currentRoute,
+        recovery_step: actionResult.recovery_hint || "",
         stderr_tail: actionResult.stderr_tail || "",
         stdout_tail: actionResult.stdout_tail || "",
         message: compactText(actionResult.failure_signature || `${currentRoute} failed`, 120),
@@ -421,6 +491,11 @@ export async function runWorkflow(options) {
       source: "kfc-run",
       command: actionResult.command,
       exit_code: actionResult.exit_code,
+      guardrail: preflight.guardrail || "route_alignment",
+      route_confidence: preflight.route_confidence,
+      fallback_route: preflight.fallback_route || "",
+      selected_route: currentRoute,
+      recovery_step: "",
       stderr_tail: actionResult.stderr_tail || "",
       stdout_tail: actionResult.stdout_tail || "",
       message: outcome.message,
@@ -440,13 +515,36 @@ export async function runWorkflow(options) {
       return 2;
     }
 
-    const signature = `${activePlan.updatedAt}|${nextRoute}`;
-    if (signature === previousSignature) {
+    const signature = buildPlanSignature(activePlan);
+    if (signature === previousPlanSignature) {
+      const failureMessage = normalizeBlockers("Plan state did not advance after route execution.", [
+        `route=${currentRoute}`,
+        `next=${nextRoute || "unknown"}`,
+        "signal=FLOW_STALLED_NO_ADVANCE"
+      ]);
+      await appendRunlog(parsed.project, activePlan.planId, {
+        event_type: "codex_run_failed",
+        status: "blocked",
+        run_id: runId,
+        plan_id: activePlan.planId,
+        action_type: currentRoute,
+        source: "kfc-run",
+        error_code: "FLOW_STALLED_NO_ADVANCE",
+        guardrail: "loop_guard",
+        route_confidence: 2,
+        fallback_route: nextRoute || "plan",
+        selected_route: currentRoute,
+        recovery_step: "Run `kfc flow ensure-plan --project .` then `kfc flow ready --project .` before rerun.",
+        message: "Flow stalled: no plan-state advance",
+        detail: compactText(failureMessage, 600),
+        updated_at: new Date().toISOString()
+      });
       error("Plan state did not advance after route execution. Stopping to avoid loop.");
+      error("Recovery: Run `kfc flow ensure-plan --project .` then `kfc flow ready --project .` before rerun.");
       return 1;
     }
 
-    previousSignature = signature;
+    previousPlanSignature = signature;
     currentRoute = nextRoute;
   }
 

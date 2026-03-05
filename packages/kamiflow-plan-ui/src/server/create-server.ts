@@ -276,6 +276,11 @@ export async function createServer(options) {
                 message: signal.message,
                 detail: signal.detail,
                 evidence: signal.evidence,
+                guardrail: signal.guardrail,
+                route_confidence: signal.route_confidence,
+                fallback_route: signal.fallback_route,
+                selected_route: signal.selected_route,
+                recovery_step: signal.recovery_step,
                 updated_at: Date.now()
               }
             : {

@@ -1410,6 +1410,48 @@ textarea {
   border-color: var(--border-soft);
 }
 
+.activity-block-reliability {
+  border-color: var(--border-info);
+  background: var(--surface-2);
+}
+
+.activity-block-reliability-ok {
+  border-color: var(--border-success);
+  background: var(--semantic-success-soft);
+}
+
+.activity-block-reliability-warn {
+  border-color: var(--border-warning);
+  background: var(--warning-soft);
+}
+
+.activity-block-reliability-error {
+  border-color: var(--border-danger);
+  background: var(--semantic-danger-soft);
+}
+
+.activity-reliability-main {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.activity-block-route {
+  border-color: var(--border-soft);
+  background: var(--surface-1);
+}
+
+.activity-route-main {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-route-line {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
 .activity-evidence-main {
   display: grid;
   gap: var(--space-1);
@@ -1543,6 +1585,12 @@ textarea {
   color: var(--semantic-info);
   background: var(--semantic-info-soft);
   border-color: var(--border-info);
+}
+
+.activity-summary-state-warn {
+  color: var(--semantic-warning);
+  background: var(--warning-soft);
+  border-color: var(--border-warning);
 }
 
 .activity-summary-state-idle {
@@ -2020,13 +2068,13 @@ pre {
   }
 
   .activity-quick-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (min-width: 1200px) and (max-width: 1499px) {
   .activity-quick-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

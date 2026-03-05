@@ -85,6 +85,71 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     return { ok: true, reason: "ok" };
   }
 
+  function evaluateAutomationTransitionGate(parsed: any, actionType: "build_result" | "check_result"): {
+    ok: boolean;
+    reason: string;
+    recovery: string;
+    expected_route: string;
+    current_next_command: string;
+  } {
+    const fm = parsed?.frontmatter ?? {};
+    const nextCommand = String(fm.next_command || "").trim().toLowerCase();
+    const lifecycle = String(fm.lifecycle_phase || "").trim().toLowerCase();
+    const status = String(fm.status || "").trim().toLowerCase();
+
+    if (status === "done" || nextCommand === "done" || lifecycle === "done") {
+      return {
+        ok: false,
+        reason: "Plan is already done; automation route updates are blocked.",
+        recovery: "Select an active non-done plan before applying automation.",
+        expected_route: "done",
+        current_next_command: nextCommand || "done"
+      };
+    }
+
+    if (actionType === "build_result") {
+      if (nextCommand === "check" && lifecycle === "check") {
+        return {
+          ok: false,
+          reason: "Build updates are blocked while plan is in Check phase.",
+          recovery: "Use `check_result` (or move plan back to Build/Fix) before applying build updates.",
+          expected_route: "check",
+          current_next_command: nextCommand || "check"
+        };
+      }
+      return {
+        ok: true,
+        reason: "ok",
+        recovery: "",
+        expected_route: "build",
+        current_next_command: nextCommand || "build"
+      };
+    }
+
+    const checkAllowed =
+      nextCommand === "check" ||
+      nextCommand === "fix" ||
+      lifecycle === "check" ||
+      lifecycle === "fix";
+    if (!checkAllowed) {
+      return {
+        ok: false,
+        reason: "Check updates are blocked because plan handoff is not in Check/Fix.",
+        recovery: `Run expected route \`${nextCommand || "build"}\` first, then apply check_result.`,
+        expected_route: nextCommand || "build",
+        current_next_command: nextCommand || "unknown"
+      };
+    }
+
+    return {
+      ok: true,
+      reason: "ok",
+      recovery: "",
+      expected_route: "check",
+      current_next_command: nextCommand || "check"
+    };
+  }
+
   function validateChecklistUpdates(items: any, fieldName: string): void {
     if (!Array.isArray(items)) {
       throw new Error(`Invalid ${fieldName} payload.`);
@@ -189,6 +254,45 @@ export function registerApiRoutes(fastify: any, deps: any): void {
           error: "Check phase only supports Acceptance Criteria updates.",
           error_code: "PHASE_SCOPE_VIOLATION",
           recovery: "Move task updates to build_result/fix cycle in Build phase."
+        }
+      };
+    }
+
+    const project = getProject(projectId);
+    if (!project) {
+      return {
+        statusCode: 404,
+        payload: { error: "Project not found", error_code: "PROJECT_NOT_FOUND", project_id: projectId }
+      };
+    }
+    const existing = await loadPlanById(project.project_dir, planId, { includeDone: true });
+    if (!existing) {
+      return {
+        statusCode: 404,
+        payload: { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: planId }
+      };
+    }
+    if (!existing.parsed) {
+      return {
+        statusCode: 409,
+        payload: { error: "Plan is invalid and cannot be mutated", error_code: "PLAN_INVALID" }
+      };
+    }
+
+    const transitionGate = evaluateAutomationTransitionGate(
+      existing.parsed,
+      body.action_type as "build_result" | "check_result"
+    );
+    if (!transitionGate.ok) {
+      return {
+        statusCode: 409,
+        payload: {
+          error: transitionGate.reason,
+          error_code: "FLOW_TRANSITION_BLOCK",
+          guardrail: "transition_guard",
+          expected_route: transitionGate.expected_route,
+          current_next_command: transitionGate.current_next_command,
+          recovery: transitionGate.recovery
         }
       };
     }

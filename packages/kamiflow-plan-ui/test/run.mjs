@@ -1261,6 +1261,32 @@ await runCase("check PASS loops to fix when completion is below 100%", async () 
     const listPayload = JSON.parse(listResponse.payload);
     const planId = listPayload.plans[0].plan_id;
 
+    const transitionBlocked = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "check_result",
+        check: { result: "PASS", findings: [] }
+      }
+    });
+    assert.equal(transitionBlocked.statusCode, 409);
+    const transitionBlockedPayload = JSON.parse(transitionBlocked.payload);
+    assert.equal(transitionBlockedPayload.error_code, "FLOW_TRANSITION_BLOCK");
+
+    const buildApply = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "build_result",
+        wip: {
+          status: "in_progress",
+          blockers: "none",
+          next_step: "run check"
+        }
+      }
+    });
+    assert.equal(buildApply.statusCode, 200);
+
     const checkPassIncomplete = await server.inject({
       method: "POST",
       url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,

@@ -51,6 +51,11 @@ export interface ActivityMeta {
   blocker?: string;
   evidence?: string;
   source?: string;
+  guardrail?: string;
+  route_confidence?: number;
+  fallback_route?: string;
+  selected_route?: string;
+  recovery_step?: string;
 }
 
 export interface ActivityItem {

@@ -73,6 +73,38 @@ function looksRunnableCommand(text) {
   return /^(npm|npx|node|kfc|kf|git|pnpm|yarn|python|pytest|cargo|go)\b/i.test(value);
 }
 
+function normalizeMode(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "build") {
+    return "build";
+  }
+  if (normalized === "plan") {
+    return "plan";
+  }
+  return normalized;
+}
+
+function normalizeRoute(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (["start", "plan", "build", "check", "fix", "research", "done"].includes(normalized)) {
+    return normalized;
+  }
+  return "";
+}
+
+function fallbackRouteFromNext(nextCommand) {
+  if (!nextCommand || nextCommand === "done") {
+    return "plan";
+  }
+  if (nextCommand === "build" || nextCommand === "fix") {
+    return "plan";
+  }
+  if (nextCommand === "check") {
+    return "fix";
+  }
+  return "plan";
+}
+
 function resolveDiagramMode(value) {
   const normalized = String(value || "").trim().toLowerCase();
   if (normalized === "required" || normalized === "auto" || normalized === "hidden") {
@@ -330,5 +362,101 @@ export function evaluateBuildReadiness(planRecord) {
   return {
     ready: findings.length === 0,
     findings
+  };
+}
+
+export function evaluateRoutePreflight(planRecord, route) {
+  const fm = planRecord?.frontmatter || {};
+  const selectedMode = normalizeMode(fm.selected_mode);
+  const nextCommand = normalizeRoute(fm.next_command);
+  const lifecyclePhase = normalizeRoute(fm.lifecycle_phase);
+  const targetRoute = normalizeRoute(route);
+  const fallbackRoute = fallbackRouteFromNext(nextCommand || targetRoute);
+  const done = targetRoute === "done" || nextCommand === "done" || lifecyclePhase === "done" || String(fm.status || "").toLowerCase() === "done";
+
+  if (!targetRoute) {
+    return {
+      ok: false,
+      error_code: "ROUTE_INVALID",
+      route_confidence: 1,
+      fallback_route: fallbackRoute,
+      guardrail: "route_selection",
+      reason: "Route is missing or invalid.",
+      recovery: "Set a valid next route in plan frontmatter and rerun."
+    };
+  }
+
+  if (done && targetRoute !== "done") {
+    return {
+      ok: false,
+      error_code: "PLAN_ALREADY_DONE",
+      route_confidence: 1,
+      fallback_route: "done",
+      guardrail: "completion_gate",
+      reason: "Plan is already done and should not execute additional routes.",
+      recovery: "Create or select a non-done active plan."
+    };
+  }
+
+  const routeMode = targetRoute === "build" || targetRoute === "fix" ? "build" : "plan";
+  if (selectedMode && routeMode && selectedMode !== routeMode && selectedMode !== "done") {
+    return {
+      ok: false,
+      error_code: "MODE_MISMATCH",
+      route_confidence: 2,
+      fallback_route: routeMode === "build" ? "plan" : targetRoute,
+      guardrail: "mode_guard",
+      reason: `selected_mode=${selectedMode} is incompatible with route=${targetRoute}.`,
+      recovery: "Switch mode/route handoff in plan frontmatter before execution."
+    };
+  }
+
+  if ((targetRoute === "build" || targetRoute === "fix") && nextCommand === "build") {
+    const readiness = evaluateBuildReadiness(planRecord);
+    if (!readiness.ready) {
+      return {
+        ok: false,
+        error_code: "BUILD_NOT_READY",
+        route_confidence: 2,
+        fallback_route: "plan",
+        guardrail: "readiness_gate",
+        reason: normalizeBlockers("Build readiness failed", readiness.findings),
+        recovery: "Run planning route to satisfy decision/readiness gates before build/fix."
+      };
+    }
+  }
+
+  if (!nextCommand || nextCommand === targetRoute) {
+    return {
+      ok: true,
+      error_code: "",
+      route_confidence: 5,
+      fallback_route: "",
+      guardrail: "route_alignment",
+      reason: "Route aligns with plan handoff.",
+      recovery: ""
+    };
+  }
+
+  if (targetRoute === "check" && (nextCommand === "fix" || nextCommand === "done")) {
+    return {
+      ok: true,
+      error_code: "",
+      route_confidence: 4,
+      fallback_route: "",
+      guardrail: "route_alignment",
+      reason: "Check rerun is allowed for verification continuity.",
+      recovery: ""
+    };
+  }
+
+  return {
+    ok: false,
+    error_code: "FLOW_TRANSITION_BLOCKED",
+    route_confidence: 3,
+    fallback_route: fallbackRoute,
+    guardrail: "transition_guard",
+    reason: `Route ${targetRoute} does not match expected next_command ${nextCommand || "unknown"}.`,
+    recovery: `Run the expected route \`${nextCommand || fallbackRoute}\` or update plan handoff fields first.`
   };
 }

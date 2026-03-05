@@ -30,6 +30,14 @@ export function ActivityJournal(props: ActivityJournalProps) {
     return "Idle";
   }
 
+  function routeLabel(value: string | undefined): string {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized) {
+      return "unknown";
+    }
+    return normalized;
+  }
+
   const successCount = props.items.filter((item) => item.tone === "ok").length;
   const failCount = props.items.filter((item) => item.tone === "error").length;
   const latestNowEvent =
@@ -91,6 +99,34 @@ export function ActivityJournal(props: ActivityJournalProps) {
           ? "Active blockers or failures reduce confidence."
           : "No recent evidence to score confidence.";
   const latestSummaryTime = currentTaskTime !== "-" ? currentTaskTime : activityTime;
+  const latestReliabilityEvent =
+    props.items.find((item) =>
+      typeof item.meta?.route_confidence === "number" ||
+      Boolean(item.meta?.guardrail) ||
+      Boolean(item.meta?.fallback_route) ||
+      Boolean(item.meta?.recovery_step)
+    ) || null;
+  const routeConfidenceValue =
+    typeof latestReliabilityEvent?.meta?.route_confidence === "number"
+      ? latestReliabilityEvent.meta.route_confidence
+      : null;
+  const routeConfidenceLabel = routeConfidenceValue === null ? "n/a" : `${Math.max(0, Math.min(5, routeConfidenceValue))}/5`;
+  const selectedRoute = routeLabel(latestReliabilityEvent?.meta?.selected_route);
+  const fallbackRoute = routeLabel(latestReliabilityEvent?.meta?.fallback_route);
+  const guardrailLabel = latestReliabilityEvent?.meta?.guardrail || "steady";
+  const recoveryStep = compactText(
+    latestReliabilityEvent?.meta?.recovery_step || "No recovery action required.",
+    128
+  );
+  const reliabilityState =
+    routeConfidenceValue !== null && routeConfidenceValue < 4
+      ? "warn"
+      : String(currentTaskState || "").toUpperCase() === "FAIL"
+        ? "error"
+        : "ok";
+  const reliabilityStateLabel = reliabilityState === "warn" ? "Needs attention" : reliabilityState === "error" ? "Blocked" : "Stable";
+  const reliabilityStateClass = reliabilityState === "error" ? "fail" : reliabilityState;
+  const reliabilityEventTime = latestReliabilityEvent?.ts ? formatClock(latestReliabilityEvent.ts) : "-";
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -166,6 +202,33 @@ export function ActivityJournal(props: ActivityJournalProps) {
                   <small class="activity-block-meta">
                     Source: {activitySource} | Updated at {activityTime}
                   </small>
+                </section>
+                <section class={`activity-block activity-block-reliability activity-block-reliability-${reliabilityState}`}>
+                  <p class="activity-block-title">
+                    <Icon icon={TriangleAlert} />
+                    Reliability
+                  </p>
+                  <p class="activity-block-main activity-reliability-main">
+                    <span class={`activity-summary-state activity-summary-state-${reliabilityStateClass}`}>
+                      {reliabilityStateLabel}
+                    </span>
+                    <span class="activity-now-copy">
+                      <span class="activity-now-message">Guardrail: {guardrailLabel}</span>
+                      <small class="activity-block-meta">Updated at {reliabilityEventTime}</small>
+                    </span>
+                  </p>
+                </section>
+                <section class="activity-block activity-block-route">
+                  <p class="activity-block-title">
+                    <Icon icon={Info} />
+                    Route Rationale
+                  </p>
+                  <p class="activity-block-main activity-route-main">
+                    <span class="activity-route-line">Selected: <strong>{selectedRoute}</strong></span>
+                    <span class="activity-route-line">Confidence: <strong>{routeConfidenceLabel}</strong></span>
+                    <span class="activity-route-line">Fallback: <strong>{fallbackRoute}</strong></span>
+                  </p>
+                  <small class="activity-block-meta">Recovery: {recoveryStep}</small>
                 </section>
                 <section class={`activity-block activity-block-evidence ${evidenceMissing ? "activity-block-evidence-missing" : "activity-block-evidence-ready"}`}>
                   <p class="activity-block-title">

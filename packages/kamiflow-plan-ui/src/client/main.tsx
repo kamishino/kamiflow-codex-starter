@@ -414,6 +414,11 @@ function summarizeRunlogEvent(
     message?: string;
     detail?: string;
     evidence?: string;
+    guardrail?: string;
+    route_confidence?: number;
+    fallback_route?: string;
+    selected_route?: string;
+    recovery_step?: string;
   }
 ): { message: string; detail: string; runState: "RUNNING" | "SUCCESS" | "FAIL" | "IDLE" } {
   const action = String(payload.action_type || "task").toUpperCase();
@@ -836,6 +841,7 @@ function attachStream(projectId: string, planId: string): void {
         phase: derivedPhase || lastKnownPhase || undefined,
         blocker: blocker || undefined,
         evidence: evidence || undefined,
+        selected_route: payload.action_type ? String(payload.action_type) : undefined,
         source: payload.action_type ? `codex:${payload.action_type}` : "codex"
       });
       setStatus("Codex run event: " + summary.message);
@@ -862,6 +868,11 @@ function attachStream(projectId: string, planId: string): void {
         phase: derivedPhase || lastKnownPhase || undefined,
         blocker: blocker || undefined,
         evidence: evidence || undefined,
+        guardrail: payload.guardrail ? String(payload.guardrail) : undefined,
+        route_confidence: Number.isFinite(Number(payload.route_confidence)) ? Number(payload.route_confidence) : undefined,
+        fallback_route: payload.fallback_route ? String(payload.fallback_route) : undefined,
+        selected_route: payload.selected_route ? String(payload.selected_route) : payload.action_type ? String(payload.action_type) : undefined,
+        recovery_step: payload.recovery_step ? String(payload.recovery_step) : undefined,
         source: payload.source || (payload.action_type ? `runlog:${payload.action_type}` : "runlog")
       });
       setStatus("Runtime stream update: " + summary.message);
