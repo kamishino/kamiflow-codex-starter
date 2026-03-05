@@ -1,6 +1,7 @@
 import { ClipboardCheck, Gauge, ListTodo } from "lucide-preact";
 import type { PlanDetail } from "../types";
 import { parseChecklist } from "../utils";
+import { renderInlineMarkdown } from "../lib/inline-markdown";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Icon } from "../ui/Icon";
 import { ScrollArea } from "../ui/ScrollArea";
@@ -23,119 +24,6 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
   const completion = totalChecklist > 0 ? Math.round((completedChecklist / totalChecklist) * 100) : 0;
   const tasksProgress = tasks.length > 0 ? Math.round((tasksDone / tasks.length) * 100) : 0;
   const acceptanceProgress = acs.length > 0 ? Math.round((acsDone / acs.length) * 100) : 0;
-
-  function normalizePathCandidate(value: string): string {
-    const trimmed = String(value || "").trim();
-    const unquoted = trimmed.replace(/^["']|["']$/g, "");
-    return unquoted.replace(/[),.;]+$/g, "");
-  }
-
-  function looksLikePath(value: string): boolean {
-    const text = normalizePathCandidate(value);
-    if (!text) {
-      return false;
-    }
-    if (/^https?:\/\//i.test(text)) {
-      return false;
-    }
-    if (/^vscode:\/\//i.test(text)) {
-      return true;
-    }
-    if (/^file:\/\//i.test(text)) {
-      return true;
-    }
-    if (/^[a-zA-Z]:[\\/]/.test(text)) {
-      return true;
-    }
-    if (text.startsWith("~/")) {
-      return true;
-    }
-    if (text.startsWith("/")) {
-      return true;
-    }
-    if (text.startsWith("./") || text.startsWith("../")) {
-      return true;
-    }
-    if (/[\\/]/.test(text)) {
-      return true;
-    }
-    if (/^[^\\/:*?"<>|\r\n]+\.[^\\/:*?"<>|\r\n]+$/i.test(text)) {
-      return true;
-    }
-    return false;
-  }
-
-  function toFileHref(rawPath: string): string | null {
-    const text = normalizePathCandidate(rawPath);
-    if (!text) {
-      return null;
-    }
-    if (/^vscode:\/\//i.test(text)) {
-      return text;
-    }
-    if (/^file:\/\//i.test(text)) {
-      return text;
-    }
-
-    let normalized = text.replace(/\\/g, "/");
-    if (normalized.startsWith("~/")) {
-      normalized = normalized.slice(1);
-    }
-    if (!/^[a-zA-Z]:\//.test(normalized) && !normalized.startsWith("/")) {
-      if (!projectDir) {
-        return null;
-      }
-      const base = projectDir.replace(/\\/g, "/").replace(/\/+$/g, "");
-      normalized = `${base}/${normalized.replace(/^\.?\//, "")}`;
-    }
-
-    const href = /^[a-zA-Z]:\//.test(normalized)
-      ? `file:///${normalized}`
-      : `file://${normalized.startsWith("/") ? normalized : `/${normalized}`}`;
-    return encodeURI(href);
-  }
-
-  function fileLabel(filePath: string): string {
-    const normalized = String(filePath || "").replace(/\\/g, "/").replace(/\/+$/g, "");
-    const parts = normalized.split("/");
-    return parts[parts.length - 1] || normalized;
-  }
-
-  function renderChecklistText(text: string) {
-    const pattern = /`([^`]+)`/g;
-    const nodes: any[] = [];
-    let lastIdx = 0;
-    let match: RegExpExecArray | null = null;
-
-    while ((match = pattern.exec(text)) !== null) {
-      if (match.index > lastIdx) {
-        nodes.push(text.slice(lastIdx, match.index));
-      }
-      const candidate = normalizePathCandidate(match[1] || "");
-      const href = looksLikePath(candidate) ? toFileHref(candidate) : null;
-      if (href) {
-        nodes.push(
-          <a
-            class="plan-file-link"
-            href={href}
-            target="_blank"
-            rel="noopener noreferrer"
-            title={`${candidate} (open with your editor/app)`}
-          >
-            {fileLabel(candidate)}
-          </a>
-        );
-      } else {
-        nodes.push(match[0]);
-      }
-      lastIdx = match.index + match[0].length;
-    }
-
-    if (lastIdx < text.length) {
-      nodes.push(text.slice(lastIdx));
-    }
-    return nodes.length > 0 ? nodes : text;
-  }
 
   function progressScale(
     label: string,
@@ -214,7 +102,9 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
                 tasks.map((item) => (
                   <label class="checklist-item">
                     <input class="plan-check" type="checkbox" checked={item.checked} disabled />
-                    <span class="checklist-text">{renderChecklistText(item.text)}</span>
+                    <span class="checklist-text">
+                      {renderInlineMarkdown(item.text, { projectDir, enableFileLinks: true })}
+                    </span>
                   </label>
                 ))
               ) : (
@@ -237,7 +127,9 @@ export function PlanSnapshot(props: PlanSnapshotProps) {
                 acs.map((item) => (
                   <label class="checklist-item">
                     <input class="plan-check" type="checkbox" checked={item.checked} disabled />
-                    <span class="checklist-text">{renderChecklistText(item.text)}</span>
+                    <span class="checklist-text">
+                      {renderInlineMarkdown(item.text, { projectDir, enableFileLinks: true })}
+                    </span>
                   </label>
                 ))
               ) : (

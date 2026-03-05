@@ -69,6 +69,9 @@
   --progress-triad-c-soft: #eff4ff;
   --progress-triad-c-border: #bfdbfe;
   --progress-triad-c-text: #1e3a8a;
+  --inline-code-bg: #eef2ff;
+  --inline-code-border: #c7d2fe;
+  --inline-code-foreground: #1e3a8a;
   --space-0: 0;
   --space-1: 4px;
   --space-2: 8px;
@@ -145,6 +148,9 @@
     --progress-triad-c-soft: oklch(96.5% 0.02 275);
     --progress-triad-c-border: oklch(88% 0.05 275);
     --progress-triad-c-text: oklch(35% 0.09 275);
+    --inline-code-bg: oklch(95.5% 0.02 274);
+    --inline-code-border: oklch(86% 0.04 274);
+    --inline-code-foreground: oklch(36% 0.1 274);
   }
 }
 
@@ -775,6 +781,22 @@ textarea {
 .checklist-text {
   min-width: 0;
   line-height: var(--lh-normal);
+}
+
+.inline-code-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: var(--space-0) var(--space-1);
+  padding: var(--space-0) var(--space-1);
+  border: 1px solid var(--inline-code-border);
+  border-radius: var(--space-1);
+  background: var(--inline-code-bg);
+  color: var(--inline-code-foreground);
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: var(--lh-normal);
+  white-space: nowrap;
 }
 
 .plan-file-link {

@@ -587,6 +587,7 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("Completed"));
     assert.ok(appJsResponse.payload.includes("Brainstorm"));
     assert.ok(appJsResponse.payload.includes("plan-check"));
+    assert.ok(appJsResponse.payload.includes("inline-code-chip"));
     assert.ok(appJsResponse.payload.includes("plan-file-link"));
     assert.ok(appJsResponse.payload.includes("_ts="));
     assert.ok(appJsResponse.payload.includes("cache-control"));
@@ -609,6 +610,7 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
     assert.ok(stylesResponse.payload.includes(".phase-connector-done"));
     assert.ok(stylesResponse.payload.includes(".plan-check"));
+    assert.ok(stylesResponse.payload.includes(".inline-code-chip"));
     assert.ok(stylesResponse.payload.includes(".plan-file-link"));
     assert.ok(stylesResponse.payload.includes("--space-4"));
     assert.ok(stylesResponse.payload.includes("@supports (color: oklch"));
