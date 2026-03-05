@@ -663,6 +663,7 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
     assert.ok(stylesResponse.payload.includes(".activity-overview-grid"));
     assert.ok(stylesResponse.payload.includes(".activity-block"));
+    assert.ok(stylesResponse.payload.includes("@media (min-width: 1500px)"));
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
     assert.ok(stylesResponse.payload.includes(".phase-step-current"));
     assert.ok(stylesResponse.payload.includes(".phase-current-summary"));

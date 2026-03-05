@@ -372,7 +372,7 @@ samp,
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 400px;
   gap: var(--space-4);
   align-items: start;
 }
@@ -1009,9 +1009,8 @@ textarea {
   color: var(--foreground);
   font-size: var(--text-body);
   line-height: var(--lh-normal);
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
+  display: block;
+  overflow-wrap: anywhere;
 }
 
 .activity-block-meta {
@@ -1021,6 +1020,12 @@ textarea {
 
 .activity-block-now {
   border-color: var(--border-info);
+}
+
+.activity-block-now .activity-block-main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
 .activity-block-phase {
@@ -1455,6 +1460,22 @@ pre {
 }
 
 @media (max-width: 1023px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .journal {
+    grid-column: 1 / -1;
+    position: static;
+    max-height: none;
+  }
+
+  .panel,
+  .activity {
+    padding-left: var(--space-3);
+    padding-right: var(--space-3);
+  }
+
   .phase-timeline {
     grid-template-columns: 1fr;
     gap: var(--space-2);
@@ -1476,19 +1497,7 @@ pre {
 
 @media (max-width: 1366px) {
   .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .journal {
-    grid-column: 1 / -1;
-    position: static;
-    max-height: none;
-  }
-
-  .panel,
-  .activity {
-    padding-left: var(--space-3);
-    padding-right: var(--space-3);
+    grid-template-columns: minmax(0, 1fr) 360px;
   }
 
   .topbar-controls {
@@ -1509,15 +1518,6 @@ pre {
 }
 
 @media (max-width: 860px) {
-  .content-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .journal {
-    max-height: none;
-    position: static;
-  }
-
   .progress-scale-row {
     grid-template-columns: 1fr;
   }
@@ -1560,9 +1560,33 @@ pre {
   }
 }
 
-@media (min-width: 861px) {
-  .activity-overview-grid {
+@media (min-width: 1500px) {
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+
+  .journal {
+    grid-column: 1 / -1;
+    position: static;
+    max-height: none;
+  }
+
+  #activity-feed {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+
+  .activity-overview-item {
+    grid-column: 1 / -1;
+  }
+
+  .activity-item {
+    align-self: start;
+  }
+
+  .activity-overview-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
 
