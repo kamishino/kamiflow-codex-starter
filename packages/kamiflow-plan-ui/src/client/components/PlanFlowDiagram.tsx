@@ -1,7 +1,8 @@
-import { Move, Search, ZoomIn, ZoomOut } from "lucide-preact";
+import { Move, RefreshCw, Search, ZoomIn, ZoomOut } from "lucide-preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { PlanDetail } from "../types";
-import { buildTechnicalSolutionDiagramModel } from "../../lib/plan-diagram";
+import type { DiagramAvailability, PlanDiagramTabModel } from "../../lib/plan-diagram";
+import { buildPlanDiagramTabsModel } from "../../lib/plan-diagram";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/Card";
 import { Icon } from "../ui/Icon";
 
@@ -10,6 +11,7 @@ interface TechnicalSolutionDiagramPanelProps {
 }
 
 type MermaidRenderState = "idle" | "ready" | "error";
+type DiagramTabKey = "technical" | "tasks" | "summary";
 
 let mermaidLoader: Promise<any> | null = null;
 let panZoomLoader: Promise<any> | null = null;
@@ -70,18 +72,29 @@ async function loadSvgPanZoom() {
 export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPanelProps) {
   const model = useMemo(
     () =>
-      buildTechnicalSolutionDiagramModel({
+      buildPlanDiagramTabsModel({
         summary: props.detail.summary,
         sections: props.detail.sections || {}
       }),
     [props.detail.summary.plan_id, props.detail.summary.updated_at, props.detail.sections]
   );
+  const [selectedTab, setSelectedTab] = useState<DiagramTabKey>(model.default_tab);
 
   const mermaidHostRef = useRef<HTMLDivElement>(null);
   const panZoomRef = useRef<any>(null);
   const [renderState, setRenderState] = useState<MermaidRenderState>("idle");
   const [renderError, setRenderError] = useState("");
   const [panZoomReady, setPanZoomReady] = useState(false);
+  const [renderAttempt, setRenderAttempt] = useState(0);
+
+  const activeTab = useMemo<PlanDiagramTabModel>(() => {
+    return model.tabs.find((item) => item.key === selectedTab) || model.tabs[0];
+  }, [model, selectedTab]);
+
+  useEffect(() => {
+    setSelectedTab("technical");
+    setRenderAttempt(0);
+  }, [props.detail.summary.plan_id, props.detail.summary.updated_at]);
 
   useEffect(() => {
     let disposed = false;
@@ -99,7 +112,11 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
       setRenderState("idle");
       setRenderError("");
       host.removeAttribute("data-processed");
-      host.textContent = model.mermaid_render;
+      if (activeTab.kind !== "mermaid" || activeTab.status !== "ready") {
+        host.textContent = "";
+        return;
+      }
+      host.textContent = activeTab.mermaid_render;
       try {
         const mermaid = await loadMermaid();
         if (disposed) {
@@ -147,7 +164,43 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
         panZoomRef.current = null;
       }
     };
-  }, [model.mermaid_render, props.detail.summary.plan_id, props.detail.summary.updated_at]);
+  }, [
+    activeTab.kind,
+    activeTab.status,
+    activeTab.kind === "mermaid" ? activeTab.mermaid_render : "",
+    renderAttempt,
+    props.detail.summary.plan_id,
+    props.detail.summary.updated_at
+  ]);
+
+  function tabStatusLabel(status: DiagramAvailability): string {
+    if (status === "ready") {
+      return "Ready";
+    }
+    if (status === "invalid") {
+      return "Invalid";
+    }
+    return "Missing";
+  }
+
+  function onRetry() {
+    setRenderAttempt((value) => value + 1);
+  }
+
+  function renderUnavailableState(tab: PlanDiagramTabModel) {
+    return (
+      <div class={`implementation-flow-state implementation-flow-state-${tab.status}`}>
+        <strong>{tab.status === "invalid" ? "Invalid content" : "Content unavailable"}</strong>
+        <p>{tab.status_message}</p>
+        {tab.kind === "mermaid" && tab.mermaid_source ? (
+          <details class="implementation-flow-source">
+            <summary>View raw source</summary>
+            <pre>{tab.mermaid_source}</pre>
+          </details>
+        ) : null}
+      </div>
+    );
+  }
 
   function zoomIn() {
     panZoomRef.current?.zoomIn?.();
@@ -177,51 +230,124 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
       </CardHeader>
       <CardContent>
         <div class="implementation-flow-meta">
-          <span class={`implementation-flow-chip implementation-flow-chip-${model.source_type}`}>
-            {model.source_type === "section" ? `From ${model.section_name}` : "Derived placeholder"}
+          <span class={`implementation-flow-chip implementation-flow-chip-${activeTab.status}`}>
+            {tabStatusLabel(activeTab.status)}
           </span>
-          <span class={`implementation-flow-chip implementation-flow-chip-${renderState}`}>
-            Mermaid: {renderState === "ready" ? "Rendered" : renderState === "error" ? "Fallback" : "Loading"}
+          <span class="implementation-flow-chip implementation-flow-chip-idle">Source: {activeTab.source_label}</span>
+          <span class={`implementation-flow-chip implementation-flow-chip-${activeTab.kind === "mermaid" && renderState === "error" ? "error" : renderState}`}>
+            Mermaid:{" "}
+            {activeTab.kind !== "mermaid"
+              ? "N/A"
+              : activeTab.status !== "ready"
+                ? "Unavailable"
+                : renderState === "ready"
+                  ? "Rendered"
+                  : renderState === "error"
+                    ? "Error"
+                    : "Loading"}
           </span>
           <span class={`implementation-flow-chip implementation-flow-chip-${panZoomReady ? "ready" : "idle"}`}>
             Pan/Zoom: {panZoomReady ? "Enabled" : "Unavailable"}
           </span>
         </div>
 
+        <div class="implementation-flow-tabs" role="tablist" aria-label="Diagram tabs">
+          {model.tabs.map((tab) => (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={tab.key === activeTab.key}
+              class={`implementation-flow-tab${tab.key === activeTab.key ? " implementation-flow-tab-active" : ""}`}
+              onClick={() => setSelectedTab(tab.key)}
+            >
+              <span>{tab.label}</span>
+              <span class={`implementation-flow-tab-badge implementation-flow-tab-badge-${tab.status}`}>{tabStatusLabel(tab.status)}</span>
+            </button>
+          ))}
+        </div>
+
         <div class="implementation-flow-toolbar">
-          <button type="button" class="implementation-flow-button" onClick={zoomIn} disabled={!panZoomReady} title="Zoom in">
+          <button
+            type="button"
+            class="implementation-flow-button"
+            onClick={zoomIn}
+            disabled={!panZoomReady || activeTab.kind !== "mermaid" || activeTab.status !== "ready"}
+            title="Zoom in"
+          >
             <Icon icon={ZoomIn} />
           </button>
-          <button type="button" class="implementation-flow-button" onClick={zoomOut} disabled={!panZoomReady} title="Zoom out">
+          <button
+            type="button"
+            class="implementation-flow-button"
+            onClick={zoomOut}
+            disabled={!panZoomReady || activeTab.kind !== "mermaid" || activeTab.status !== "ready"}
+            title="Zoom out"
+          >
             <Icon icon={ZoomOut} />
           </button>
-          <button type="button" class="implementation-flow-button" onClick={resetView} disabled={!panZoomReady} title="Reset view">
+          <button
+            type="button"
+            class="implementation-flow-button"
+            onClick={resetView}
+            disabled={!panZoomReady || activeTab.kind !== "mermaid" || activeTab.status !== "ready"}
+            title="Reset view"
+          >
             <Icon icon={Move} />
+          </button>
+          <button
+            type="button"
+            class="implementation-flow-button"
+            onClick={onRetry}
+            disabled={activeTab.kind !== "mermaid" || activeTab.status !== "ready"}
+            title="Retry render"
+          >
+            <Icon icon={RefreshCw} />
           </button>
         </div>
 
-        <div class="implementation-flow-diagram-wrap">
-          <div class="implementation-flow-mermaid mermaid" ref={mermaidHostRef} />
-        </div>
+        {activeTab.kind === "summary" ? (
+          activeTab.status === "ready" ? (
+            <div class="implementation-flow-summary">
+              <ul>
+                {activeTab.summary_lines.map((line) => (
+                  <li>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            renderUnavailableState(activeTab)
+          )
+        ) : activeTab.status === "ready" ? (
+          <div class="implementation-flow-diagram-wrap">
+            <div class="implementation-flow-mermaid mermaid" ref={mermaidHostRef} />
+          </div>
+        ) : (
+          renderUnavailableState(activeTab)
+        )}
 
-        {renderState === "error" ? (
+        {activeTab.kind === "mermaid" && renderState === "error" && activeTab.status === "ready" ? (
           <div class="implementation-flow-warning">
-            Mermaid render failed: {renderError || "unknown error"}. Showing source below.
+            Mermaid render failed: {renderError || "unknown error"}.
+            <button type="button" class="implementation-flow-inline-button" onClick={onRetry}>
+              Retry
+            </button>
           </div>
         ) : null}
 
-        {model.warnings.length ? (
+        {activeTab.warnings.length ? (
           <ul class="implementation-flow-warning-list">
-            {model.warnings.map((item) => (
+            {activeTab.warnings.map((item) => (
               <li>{item}</li>
             ))}
           </ul>
         ) : null}
 
-        <details class="implementation-flow-source">
-          <summary>View Mermaid source</summary>
-          <pre>{model.mermaid_source}</pre>
-        </details>
+        {activeTab.kind === "mermaid" && activeTab.mermaid_source ? (
+          <details class="implementation-flow-source">
+            <summary>View Mermaid source</summary>
+            <pre>{activeTab.mermaid_source}</pre>
+          </details>
+        ) : null}
       </CardContent>
     </Card>
   );
