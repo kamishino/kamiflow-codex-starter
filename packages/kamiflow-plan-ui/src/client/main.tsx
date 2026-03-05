@@ -23,6 +23,9 @@ const workflowEl = document.querySelector<HTMLElement>("#workflow-rail");
 const workEl = document.querySelector<HTMLElement>("#work-surface");
 const activityEl = document.querySelector<HTMLElement>("#activity-feed");
 const connectionBadgeEl = document.querySelector<HTMLElement>("#connection-badge");
+const connectionAlertEl = document.querySelector<HTMLElement>("#connection-alert");
+const connectionAlertTitleEl = document.querySelector<HTMLElement>("#connection-alert-title");
+const connectionAlertDescriptionEl = document.querySelector<HTMLElement>("#connection-alert-description");
 
 if (
   !projectEl ||
@@ -36,7 +39,10 @@ if (
   !workflowEl ||
   !workEl ||
   !activityEl ||
-  !connectionBadgeEl
+  !connectionBadgeEl ||
+  !connectionAlertEl ||
+  !connectionAlertTitleEl ||
+  !connectionAlertDescriptionEl
 ) {
   throw new Error("KFP UI bootstrap failed: required DOM nodes are missing.");
 }
@@ -58,6 +64,8 @@ let planSearchQuery = "";
 let projectsLoaded = false;
 let suppressHashChange = false;
 let lastKnownPhase = "";
+let connectionState: "connected" | "stale" | "offline" | "disconnected" = "disconnected";
+let lastLiveSignalTs = 0;
 
 function parseUpdatedAtMs(value: string): number {
   const parsed = Date.parse(String(value || ""));
@@ -92,6 +100,55 @@ function currentProjectId(): string {
 
 function setStatus(message: string): void {
   statusMessage.value = message;
+}
+
+function formatElapsedDuration(ms: number): string {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 5) {
+    return "just now";
+  }
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) {
+    return `${minutes}m`;
+  }
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}m`;
+}
+
+function liveUpdateAgeLabel(): string {
+  if (!lastLiveSignalTs) {
+    return "unknown";
+  }
+  return formatElapsedDuration(Date.now() - lastLiveSignalTs);
+}
+
+function syncConnectionAlert(): void {
+  if (connectionState === "connected" || connectionState === "disconnected") {
+    connectionAlertEl.hidden = true;
+    return;
+  }
+
+  const age = liveUpdateAgeLabel();
+  if (connectionState === "stale") {
+    connectionAlertEl.className = "topbar-connection-alert ui-alert ui-alert-warning";
+    connectionAlertTitleEl.textContent = "Connection stale";
+    connectionAlertDescriptionEl.textContent = `Last live update ${age} ago. Auto-resync in progress.`;
+  } else {
+    connectionAlertEl.className = "topbar-connection-alert ui-alert ui-alert-danger";
+    connectionAlertTitleEl.textContent = "Connection offline";
+    connectionAlertDescriptionEl.textContent = `Last live update ${age} ago. Waiting for stream reconnect.`;
+  }
+  connectionAlertEl.hidden = false;
+}
+
+function markLiveSignal(): void {
+  const now = Date.now();
+  lastHeartbeatTs = now;
+  lastLiveSignalTs = now;
+  syncConnectionAlert();
 }
 
 function escapeHtml(value: string): string {
@@ -189,24 +246,29 @@ function navigateToPlan(projectId: string, planId: string | null, mode: "push" |
 }
 
 function setConnectionState(state: "connected" | "stale" | "offline" | "disconnected"): void {
+  connectionState = state;
   connectionBadgeEl.className = "chip";
   if (state === "connected") {
     connectionBadgeEl.classList.add("chip-ok");
     connectionBadgeEl.textContent = "connected";
+    syncConnectionAlert();
     return;
   }
   if (state === "stale") {
     connectionBadgeEl.classList.add("chip-warn");
     connectionBadgeEl.textContent = "stale";
+    syncConnectionAlert();
     return;
   }
   if (state === "offline") {
     connectionBadgeEl.classList.add("chip-danger");
     connectionBadgeEl.textContent = "offline";
+    syncConnectionAlert();
     return;
   }
   connectionBadgeEl.classList.add("chip-muted");
   connectionBadgeEl.textContent = "disconnected";
+  syncConnectionAlert();
 }
 
 function currentActivityStorageKey(): string {
@@ -682,6 +744,7 @@ function attachStream(projectId: string, planId: string): void {
   }
 
   staleTimer = window.setInterval(() => {
+    syncConnectionAlert();
     if (!lastHeartbeatTs) {
       return;
     }
@@ -696,15 +759,16 @@ function attachStream(projectId: string, planId: string): void {
   currentStream.addEventListener("connected", () => {
     setConnectionState("connected");
     setStatus("Connected.");
-    lastHeartbeatTs = Date.now();
+    markLiveSignal();
     stopPollingFallback();
   });
 
   currentStream.addEventListener("heartbeat", () => {
-    lastHeartbeatTs = Date.now();
+    markLiveSignal();
   });
 
   currentStream.addEventListener("resync_required", () => {
+    markLiveSignal();
     setStatus("Stream replay unavailable. Full resync.");
     addActivity("resync_required", "SSE replay unavailable", "full resync triggered", {
       run_state: "IDLE",
@@ -717,6 +781,7 @@ function attachStream(projectId: string, planId: string): void {
 
   for (const eventType of ["plan_updated", "plan_deleted", "plan_invalid", "plan_archived"]) {
     currentStream.addEventListener(eventType, (evt) => {
+      markLiveSignal();
       const payloadText = (evt as MessageEvent).data || "{}";
       const payload = parseJsonPayload(payloadText);
       const derivedPhase = phaseFromPlanEventPayload(payload);
@@ -750,6 +815,7 @@ function attachStream(projectId: string, planId: string): void {
 
   for (const eventType of ["codex_run_started", "codex_run_completed", "codex_run_failed"]) {
     currentStream.addEventListener(eventType, (evt) => {
+      markLiveSignal();
       const payloadText = (evt as MessageEvent).data || "{}";
       let payload: { action_type?: string; status?: string; stdout_tail?: string; stderr_tail?: string };
       try {
@@ -778,6 +844,7 @@ function attachStream(projectId: string, planId: string): void {
 
   for (const eventType of ["runlog_started", "runlog_completed", "runlog_failed", "runlog_updated", "runlog_deleted"]) {
     currentStream.addEventListener(eventType, (evt) => {
+      markLiveSignal();
       const payloadText = (evt as MessageEvent).data || "{}";
       const payload = parseJsonPayload(payloadText) || {};
       const summary = summarizeRunlogEvent(eventType, payload);

@@ -55,6 +55,8 @@ export function ActivityJournal(props: ActivityJournalProps) {
     props.items.find((item) => isRuntimeEvent(item.eventType) || item.eventType.startsWith("plan_")) || null;
   const blockerEvent = props.items.find((item) => Boolean(item.meta?.blocker) || item.tone === "error") || null;
   const blockerText = compactText(blockerEvent?.meta?.blocker || blockerEvent?.message || "", 96);
+  const blockerSource = blockerEvent?.meta?.source || blockerEvent?.eventLabel || "none";
+  const blockerTime = blockerEvent?.ts ? formatClock(blockerEvent.ts) : "-";
   const activityText = compactText(latestActivityEvent?.message || "No recent activity events.");
   const activitySource = latestActivityEvent?.meta?.source || latestActivityEvent?.eventLabel || "none";
   const activityTime = latestActivityEvent?.ts ? formatClock(latestActivityEvent.ts) : "-";
@@ -88,6 +90,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
         : confidenceLevel === "low"
           ? "Active blockers or failures reduce confidence."
           : "No recent evidence to score confidence.";
+  const latestSummaryTime = currentTaskTime !== "-" ? currentTaskTime : activityTime;
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -117,53 +120,69 @@ export function ActivityJournal(props: ActivityJournalProps) {
                 </Badge>
               </div>
             </div>
-            <div class="activity-overview-grid">
-              <section class="activity-block activity-block-now">
+            <div class="activity-overview-stack">
+              <section class="activity-block activity-block-now activity-block-now-dominant">
                 <p class="activity-block-title">
                   <Icon icon={Clock3} />
                   Now
                 </p>
-                <p class="activity-block-main">
+                <p class="activity-block-main activity-now-main">
                   <span class={`activity-summary-state activity-summary-state-${currentTaskState.toLowerCase()}`}>
                     {runStateLabel(currentTaskState)}
                   </span>
-                  <span class="activity-summary-current-message">{currentTaskMessage}</span>
-                </p>
-                <small class="activity-block-meta">Updated at {currentTaskTime}</small>
-              </section>
-              <section class="activity-block activity-block-phase">
-                <p class="activity-block-title">
-                  <Icon icon={CheckCircle2} />
-                  Plan Status
-                </p>
-                <p class="activity-block-main">{phaseLabel}</p>
-                <small class="activity-block-meta">Last transition {phaseTime}</small>
-              </section>
-              <section class="activity-block activity-block-activity">
-                <p class="activity-block-title">
-                  <Icon icon={ListChecks} />
-                  Activity
-                </p>
-                <p class="activity-block-main">{activityText}</p>
-                <small class="activity-block-meta">
-                  {blockerText ? `Blocker: ${blockerText}` : `Source: ${activitySource}`} | Updated at {activityTime}
-                </small>
-              </section>
-              <section class={`activity-block activity-block-evidence ${evidenceMissing ? "activity-block-evidence-missing" : "activity-block-evidence-ready"}`}>
-                <p class="activity-block-title">
-                  <Icon icon={FileText} />
-                  Evidence
-                </p>
-                <p class="activity-block-main">
-                  <span class={`activity-evidence-state ${evidenceMissing ? "activity-evidence-state-missing" : "activity-evidence-state-ready"}`}>
-                    {evidenceMissing ? "Needs evidence" : "Evidence ready"}
+                  <span class="activity-now-copy">
+                    <span class="activity-now-message">{currentTaskMessage}</span>
+                    <small class="activity-block-meta">Updated at {latestSummaryTime}</small>
                   </span>
-                  <span>{evidenceText}</span>
                 </p>
-                <small class="activity-block-meta">
-                  Source: {evidenceSource} | Confidence note: {confidenceHint}
-                </small>
               </section>
+              {blockerText ? (
+                <section class="activity-block activity-block-blocker">
+                  <p class="activity-block-title">
+                    <Icon icon={TriangleAlert} />
+                    Active Blocker
+                  </p>
+                  <p class="activity-block-main">{blockerText}</p>
+                  <small class="activity-block-meta">
+                    Source: {blockerSource} | Updated at {blockerTime}
+                  </small>
+                </section>
+              ) : null}
+              <div class="activity-quick-grid">
+                <section class="activity-block activity-block-phase">
+                  <p class="activity-block-title">
+                    <Icon icon={CheckCircle2} />
+                    Plan Status
+                  </p>
+                  <p class="activity-block-main">{phaseLabel}</p>
+                  <small class="activity-block-meta">Last transition {phaseTime}</small>
+                </section>
+                <section class="activity-block activity-block-activity">
+                  <p class="activity-block-title">
+                    <Icon icon={ListChecks} />
+                    Activity
+                  </p>
+                  <p class="activity-block-main">{activityText}</p>
+                  <small class="activity-block-meta">
+                    Source: {activitySource} | Updated at {activityTime}
+                  </small>
+                </section>
+                <section class={`activity-block activity-block-evidence ${evidenceMissing ? "activity-block-evidence-missing" : "activity-block-evidence-ready"}`}>
+                  <p class="activity-block-title">
+                    <Icon icon={FileText} />
+                    Evidence
+                  </p>
+                  <p class="activity-block-main activity-evidence-main">
+                    <span class={`activity-evidence-state ${evidenceMissing ? "activity-evidence-state-missing" : "activity-evidence-state-ready"}`}>
+                      {evidenceMissing ? "Needs evidence" : "Evidence ready"}
+                    </span>
+                    <span>{evidenceText}</span>
+                  </p>
+                  <small class="activity-block-meta">
+                    Source: {evidenceSource} | {confidenceHint}
+                  </small>
+                </section>
+              </div>
             </div>
           </CardContent>
         </Card>

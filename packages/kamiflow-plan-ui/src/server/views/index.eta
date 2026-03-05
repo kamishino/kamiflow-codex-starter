@@ -24,6 +24,10 @@
           <span id="connection-badge" class="chip chip-muted">disconnected</span>
         </div>
       </div>
+      <div id="connection-alert" class="topbar-connection-alert ui-alert ui-alert-warning" hidden>
+        <p id="connection-alert-title" class="topbar-connection-alert-title">Connection stale</p>
+        <p id="connection-alert-description" class="topbar-connection-alert-description">Last update unknown. Auto-resync in progress.</p>
+      </div>
       <div id="toolbar-controls" class="topbar-controls">
         <div class="toolbar-field toolbar-field-project">
           <label for="project-filter">Project</label>

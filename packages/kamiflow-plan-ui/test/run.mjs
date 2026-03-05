@@ -1043,7 +1043,8 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".journal-header"));
     assert.ok(stylesResponse.payload.includes(".empty-state"));
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));
-    assert.ok(stylesResponse.payload.includes(".activity-overview-grid"));
+    assert.ok(stylesResponse.payload.includes(".activity-overview-stack"));
+    assert.ok(stylesResponse.payload.includes(".activity-quick-grid"));
     assert.ok(stylesResponse.payload.includes(".activity-block"));
     assert.ok(stylesResponse.payload.includes("@media (min-width: 1500px)"));
     assert.ok(stylesResponse.payload.includes(".phase-timeline"));
