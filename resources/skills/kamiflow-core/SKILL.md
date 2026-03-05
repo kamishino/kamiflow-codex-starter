@@ -88,6 +88,7 @@ Pick mode before executing route logic:
 - Every route invocation persists plan-state changes directly in markdown before final output.
 - Prefer direct plan-file mutation as primary lifecycle path; use `kfc flow ...` only as recovery fallback.
 - Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.
+- `diagram_mode` policy must be explicit in plan frontmatter (`required|auto|hidden`) and respected during Start/Plan/Build routes.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
