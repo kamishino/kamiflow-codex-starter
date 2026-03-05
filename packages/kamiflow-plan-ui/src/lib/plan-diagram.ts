@@ -15,6 +15,7 @@ export type DiagramAvailability = "ready" | "missing" | "invalid";
 export interface TechnicalSolutionDiagramModel {
   plan_id: string;
   section_name: string;
+  has_section: boolean;
   source_type: "section" | "derived";
   content_state: DiagramAvailability;
   state_message: string;
@@ -161,6 +162,7 @@ export function buildTechnicalSolutionDiagramModel(input: DiagramPlanInput): Tec
     return {
       plan_id: input.summary.plan_id,
       section_name: "Technical Solution Diagram",
+      has_section: false,
       source_type: "derived",
       content_state: "missing",
       state_message: "No section found.",
@@ -177,6 +179,7 @@ export function buildTechnicalSolutionDiagramModel(input: DiagramPlanInput): Tec
     return {
       plan_id: input.summary.plan_id,
       section_name: section.name,
+      has_section: true,
       source_type: "derived",
       content_state: "invalid",
       state_message: "Invalid Mermaid block.",
@@ -195,6 +198,7 @@ export function buildTechnicalSolutionDiagramModel(input: DiagramPlanInput): Tec
     return {
       plan_id: input.summary.plan_id,
       section_name: section.name,
+      has_section: true,
       source_type: "derived",
       content_state: "missing",
       state_message: "No Mermaid block found.",
@@ -212,6 +216,7 @@ export function buildTechnicalSolutionDiagramModel(input: DiagramPlanInput): Tec
   return {
     plan_id: input.summary.plan_id,
     section_name: section.name,
+    has_section: true,
     source_type: "section",
     content_state: "ready",
     state_message: "Ready",
@@ -364,7 +369,7 @@ export function buildPlanDiagramTabsModel(input: DiagramPlanInput): PlanDiagramT
   const summary = buildFallbackSummaryModel(input);
 
   const tabs: PlanDiagramTabModel[] = [];
-  const canShowTechnical = mode === "required" || (mode === "auto" && technical.content_state === "ready");
+  const canShowTechnical = technical.has_section && mode !== "hidden";
 
   if (canShowTechnical) {
     tabs.push({
@@ -403,14 +408,13 @@ export function buildPlanDiagramTabsModel(input: DiagramPlanInput): PlanDiagramT
     warnings: summary.warnings
   });
 
-  const defaultTab =
-    mode === "required"
-      ? "technical"
-      : tasks.content_state === "ready"
-        ? "tasks"
-        : summary.content_state === "ready"
-          ? "summary"
-          : (tabs[0]?.key ?? "tasks");
+  const defaultTab = canShowTechnical
+    ? "technical"
+    : tasks.content_state === "ready"
+      ? "tasks"
+      : summary.content_state === "ready"
+        ? "summary"
+        : (tabs[0]?.key ?? "tasks");
 
   return {
     default_tab: defaultTab,

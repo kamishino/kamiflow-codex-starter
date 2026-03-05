@@ -161,10 +161,10 @@ updated_at: 2026-03-02
   const parsed = parsePlanFileContent(markdown, "<memory>");
   const errors = validateParsedPlan(parsed);
   assert.ok(errors.some((item) => item.includes("Start Summary")));
-  assert.ok(parsed.sections["Technical Solution Diagram"]);
+  assert.equal(parsed.sections["Technical Solution Diagram"], undefined);
 });
 
-await runCase("parser backfills technical solution diagram section when missing", async () => {
+await runCase("parser does not backfill technical solution diagram section when missing", async () => {
   const markdown = `---
 plan_id: PLAN-2026-03-05-001
 title: Backfill Diagram
@@ -227,8 +227,7 @@ updated_at: 2026-03-05
 - Next step: build
 `;
   const parsed = parsePlanFileContent(markdown, "<memory>");
-  assert.ok(parsed.sections["Technical Solution Diagram"]);
-  assert.ok(parsed.sections["Technical Solution Diagram"].includes("flowchart LR"));
+  assert.equal(parsed.sections["Technical Solution Diagram"], undefined);
 });
 
 await runCase("parser does not backfill technical solution diagram when diagram_mode is auto", async () => {
@@ -739,6 +738,17 @@ await runCase("diagram tabs hide technical when diagram_mode is hidden", async (
 await runCase("diagram tabs default to tasks for auto mode without technical section", async () => {
   const model = buildPlanDiagramTabsModel({
     summary: { plan_id: "PLAN-TEST-DIAGRAM-004", diagram_mode: "auto" },
+    sections: {
+      "Implementation Tasks": "- [ ] Task One\n- [x] Task Two"
+    }
+  });
+  assert.equal(model.tabs.some((tab) => tab.key === "technical"), false);
+  assert.equal(model.default_tab, "tasks");
+});
+
+await runCase("diagram tabs default to tasks when required mode has no technical section", async () => {
+  const model = buildPlanDiagramTabsModel({
+    summary: { plan_id: "PLAN-TEST-DIAGRAM-004B", diagram_mode: "required" },
     sections: {
       "Implementation Tasks": "- [ ] Task One\n- [x] Task Two"
     }

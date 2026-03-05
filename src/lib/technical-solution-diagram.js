@@ -5,44 +5,6 @@ const SECTION_CANDIDATES = [
   "Implementation Flow"
 ];
 
-function resolveDiagramMode(markdown) {
-  const text = String(markdown || "");
-  if (!text.startsWith("---")) {
-    return "required";
-  }
-  const lines = text.split(/\r?\n/);
-  let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i].trim() === "---") {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) {
-    return "required";
-  }
-  for (let i = 1; i < endIdx; i += 1) {
-    const trimmed = lines[i].trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const sep = trimmed.indexOf(":");
-    if (sep <= 0) {
-      continue;
-    }
-    const key = trimmed.slice(0, sep).trim().toLowerCase();
-    if (key !== "diagram_mode") {
-      continue;
-    }
-    const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "").toLowerCase();
-    if (value === "auto" || value === "hidden" || value === "required") {
-      return value;
-    }
-    return "required";
-  }
-  return "required";
-}
-
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -54,12 +16,31 @@ function extractSection(markdown, heading) {
   return match ? match[2].trim() : "";
 }
 
-function hasExistingTechnicalSection(markdown) {
+function findTechnicalSection(markdown) {
   const text = String(markdown || "");
-  return SECTION_CANDIDATES.some((heading) => {
+  for (const heading of SECTION_CANDIDATES) {
     const escaped = escapeRegExp(heading);
-    return new RegExp(`(^|\\r?\\n)##\\s+${escaped}\\s*(\\r?\\n|$)`, "i").test(text);
-  });
+    const re = new RegExp(`(^|\\r?\\n)(##\\s+${escaped}\\s*\\r?\\n)([\\s\\S]*?)(?=\\r?\\n##\\s+|$)`, "i");
+    const match = re.exec(text);
+    if (!match || typeof match.index !== "number") {
+      continue;
+    }
+    const prefixLength = match[1]?.length || 0;
+    const headerLength = match[2]?.length || 0;
+    const start = match.index + prefixLength;
+    const end = start + headerLength + String(match[3] || "").length;
+    return {
+      heading,
+      start,
+      end,
+      sectionText: String(match[3] || "").trim()
+    };
+  }
+  return null;
+}
+
+function hasMermaidBlock(sectionText) {
+  return /```mermaid\s*[\s\S]*?```/i.test(String(sectionText || ""));
 }
 
 function sanitizeLabel(value) {
@@ -122,38 +103,20 @@ function buildDiagramSection(title, markdown) {
   ].join("\n");
 }
 
-function resolveInsertPoint(markdown) {
-  const text = String(markdown || "");
-  const candidates = ["Implementation Tasks", "Acceptance Criteria", "Validation Commands", "WIP Log"];
-  for (const heading of candidates) {
-    const escaped = escapeRegExp(heading);
-    const re = new RegExp(`\\r?\\n##\\s+${escaped}\\s*\\r?\\n`, "i");
-    const match = re.exec(text);
-    if (match && typeof match.index === "number") {
-      return match.index;
-    }
-  }
-  return -1;
-}
-
 export function ensureTechnicalSolutionDiagramSection(markdown, options = {}) {
   const raw = String(markdown || "");
   if (!raw.trim()) {
     return { markdown: raw, changed: false };
   }
-  const diagramMode = resolveDiagramMode(raw);
-  if (diagramMode !== "required") {
+  const section = findTechnicalSection(raw);
+  if (!section) {
     return { markdown: raw, changed: false };
   }
-  if (hasExistingTechnicalSection(raw)) {
+  if (hasMermaidBlock(section.sectionText)) {
     return { markdown: raw, changed: false };
   }
 
-  const section = buildDiagramSection(options.title || "", raw);
-  const insertAt = resolveInsertPoint(raw);
-  if (insertAt >= 0) {
-    const next = `${raw.slice(0, insertAt).trimEnd()}\n\n${section}\n\n${raw.slice(insertAt).trimStart()}`;
-    return { markdown: next, changed: true };
-  }
-  return { markdown: `${raw.trimEnd()}\n\n${section}\n`, changed: true };
+  const normalizedSection = buildDiagramSection(options.title || "", raw);
+  const next = `${raw.slice(0, section.start)}${normalizedSection}${raw.slice(section.end)}`;
+  return { markdown: next, changed: next !== raw };
 }
