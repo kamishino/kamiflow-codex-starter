@@ -31,10 +31,16 @@ npm run link:self
 
 Do not use `npm run ...` from this repo in client projects.
 
-In the client project:
+From the root of the external client repository (new/existing folder, not `kamiflow-codex-starter`):
 
 ```bash
 kfc client --force
+```
+
+Low-level equivalent (only when you need manual bootstrap control):
+
+```bash
+kfc client bootstrap --project . --profile client --force
 ```
 
 For each task, use this KISS loop:

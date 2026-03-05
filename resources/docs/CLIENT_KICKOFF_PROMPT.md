@@ -20,6 +20,8 @@ kfc client --force
 kfc client doctor --project . --fix
 ```
 
+Run from the client repository root (external project folder, not this KFC repo).
+
 Then paste this prompt into Codex (or tell Codex to read `.kfc/CODEX_READY.md`):
 
 ```text

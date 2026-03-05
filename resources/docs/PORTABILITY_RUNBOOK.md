@@ -7,7 +7,7 @@ Use this runbook to validate that `kfc` + `kamiflow-core` work outside this dogf
 Prove external-repo portability baseline in an external repository:
 
 - install/link CLI
-- bootstrap and verify client project readiness
+- run one-command client setup and verify readiness
 - confirm plan bootstrap, validation, and health checks work outside this repo
 
 ## Preconditions
@@ -48,10 +48,10 @@ npm i -D @kamishino/kamiflow-plan-ui
 
 ```bash
 npx --no-install kfc --help
-npx --no-install kfc client bootstrap --project . --profile client
+npx --no-install kfc client --force --port 4310
 ```
 
-What bootstrap verifies:
+What one-command client setup verifies:
 
 - valid config (creates if missing)
 - plan UI dependency available
@@ -113,7 +113,7 @@ In that case, run the same command in a normal local terminal session.
 Validation is complete when all are true:
 
 1. `kfc` works in external repo context.
-2. `kfc client bootstrap` completes PASS in external repo.
+2. `kfc client --force` completes PASS in external repo.
 3. plan file is created and validated in external repo.
 4. smoke log is captured and reviewable.
 

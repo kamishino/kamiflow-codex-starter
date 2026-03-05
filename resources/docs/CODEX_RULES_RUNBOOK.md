@@ -78,10 +78,11 @@ Client-project preferred path:
 
 ```bash
 # In client project after linking kfc:
-npx --no-install kfc client bootstrap --project . --profile client
+kfc client --force
 ```
 
-`client bootstrap` creates or validates config, ensures plan UI availability (project-local install or linked fallback), and syncs project rules.
+Run from the client repository root (external project folder, not this KFC repo).
+`kfc client --force` creates or validates config, ensures plan UI availability (project-local install or linked fallback), syncs project rules, and creates `.kfc/CODEX_READY.md`.
 
 ## Verification
 

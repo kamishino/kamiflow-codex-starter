@@ -49,10 +49,11 @@ kfc plan serve --project . --port 4310
 When KFC is linked into a client repo, use `kfc` commands there (not `npm run` from this repo):
 
 ```bash
-npx --no-install kfc client bootstrap --project . --profile client
-kfc plan init --project . --new
-kfc plan validate --project .
+kfc client --force
+kfc client doctor --project . --fix
 ```
+
+Run from the client repository root (external project folder, not `kamiflow-codex-starter`).
 
 5. Run Codex routes against one plan file:
 

@@ -20,6 +20,7 @@ kfc client --force
 kfc client doctor --project . --fix
 ```
 
+Run those commands from the client repository root (external project folder, not this KFC repo).
 This generates `.kfc/CODEX_READY.md` for Codex handoff.
 
 ## Workflow Contract

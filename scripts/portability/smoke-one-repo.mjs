@@ -37,7 +37,7 @@ function printUsage() {
       "  --link             Run npm link from this repo and npm link <package> in target project.",
       "  --port <n>         Port for kfc plan serve health check (default: 4310).",
       "  --out <path>       Output markdown report path (default: artifacts/portability/<timestamp>-<project>.md)",
-      "  --legacy-steps     Use legacy granular checks instead of baseline `kfc client bootstrap` smoke."
+      "  --legacy-steps     Use legacy granular checks instead of baseline one-command `kfc client --force` smoke."
     ].join("\n")
   );
 }
@@ -285,7 +285,7 @@ async function main() {
 
   console.log(`[portability] Target project: ${projectDir}`);
   console.log(`[portability] Link mode: ${args.link ? "on" : "off"}`);
-  console.log(`[portability] Step mode: ${args.legacySteps ? "legacy" : "baseline-bootstrap"}`);
+  console.log(`[portability] Step mode: ${args.legacySteps ? "legacy" : "baseline-client-force"}`);
 
   if (args.link) {
     steps.push(runStep("npm link (tool repo)", NODE, [NPM_CLI, "link"], ROOT_DIR));
@@ -310,7 +310,7 @@ async function main() {
   if (!args.legacySteps) {
     steps.push(
       runStep(
-        "kfc client bootstrap",
+        "kfc client --force",
         NODE,
         [
           NPM_CLI,
@@ -319,11 +319,9 @@ async function main() {
           "--",
           "kfc",
           "client",
-          "bootstrap",
+          "--force",
           "--project",
           ".",
-          "--profile",
-          "client",
           "--port",
           String(args.port)
         ],
@@ -362,9 +360,10 @@ async function main() {
 }
 
 function finalize(steps, outPath, projectDir, linkMode) {
-  const createdPlanStep = steps.find((step) => step.title === "kfc plan init --new");
-  const createdPlanMatch = createdPlanStep?.stdout?.match(/\[kfp\] Created template:\s*(.+)/);
-  const createdPlanPath = createdPlanMatch?.[1]?.trim() || "";
+  const outputBlob = steps.map((step) => `${step.stdout || ""}\n${step.stderr || ""}`).join("\n");
+  const jsonPlanPathMatch = outputBlob.match(/"plan_path"\s*:\s*"([^"]+)"/);
+  const createdTemplateMatch = outputBlob.match(/\[kfp\] Created template:\s*(.+)/);
+  const createdPlanPath = (jsonPlanPathMatch?.[1] || createdTemplateMatch?.[1] || "").trim();
   const result = steps.every((step) => step.ok) ? "PASS" : "BLOCK";
   const report = toMarkdownReport(
     {
