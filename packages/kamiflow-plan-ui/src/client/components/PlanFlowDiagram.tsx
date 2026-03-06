@@ -81,19 +81,83 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
   const [selectedTab, setSelectedTab] = useState<DiagramTabKey>(model.default_tab);
 
   const mermaidHostRef = useRef<HTMLDivElement>(null);
+  const diagramWrapRef = useRef<HTMLDivElement>(null);
   const panZoomRef = useRef<any>(null);
+  const autoFitRafRef = useRef<number | null>(null);
+  const autoFitForceRef = useRef(false);
+  const userAdjustedViewRef = useRef(false);
   const [renderState, setRenderState] = useState<MermaidRenderState>("idle");
   const [renderError, setRenderError] = useState("");
   const [panZoomReady, setPanZoomReady] = useState(false);
   const [renderAttempt, setRenderAttempt] = useState(0);
+  const [autoFitPaused, setAutoFitPaused] = useState(false);
 
   const activeTab = useMemo<PlanDiagramTabModel>(() => {
     return model.tabs.find((item) => item.key === selectedTab) || model.tabs[0];
   }, [model, selectedTab]);
 
+  function cancelScheduledAutoFit() {
+    if (autoFitRafRef.current !== null) {
+      window.cancelAnimationFrame(autoFitRafRef.current);
+      autoFitRafRef.current = null;
+    }
+    autoFitForceRef.current = false;
+  }
+
+  function runAutoFit(force = false) {
+    const panZoom = panZoomRef.current;
+    if (!panZoom) {
+      return;
+    }
+    if (!force && userAdjustedViewRef.current) {
+      return;
+    }
+    panZoom.resetZoom?.();
+    panZoom.fit?.();
+    panZoom.center?.();
+  }
+
+  function scheduleAutoFit(force = false) {
+    if (!panZoomRef.current) {
+      return;
+    }
+    if (!force && userAdjustedViewRef.current) {
+      return;
+    }
+    if (force) {
+      autoFitForceRef.current = true;
+    }
+    if (autoFitRafRef.current !== null) {
+      return;
+    }
+    autoFitRafRef.current = window.requestAnimationFrame(() => {
+      autoFitRafRef.current = null;
+      const forceFit = autoFitForceRef.current;
+      autoFitForceRef.current = false;
+      runAutoFit(forceFit);
+    });
+  }
+
+  function markUserAdjustedView() {
+    if (userAdjustedViewRef.current) {
+      return;
+    }
+    userAdjustedViewRef.current = true;
+    setAutoFitPaused(true);
+  }
+
+  function unlockAutoFit() {
+    if (!userAdjustedViewRef.current && !autoFitPaused) {
+      return;
+    }
+    userAdjustedViewRef.current = false;
+    setAutoFitPaused(false);
+  }
+
   useEffect(() => {
     setSelectedTab(model.default_tab);
     setRenderAttempt(0);
+    unlockAutoFit();
   }, [model.default_tab, props.detail.summary.plan_id, props.detail.summary.updated_at]);
 
   useEffect(() => {
@@ -114,6 +178,7 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
         panZoomRef.current.destroy();
         panZoomRef.current = null;
       }
+      cancelScheduledAutoFit();
       setPanZoomReady(false);
       setRenderState("idle");
       setRenderError("");
@@ -141,12 +206,14 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
                 zoomEnabled: true,
                 panEnabled: true,
                 controlIconsEnabled: false,
-                fit: true,
-                center: true,
+                fit: false,
+                center: false,
                 minZoom: 0.5,
                 maxZoom: 8
               });
+              unlockAutoFit();
               setPanZoomReady(true);
+              scheduleAutoFit(true);
             }
           } catch {
             setPanZoomReady(false);
@@ -165,6 +232,7 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
     void renderMermaid();
     return () => {
       disposed = true;
+      cancelScheduledAutoFit();
       if (panZoomRef.current?.destroy) {
         panZoomRef.current.destroy();
         panZoomRef.current = null;
@@ -178,6 +246,74 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
     props.detail.summary.plan_id,
     props.detail.summary.updated_at
   ]);
+
+  useEffect(() => {
+    if (!panZoomReady || activeTab.kind !== "mermaid" || activeTab.status !== "ready") {
+      return;
+    }
+    const target = diagramWrapRef.current;
+    if (!target) {
+      return;
+    }
+
+    const onResize = () => scheduleAutoFit(false);
+    let observer: ResizeObserver | null = null;
+
+    if (typeof ResizeObserver !== "undefined") {
+      observer = new ResizeObserver(() => onResize());
+      observer.observe(target);
+    } else {
+      window.addEventListener("resize", onResize);
+    }
+
+    return () => {
+      if (observer) {
+        observer.disconnect();
+      } else {
+        window.removeEventListener("resize", onResize);
+      }
+    };
+  }, [
+    panZoomReady,
+    activeTab.key,
+    activeTab.kind,
+    activeTab.status,
+    props.detail.summary.plan_id,
+    props.detail.summary.updated_at
+  ]);
+
+  useEffect(() => {
+    if (!panZoomReady || activeTab.kind !== "mermaid" || activeTab.status !== "ready") {
+      return;
+    }
+
+    const svg = mermaidHostRef.current?.querySelector("svg");
+    if (!svg) {
+      return;
+    }
+    const onManualInteraction = () => markUserAdjustedView();
+    svg.addEventListener("wheel", onManualInteraction, { passive: true });
+    svg.addEventListener("pointerdown", onManualInteraction);
+
+    return () => {
+      svg.removeEventListener("wheel", onManualInteraction);
+      svg.removeEventListener("pointerdown", onManualInteraction);
+    };
+  }, [
+    panZoomReady,
+    activeTab.key,
+    activeTab.kind,
+    activeTab.status,
+    activeTab.kind === "mermaid" ? activeTab.mermaid_render : "",
+    props.detail.summary.plan_id,
+    props.detail.summary.updated_at
+  ]);
+
+  useEffect(() => {
+    return () => {
+      cancelScheduledAutoFit();
+    };
+  }, []);
 
   function tabStatusLabel(status: DiagramAvailability): string {
     if (status === "ready") {
@@ -209,10 +345,12 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
   }
 
   function zoomIn() {
+    markUserAdjustedView();
     panZoomRef.current?.zoomIn?.();
   }
 
   function zoomOut() {
+    markUserAdjustedView();
     panZoomRef.current?.zoomOut?.();
   }
 
@@ -220,9 +358,8 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
     if (!panZoomRef.current) {
       return;
     }
-    panZoomRef.current.resetZoom?.();
-    panZoomRef.current.fit?.();
-    panZoomRef.current.center?.();
+    unlockAutoFit();
+    runAutoFit(true);
   }
 
   return (
@@ -254,6 +391,9 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
           </span>
           <span class={`implementation-flow-chip implementation-flow-chip-${panZoomReady ? "ready" : "idle"}`}>
             Pan/Zoom: {panZoomReady ? "Enabled" : "Unavailable"}
+          </span>
+          <span class={`implementation-flow-chip implementation-flow-chip-${autoFitPaused ? "missing" : "ready"}`}>
+            Auto-fit: {autoFitPaused ? "Paused" : "Active"}
           </span>
         </div>
 
@@ -325,7 +465,7 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
             renderUnavailableState(activeTab)
           )
         ) : activeTab.status === "ready" ? (
-          <div class="implementation-flow-diagram-wrap">
+          <div class="implementation-flow-diagram-wrap" ref={diagramWrapRef}>
             <div class="implementation-flow-mermaid mermaid" ref={mermaidHostRef} />
           </div>
         ) : (

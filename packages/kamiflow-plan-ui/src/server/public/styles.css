@@ -878,6 +878,7 @@ textarea {
   border-radius: var(--radius-sm);
   background: var(--surface-1);
   padding: var(--space-3);
+  min-height: clamp(208px, 38vh, 420px);
   overflow: auto;
 }
 
@@ -2026,6 +2027,10 @@ pre {
   .progress-scale-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .implementation-flow-diagram-wrap {
+    min-height: clamp(196px, 36vh, 360px);
+  }
 }
 
 @media (max-width: 860px) {
@@ -2072,6 +2077,10 @@ pre {
   #activity-filter {
     justify-self: start;
     text-align: left;
+  }
+
+  .implementation-flow-diagram-wrap {
+    min-height: clamp(176px, 44vh, 320px);
   }
 }
 
