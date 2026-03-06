@@ -22,7 +22,8 @@ const LIFECYCLE_CONTRACTS = [
   {
     file: "AGENTS.md",
     required: [
-      "Every top-level user request must touch the active plan twice",
+      "Every top-level implementation or workflow request must touch the active plan twice",
+      "Low-risk operational requests may use a no-plan fast path",
       "A valid touch means updating `updated_at` and appending a timestamped `WIP Log` entry",
       "On `check` PASS with all Acceptance Criteria and Go/No-Go items checked, archive the plan to `.local/plans/done/`.",
       "If completion is below 100% (remaining checklist items), do not archive"
@@ -31,6 +32,7 @@ const LIFECYCLE_CONTRACTS = [
   {
     file: "resources/skills/kamiflow-core/SKILL.md",
     required: [
+      "If request is trivial and low-risk operational, do not force this skill; use the no-plan fast path instead.",
       "Touch active plan at route start (`updated_at` + WIP line).",
       "Touch active plan again before final output to persist actual results from this turn.",
       "If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done."
@@ -47,7 +49,7 @@ const LIFECYCLE_CONTRACTS = [
   },
   {
     file: "resources/docs/CODEX_ANTI_PATTERNS.md",
-    required: ["AP-012", "AP-013"]
+    required: ["AP-012", "AP-013", "AP-015"]
   }
 ];
 

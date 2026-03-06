@@ -109,8 +109,10 @@ $kamiflow-core check verify current changes against Acceptance Criteria in .loca
 Deterministic persistence (direct markdown lifecycle):
 
 ```text
-- Every top-level request resolves one active non-done plan first (reuse by default)
+- Every top-level implementation/workflow request resolves one active non-done plan first (reuse by default)
 - Create a new plan file only when no active plan exists or the scope is explicitly split
+- Low-risk operational requests may use a no-plan fast path when they do not need acceptance criteria, phase/archive tracking, or multi-step workflow state
+- Allowed fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow low-risk chores
 - Every route updates frontmatter + WIP Log before final response
 - build/fix focuses on Implementation Tasks; check validates Acceptance Criteria
 - check PASS archives only when completion is 100% (Implementation Tasks + Acceptance Criteria checked)

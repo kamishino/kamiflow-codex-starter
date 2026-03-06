@@ -40,8 +40,11 @@ This repository has four active scopes:
 
 - Every new session must start by reading `AGENTS.md`.
 - If `.kfc/CODEX_READY.md` exists, read it before implementation.
-- Every top-level user request must resolve one active non-done plan in `.local/plans/` before route output.
-- Every top-level user request must touch the active plan twice: once at route start, once before final response.
+- Every top-level implementation or workflow request must resolve one active non-done plan in `.local/plans/` before route output.
+- Low-risk operational requests may use a no-plan fast path when they do not need acceptance criteria, phase/archive tracking, or multi-step workflow state.
+- Allowed no-plan fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow maintenance chores with low workflow risk.
+- If a low-risk operational request expands into implementation-bearing work, switch back to the active-plan workflow before continuing.
+- Every top-level implementation or workflow request must touch the active plan twice: once at route start, once before final response.
 - A valid touch means updating `updated_at` and appending a timestamped `WIP Log` entry for what was done in that turn.
 - Reuse the active plan by default; create a new plan file only when no active plan exists or the scope is explicitly split.
 - Every route call must persist plan updates before final response.

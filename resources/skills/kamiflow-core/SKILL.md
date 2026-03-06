@@ -70,16 +70,18 @@ Pick mode before executing route logic:
   - evidence gathering (`research`)
   - optional feature ideation/inspiration discovery (`research` ideation preset)
   - targeted remediation (`fix`)
-- If request is trivial and does not require plan lifecycle handling, do not force this skill.
+- If request is trivial and low-risk operational, do not force this skill; use the no-plan fast path instead.
 
 ## Boundaries Contract
 
 - Must:
   - execute exactly one route per response.
-  - resolve one active non-done plan before route output.
-  - mutate plan state directly in markdown before final response.
+  - resolve one active non-done plan before route output for implementation/workflow requests.
+  - mutate plan state directly in markdown before final response for implementation/workflow requests.
+  - allow the no-plan fast path only for low-risk operational requests that do not need acceptance criteria, phase/archive tracking, or multi-step workflow state.
 - Must not:
   - mix `Implementation Tasks` and `Acceptance Criteria` scope incorrectly (`build/fix` vs `check`).
+  - use the no-plan fast path for implementation-bearing work.
   - claim PASS, completion, or done without concrete evidence.
   - require routine user-run commands when agent execution is possible.
 
@@ -108,7 +110,10 @@ Pick mode before executing route logic:
 - If route confidence is below `4`, reroute instead of forcing the selected route.
 - If mode does not satisfy route requirements, do not continue.
 - Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
-- Every top-level user request must resolve one active non-done plan in `.local/plans` before route output.
+- Every top-level implementation or workflow request must resolve one active non-done plan in `.local/plans` before route output.
+- Low-risk operational requests may use the no-plan fast path when they do not need acceptance criteria, phase/archive tracking, or multi-step workflow state.
+- Allowed no-plan fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow maintenance chores with low workflow risk.
+- If a low-risk operational request expands into implementation-bearing work, switch back to the active-plan workflow before continuing.
 - Reuse the active plan by default; create a new plan file only when no active plan exists or scope is explicitly split.
 - Every route invocation persists plan-state changes directly in markdown before final output.
 - Prefer direct plan-file mutation as primary lifecycle path; use `kfc flow ...` only as recovery fallback.
@@ -122,20 +127,21 @@ Pick mode before executing route logic:
 
 ## Smooth Flow Checklist
 
-1. Resolve one active plan before route logic.
-2. Touch active plan at route start (`updated_at` + WIP line).
-3. Pick exactly one route and one mode.
-4. Record `Route Confidence` (`1-5`) and reroute when score is below `4`.
-5. Execute one scoped slice only (avoid multi-route mixing in one output).
-6. Mutate plan frontmatter + WIP Log before final response.
-7. Touch active plan again before final output to persist actual results from this turn.
-8. State claims only with evidence; otherwise label `Unknown`.
-9. Keep user response compact: `State`, `Doing`, `Next`.
-10. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
-11. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
-12. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
-13. Treat completion as valid only after archive success.
-14. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
+1. If request matches the low-risk operational no-plan fast path, execute it directly and do not force route or plan lifecycle handling.
+2. Otherwise resolve one active plan before route logic.
+3. Touch active plan at route start (`updated_at` + WIP line).
+4. Pick exactly one route and one mode.
+5. Record `Route Confidence` (`1-5`) and reroute when score is below `4`.
+6. Execute one scoped slice only (avoid multi-route mixing in one output).
+7. Mutate plan frontmatter + WIP Log before final response.
+8. Touch active plan again before final output to persist actual results from this turn.
+9. State claims only with evidence; otherwise label `Unknown`.
+10. Keep user response compact: `State`, `Doing`, `Next`.
+11. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
+12. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
+13. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
+14. Treat completion as valid only after archive success.
+15. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
 
 ## Plan Lifecycle Protocol
 

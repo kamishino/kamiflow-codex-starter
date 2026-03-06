@@ -4,13 +4,35 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 
 ## Core Sequence
 
-1. Resolve active non-done plan.
-2. Choose exactly one route (`start|plan|build|check|fix|research`).
-3. Assign `Route Confidence` (`1-5`) and reroute when confidence is below `4`.
-4. Execute one scoped slice.
-5. Mutate plan frontmatter + `WIP Log`.
-6. Run check validations for completed build/fix work.
-7. Respond with compact user guidance.
+1. Classify the request as implementation/workflow or low-risk operational.
+2. If low-risk operational fast path applies, execute the one-shot task without forcing a plan.
+3. Otherwise resolve active non-done plan.
+4. Choose exactly one route (`start|plan|build|check|fix|research`).
+5. Assign `Route Confidence` (`1-5`) and reroute when confidence is below `4`.
+6. Execute one scoped slice.
+7. Mutate plan frontmatter + `WIP Log`.
+8. Run check validations for completed build/fix work.
+9. Respond with compact user guidance.
+
+## No-Plan Fast Path
+
+- Use the no-plan fast path only when all conditions are true:
+  - request is low-risk and operational
+  - no acceptance criteria are needed
+  - no phase/archive tracking value exists
+  - no multi-step workflow state must be preserved
+- Typical allowed categories:
+  - commit/amend/reword
+  - git status/diff/log or explain current state
+  - sync generated docs/rules/skills
+  - narrow maintenance chores with low workflow risk
+- Disallowed on the fast path:
+  - feature work
+  - refactors
+  - UI changes
+  - non-trivial docs/spec changes
+  - any request that becomes implementation-bearing while executing
+- If scope expands beyond the fast-path boundary, stop and return to the active-plan workflow.
 
 ## Route Confidence Gate
 
@@ -69,8 +91,8 @@ When route execution fails or context is incomplete, use this exact order:
 
 ## Plan Touch Cadence
 
-- `📝` Touch active plan at route start (set current turn context).
-- `📝` Touch active plan again before final response (persist actual outcomes).
+- `📝` For implementation/workflow routes, touch active plan at route start (set current turn context).
+- `📝` For implementation/workflow routes, touch active plan again before final response (persist actual outcomes).
 - `📝` During `build`/`fix`, after each completed task/subtask, immediately update checklist state and append timestamped WIP evidence before continuing.
 - `📝` Include route confidence/reroute reason in WIP notes when confidence causes fallback.
 - A valid touch updates `updated_at` and appends a timestamped `WIP Log` line.
