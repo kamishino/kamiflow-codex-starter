@@ -20,6 +20,11 @@ export interface RunlogSignal {
   fallback_route?: string;
   selected_route?: string;
   recovery_step?: string;
+  onboarding_status?: string;
+  onboarding_stage?: string;
+  onboarding_error_code?: string;
+  onboarding_recovery?: string;
+  onboarding_next?: string;
 }
 
 function compactLine(value: string, max = 200): string {
@@ -139,6 +144,7 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
 
   const actionType = entry?.action_type ? String(entry.action_type) : undefined;
   const status = entry?.status ? String(entry.status) : undefined;
+  const explicitPhase = entry?.phase ? String(entry.phase) : undefined;
   const runState = deriveRunState(entry || {});
   const eventType = deriveEventType(runState);
 
@@ -169,7 +175,7 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
     action_type: actionType,
     status,
     run_id: entry?.run_id ? String(entry.run_id) : undefined,
-    phase: mapActionToPhase(actionType),
+    phase: explicitPhase || mapActionToPhase(actionType),
     source: entry?.source ? String(entry.source) : "runlog",
     message: derivedMessage,
     detail,
@@ -178,6 +184,11 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
     route_confidence: Number.isFinite(Number(entry?.route_confidence)) ? Number(entry.route_confidence) : undefined,
     fallback_route: entry?.fallback_route ? String(entry.fallback_route) : undefined,
     selected_route: entry?.selected_route ? String(entry.selected_route) : undefined,
-    recovery_step: entry?.recovery_step ? compactLine(String(entry.recovery_step), 300) : undefined
+    recovery_step: entry?.recovery_step ? compactLine(String(entry.recovery_step), 300) : undefined,
+    onboarding_status: entry?.onboarding_status ? String(entry.onboarding_status) : undefined,
+    onboarding_stage: entry?.onboarding_stage ? String(entry.onboarding_stage) : undefined,
+    onboarding_error_code: entry?.onboarding_error_code ? String(entry.onboarding_error_code) : undefined,
+    onboarding_recovery: entry?.onboarding_recovery ? compactLine(String(entry.onboarding_recovery), 300) : undefined,
+    onboarding_next: entry?.onboarding_next ? compactLine(String(entry.onboarding_next), 300) : undefined
   };
 }

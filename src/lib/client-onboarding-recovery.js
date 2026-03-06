@@ -15,8 +15,32 @@ export const CLIENT_ONBOARDING_CODES = Object.freeze({
   PASS_RECOVERED: "CLIENT_ONBOARDING_PASS_RECOVERED"
 });
 
+export const CLIENT_ONBOARDING_STAGES = Object.freeze({
+  INIT: "init",
+  BOOTSTRAP: "bootstrap",
+  READY_BRIEF: "ready_brief",
+  PLAN_READY: "plan_ready",
+  EXECUTION_READY: "execution_ready",
+  BLOCKED: "blocked",
+  DONE: "done"
+});
+
+const PASS_NEXT_STEPS = Object.freeze([
+  "kfc flow ensure-plan --project .",
+  "kfc flow ready --project .",
+  "kfc flow next --project . --plan <plan-id> --style narrative"
+]);
+
 function normalizeMessage(value) {
   return String(value || "").trim();
+}
+
+function normalizeStage(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (Object.values(CLIENT_ONBOARDING_STAGES).includes(normalized)) {
+    return normalized;
+  }
+  return CLIENT_ONBOARDING_STAGES.BOOTSTRAP;
 }
 
 export function createClientOnboardingError(code, reason, recovery) {
@@ -26,6 +50,42 @@ export function createClientOnboardingError(code, reason, recovery) {
     err.recovery = String(recovery);
   }
   return err;
+}
+
+function stageForCode(code) {
+  if (
+    code === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
+    code === CLIENT_ONBOARDING_CODES.CONFIG_INVALID ||
+    code === CLIENT_ONBOARDING_CODES.PLAN_UI_MISSING ||
+    code === CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED ||
+    code === CLIENT_ONBOARDING_CODES.DOCTOR_FAILED ||
+    code === CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED
+  ) {
+    return CLIENT_ONBOARDING_STAGES.BOOTSTRAP;
+  }
+  if (code === CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED || code === CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED) {
+    return CLIENT_ONBOARDING_STAGES.PLAN_READY;
+  }
+  if (code === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS || code === CLIENT_ONBOARDING_CODES.READY_ARTIFACT_FAILED) {
+    return CLIENT_ONBOARDING_STAGES.READY_BRIEF;
+  }
+  return CLIENT_ONBOARDING_STAGES.BLOCKED;
+}
+
+function nextForStage(stage) {
+  if (stage === CLIENT_ONBOARDING_STAGES.PLAN_READY) {
+    return "kfc flow ensure-plan --project .";
+  }
+  if (stage === CLIENT_ONBOARDING_STAGES.READY_BRIEF) {
+    return "Read .kfc/CODEX_READY.md and execute the mission.";
+  }
+  if (stage === CLIENT_ONBOARDING_STAGES.EXECUTION_READY) {
+    return PASS_NEXT_STEPS[0];
+  }
+  if (stage === CLIENT_ONBOARDING_STAGES.DONE) {
+    return "kfc client done";
+  }
+  return "kfc client doctor --project . --fix";
 }
 
 function recoveryForCode(code) {
@@ -68,26 +128,40 @@ export function classifyClientOnboardingFailure(input) {
   const explicitCode = normalizeMessage(input?.code || "");
   const code = explicitCode && explicitCode.startsWith("CLIENT_") ? explicitCode : codeFromMessage(reason);
   const recovery = normalizeMessage(input?.recovery || "") || recoveryForCode(code);
+  const stage = normalizeStage(input?.stage || stageForCode(code));
+  const next = normalizeMessage(input?.next || "") || recovery;
   return {
     status: "BLOCK",
+    stage,
     error_code: code,
     reason,
-    recovery
+    recovery,
+    next
   };
 }
 
 export function buildClientOnboardingPassPayload(recoveryUsed = false) {
   return {
     status: "PASS",
+    stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY,
     error_code: recoveryUsed ? CLIENT_ONBOARDING_CODES.PASS_RECOVERED : CLIENT_ONBOARDING_CODES.PASS,
     reason: recoveryUsed
       ? "Client onboarding completed after one smart-recovery cycle."
       : "Client onboarding completed without remediation.",
     recovery: "None",
-    next_steps: [
-      "kfc flow ensure-plan --project .",
-      "kfc flow ready --project .",
-      "kfc flow next --project . --plan <plan-id> --style narrative"
-    ]
+    next: nextForStage(CLIENT_ONBOARDING_STAGES.EXECUTION_READY),
+    next_steps: [...PASS_NEXT_STEPS]
+  };
+}
+
+export function buildClientOnboardingProgressPayload(stage, reason, next = "") {
+  const normalizedStage = normalizeStage(stage);
+  return {
+    status: "RUNNING",
+    stage: normalizedStage,
+    error_code: "CLIENT_ONBOARDING_PROGRESS",
+    reason: normalizeMessage(reason) || "Client onboarding in progress.",
+    recovery: "None",
+    next: normalizeMessage(next) || nextForStage(normalizedStage)
   };
 }

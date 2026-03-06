@@ -36,8 +36,10 @@ kfc client --force
 
 `kfc client --force` now runs one smart-recovery cycle by default and prints:
 - `Onboarding Status: PASS|BLOCK`
+- `Stage: init|bootstrap|ready_brief|plan_ready|execution_ready|blocked|done`
 - `Error Code: CLIENT_*`
 - `Recovery: <exact command>` when blocked
+- `Next: <single concrete next action>`
 
 Low-level equivalent (only when you need manual bootstrap control):
 

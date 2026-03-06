@@ -56,6 +56,11 @@ export interface ActivityMeta {
   fallback_route?: string;
   selected_route?: string;
   recovery_step?: string;
+  onboarding_status?: string;
+  onboarding_stage?: string;
+  onboarding_error_code?: string;
+  onboarding_recovery?: string;
+  onboarding_next?: string;
 }
 
 export interface ActivityItem {

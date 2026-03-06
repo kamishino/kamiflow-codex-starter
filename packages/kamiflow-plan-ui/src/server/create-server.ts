@@ -281,6 +281,11 @@ export async function createServer(options) {
                 fallback_route: signal.fallback_route,
                 selected_route: signal.selected_route,
                 recovery_step: signal.recovery_step,
+                onboarding_status: signal.onboarding_status,
+                onboarding_stage: signal.onboarding_stage,
+                onboarding_error_code: signal.onboarding_error_code,
+                onboarding_recovery: signal.onboarding_recovery,
+                onboarding_next: signal.onboarding_next,
                 updated_at: Date.now()
               }
             : {

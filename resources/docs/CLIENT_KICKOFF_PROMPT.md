@@ -21,7 +21,7 @@ kfc client doctor --project . --fix
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-Bootstrap now includes one smart-recovery cycle and reports `Onboarding Status: PASS|BLOCK` with `Error Code: CLIENT_*`.
+Bootstrap now includes one smart-recovery cycle and reports `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 
 Then paste this prompt into Codex (or tell Codex to read `.kfc/CODEX_READY.md`):
 
@@ -55,8 +55,10 @@ Rules:
    - confirm `.kfc/CODEX_READY.md` is removed.
 12) For onboarding/bootstrap failures, report:
    - `Onboarding Status: BLOCK`
+   - `Stage: <lifecycle stage>`
    - `Error Code: CLIENT_*`
    - `Recovery: <exact command>`
+   - `Next: <single concrete next action>`
 
 Deliverable expectations:
 - Keep tasks small and verifiable.

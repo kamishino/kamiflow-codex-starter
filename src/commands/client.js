@@ -14,6 +14,8 @@ import {
 } from "../lib/config.js";
 import {
   CLIENT_ONBOARDING_CODES,
+  CLIENT_ONBOARDING_STAGES,
+  buildClientOnboardingProgressPayload,
   buildClientOnboardingPassPayload,
   classifyClientOnboardingFailure,
   createClientOnboardingError
@@ -298,24 +300,89 @@ function printClientNextCommandHints() {
   info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
 }
 
-function printClientOnboardingPass(recoveryUsed) {
-  const payload = buildClientOnboardingPassPayload(recoveryUsed);
-  info(`Onboarding Status: ${payload.status}`);
-  info(`Error Code: ${payload.error_code}`);
-  info(`Reason: ${payload.reason}`);
-  info(`Recovery: ${payload.recovery}`);
-  const [step1, step2, step3] = payload.next_steps;
-  if (step1) info(`Next: ${step1}`);
-  if (step2) info(`Then: ${step2}`);
-  if (step3) info(`Then: ${step3}`);
+function resolveRunsDir(projectDir) {
+  return path.join(projectDir, ".local", "runs");
+}
+
+function onboardingRunState(status) {
+  const normalized = String(status || "").toUpperCase();
+  if (normalized === "PASS") return "SUCCESS";
+  if (normalized === "BLOCK") return "FAIL";
+  return "RUNNING";
+}
+
+function onboardingPhase(stage) {
+  const normalized = String(stage || "").toLowerCase();
+  if (normalized === CLIENT_ONBOARDING_STAGES.PLAN_READY || normalized === CLIENT_ONBOARDING_STAGES.EXECUTION_READY) {
+    return "Plan";
+  }
+  if (normalized === CLIENT_ONBOARDING_STAGES.READY_BRIEF) {
+    return "Build";
+  }
+  return "Start";
+}
+
+async function emitClientOnboardingEvent(projectDir, payload) {
+  try {
+    const activePlan = await resolveActivePlan(projectDir);
+    if (!activePlan?.planId) {
+      return;
+    }
+    const runsDir = resolveRunsDir(projectDir);
+    await fsp.mkdir(runsDir, { recursive: true });
+    const runFile = path.join(runsDir, `${activePlan.planId}.jsonl`);
+    const stage = String(payload?.stage || "bootstrap");
+    const status = String(payload?.status || "RUNNING");
+    const recovery = String(payload?.recovery || "None");
+    const next = String(payload?.next || "");
+    const reason = String(payload?.reason || "Client onboarding update.");
+    const errorCode = String(payload?.error_code || "CLIENT_ONBOARDING_PROGRESS");
+    const entry = {
+      event_type: "runlog_updated",
+      source: "client_onboarding",
+      plan_id: activePlan.planId,
+      action_type: "onboarding",
+      status,
+      run_state: onboardingRunState(status),
+      phase: onboardingPhase(stage),
+      message: `${status} ONBOARDING ${stage}`.trim(),
+      detail: reason,
+      evidence: `${errorCode} | stage=${stage}`.trim(),
+      onboarding_status: status,
+      onboarding_stage: stage,
+      onboarding_error_code: errorCode,
+      onboarding_recovery: recovery,
+      onboarding_next: next,
+      recovery_step: recovery === "None" ? undefined : recovery,
+      updated_at: new Date().toISOString()
+    };
+    await fsp.appendFile(runFile, JSON.stringify(entry) + "\n", "utf8");
+  } catch (err) {
+    warn(`Skipped onboarding activity emit: ${err instanceof Error ? err.message : String(err)}`);
+  }
+}
+
+function printClientOnboardingPayload(payload, asError = false) {
+  const writer = asError ? error : info;
+  writer(`Onboarding Status: ${payload.status}`);
+  writer(`Stage: ${payload.stage || CLIENT_ONBOARDING_STAGES.BOOTSTRAP}`);
+  writer(`Error Code: ${payload.error_code}`);
+  writer(`Reason: ${payload.reason}`);
+  writer(`Recovery: ${payload.recovery}`);
+  writer(`Next: ${payload.next || payload.recovery}`);
+}
+
+function printClientOnboardingPass(payload) {
+  printClientOnboardingPayload(payload, false);
+  const steps = Array.isArray(payload.next_steps) ? payload.next_steps.slice(1) : [];
+  for (const step of steps) {
+    info(`Then: ${step}`);
+  }
 }
 
 function printClientOnboardingBlock(errorLike) {
   const payload = classifyClientOnboardingFailure(errorLike);
-  error("Onboarding Status: BLOCK");
-  error(`Error Code: ${payload.error_code}`);
-  error(`Reason: ${payload.reason}`);
-  error(`Recovery: ${payload.recovery}`);
+  printClientOnboardingPayload(payload, true);
 }
 
 function resolveClientReadyPath(projectDir) {
@@ -420,9 +487,16 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     "## Mission",
     `- ${mission}`,
     "",
-    "## Plan Context",
+    "## Active Plan",
     `- plan_id: ${planId}`,
     `- plan_path: ${planPath}`,
+    "",
+    "## First-Run Sequence",
+    "1. Read this file and `AGENTS.md` before implementation.",
+    "2. Ensure plan + readiness: `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
+    "3. Execute exactly one route and mutate the active plan markdown (`updated_at` + `WIP Log`).",
+    "4. After build/fix work, run checks and report `Check: PASS|BLOCK` with evidence.",
+    "5. If blocked, return exact `Recovery: <command>` and stop until recovered.",
     "",
     "## Session Bootstrap (Every Session)",
     "1. Read `AGENTS.md` first, then re-read this file before implementation.",
@@ -437,13 +511,6 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     "5. Before `build`/`fix`, run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
     "6. If readiness or flow behavior fails, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.",
     "7. After completing implementation in a turn, run check validations and report `Check: PASS|BLOCK` before final response.",
-    "",
-    "## Phase Update Commands",
-    "- Readiness gate: `kfc flow ready --project .`",
-    `- Build progress: \`kfc flow apply --project . --plan ${planId} --route build --result progress\``,
-    `- Check pass: \`kfc flow apply --project . --plan ${planId} --route check --result pass\``,
-    `- Check block: \`kfc flow apply --project . --plan ${planId} --route check --result block\``,
-    `- Next action: \`kfc flow next --project . --plan ${planId} --style narrative\``,
     "",
     "## Blocker Contract",
     "- Return exactly:",
@@ -811,15 +878,37 @@ async function runBootstrapOnce(options) {
   info("Next steps in this client repo should use `kfc ...` commands.");
 }
 
-async function runBootstrapWithSmartRecovery(options) {
+async function runBootstrapWithSmartRecovery(options, runtime = {}) {
+  const shouldPrintPass = runtime.printPass !== false;
+  await emitClientOnboardingEvent(
+    options.project,
+    buildClientOnboardingProgressPayload(
+      CLIENT_ONBOARDING_STAGES.BOOTSTRAP,
+      "Running client bootstrap checks.",
+      "kfc client doctor --project . --fix"
+    )
+  );
   try {
     await runBootstrapOnce(options);
-    printClientOnboardingPass(false);
-    return 0;
+    const payload = buildClientOnboardingPassPayload(false);
+    await emitClientOnboardingEvent(options.project, payload);
+    if (shouldPrintPass) {
+      printClientOnboardingPass(payload);
+    }
+    return { code: 0, recoveryUsed: false };
   } catch (initialErr) {
     const first = classifyClientOnboardingFailure(initialErr);
+    await emitClientOnboardingEvent(options.project, first);
     warn(
       `Onboarding bootstrap blocked (${first.error_code}). Running one smart recovery cycle via \`kfc client doctor --project . --fix\`.`
+    );
+    await emitClientOnboardingEvent(
+      options.project,
+      buildClientOnboardingProgressPayload(
+        CLIENT_ONBOARDING_STAGES.BOOTSTRAP,
+        `Running smart recovery after ${first.error_code}.`,
+        "kfc client doctor --project . --fix"
+      )
     );
 
     const doctorFixCode = await runClientDoctorOnly({
@@ -827,23 +916,31 @@ async function runBootstrapWithSmartRecovery(options) {
       fix: true
     });
     if (doctorFixCode !== 0) {
-      printClientOnboardingBlock(
+      const blockPayload = classifyClientOnboardingFailure(
         createClientOnboardingError(
           CLIENT_ONBOARDING_CODES.SMART_RECOVERY_FAILED,
           `Smart recovery failed after initial bootstrap error (${first.error_code}).`,
           "kfc client doctor --project . --fix"
         )
       );
-      return 1;
+      await emitClientOnboardingEvent(options.project, blockPayload);
+      printClientOnboardingPayload(blockPayload, true);
+      return { code: 1, recoveryUsed: false };
     }
 
     try {
       await runBootstrapOnce({ ...options, force: true });
-      printClientOnboardingPass(true);
-      return 0;
+      const payload = buildClientOnboardingPassPayload(true);
+      await emitClientOnboardingEvent(options.project, payload);
+      if (shouldPrintPass) {
+        printClientOnboardingPass(payload);
+      }
+      return { code: 0, recoveryUsed: true };
     } catch (retryErr) {
-      printClientOnboardingBlock(retryErr);
-      return 1;
+      const blockPayload = classifyClientOnboardingFailure(retryErr);
+      await emitClientOnboardingEvent(options.project, blockPayload);
+      printClientOnboardingPayload(blockPayload, true);
+      return { code: 1, recoveryUsed: true };
     }
   }
 }
@@ -955,9 +1052,9 @@ async function runClientStart(options) {
     );
   }
 
-  const bootstrapCode = await runBootstrapWithSmartRecovery(options);
-  if (bootstrapCode !== 0) {
-    return bootstrapCode;
+  const bootstrap = await runBootstrapWithSmartRecovery(options, { printPass: false });
+  if (bootstrap.code !== 0) {
+    return bootstrap.code;
   }
 
   let ready;
@@ -969,16 +1066,27 @@ async function runClientStart(options) {
       profileName: options.profile || "client"
     });
   } catch (err) {
-    printClientOnboardingBlock(
+    const blockPayload = classifyClientOnboardingFailure(
       createClientOnboardingError(
         CLIENT_ONBOARDING_CODES.READY_ARTIFACT_FAILED,
         err instanceof Error ? err.message : String(err),
         "kfc flow ensure-plan --project ."
       )
     );
+    await emitClientOnboardingEvent(options.project, blockPayload);
+    printClientOnboardingPayload(blockPayload, true);
     return 1;
   }
 
+  const readyPayload = {
+    ...buildClientOnboardingPassPayload(bootstrap.recoveryUsed),
+    stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
+    reason: "Client onboarding handoff artifacts are ready.",
+    next: "Read .kfc/CODEX_READY.md and execute the mission.",
+    next_steps: ["Read .kfc/CODEX_READY.md and execute the mission."]
+  };
+  await emitClientOnboardingEvent(options.project, readyPayload);
+  printClientOnboardingPass(readyPayload);
   info(`Ready file: ${ready.readyPath}`);
   info("Tell Codex: read .kfc/CODEX_READY.md and execute the mission.");
   info("Finish cleanup: kfc client done");
@@ -1018,7 +1126,9 @@ export async function runClient(options) {
     try {
       return await runClientStart(parsed);
     } catch (err) {
-      printClientOnboardingBlock(err);
+      const blockPayload = classifyClientOnboardingFailure(err);
+      await emitClientOnboardingEvent(parsed.project, blockPayload);
+      printClientOnboardingPayload(blockPayload, true);
       return 1;
     }
   }
@@ -1028,7 +1138,8 @@ export async function runClient(options) {
   }
 
   if (parsed.subcommand === "bootstrap") {
-    return await runBootstrapWithSmartRecovery(parsed);
+    const result = await runBootstrapWithSmartRecovery(parsed);
+    return result.code;
   }
 
   if (parsed.subcommand === "done") {

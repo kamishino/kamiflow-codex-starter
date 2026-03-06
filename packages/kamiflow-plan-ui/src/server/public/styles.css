@@ -1406,6 +1406,32 @@ textarea {
   background: var(--warning-soft);
 }
 
+.activity-block-onboarding {
+  border-color: var(--border-info);
+  background: var(--surface-2);
+}
+
+.activity-block-onboarding-ok {
+  border-color: var(--border-success);
+  background: var(--semantic-success-soft);
+}
+
+.activity-block-onboarding-warn {
+  border-color: var(--border-warning);
+  background: var(--warning-soft);
+}
+
+.activity-block-onboarding-error {
+  border-color: var(--border-danger);
+  background: var(--semantic-danger-soft);
+}
+
+.activity-onboarding-main {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
 .activity-block-evidence {
   border-color: var(--border-soft);
 }

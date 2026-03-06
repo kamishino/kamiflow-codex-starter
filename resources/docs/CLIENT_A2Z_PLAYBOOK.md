@@ -22,7 +22,7 @@ kfc client doctor --project . --fix
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
 This generates `.kfc/CODEX_READY.md` for Codex handoff.
-Client bootstrap includes one smart-recovery cycle and prints `Onboarding Status: PASS|BLOCK` with `Error Code: CLIENT_*`.
+Client bootstrap includes one smart-recovery cycle and prints `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 
 ## Workflow Contract
 

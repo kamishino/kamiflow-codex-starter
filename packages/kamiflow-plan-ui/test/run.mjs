@@ -691,6 +691,43 @@ await runCase("runlog parser extracts runtime signal from latest jsonl entry", a
   });
 });
 
+await runCase("runlog parser includes onboarding metadata when present", async () => {
+  await withTempDir(async (tempDir) => {
+    const runsDir = path.join(tempDir, ".local", "runs");
+    await fs.mkdir(runsDir, { recursive: true });
+    const filePath = path.join(runsDir, "PLAN-2026-03-05-124.jsonl");
+    await fs.writeFile(
+      filePath,
+      JSON.stringify({
+        event_type: "runlog_updated",
+        status: "PASS",
+        action_type: "onboarding",
+        plan_id: "PLAN-2026-03-05-124",
+        phase: "Plan",
+        message: "PASS ONBOARDING ready_brief",
+        detail: "Client onboarding handoff artifacts are ready.",
+        onboarding_status: "PASS",
+        onboarding_stage: "ready_brief",
+        onboarding_error_code: "CLIENT_ONBOARDING_PASS",
+        onboarding_recovery: "None",
+        onboarding_next: "Read .kfc/CODEX_READY.md and execute the mission."
+      }) + "\n",
+      "utf8"
+    );
+
+    const signal = await readRunlogSignal(filePath);
+    assert.ok(signal);
+    assert.equal(signal.plan_id, "PLAN-2026-03-05-124");
+    assert.equal(signal.action_type, "onboarding");
+    assert.equal(signal.phase, "Plan");
+    assert.equal(signal.onboarding_status, "PASS");
+    assert.equal(signal.onboarding_stage, "ready_brief");
+    assert.equal(signal.onboarding_error_code, "CLIENT_ONBOARDING_PASS");
+    assert.equal(signal.onboarding_recovery, "None");
+    assert.equal(signal.onboarding_next, "Read .kfc/CODEX_READY.md and execute the mission.");
+  });
+});
+
 await runCase("technical solution diagram model reads mermaid from solution section", async () => {
   const input = {
     summary: {

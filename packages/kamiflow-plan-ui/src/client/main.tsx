@@ -419,6 +419,11 @@ function summarizeRunlogEvent(
     fallback_route?: string;
     selected_route?: string;
     recovery_step?: string;
+    onboarding_status?: string;
+    onboarding_stage?: string;
+    onboarding_error_code?: string;
+    onboarding_recovery?: string;
+    onboarding_next?: string;
   }
 ): { message: string; detail: string; runState: "RUNNING" | "SUCCESS" | "FAIL" | "IDLE" } {
   const action = String(payload.action_type || "task").toUpperCase();
@@ -873,6 +878,11 @@ function attachStream(projectId: string, planId: string): void {
         fallback_route: payload.fallback_route ? String(payload.fallback_route) : undefined,
         selected_route: payload.selected_route ? String(payload.selected_route) : payload.action_type ? String(payload.action_type) : undefined,
         recovery_step: payload.recovery_step ? String(payload.recovery_step) : undefined,
+        onboarding_status: payload.onboarding_status ? String(payload.onboarding_status) : undefined,
+        onboarding_stage: payload.onboarding_stage ? String(payload.onboarding_stage) : undefined,
+        onboarding_error_code: payload.onboarding_error_code ? String(payload.onboarding_error_code) : undefined,
+        onboarding_recovery: payload.onboarding_recovery ? String(payload.onboarding_recovery) : undefined,
+        onboarding_next: payload.onboarding_next ? String(payload.onboarding_next) : undefined,
         source: payload.source || (payload.action_type ? `runlog:${payload.action_type}` : "runlog")
       });
       setStatus("Runtime stream update: " + summary.message);

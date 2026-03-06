@@ -38,6 +38,14 @@ export function ActivityJournal(props: ActivityJournalProps) {
     return normalized;
   }
 
+  function onboardingLabel(value: string | undefined): string {
+    const normalized = String(value || "").trim().toLowerCase();
+    if (!normalized) {
+      return "unknown";
+    }
+    return normalized.replace(/_/g, " ");
+  }
+
   const successCount = props.items.filter((item) => item.tone === "ok").length;
   const failCount = props.items.filter((item) => item.tone === "error").length;
   const latestNowEvent =
@@ -127,6 +135,24 @@ export function ActivityJournal(props: ActivityJournalProps) {
   const reliabilityStateLabel = reliabilityState === "warn" ? "Needs attention" : reliabilityState === "error" ? "Blocked" : "Stable";
   const reliabilityStateClass = reliabilityState === "error" ? "fail" : reliabilityState;
   const reliabilityEventTime = latestReliabilityEvent?.ts ? formatClock(latestReliabilityEvent.ts) : "-";
+  const latestOnboardingEvent =
+    props.items.find((item) => Boolean(item.meta?.onboarding_status) || Boolean(item.meta?.onboarding_stage)) || null;
+  const onboardingStatus = String(latestOnboardingEvent?.meta?.onboarding_status || "UNKNOWN").toUpperCase();
+  const onboardingStage = onboardingLabel(latestOnboardingEvent?.meta?.onboarding_stage || "unknown");
+  const onboardingErrorCode = latestOnboardingEvent?.meta?.onboarding_error_code || "-";
+  const onboardingRecovery = compactText(latestOnboardingEvent?.meta?.onboarding_recovery || "None", 120);
+  const onboardingNext = compactText(latestOnboardingEvent?.meta?.onboarding_next || "n/a", 120);
+  const onboardingTime = latestOnboardingEvent?.ts ? formatClock(latestOnboardingEvent.ts) : "-";
+  const onboardingStateClass =
+    onboardingStatus === "PASS" ? "ok" : onboardingStatus === "BLOCK" ? "error" : "warn";
+  const onboardingStateLabel =
+    onboardingStatus === "PASS"
+      ? "Ready"
+      : onboardingStatus === "BLOCK"
+        ? "Blocked"
+        : onboardingStatus === "RUNNING"
+          ? "In progress"
+          : "Unknown";
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -192,6 +218,25 @@ export function ActivityJournal(props: ActivityJournalProps) {
                   </p>
                   <p class="activity-block-main">{phaseLabel}</p>
                   <small class="activity-block-meta">Last transition {phaseTime}</small>
+                </section>
+                <section class={`activity-block activity-block-onboarding activity-block-onboarding-${onboardingStateClass}`}>
+                  <p class="activity-block-title">
+                    <Icon icon={Info} />
+                    Onboarding
+                  </p>
+                  <p class="activity-block-main activity-onboarding-main">
+                    <span class={`activity-summary-state activity-summary-state-${onboardingStateClass}`}>
+                      {onboardingStateLabel}
+                    </span>
+                    <span class="activity-now-copy">
+                      <span class="activity-now-message">
+                        Stage: {onboardingStage} | Code: {onboardingErrorCode}
+                      </span>
+                      <small class="activity-block-meta">Updated at {onboardingTime}</small>
+                    </span>
+                  </p>
+                  <small class="activity-block-meta">Recovery: {onboardingRecovery}</small>
+                  <small class="activity-block-meta">Next: {onboardingNext}</small>
                 </section>
                 <section class="activity-block activity-block-activity">
                   <p class="activity-block-title">
