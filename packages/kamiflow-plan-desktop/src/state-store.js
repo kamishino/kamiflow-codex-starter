@@ -7,6 +7,10 @@ const MIN_HEIGHT = 600;
 const MAX_RECENT_TARGETS = 8;
 const TARGET_MODE_ROOT = "root";
 const TARGET_MODE_PLANS_DIR = "plans_dir";
+const THEME_SYSTEM = "system";
+const THEME_LIGHT = "light";
+const THEME_DARK = "dark";
+const DEFAULT_THEME_PREFERENCE = THEME_SYSTEM;
 
 export function sanitizeHashRoute(value) {
   const text = String(value || "").trim();
@@ -17,6 +21,14 @@ export function sanitizeHashRoute(value) {
     return DEFAULT_HASH;
   }
   return text;
+}
+
+export function sanitizeThemePreference(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === THEME_LIGHT || normalized === THEME_DARK || normalized === THEME_SYSTEM) {
+    return normalized;
+  }
+  return DEFAULT_THEME_PREFERENCE;
 }
 
 function normalizeDirectoryPath(input) {
@@ -149,7 +161,8 @@ export function sanitizeDesktopState(input) {
     lastHash: sanitizeHashRoute(source.lastHash),
     windowBounds: normalizeWindowBounds(source.windowBounds),
     activeTarget: sanitizeDesktopTarget(source.activeTarget),
-    recentTargets: sanitizeRecentTargets(source.recentTargets)
+    recentTargets: sanitizeRecentTargets(source.recentTargets),
+    themePreference: sanitizeThemePreference(source.themePreference)
   };
 }
 
@@ -184,5 +197,9 @@ export const DESKTOP_STATE_DEFAULTS = {
   MIN_HEIGHT,
   MAX_RECENT_TARGETS,
   TARGET_MODE_ROOT,
-  TARGET_MODE_PLANS_DIR
+  TARGET_MODE_PLANS_DIR,
+  THEME_SYSTEM,
+  THEME_LIGHT,
+  THEME_DARK,
+  DEFAULT_THEME_PREFERENCE
 };

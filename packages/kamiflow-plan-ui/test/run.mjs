@@ -1223,6 +1223,9 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("No selected plan. Click to browse or type to filter."));
     assert.ok(indexResponse.payload.includes("Plan Picker"));
     assert.ok(indexResponse.payload.includes("Plan View"));
+    assert.ok(indexResponse.payload.includes("theme-preference"));
+    assert.ok(indexResponse.payload.includes("Theme"));
+    assert.ok(indexResponse.payload.includes("theme_pref"));
     assert.ok(!indexResponse.payload.includes("workspace-badge"));
     assert.ok(!indexResponse.payload.includes("project-badge"));
     assert.ok(!indexResponse.payload.includes("api-badge"));
@@ -1246,6 +1249,11 @@ updated_at: 2026-03-01
     assert.equal(appJsResponse.statusCode, 200);
     assert.ok(appJsResponse.payload.includes("No plan selected."));
     assert.ok(appJsResponse.payload.includes("toolbar plan picker"));
+    assert.ok(appJsResponse.payload.includes("initializeThemePreference"));
+    assert.ok(appJsResponse.payload.includes("kfpDesktopTheme"));
+    assert.ok(appJsResponse.payload.includes("prefers-color-scheme"));
+    assert.ok(appJsResponse.payload.includes("themePreference"));
+    assert.ok(appJsResponse.payload.includes("resolvedTheme"));
     assert.ok(appJsResponse.payload.includes("sortPlansByRecency"));
     assert.ok(appJsResponse.payload.includes("selectedPlanDisplayLabel"));
     assert.ok(appJsResponse.payload.includes("activity-tag"));
@@ -1296,6 +1304,10 @@ updated_at: 2026-03-01
       url: "/assets/styles.css"
     });
     assert.equal(stylesResponse.statusCode, 200);
+    assert.ok(stylesResponse.payload.includes(":root[data-theme=\"dark\"]"));
+    assert.ok(stylesResponse.payload.includes("color-scheme: dark"));
+    assert.ok(stylesResponse.payload.includes("--bg-glow-a-fade"));
+    assert.ok(stylesResponse.payload.includes(".toolbar-field-theme"));
     assert.ok(stylesResponse.payload.includes(".journal-header"));
     assert.ok(stylesResponse.payload.includes(".empty-state"));
     assert.ok(stylesResponse.payload.includes(".activity-tag-error"));

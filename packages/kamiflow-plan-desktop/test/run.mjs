@@ -12,6 +12,7 @@ import {
   sanitizeDesktopTarget,
   sanitizeDesktopState,
   sanitizeHashRoute,
+  sanitizeThemePreference,
   withRecentTarget,
   writeDesktopState
 } from "../src/state-store.js";
@@ -77,7 +78,8 @@ await runCase("sanitize desktop state fallback", async () => {
     lastHash: "#/",
     windowBounds: {},
     activeTarget: null,
-    recentTargets: []
+    recentTargets: [],
+    themePreference: DESKTOP_STATE_DEFAULTS.DEFAULT_THEME_PREFERENCE
   });
 });
 
@@ -120,6 +122,27 @@ await runCase("recent targets keep latest unique items", async () => {
   assert.equal(state.recentTargets[0].rootDir, path.resolve("D:/repo-a"));
   assert.equal(state.recentTargets[1].rootDir, path.resolve("D:/repo-b"));
   assert.equal(state.activeTarget.rootDir, path.resolve("D:/repo-a"));
+});
+
+await runCase("sanitize theme preference variants", async () => {
+  assert.equal(sanitizeThemePreference("dark"), DESKTOP_STATE_DEFAULTS.THEME_DARK);
+  assert.equal(sanitizeThemePreference("light"), DESKTOP_STATE_DEFAULTS.THEME_LIGHT);
+  assert.equal(sanitizeThemePreference("system"), DESKTOP_STATE_DEFAULTS.THEME_SYSTEM);
+  assert.equal(sanitizeThemePreference("bad"), DESKTOP_STATE_DEFAULTS.DEFAULT_THEME_PREFERENCE);
+});
+
+await runCase("desktop state persists theme preference", async () => {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "kfp-desktop-theme-"));
+  const filePath = path.join(tempDir, "state.json");
+  const stored = await writeDesktopState(filePath, {
+    themePreference: "dark"
+  });
+  assert.equal(stored.themePreference, DESKTOP_STATE_DEFAULTS.THEME_DARK);
+
+  const reloaded = await readDesktopState(filePath);
+  assert.equal(reloaded.themePreference, DESKTOP_STATE_DEFAULTS.THEME_DARK);
+
+  await fs.rm(tempDir, { recursive: true, force: true });
 });
 
 if (!process.exitCode) {

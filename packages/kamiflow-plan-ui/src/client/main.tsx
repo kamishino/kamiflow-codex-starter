@@ -6,12 +6,14 @@ import { EmptyPanelCard } from "./components/EmptyPanelCard";
 import { ImplementationFlowPanel } from "./components/PlanFlowDiagram";
 import { PlanSnapshot } from "./components/PlanSnapshot";
 import { WorkflowTimeline } from "./components/WorkflowTimeline";
+import { initializeThemePreference } from "./theme";
 import { activityDensity, activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
 import type { ActivityItem, ActivityMeta, PlanSummary } from "./types";
 import { activityTone, deriveStage, formatEventLabel, nowIso, parseRoute } from "./utils";
 
 const projectEl = document.querySelector<HTMLSelectElement>("#project-filter");
 const filterEl = document.querySelector<HTMLSelectElement>("#plan-filter");
+const themePreferenceEl = document.querySelector<HTMLSelectElement>("#theme-preference");
 const planSearchInputEl = document.querySelector<HTMLInputElement>("#plan-search-input");
 const planSelectionHelpEl = document.querySelector<HTMLElement>("#plan-selection-help");
 const planSearchResultsEl = document.querySelector<HTMLElement>("#plan-search-results");
@@ -31,6 +33,7 @@ const connectionAlertDescriptionEl = document.querySelector<HTMLElement>("#conne
 if (
   !projectEl ||
   !filterEl ||
+  !themePreferenceEl ||
   !planSearchInputEl ||
   !planSelectionHelpEl ||
   !planSearchResultsEl ||
@@ -1044,8 +1047,17 @@ filterEl.classList.add("ui-select");
 activityFilterEl.classList.add("ui-select");
 activityDensityEl.classList.add("ui-select");
 planSearchInputEl.classList.add("ui-input");
+let disposeThemePreference = () => {};
+initializeThemePreference(themePreferenceEl)
+  .then((dispose) => {
+    disposeThemePreference = dispose;
+  })
+  .catch((err) => {
+    setStatus("Failed to initialize theme: " + (err?.message || String(err)));
+  });
 startLiveRefreshTimer();
 window.addEventListener("beforeunload", () => {
+  disposeThemePreference();
   stopLiveRefreshTimer();
   stopPollingFallback();
   detachStream(false);

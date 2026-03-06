@@ -1,4 +1,5 @@
 :root {
+  color-scheme: light;
   --background: #f4f6fb;
   --foreground: #111827;
   --card: #ffffff;
@@ -41,6 +42,8 @@
   --focus-ring-soft: rgba(29, 78, 216, 0.14);
   --bg-glow-a: #dbe9ff;
   --bg-glow-b: #f1f5ff;
+  --bg-glow-a-fade: rgba(219, 233, 255, 0);
+  --bg-glow-b-fade: rgba(241, 245, 255, 0);
   --shadow-color: rgba(17, 24, 39, 0.08);
   --shadow-color-soft: rgba(17, 24, 39, 0.05);
   --shadow-color-line: rgba(17, 24, 39, 0.02);
@@ -154,6 +157,159 @@
   }
 }
 
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #08111f;
+  --foreground: #edf4ff;
+  --card: #111b2c;
+  --card-foreground: #edf4ff;
+  --muted: #152235;
+  --muted-foreground: #a7b5ca;
+  --primary: #7aa2ff;
+  --primary-strong: #9cb8ff;
+  --primary-foreground: #08111f;
+  --border: #24344d;
+  --ring: #8fb6ff;
+  --warning: #f8b84a;
+  --warning-soft: #2d2312;
+  --success: #55d39a;
+  --success-soft: #12271e;
+  --danger: #ff8f8f;
+  --danger-soft: #2d171a;
+  --semantic-info: #9cb8ff;
+  --semantic-info-soft: #132238;
+  --semantic-success: #86e3b7;
+  --semantic-success-soft: #11261e;
+  --semantic-warning: #ffd27c;
+  --semantic-warning-soft: #2f2716;
+  --semantic-danger: #ffb1b1;
+  --semantic-danger-soft: #30171c;
+  --surface-1: #111b2c;
+  --surface-2: #0d1727;
+  --surface-3: #142236;
+  --surface-4: #0e1828;
+  --surface-muted: #152133;
+  --text-2: #d7e2f2;
+  --text-3: #b3bfd1;
+  --text-4: #f4f8ff;
+  --border-soft: #223149;
+  --border-info: #35558f;
+  --border-success: #25553f;
+  --border-warning: #6b5123;
+  --border-danger: #6b2b38;
+  --focus-ring: rgba(122, 162, 255, 0.32);
+  --focus-ring-soft: rgba(122, 162, 255, 0.18);
+  --bg-glow-a: rgba(46, 82, 144, 0.32);
+  --bg-glow-b: rgba(16, 35, 62, 0.72);
+  --bg-glow-a-fade: rgba(46, 82, 144, 0);
+  --bg-glow-b-fade: rgba(16, 35, 62, 0);
+  --shadow-color: rgba(2, 6, 23, 0.5);
+  --shadow-color-soft: rgba(2, 6, 23, 0.32);
+  --shadow-color-line: rgba(148, 163, 184, 0.05);
+  --timeline-line: #25364f;
+  --timeline-line-done: #3f8f69;
+  --timeline-node-upcoming: #31445f;
+  --timeline-node-done: #48b582;
+  --timeline-node-current: var(--primary);
+  --timeline-current-bg: #13243c;
+  --timeline-current-border: #7aa2ff;
+  --timeline-current-ring: rgba(122, 162, 255, 0.24);
+  --timeline-done-bg: #11241c;
+  --timeline-upcoming-bg: #0f1a2b;
+  --timeline-hint-foreground: #b7c3d6;
+  --timeline-badge-done-foreground: #9ce8c4;
+  --timeline-badge-upcoming-foreground: #d7e2f2;
+  --progress-triad-a: #ffb47a;
+  --progress-triad-a-soft: #321f14;
+  --progress-triad-a-border: #6b4527;
+  --progress-triad-a-text: #ffd7bc;
+  --progress-triad-b: #7ae0b2;
+  --progress-triad-b-soft: #14261c;
+  --progress-triad-b-border: #25553f;
+  --progress-triad-b-text: #d0f8e5;
+  --progress-triad-c: #9eb8ff;
+  --progress-triad-c-soft: #15243c;
+  --progress-triad-c-border: #31518a;
+  --progress-triad-c-text: #d9e4ff;
+  --inline-code-bg: #16233d;
+  --inline-code-border: #35558f;
+  --inline-code-foreground: #cfdbff;
+}
+
+@supports (color: oklch(60% 0.1 250)) {
+  :root[data-theme="dark"] {
+    --background: oklch(17% 0.025 258);
+    --foreground: oklch(95% 0.012 255);
+    --card: oklch(22% 0.03 258);
+    --card-foreground: oklch(95% 0.012 255);
+    --muted: oklch(25% 0.03 257);
+    --muted-foreground: oklch(79% 0.02 255);
+    --primary: oklch(75% 0.12 258);
+    --primary-strong: oklch(82% 0.11 258);
+    --primary-foreground: oklch(17% 0.025 258);
+    --border: oklch(34% 0.025 257);
+    --ring: oklch(78% 0.09 252);
+    --warning: oklch(80% 0.11 78);
+    --warning-soft: oklch(28% 0.03 78);
+    --success: oklch(77% 0.11 160);
+    --success-soft: oklch(27% 0.03 160);
+    --danger: oklch(77% 0.12 28);
+    --danger-soft: oklch(28% 0.03 28);
+    --semantic-info: oklch(83% 0.08 255);
+    --semantic-info-soft: oklch(26% 0.03 255);
+    --semantic-success: oklch(84% 0.08 160);
+    --semantic-success-soft: oklch(27% 0.03 160);
+    --semantic-warning: oklch(86% 0.08 78);
+    --semantic-warning-soft: oklch(29% 0.03 78);
+    --semantic-danger: oklch(84% 0.09 28);
+    --semantic-danger-soft: oklch(28% 0.03 28);
+    --surface-1: oklch(22% 0.03 258);
+    --surface-2: oklch(19% 0.028 258);
+    --surface-3: oklch(25% 0.03 258);
+    --surface-4: oklch(20% 0.028 258);
+    --surface-muted: oklch(24% 0.025 258);
+    --text-2: oklch(90% 0.015 255);
+    --text-3: oklch(81% 0.015 255);
+    --text-4: oklch(97% 0.01 255);
+    --border-soft: oklch(33% 0.02 257);
+    --border-info: oklch(44% 0.05 255);
+    --border-success: oklch(45% 0.05 160);
+    --border-warning: oklch(47% 0.05 78);
+    --border-danger: oklch(45% 0.05 28);
+    --bg-glow-a: oklch(38% 0.05 253 / 0.45);
+    --bg-glow-b: oklch(28% 0.03 252 / 0.72);
+    --bg-glow-a-fade: rgba(48, 92, 168, 0);
+    --bg-glow-b-fade: rgba(18, 41, 77, 0);
+    --timeline-line: oklch(35% 0.02 257);
+    --timeline-line-done: oklch(60% 0.12 160);
+    --timeline-node-upcoming: oklch(40% 0.02 257);
+    --timeline-node-done: oklch(68% 0.12 160);
+    --timeline-current-bg: oklch(26% 0.04 255);
+    --timeline-current-border: oklch(75% 0.12 258);
+    --timeline-current-ring: rgba(122, 162, 255, 0.24);
+    --timeline-done-bg: oklch(27% 0.03 160);
+    --timeline-upcoming-bg: oklch(20% 0.028 258);
+    --timeline-hint-foreground: oklch(83% 0.014 255);
+    --timeline-badge-done-foreground: oklch(88% 0.07 160);
+    --timeline-badge-upcoming-foreground: oklch(89% 0.015 255);
+    --progress-triad-a: oklch(79% 0.08 45);
+    --progress-triad-a-soft: oklch(29% 0.03 45);
+    --progress-triad-a-border: oklch(47% 0.05 45);
+    --progress-triad-a-text: oklch(90% 0.03 45);
+    --progress-triad-b: oklch(80% 0.08 160);
+    --progress-triad-b-soft: oklch(27% 0.03 160);
+    --progress-triad-b-border: oklch(45% 0.05 160);
+    --progress-triad-b-text: oklch(92% 0.03 160);
+    --progress-triad-c: oklch(82% 0.08 258);
+    --progress-triad-c-soft: oklch(27% 0.03 258);
+    --progress-triad-c-border: oklch(46% 0.05 258);
+    --progress-triad-c-text: oklch(93% 0.03 258);
+    --inline-code-bg: oklch(27% 0.04 258);
+    --inline-code-border: oklch(43% 0.05 258);
+    --inline-code-foreground: oklch(91% 0.03 258);
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -162,8 +318,8 @@ body {
   margin: var(--space-0);
   color: var(--foreground);
   background:
-    radial-gradient(circle at 10% 0%, var(--bg-glow-a) 0, rgba(219, 233, 255, 0) 35%),
-    radial-gradient(circle at 100% 0%, var(--bg-glow-b) 0, rgba(241, 245, 255, 0) 35%),
+    radial-gradient(circle at 10% 0%, var(--bg-glow-a) 0, var(--bg-glow-a-fade) 35%),
+    radial-gradient(circle at 100% 0%, var(--bg-glow-b) 0, var(--bg-glow-b-fade) 35%),
     var(--background);
   font-family: "Work Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Arial, sans-serif;
   font-size: var(--text-body);
@@ -250,11 +406,11 @@ samp,
 
 .topbar-controls {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 140px;
+  grid-template-columns: minmax(0, 1fr) 140px 140px;
   grid-template-areas:
-    "project project"
-    "plan view"
-    "selected selected";
+    "project project project"
+    "plan view theme"
+    "selected selected selected";
   gap: var(--space-3);
   align-items: end;
 }
@@ -274,6 +430,10 @@ samp,
 
 .toolbar-field-view {
   grid-area: view;
+}
+
+.toolbar-field-theme {
+  grid-area: theme;
 }
 
 .toolbar-field-selected {
@@ -299,7 +459,8 @@ samp,
 
 #plan-search-input,
 #project-filter,
-#plan-filter {
+#plan-filter,
+#theme-preference {
   margin-bottom: 0;
 }
 
@@ -2429,12 +2590,14 @@ pre {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     grid-template-areas:
       "project project"
-      "plan view"
+      "plan plan"
+      "view theme"
       "selected selected";
   }
 
-  .toolbar-field-view {
-    justify-self: end;
+  .toolbar-field-view,
+  .toolbar-field-theme {
+    max-width: none;
   }
 
   .progress-scale-row {
@@ -2463,6 +2626,7 @@ pre {
       "project"
       "plan"
       "view"
+      "theme"
       "selected";
   }
 

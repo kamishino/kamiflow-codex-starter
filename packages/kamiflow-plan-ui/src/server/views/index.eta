@@ -4,6 +4,32 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= it.title %></title>
+  <script>
+    (function () {
+      var storageKey = "kfp.theme.preference.v1";
+      var params = new URLSearchParams(window.location.search);
+      var queryPreference = params.get("theme_pref");
+      var env = params.get("theme_env");
+      var preference = "system";
+      if (queryPreference === "dark" || queryPreference === "light" || queryPreference === "system") {
+        preference = queryPreference;
+      } else if (env !== "desktop") {
+        try {
+          var stored = localStorage.getItem(storageKey);
+          if (stored === "dark" || stored === "light" || stored === "system") {
+            preference = stored;
+          }
+        } catch (_err) {
+          preference = "system";
+        }
+      }
+      var systemDark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      var resolved = preference === "dark" ? "dark" : preference === "light" ? "light" : (systemDark ? "dark" : "light");
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.style.colorScheme = resolved;
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
@@ -39,6 +65,14 @@
             <option value="active">Active</option>
             <option value="done">Done</option>
             <option value="all">All</option>
+          </select>
+        </div>
+        <div class="toolbar-field toolbar-field-compact toolbar-field-theme">
+          <label for="theme-preference">Theme</label>
+          <select id="theme-preference">
+            <option value="system">System</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
           </select>
         </div>
         <div class="toolbar-field toolbar-field-plan" id="plan-picker-wrap">

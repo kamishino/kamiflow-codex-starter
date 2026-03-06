@@ -1,5 +1,15 @@
 import { signal } from "@preact/signals";
-import type { ActivityDensity, ActivityFilter, ActivityItem, PlanDetail, PlanSummary, ProjectInfo, RouteInfo } from "./types";
+import type {
+  ActivityDensity,
+  ActivityFilter,
+  ActivityItem,
+  PlanDetail,
+  PlanSummary,
+  ProjectInfo,
+  ResolvedTheme,
+  RouteInfo,
+  ThemePreference
+} from "./types";
 
 export const statusMessage = signal("Waiting for updates...");
 export const workspaceName = signal("-default-");
@@ -13,3 +23,5 @@ export const emptyPanelState = signal<{ reason: string; nextStep: string } | nul
 export const activityItems = signal<ActivityItem[]>([]);
 export const activityFilter = signal<ActivityFilter>("all");
 export const activityDensity = signal<ActivityDensity>("compact");
+export const themePreference = signal<ThemePreference>("system");
+export const resolvedTheme = signal<ResolvedTheme>("light");

@@ -1,7 +1,7 @@
 import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { app, BrowserWindow, Menu, dialog } from "electron";
+import { app, BrowserWindow, Menu, dialog, ipcMain, nativeTheme } from "electron";
 import {
   DESKTOP_STATE_DEFAULTS,
   deriveRootFromPlansDir,
@@ -10,6 +10,7 @@ import {
   sanitizeDesktopState,
   sanitizeDesktopTarget,
   sanitizeHashRoute,
+  sanitizeThemePreference,
   withRecentTarget,
   writeDesktopState
 } from "./state-store.js";
@@ -18,20 +19,22 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const KFP_CREATE_SERVER_MODULE = path.resolve(__dirname, "../../kamiflow-plan-ui/dist/server/create-server.js");
 const DESKTOP_STATE_FILENAME = "kfp-desktop-state.json";
+const PRELOAD_FILE = path.join(__dirname, "preload.js");
 const LAUNCH_CWD = path.resolve(process.cwd());
 const TARGET_MODE_ROOT = DESKTOP_STATE_DEFAULTS.TARGET_MODE_ROOT;
 const TARGET_MODE_PLANS_DIR = DESKTOP_STATE_DEFAULTS.TARGET_MODE_PLANS_DIR;
+const DEFAULT_THEME_PREFERENCE = DESKTOP_STATE_DEFAULTS.DEFAULT_THEME_PREFERENCE;
 const WINDOW_DEFAULTS = {
   width: 1440,
   height: 920,
   minWidth: 1024,
   minHeight: 640,
   show: false,
-  backgroundColor: "#f4f6fb",
   webPreferences: {
     contextIsolation: true,
     sandbox: true,
-    nodeIntegration: false
+    nodeIntegration: false,
+    preload: PRELOAD_FILE
   }
 };
 
@@ -42,6 +45,64 @@ let persistedState = sanitizeDesktopState({});
 let activeTarget = null;
 let isQuitting = false;
 const externalNoticeSeen = new Set();
+
+function currentThemePreference() {
+  return sanitizeThemePreference(persistedState.themePreference || DEFAULT_THEME_PREFERENCE);
+}
+
+function applyNativeThemePreference(preference) {
+  nativeTheme.themeSource = preference === DESKTOP_STATE_DEFAULTS.THEME_SYSTEM ? "system" : preference;
+}
+
+function resolvedThemeForPreference(preference) {
+  const normalized = sanitizeThemePreference(preference);
+  if (normalized === DESKTOP_STATE_DEFAULTS.THEME_DARK) {
+    return "dark";
+  }
+  if (normalized === DESKTOP_STATE_DEFAULTS.THEME_LIGHT) {
+    return "light";
+  }
+  return nativeTheme.shouldUseDarkColors ? "dark" : "light";
+}
+
+function themeBackgroundColor(theme) {
+  return theme === "dark" ? "#08111f" : "#f4f6fb";
+}
+
+function currentThemeState() {
+  const preference = currentThemePreference();
+  return {
+    preference,
+    resolvedTheme: resolvedThemeForPreference(preference)
+  };
+}
+
+function updateWindowThemeSurface() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.setBackgroundColor(themeBackgroundColor(currentThemeState().resolvedTheme));
+}
+
+function broadcastThemeState() {
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    return;
+  }
+  mainWindow.webContents.send("kfp:theme-updated", currentThemeState());
+}
+
+async function applyDesktopThemePreference(preference) {
+  persistedState = {
+    ...persistedState,
+    themePreference: sanitizeThemePreference(preference)
+  };
+  applyNativeThemePreference(currentThemePreference());
+  updateWindowThemeSurface();
+  refreshMenu();
+  await persistCurrentState();
+  broadcastThemeState();
+  return currentThemeState();
+}
 
 function parseArgValue(flag) {
   const idx = process.argv.indexOf(flag);
@@ -231,10 +292,20 @@ function stateFilePath() {
   return path.join(app.getPath("userData"), DESKTOP_STATE_FILENAME);
 }
 
+function buildWindowUrl(hash) {
+  const url = new URL(appUrl);
+  url.searchParams.set("theme_env", "desktop");
+  url.searchParams.set("theme_pref", currentThemePreference());
+  url.hash = sanitizeHashRoute(hash);
+  return url.toString();
+}
+
 function restoredWindowOptions() {
   const bounds = persistedState.windowBounds || {};
+  const resolvedTheme = currentThemeState().resolvedTheme;
   return {
     ...WINDOW_DEFAULTS,
+    backgroundColor: themeBackgroundColor(resolvedTheme),
     ...(typeof bounds.width === "number" ? { width: bounds.width } : {}),
     ...(typeof bounds.height === "number" ? { height: bounds.height } : {}),
     ...(typeof bounds.x === "number" ? { x: bounds.x } : {}),
@@ -349,6 +420,7 @@ function buildRecentMenuItems() {
 }
 
 function refreshMenu() {
+  const themePreference = currentThemePreference();
   const template = [
     {
       label: "File",
@@ -372,6 +444,35 @@ function refreshMenu() {
         },
         { type: "separator" },
         { role: "quit" }
+      ]
+    },
+    {
+      label: "Appearance",
+      submenu: [
+        {
+          label: "System",
+          type: "radio",
+          checked: themePreference === DESKTOP_STATE_DEFAULTS.THEME_SYSTEM,
+          click: () => {
+            void applyDesktopThemePreference(DESKTOP_STATE_DEFAULTS.THEME_SYSTEM);
+          }
+        },
+        {
+          label: "Dark",
+          type: "radio",
+          checked: themePreference === DESKTOP_STATE_DEFAULTS.THEME_DARK,
+          click: () => {
+            void applyDesktopThemePreference(DESKTOP_STATE_DEFAULTS.THEME_DARK);
+          }
+        },
+        {
+          label: "Light",
+          type: "radio",
+          checked: themePreference === DESKTOP_STATE_DEFAULTS.THEME_LIGHT,
+          click: () => {
+            void applyDesktopThemePreference(DESKTOP_STATE_DEFAULTS.THEME_LIGHT);
+          }
+        }
       ]
     }
   ];
@@ -423,7 +524,8 @@ async function applyTarget(target, options = {}) {
   await startEmbeddedServer(normalized);
 
   if (mainWindow && !mainWindow.isDestroyed()) {
-    await mainWindow.loadURL(`${appUrl}${hash}`);
+    await mainWindow.loadURL(buildWindowUrl(hash));
+    updateWindowThemeSurface();
     mainWindow.show();
   }
 
@@ -443,8 +545,9 @@ async function createMainWindow() {
   }
 
   mainWindow = new BrowserWindow(restoredWindowOptions());
-  const loadTarget = `${appUrl}${sanitizeHashRoute(persistedState.lastHash)}`;
+  const loadTarget = buildWindowUrl(sanitizeHashRoute(persistedState.lastHash));
   await mainWindow.loadURL(loadTarget);
+  updateWindowThemeSurface();
   mainWindow.show();
 
   const syncRouteState = () => {
@@ -470,6 +573,7 @@ async function createMainWindow() {
 
 async function bootstrap() {
   persistedState = await readDesktopState(stateFilePath());
+  applyNativeThemePreference(currentThemePreference());
   activeTarget = await resolveInitialTarget();
   if (!activeTarget) {
     app.quit();
@@ -486,6 +590,18 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
+  ipcMain.handle("kfp:theme:get", async () => {
+    return currentThemeState();
+  });
+  ipcMain.handle("kfp:theme:set", async (_event, preference) => {
+    return await applyDesktopThemePreference(preference);
+  });
+  nativeTheme.on("updated", () => {
+    updateWindowThemeSurface();
+    broadcastThemeState();
+    refreshMenu();
+  });
+
   app.on("second-instance", () => {
     if (!mainWindow) {
       return;

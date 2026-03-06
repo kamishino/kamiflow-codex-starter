@@ -45,6 +45,8 @@ export type ActivityTone = "info" | "ok" | "warn" | "error";
 export type ActivityFilter = "all" | "timeline" | "runtime" | "plan";
 export type ActivityDensity = "compact" | "expanded";
 export type ActivityRunState = "RUNNING" | "SUCCESS" | "FAIL" | "IDLE";
+export type ThemePreference = "system" | "dark" | "light";
+export type ResolvedTheme = "dark" | "light";
 
 export interface ActivityMeta {
   run_state?: ActivityRunState;
