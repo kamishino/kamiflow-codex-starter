@@ -971,7 +971,7 @@ document.addEventListener("focusin", (event) => {
 
 activityFilterEl.addEventListener("change", () => {
   const nextFilter = activityFilterEl.value;
-  if (nextFilter === "plan" || nextFilter === "codex" || nextFilter === "system" || nextFilter === "all") {
+  if (nextFilter === "all" || nextFilter === "timeline" || nextFilter === "runtime" || nextFilter === "plan") {
     activityFilter.value = nextFilter;
   } else {
     activityFilter.value = "all";

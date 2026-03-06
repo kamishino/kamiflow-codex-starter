@@ -19,19 +19,26 @@ interface ActivityJournalProps {
   projectDir: string;
 }
 
-export function ActivityJournal(props: ActivityJournalProps) {
-  type TimelineActionType = "status" | "blockers" | "next_step" | "other";
-  interface TimelineEntry {
-    key: string;
-    actionType: TimelineActionType;
-    actionLabel: string;
-    message: string;
-    raw: string;
-    timeMs: number | null;
-    timeLabel: string;
-    lineIndex: number;
-  }
+type TimelineActionType = "status" | "blockers" | "next_step" | "other";
 
+interface TimelineAction {
+  key: string;
+  actionType: TimelineActionType;
+  actionLabel: string;
+  message: string;
+  raw: string;
+  lineIndex: number;
+}
+
+interface TimelineGroup {
+  key: string;
+  timeMs: number | null;
+  timeLabel: string;
+  lineIndex: number;
+  actions: TimelineAction[];
+}
+
+export function ActivityJournal(props: ActivityJournalProps) {
   function compactText(value: string, max = 120): string {
     const singleLine = String(value || "").replace(/\s+/g, " ").trim();
     if (!singleLine) {
@@ -40,9 +47,9 @@ export function ActivityJournal(props: ActivityJournalProps) {
     return singleLine.length > max ? singleLine.slice(0, max - 3) + "..." : singleLine;
   }
 
-  function parseWipTimeline(sectionText: string, max = 10): TimelineEntry[] {
+  function parseWipTimeline(sectionText: string, max = 8): TimelineGroup[] {
     const lines = String(sectionText || "").split(/\r?\n/);
-    const parsed: TimelineEntry[] = [];
+    const groupedByTime = new Map<string, TimelineGroup>();
 
     for (let index = 0; index < lines.length; index += 1) {
       const line = lines[index].trim();
@@ -84,23 +91,36 @@ export function ActivityJournal(props: ActivityJournalProps) {
               : "Update";
       const message = actionMatch?.[2]?.trim() || raw;
       const timeLabel = timeMs === null ? "n/a" : formatClock(new Date(timeMs).toISOString());
-      parsed.push({
+      const action: TimelineAction = {
         key: `${index}-${actionType}-${message.slice(0, 24)}`,
         actionType,
         actionLabel,
         message,
         raw,
-        timeMs,
-        timeLabel,
         lineIndex: index
-      });
+      };
+      const timeKey = timeMs === null ? `line:${index}` : `time:${timeMs}`;
+      const group = groupedByTime.get(timeKey);
+      if (group) {
+        group.actions.push(action);
+        group.lineIndex = Math.max(group.lineIndex, index);
+      } else {
+        groupedByTime.set(timeKey, {
+          key: timeKey,
+          timeMs,
+          timeLabel,
+          lineIndex: index,
+          actions: [action]
+        });
+      }
     }
 
-    if (!parsed.length) {
+    const groups = [...groupedByTime.values()];
+    if (!groups.length) {
       return [];
     }
 
-    parsed.sort((a, b) => {
+    groups.sort((a, b) => {
       if (a.timeMs !== null && b.timeMs !== null && a.timeMs !== b.timeMs) {
         return b.timeMs - a.timeMs;
       }
@@ -113,7 +133,23 @@ export function ActivityJournal(props: ActivityJournalProps) {
       return b.lineIndex - a.lineIndex;
     });
 
-    return parsed.slice(0, max);
+    const actionPriority: Record<TimelineActionType, number> = {
+      next_step: 0,
+      blockers: 1,
+      status: 2,
+      other: 3
+    };
+    for (const group of groups) {
+      group.actions.sort((a, b) => {
+        const priorityDiff = actionPriority[a.actionType] - actionPriority[b.actionType];
+        if (priorityDiff !== 0) {
+          return priorityDiff;
+        }
+        return b.lineIndex - a.lineIndex;
+      });
+    }
+
+    return groups.slice(0, max);
   }
 
   function timelineBadgeTone(actionType: TimelineActionType): "success" | "warning" | "danger" | "default" {
@@ -136,6 +172,51 @@ export function ActivityJournal(props: ActivityJournalProps) {
     return Info;
   }
 
+  function timelineNodeType(group: TimelineGroup): TimelineActionType {
+    if (group.actions.some((item) => item.actionType === "blockers")) {
+      return "blockers";
+    }
+    if (group.actions.some((item) => item.actionType === "next_step")) {
+      return "next_step";
+    }
+    if (group.actions.some((item) => item.actionType === "status")) {
+      return "status";
+    }
+    return "other";
+  }
+
+  function inferRunState(item: ActivityItem): "RUNNING" | "SUCCESS" | "FAIL" | "IDLE" {
+    const runState = item.meta?.run_state;
+    if (runState === "RUNNING" || runState === "SUCCESS" || runState === "FAIL" || runState === "IDLE") {
+      return runState;
+    }
+    if (item.eventType.endsWith("_started")) {
+      return "RUNNING";
+    }
+    if (item.eventType.endsWith("_completed")) {
+      return "SUCCESS";
+    }
+    if (item.eventType.endsWith("_failed") || item.tone === "error") {
+      return "FAIL";
+    }
+    return "IDLE";
+  }
+
+  function resolveRuntimeSignalState(items: ActivityItem[]): { label: string; className: string; icon: typeof Clock3 } {
+    const sourceItem = items.find((item) => item.meta?.run_state || item.eventType.startsWith("runlog_") || item.eventType.startsWith("codex_run_"));
+    const state = sourceItem ? inferRunState(sourceItem) : "IDLE";
+    if (state === "RUNNING") {
+      return { label: "Working", className: "activity-summary-state-running", icon: MoveRight };
+    }
+    if (state === "SUCCESS") {
+      return { label: "Done", className: "activity-summary-state-success", icon: CheckCircle2 };
+    }
+    if (state === "FAIL") {
+      return { label: "Blocked", className: "activity-summary-state-fail", icon: TriangleAlert };
+    }
+    return { label: "Idle", className: "activity-summary-state-idle", icon: Clock3 };
+  }
+
   const timelineStage = props.detail ? deriveStage(props.detail.summary, props.detail) : "Unknown";
   const nextCommand = props.detail?.summary?.next_command || "unknown";
   const planUpdatedAt = props.detail?.summary?.updated_at || "";
@@ -155,6 +236,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
   const acceptanceDone = acceptanceLeaves.filter((item) => item.checked).length;
   const timelineItems = parseWipTimeline(props.detail?.sections?.["WIP Log"] || "");
   const visibleItems = props.items.filter((item) => activityMatchesFilter(item.eventType, props.filter));
+  const runtimeState = resolveRuntimeSignalState(props.items);
 
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -170,25 +252,18 @@ export function ActivityJournal(props: ActivityJournalProps) {
           <CardContent>
             <div class="activity-overview-head">
               <strong>Execution Timeline</strong>
-              <div class="activity-overview-metrics">
-                <Badge class="activity-summary-badge activity-summary-badge-success" tone="success">
-                  Stage {timelineStage}
-                </Badge>
-                <Badge class="activity-summary-badge activity-summary-badge-fail" tone="default">
-                  Next {nextCommand}
-                </Badge>
-              </div>
+              <small class="activity-overview-meta">Stage {timelineStage} | Next {nextCommand}</small>
             </div>
             <div class="activity-progress-strip">
-              <div class="activity-progress-kv activity-progress-kv-tasks">
+              <div class="activity-progress-kv">
                 <span>Tasks</span>
                 <strong>{tasksDone}/{tasksLeaves.length}</strong>
               </div>
-              <div class="activity-progress-kv activity-progress-kv-acceptance">
+              <div class="activity-progress-kv">
                 <span>Acceptance</span>
                 <strong>{acceptanceDone}/{acceptanceLeaves.length}</strong>
               </div>
-              <div class="activity-progress-kv activity-progress-kv-updated">
+              <div class="activity-progress-kv">
                 <span>Updated</span>
                 <strong>{planUpdatedAt ? formatClock(planUpdatedAt) : "-"}</strong>
               </div>
@@ -200,7 +275,10 @@ export function ActivityJournal(props: ActivityJournalProps) {
                 Current Signal
               </p>
               <p class="activity-current-signal-main">
-                <span class="activity-summary-state activity-summary-state-running">Live</span>
+                <span class={`activity-summary-state ${runtimeState.className}`}>
+                  <Icon icon={runtimeState.icon} />
+                  {runtimeState.label}
+                </span>
                 <span class="activity-current-signal-copy">
                   <span class="activity-current-signal-message">
                     {renderInlineMarkdown(runtimeMessage, { projectDir: props.projectDir, enableFileLinks: true })}
@@ -212,20 +290,38 @@ export function ActivityJournal(props: ActivityJournalProps) {
 
             <ol class="activity-timeline-list">
               {timelineItems.length ? (
-                timelineItems.map((item) => (
-                  <li class={`activity-timeline-item activity-timeline-item-${item.actionType}`} key={item.key}>
-                    <div class="activity-timeline-head">
-                      <Badge class={`activity-timeline-badge activity-timeline-badge-${item.actionType}`} tone={timelineBadgeTone(item.actionType)}>
-                        <Icon icon={resolveTimelineIcon(item.actionType)} />
-                        {item.actionLabel}
-                      </Badge>
-                      <time>{item.timeLabel}</time>
-                    </div>
-                    <p class="activity-timeline-message" title={item.raw}>
-                      {renderInlineMarkdown(compactText(item.message, 240), { projectDir: props.projectDir, enableFileLinks: true })}
-                    </p>
-                  </li>
-                ))
+                timelineItems.map((group) => {
+                  const nodeType = timelineNodeType(group);
+                  return (
+                    <li class={`activity-timeline-node activity-timeline-node-${nodeType}`} key={group.key}>
+                      <div class="activity-timeline-axis" aria-hidden="true">
+                        <span class={`activity-timeline-dot activity-timeline-dot-${nodeType}`}></span>
+                        <span class="activity-timeline-stem"></span>
+                      </div>
+                      <div class="activity-timeline-card">
+                        <div class="activity-timeline-head">
+                          <time>{group.timeLabel}</time>
+                          <Badge class={`activity-timeline-badge activity-timeline-badge-${nodeType}`} tone={timelineBadgeTone(nodeType)}>
+                            {group.actions.length} update{group.actions.length > 1 ? "s" : ""}
+                          </Badge>
+                        </div>
+                        <ul class="activity-timeline-action-list">
+                          {group.actions.map((action) => (
+                            <li class={`activity-timeline-action activity-timeline-action-${action.actionType}`} key={action.key}>
+                              <span class={`activity-timeline-action-label activity-timeline-action-label-${action.actionType}`}>
+                                <Icon icon={resolveTimelineIcon(action.actionType)} />
+                                {action.actionLabel}
+                              </span>
+                              <span class="activity-timeline-action-message" title={action.raw}>
+                                {renderInlineMarkdown(compactText(action.message, 260), { projectDir: props.projectDir, enableFileLinks: true })}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </li>
+                  );
+                })
               ) : (
                 <li class="activity-timeline-empty">
                   <strong>No milestones yet.</strong>
@@ -242,35 +338,33 @@ export function ActivityJournal(props: ActivityJournalProps) {
             <details class="activity-debug-details">
               <summary>
                 <Icon icon={ListChecks} />
-                Debug Events ({visibleItems.length})
+                Execution Events ({visibleItems.length})
               </summary>
               {!visibleItems.length ? (
                 <p class="activity-debug-empty">No events for this filter.</p>
               ) : (
                 <ul class="activity-debug-list">
                   {visibleItems.map((item) => (
-                    <li class={`activity-item activity-item-${item.tone}`}>
-                      <Card class="activity-card">
-                        <CardContent>
-                          <div class="activity-head">
-                            <time>{formatClock(item.ts)}</time>
-                            <Badge
-                              class={`activity-tag activity-tag-${item.tone}`}
-                              tone={item.tone === "ok" ? "success" : item.tone === "warn" ? "warning" : item.tone === "error" ? "danger" : "default"}
-                            >
-                              <Icon icon={resolveToneIcon(item.tone)} />
-                              {item.eventLabel}
-                            </Badge>
-                          </div>
-                          <div class="activity-message">{item.message}</div>
-                          {item.detail ? (
-                            <details class="activity-detail">
-                              <summary>View detail</summary>
-                              <pre>{item.detail}</pre>
-                            </details>
-                          ) : null}
-                        </CardContent>
-                      </Card>
+                    <li class={`activity-item activity-item-${item.tone}`} key={`${item.ts}-${item.eventType}-${item.message.slice(0, 24)}`}>
+                      <div class="activity-row">
+                        <div class="activity-head">
+                          <time>{formatClock(item.ts)}</time>
+                          <Badge
+                            class={`activity-tag activity-tag-${item.tone}`}
+                            tone={item.tone === "ok" ? "success" : item.tone === "warn" ? "warning" : item.tone === "error" ? "danger" : "default"}
+                          >
+                            <Icon icon={resolveToneIcon(item.tone)} />
+                            {item.eventLabel}
+                          </Badge>
+                        </div>
+                        <div class="activity-message">{item.message}</div>
+                        {item.detail ? (
+                          <details class="activity-detail">
+                            <summary>View detail</summary>
+                            <pre>{item.detail}</pre>
+                          </details>
+                        ) : null}
+                      </div>
                     </li>
                   ))}
                 </ul>

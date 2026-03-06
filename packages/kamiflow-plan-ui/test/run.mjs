@@ -1173,6 +1173,7 @@ updated_at: 2026-03-01
     assert.ok(!indexResponse.payload.includes("Next Step"));
     assert.ok(!indexResponse.payload.includes("Plan Health"));
     assert.ok(indexResponse.payload.includes("Execution Timeline"));
+    assert.ok(indexResponse.payload.includes("Execution Type"));
     assert.ok(indexResponse.payload.includes("1. Now"));
     assert.ok(indexResponse.payload.includes("2. Plan Status"));
     assert.ok(indexResponse.payload.includes("3. Timeline"));
@@ -1212,15 +1213,16 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("Pan/Zoom"));
     assert.ok(appJsResponse.payload.includes("work-surface-stack"));
     assert.ok(appJsResponse.payload.includes("Current Signal"));
-    assert.ok(appJsResponse.payload.includes("Debug Events"));
+    assert.ok(appJsResponse.payload.includes("Execution Events"));
     assert.ok(appJsResponse.payload.includes("No milestones yet."));
     assert.ok(appJsResponse.payload.includes("Timeline will update from WIP Log entries in the plan file."));
     assert.ok(appJsResponse.payload.includes("Next step"));
     assert.ok(appJsResponse.payload.includes("Stage "));
     assert.ok(appJsResponse.payload.includes("Next "));
     assert.ok(appJsResponse.payload.includes("activity-timeline-badge-"));
-    assert.ok(appJsResponse.payload.includes("activity-timeline-item-"));
-    assert.ok(appJsResponse.payload.includes("activity-progress-kv-updated"));
+    assert.ok(appJsResponse.payload.includes("activity-timeline-node-"));
+    assert.ok(appJsResponse.payload.includes("activity-progress-kv"));
+    assert.ok(appJsResponse.payload.includes("activity-row"));
     assert.ok(appJsResponse.payload.includes("renderInlineMarkdown"));
     assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
     assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
@@ -1265,7 +1267,9 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".activity-progress-kv-tasks"));
     assert.ok(stylesResponse.payload.includes(".activity-current-signal"));
     assert.ok(stylesResponse.payload.includes(".activity-timeline-badge-status"));
-    assert.ok(stylesResponse.payload.includes(".activity-timeline-message"));
+    assert.ok(stylesResponse.payload.includes(".activity-timeline-action-message"));
+    assert.ok(stylesResponse.payload.includes(".activity-timeline-node"));
+    assert.ok(stylesResponse.payload.includes(".activity-summary-state-pulse"));
     assert.ok(stylesResponse.payload.includes(".implementation-flow-mermaid svg"));
     assert.ok(stylesResponse.payload.includes("height: 100% !important"));
     assert.ok(stylesResponse.payload.includes("height: clamp(208px, 38vh, 420px)"));

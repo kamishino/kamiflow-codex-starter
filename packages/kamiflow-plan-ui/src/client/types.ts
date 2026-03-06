@@ -42,7 +42,7 @@ export interface RouteInfo {
 }
 
 export type ActivityTone = "info" | "ok" | "warn" | "error";
-export type ActivityFilter = "all" | "plan" | "codex" | "system";
+export type ActivityFilter = "all" | "timeline" | "runtime" | "plan";
 export type ActivityRunState = "RUNNING" | "SUCCESS" | "FAIL" | "IDLE";
 
 export interface ActivityMeta {

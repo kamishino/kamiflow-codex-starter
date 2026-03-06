@@ -76,12 +76,12 @@
             <h2>Execution Timeline</h2>
           </div>
           <div class="journal-filter-group">
-            <label for="activity-filter" class="journal-filter-label">Debug Filter</label>
+            <label for="activity-filter" class="journal-filter-label">Execution Type</label>
             <select id="activity-filter">
               <option value="all">All</option>
+              <option value="timeline">Timeline</option>
+              <option value="runtime">Runtime</option>
               <option value="plan">Plan</option>
-              <option value="codex">Codex</option>
-              <option value="system">System</option>
             </select>
           </div>
         </div>

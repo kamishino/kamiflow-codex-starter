@@ -58,16 +58,13 @@ export function activityTone(eventType: string): ActivityTone {
   return "info";
 }
 
-export function activityCategory(eventType: string): ActivityFilter | "unknown" {
+export function activityCategory(eventType: string): Exclude<ActivityFilter, "all" | "timeline"> | "unknown" {
   const key = String(eventType || "").toLowerCase();
   if (key.includes("codex") || key.includes("runlog")) {
-    return "codex";
+    return "runtime";
   }
   if (key.startsWith("plan_") || key.includes("plan")) {
     return "plan";
-  }
-  if (key.includes("ui_") || key.includes("connected") || key.includes("resync")) {
-    return "system";
   }
   return "unknown";
 }
@@ -76,7 +73,11 @@ export function activityMatchesFilter(eventType: string, filterValue: ActivityFi
   if (filterValue === "all") {
     return true;
   }
-  return activityCategory(eventType) === filterValue;
+  const category = activityCategory(eventType);
+  if (filterValue === "timeline") {
+    return category === "runtime" || category === "plan";
+  }
+  return category === filterValue;
 }
 
 export interface ChecklistItem {
