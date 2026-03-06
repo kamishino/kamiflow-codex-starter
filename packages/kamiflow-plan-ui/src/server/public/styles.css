@@ -1285,6 +1285,12 @@ textarea {
   justify-self: end;
 }
 
+#activity-density {
+  width: 120px;
+  margin: var(--space-0);
+  justify-self: end;
+}
+
 #activity-feed {
   list-style: none;
   margin: var(--space-0);
@@ -1385,6 +1391,12 @@ textarea {
   gap: var(--space-1);
 }
 
+.activity-current-summary {
+  position: sticky;
+  top: var(--space-0);
+  z-index: 2;
+}
+
 .activity-current-signal-label {
   margin: var(--space-0);
   display: inline-flex;
@@ -1424,6 +1436,63 @@ textarea {
 
 .activity-summary-state-pulse {
   animation: none;
+}
+
+.activity-trace-hint {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  padding: 2px var(--space-2);
+  font-size: var(--text-caption);
+  color: var(--text-3);
+  background: var(--surface-1);
+}
+
+.activity-pinned-blockers {
+  margin-top: var(--space-2);
+  border: 1px solid var(--border-danger);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--semantic-danger-soft) 28%, var(--surface-1));
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.activity-pinned-list {
+  list-style: none;
+  margin: var(--space-0);
+  padding: var(--space-0);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.activity-pinned-item {
+  border: 1px solid var(--border-danger);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-pinned-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.activity-pinned-head time {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.activity-pinned-message {
+  margin: var(--space-0);
+  font-size: var(--text-body);
+  line-height: var(--lh-normal);
 }
 
 .activity-timeline-list {
@@ -1598,6 +1667,17 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.activity-timeline-action-message-compact {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.activity-timeline-action-message-expanded {
+  display: block;
+}
+
 .activity-timeline-action-message .inline-code-chip,
 .activity-timeline-action-message .plan-file-link {
   vertical-align: baseline;
@@ -1641,6 +1721,10 @@ textarea {
   padding: var(--space-0);
   display: grid;
   gap: var(--space-2);
+}
+
+.activity-debug-list-compact .activity-item {
+  gap: var(--space-1);
 }
 
 .activity-debug-empty {

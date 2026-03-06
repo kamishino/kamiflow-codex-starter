@@ -83,6 +83,11 @@
               <option value="runtime">Runtime</option>
               <option value="plan">Plan</option>
             </select>
+            <label for="activity-density" class="journal-filter-label">Density</label>
+            <select id="activity-density">
+              <option value="compact">Compact</option>
+              <option value="expanded">Expanded</option>
+            </select>
           </div>
         </div>
         <ul id="activity-feed"></ul>

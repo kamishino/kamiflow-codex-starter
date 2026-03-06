@@ -6,7 +6,7 @@ import { EmptyPanelCard } from "./components/EmptyPanelCard";
 import { ImplementationFlowPanel } from "./components/PlanFlowDiagram";
 import { PlanSnapshot } from "./components/PlanSnapshot";
 import { WorkflowTimeline } from "./components/WorkflowTimeline";
-import { activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
+import { activityDensity, activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
 import type { ActivityItem, ActivityMeta, PlanSummary } from "./types";
 import { activityTone, deriveStage, formatEventLabel, nowIso, parseRoute } from "./utils";
 
@@ -17,6 +17,7 @@ const planSelectionHelpEl = document.querySelector<HTMLElement>("#plan-selection
 const planSearchResultsEl = document.querySelector<HTMLElement>("#plan-search-results");
 const planPickerWrapEl = document.querySelector<HTMLElement>("#plan-picker-wrap");
 const activityFilterEl = document.querySelector<HTMLSelectElement>("#activity-filter");
+const activityDensityEl = document.querySelector<HTMLSelectElement>("#activity-density");
 
 const statusEl = document.querySelector<HTMLElement>("#status");
 const workflowEl = document.querySelector<HTMLElement>("#workflow-rail");
@@ -35,6 +36,7 @@ if (
   !planSearchResultsEl ||
   !planPickerWrapEl ||
   !activityFilterEl ||
+  !activityDensityEl ||
   !statusEl ||
   !workflowEl ||
   !workEl ||
@@ -978,6 +980,11 @@ activityFilterEl.addEventListener("change", () => {
   }
 });
 
+activityDensityEl.addEventListener("change", () => {
+  const nextDensity = activityDensityEl.value;
+  activityDensity.value = nextDensity === "expanded" ? "expanded" : "compact";
+});
+
 window.addEventListener("hashchange", () => {
   if (suppressHashChange) {
     return;
@@ -1023,6 +1030,7 @@ effect(() => {
     <ActivityJournal
       items={activityItems.value}
       filter={activityFilter.value}
+      density={activityDensity.value}
       detail={activeDetail}
       projectDir={projectDir}
     />,
@@ -1034,6 +1042,7 @@ setConnectionState("disconnected");
 projectEl.classList.add("ui-select");
 filterEl.classList.add("ui-select");
 activityFilterEl.classList.add("ui-select");
+activityDensityEl.classList.add("ui-select");
 planSearchInputEl.classList.add("ui-input");
 startLiveRefreshTimer();
 window.addEventListener("beforeunload", () => {

@@ -1174,6 +1174,8 @@ updated_at: 2026-03-01
     assert.ok(!indexResponse.payload.includes("Plan Health"));
     assert.ok(indexResponse.payload.includes("Execution Timeline"));
     assert.ok(indexResponse.payload.includes("Execution Type"));
+    assert.ok(indexResponse.payload.includes("activity-density"));
+    assert.ok(indexResponse.payload.includes("Density"));
     assert.ok(indexResponse.payload.includes("1. Now"));
     assert.ok(indexResponse.payload.includes("2. Plan Status"));
     assert.ok(indexResponse.payload.includes("3. Timeline"));
@@ -1212,8 +1214,11 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("svg-pan-zoom"));
     assert.ok(appJsResponse.payload.includes("Pan/Zoom"));
     assert.ok(appJsResponse.payload.includes("work-surface-stack"));
-    assert.ok(appJsResponse.payload.includes("Current Signal"));
+    assert.ok(appJsResponse.payload.includes("Current Run Summary"));
     assert.ok(appJsResponse.payload.includes("Execution Events"));
+    assert.ok(appJsResponse.payload.includes("Pinned Blockers"));
+    assert.ok(appJsResponse.payload.includes("activity-density-"));
+    assert.ok(appJsResponse.payload.includes("activity-trace-hint"));
     assert.ok(appJsResponse.payload.includes("No milestones yet."));
     assert.ok(appJsResponse.payload.includes("Timeline will update from WIP Log entries in the plan file."));
     assert.ok(appJsResponse.payload.includes("Next step"));
@@ -1266,6 +1271,10 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".activity-progress-strip"));
     assert.ok(stylesResponse.payload.includes(".activity-progress-kv-tasks"));
     assert.ok(stylesResponse.payload.includes(".activity-current-signal"));
+    assert.ok(stylesResponse.payload.includes(".activity-current-summary"));
+    assert.ok(stylesResponse.payload.includes(".activity-pinned-blockers"));
+    assert.ok(stylesResponse.payload.includes(".activity-trace-hint"));
+    assert.ok(stylesResponse.payload.includes("#activity-density"));
     assert.ok(stylesResponse.payload.includes(".activity-timeline-badge-status"));
     assert.ok(stylesResponse.payload.includes(".activity-timeline-action-message"));
     assert.ok(stylesResponse.payload.includes(".activity-timeline-node"));
