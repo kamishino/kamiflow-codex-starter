@@ -65,6 +65,12 @@ npm run dogfood:link
 npm run dogfood:smoke
 ```
 
+If you want the desktop shell for KFP UI (single window with restore):
+
+```bash
+npm run ui:desktop
+```
+
 If you need client linking, prepare the package from this repo:
 
 ```bash

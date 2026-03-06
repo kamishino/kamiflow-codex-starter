@@ -39,6 +39,8 @@
     "ui:build": "npm run -w @kamishino/kamiflow-plan-ui build",
     "ui:test": "node packages/kamiflow-plan-ui/test/run.mjs",
     "ui:dev": "npm run ui:serve",
+    "ui:desktop": "npm run -w @kamishino/kamiflow-plan-desktop dev",
+    "ui:desktop:test": "npm run -w @kamishino/kamiflow-plan-desktop test",
     "plan-ui:init": "npm run ui:init",
     "plan-ui:serve": "npm run ui:serve",
     "plan-ui:validate": "npm run ui:validate",
