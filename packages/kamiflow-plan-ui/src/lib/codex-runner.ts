@@ -5,6 +5,8 @@ export interface CodexActionInput {
   action_type: "start" | "plan" | "build" | "check" | "research" | "fix";
   mode_hint?: "Plan" | "Build";
   prompt?: string;
+  full_auto?: boolean;
+  cwd?: string;
 }
 
 export interface CodexActionResult {
@@ -68,6 +70,11 @@ function applyPlanModePromptHint(prompt: string): string {
   return `${prompt}\n\nIf requirements are unclear, use request_user_input with 1-3 short multiple-choice questions.`;
 }
 
+function buildPositionalPromptCommand(prompt: string, fullAuto = false): string {
+  const prefix = fullAuto ? "codex exec --full-auto" : "codex exec";
+  return `${prefix} ${JSON.stringify(String(prompt || ""))}`;
+}
+
 export function shouldPreferPlanInteractiveMode(input: Pick<CodexActionInput, "mode_hint" | "prompt">): boolean {
   if (input.mode_hint === "Plan") {
     return true;
@@ -79,13 +86,14 @@ export function shouldPreferPlanInteractiveMode(input: Pick<CodexActionInput, "m
 }
 
 export function buildCodexExecArgVariants(input: CodexActionInput): string[][] {
-  const defaultVariant = ["exec", "-"];
+  const defaultVariant = ["exec", ...(input.full_auto ? ["--full-auto"] : []), "-"];
   if (!shouldPreferPlanInteractiveMode(input)) {
     return [defaultVariant];
   }
   return [
     [
       "exec",
+      ...(input.full_auto ? ["--full-auto"] : []),
       "--profile",
       "plan",
       "-c",
@@ -94,8 +102,16 @@ export function buildCodexExecArgVariants(input: CodexActionInput): string[][] {
       "features.default_mode_request_user_input=true",
       "-"
     ],
-    ["exec", "-c", "features.collaboration_modes=true", "-c", "features.default_mode_request_user_input=true", "-"],
-    ["exec", "--profile", "plan", "-"],
+    [
+      "exec",
+      ...(input.full_auto ? ["--full-auto"] : []),
+      "-c",
+      "features.collaboration_modes=true",
+      "-c",
+      "features.default_mode_request_user_input=true",
+      "-"
+    ],
+    ["exec", ...(input.full_auto ? ["--full-auto"] : []), "--profile", "plan", "-"],
     defaultVariant
   ];
 }
@@ -224,7 +240,8 @@ async function runWithExecutable(
   exe: string,
   args: string[],
   prompt: string,
-  run_id: string
+  run_id: string,
+  cwd: string
 ): Promise<CodexActionResult> {
   const command = `${exe} ${args.map((item) => JSON.stringify(item)).join(" ")} <stdin>`;
   const useCmdWrapper = process.platform === "win32" && exe.toLowerCase().endsWith(".cmd");
@@ -237,10 +254,12 @@ async function runWithExecutable(
       if (useCmdWrapper) {
         const cmdLine = `${exe} ${args.map(quoteForCmd).join(" ")}`;
         child = spawn("cmd.exe", ["/d", "/s", "/c", cmdLine], {
+          cwd,
           stdio: ["pipe", "pipe", "pipe"]
         });
       } else {
         child = spawn(exe, args, {
+          cwd,
           stdio: ["pipe", "pipe", "pipe"]
         });
       }
@@ -329,10 +348,19 @@ async function runWithExecutable(
   });
 }
 
+export function buildCodexExecManualCommand(input: Pick<CodexActionInput, "prompt" | "full_auto">): string {
+  const prompt = String(input.prompt || "").trim();
+  if (!prompt) {
+    throw new Error("buildCodexExecManualCommand requires prompt.");
+  }
+  return buildPositionalPromptCommand(prompt, Boolean(input.full_auto));
+}
+
 export async function runCodexAction(input: CodexActionInput): Promise<CodexActionResult> {
   const prompt = buildPrompt(input);
   const argVariants = buildCodexExecArgVariants(input);
   const run_id = `run_${Date.now()}`;
+  const cwd = String(input.cwd || "").trim() || process.cwd();
   const candidates = codexExecutableCandidates();
   let lastResult: CodexActionResult | null = null;
 
@@ -340,7 +368,7 @@ export async function runCodexAction(input: CodexActionInput): Promise<CodexActi
     let moveToNextExecutable = false;
     for (let index = 0; index < argVariants.length; index += 1) {
       const args = argVariants[index];
-      const result = withFailureMetadata(await runWithExecutable(exe, args, prompt, run_id));
+      const result = withFailureMetadata(await runWithExecutable(exe, args, prompt, run_id, cwd));
       lastResult = result;
       if (result.status === "completed") {
         return result;
@@ -365,7 +393,7 @@ export async function runCodexAction(input: CodexActionInput): Promise<CodexActi
     lastResult ??
     withFailureMetadata({
       status: "failed",
-      command: `codex ${fallbackArgs.map((item) => JSON.stringify(item)).join(" ")}`,
+      command: buildPositionalPromptCommand(prompt, Boolean(input.full_auto)),
       stdout_tail: "",
       stderr_tail: "No executable candidate available.",
       exit_code: -1,

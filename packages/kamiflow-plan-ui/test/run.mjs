@@ -11,6 +11,7 @@ import { SSEStream } from "../dist/server/sse-stream.js";
 import { detectProjectRoot } from "../dist/lib/project-detect.js";
 import {
   buildCodexExecArgVariants,
+  buildCodexExecManualCommand,
   classifyCodexFailure,
   runCodexAction,
   shouldPreferPlanInteractiveMode
@@ -718,6 +719,44 @@ await runCase("codex runner keeps default args when no plan-interactive hint is 
     }),
     false
   );
+});
+
+await runCase("codex runner supports full-auto execution variants and manual fallback command", async () => {
+  const variants = buildCodexExecArgVariants({
+    plan_id: "PLAN-TEST-005",
+    action_type: "start",
+    prompt: "Read .kfc/CODEX_READY.md and execute the mission.",
+    full_auto: true
+  });
+  assert.deepEqual(variants, [["exec", "--full-auto", "-"]]);
+  assert.equal(
+    buildCodexExecManualCommand({
+      prompt: "Read .kfc/CODEX_READY.md and execute the mission.",
+      full_auto: true
+    }),
+    'codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."'
+  );
+});
+
+await runCase("codex runner preserves full-auto mode in failure command metadata", async () => {
+  const previousExecutables = process.env.KFP_CODEX_EXECUTABLES;
+  try {
+    process.env.KFP_CODEX_EXECUTABLES = "__kfp_missing_codex__";
+    const result = await runCodexAction({
+      plan_id: "PLAN-TEST-006",
+      action_type: "start",
+      prompt: "Read .kfc/CODEX_READY.md and execute the mission.",
+      full_auto: true
+    });
+    assert.equal(result.status, "failed");
+    assert.ok(result.command.includes("--full-auto"));
+  } finally {
+    if (previousExecutables === undefined) {
+      delete process.env.KFP_CODEX_EXECUTABLES;
+    } else {
+      process.env.KFP_CODEX_EXECUTABLES = previousExecutables;
+    }
+  }
 });
 
 await runCase("runlog parser extracts runtime signal from latest jsonl entry", async () => {

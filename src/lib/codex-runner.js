@@ -39,6 +39,11 @@ function quoteForCmd(arg) {
   return `"${arg.replace(/"/g, "\"\"")}"`;
 }
 
+function buildPositionalPromptCommand(prompt, fullAuto = false) {
+  const prefix = fullAuto ? "codex exec --full-auto" : "codex exec";
+  return `${prefix} ${JSON.stringify(String(prompt || ""))}`;
+}
+
 function codexExecutableCandidates() {
   if (process.platform !== "win32") {
     return ["codex"];
@@ -46,14 +51,15 @@ function codexExecutableCandidates() {
   return ["codex", "codex.exe", "codex.cmd"];
 }
 
-function buildArgVariants(modeHint) {
-  const defaultVariant = ["exec", "-"];
+function buildArgVariants(modeHint, fullAuto = false) {
+  const defaultVariant = ["exec", ...(fullAuto ? ["--full-auto"] : []), "-"];
   if (String(modeHint || "") !== "Plan") {
     return [defaultVariant];
   }
   return [
     [
       "exec",
+      ...(fullAuto ? ["--full-auto"] : []),
       "--profile",
       "plan",
       "-c",
@@ -62,8 +68,16 @@ function buildArgVariants(modeHint) {
       "features.default_mode_request_user_input=true",
       "-"
     ],
-    ["exec", "-c", "features.collaboration_modes=true", "-c", "features.default_mode_request_user_input=true", "-"],
-    ["exec", "--profile", "plan", "-"],
+    [
+      "exec",
+      ...(fullAuto ? ["--full-auto"] : []),
+      "-c",
+      "features.collaboration_modes=true",
+      "-c",
+      "features.default_mode_request_user_input=true",
+      "-"
+    ],
+    ["exec", ...(fullAuto ? ["--full-auto"] : []), "--profile", "plan", "-"],
     defaultVariant
   ];
 }
@@ -142,7 +156,7 @@ function withFailureMetadata(result) {
   };
 }
 
-async function runWithExecutable(executable, args, prompt, runId, timeoutMs) {
+async function runWithExecutable(executable, args, prompt, runId, timeoutMs, cwd = process.cwd()) {
   const command = `${executable} ${args.map((item) => JSON.stringify(item)).join(" ")} <stdin>`;
   const useCmdWrapper = process.platform === "win32" && executable.toLowerCase().endsWith(".cmd");
 
@@ -155,10 +169,12 @@ async function runWithExecutable(executable, args, prompt, runId, timeoutMs) {
       if (useCmdWrapper) {
         const cmdLine = `${executable} ${args.map(quoteForCmd).join(" ")}`;
         child = spawn("cmd.exe", ["/d", "/s", "/c", cmdLine], {
+          cwd,
           stdio: ["pipe", "pipe", "pipe"]
         });
       } else {
         child = spawn(executable, args, {
+          cwd,
           stdio: ["pipe", "pipe", "pipe"]
         });
       }
@@ -244,6 +260,14 @@ async function runWithExecutable(executable, args, prompt, runId, timeoutMs) {
   });
 }
 
+export function buildCodexExecManualCommand(input) {
+  const prompt = String(input?.prompt || "").trim();
+  if (!prompt) {
+    throw new Error("buildCodexExecManualCommand requires prompt.");
+  }
+  return buildPositionalPromptCommand(prompt, Boolean(input?.full_auto));
+}
+
 export async function runCodexAction(input) {
   const planId = String(input?.plan_id || "").trim();
   const actionType = String(input?.action_type || "").trim();
@@ -264,7 +288,9 @@ export async function runCodexAction(input) {
     : DEFAULT_TIMEOUT_MS;
   const runId = String(input?.run_id || `run_${Date.now()}`);
   const modeHint = String(input?.mode_hint || "");
-  const argVariants = buildArgVariants(modeHint);
+  const fullAuto = Boolean(input?.full_auto);
+  const cwd = String(input?.cwd || "").trim() || process.cwd();
+  const argVariants = buildArgVariants(modeHint, fullAuto);
   const executables = codexExecutableCandidates();
   let lastResult = null;
 
@@ -273,7 +299,7 @@ export async function runCodexAction(input) {
     for (let idx = 0; idx < argVariants.length; idx += 1) {
       const args = argVariants[idx];
       const result = withFailureMetadata(
-        await runWithExecutable(executable, args, prompt, runId, timeoutMs)
+        await runWithExecutable(executable, args, prompt, runId, timeoutMs, cwd)
       );
       lastResult = result;
       if (result.status === "completed") {
@@ -298,7 +324,7 @@ export async function runCodexAction(input) {
   return withFailureMetadata(
     lastResult || {
       status: "failed",
-      command: `codex ${fallbackArgs.map((item) => JSON.stringify(item)).join(" ")}`,
+      command: buildPositionalPromptCommand(prompt, fullAuto),
       stdout_tail: "",
       stderr_tail: "No executable candidate available.",
       exit_code: -1,

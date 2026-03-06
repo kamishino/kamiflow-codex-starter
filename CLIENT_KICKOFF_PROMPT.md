@@ -20,13 +20,18 @@ Install/link KFC into the target client repository:
 
 ```bash
 kfc client --force
-kfc client doctor --project . --fix
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-Bootstrap now includes one smart-recovery cycle and reports `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
+Bootstrap now includes one smart-recovery cycle, creates `.kfc/CODEX_READY.md`, and auto-launches:
 
-Then paste this prompt into Codex (or tell Codex to read `.kfc/CODEX_READY.md`):
+```bash
+codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
+```
+
+If auto-launch is disabled (`--no-launch-codex`) or fails, use the exact manual fallback command printed by KFC.
+
+Use the prompt below only when you intentionally skip auto-launch or need manual recovery:
 
 ```text
 You are my implementation copilot for this client repository using KFC.

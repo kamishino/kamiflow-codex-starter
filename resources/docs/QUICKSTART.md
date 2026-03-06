@@ -34,12 +34,24 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
-`kfc client --force` now runs one smart-recovery cycle by default and prints:
+`kfc client --force` now runs one smart-recovery cycle by default, creates `.kfc/CODEX_READY.md`, and auto-launches:
+
+```bash
+codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
+```
+
+It still prints:
 - `Onboarding Status: PASS|BLOCK`
 - `Stage: init|bootstrap|ready_brief|plan_ready|execution_ready|blocked|done`
 - `Error Code: CLIENT_*`
 - `Recovery: <exact command>` when blocked
 - `Next: <single concrete next action>`
+
+To keep bootstrap setup-only and skip the automatic handoff:
+
+```bash
+kfc client --force --no-launch-codex
+```
 
 Low-level equivalent (only when you need manual bootstrap control):
 
@@ -47,22 +59,7 @@ Low-level equivalent (only when you need manual bootstrap control):
 kfc client bootstrap --project . --profile client --force
 ```
 
-For each task, use this KISS loop:
-
-1. Tell Codex to read `.kfc/CODEX_READY.md` and execute the mission.
-2. Codex should run routine flow commands autonomously (no user reminder loop).
-3. Before any implementation route (`build`/`fix`), require:
-
-```bash
-kfc flow ensure-plan --project .
-kfc flow ready --project .
-```
-
-4. If behavior looks off, run:
-
-```bash
-kfc client doctor --project . --fix
-```
+If auto-launch is disabled or fails, run the exact fallback command printed by KFC. Codex should then read `.kfc/CODEX_READY.md` and continue autonomously.
 
 After work is complete, cleanup is required:
 
@@ -103,6 +100,7 @@ Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata inde
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
 - Missing plan UI: rerun `kfc client --force`.
+- Codex did not auto-launch: rerun the exact `Manual fallback:` command printed by KFC, or use `kfc client --force --no-launch-codex` if you want setup only.
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
 - Flow behavior mismatch: run `kfc client doctor --project . --fix`.
 - If onboarding reports `Onboarding Status: BLOCK`, follow the printed `Recovery:` command exactly.

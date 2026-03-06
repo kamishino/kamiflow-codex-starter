@@ -45,8 +45,8 @@ run options:
   kfc run [--project <path>] [--skip-ready] [--route <start|plan|build|check|fix|research>] [--max-steps <n>] [--timeout-ms <n>]
 
 client options:
-  kfc client [--goal <text>] [--project <path>] [--force] [--skip-serve-check]
-  kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check]
+  kfc client [--goal <text>] [--project <path>] [--force] [--skip-serve-check] [--no-launch-codex]
+  kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check] [--no-launch-codex]
   kfc client doctor [--project <path>] [--fix]
   kfc client done [--project <path>]
 

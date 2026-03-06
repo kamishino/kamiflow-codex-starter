@@ -31,6 +31,7 @@ import {
   validateRulesProfile
 } from "../lib/rules.js";
 import { error, info, warn } from "../lib/logger.js";
+import { buildCodexExecManualCommand, runCodexAction } from "../lib/codex-runner.js";
 import { runDoctor } from "./doctor.js";
 import { runFlow } from "./flow.js";
 import { runPlan } from "./plan.js";
@@ -49,6 +50,7 @@ const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
 const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOFF_PROMPT.md");
 const CLIENT_READY_FILE = path.join(".kfc", "CODEX_READY.md");
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
+const CLIENT_CODEX_LAUNCH_PROMPT = "Read .kfc/CODEX_READY.md and execute the mission.";
 
 function usage() {
   info("Usage: kfc client [options]");
@@ -59,12 +61,13 @@ function usage() {
   info("Examples:");
   info("  kfc client");
   info("  kfc client --goal \"Implement X with tests\"");
+  info("  kfc client --no-launch-codex");
   info("  kfc client done");
   info("  kfc client bootstrap --project .");
-  info("  kfc client bootstrap --project . --profile client --port 4310");
+  info("  kfc client bootstrap --project . --profile client --port 4310 --no-launch-codex");
   info("  kfc client doctor --project .");
   info("  kfc client doctor --project . --fix");
-  info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle by default.");
+  info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle and Codex auto-launch by default.");
 }
 
 function parseMajorVersion(version) {
@@ -88,6 +91,7 @@ function parseArgs(baseCwd, args) {
     force: false,
     fix: false,
     skipServeCheck: false,
+    noLaunchCodex: false,
     goal: ""
   };
 
@@ -130,6 +134,10 @@ function parseArgs(baseCwd, args) {
     }
     if (token === "--skip-serve-check") {
       parsed.skipServeCheck = true;
+      continue;
+    }
+    if (token === "--no-launch-codex") {
+      parsed.noLaunchCodex = true;
       continue;
     }
     if (token === "--goal") {
@@ -298,6 +306,17 @@ function printClientNextCommandHints() {
   info("Next: kfc flow ensure-plan --project .");
   info("Then: kfc flow ready --project .");
   info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
+}
+
+function buildClientCodexLaunchPrompt() {
+  return CLIENT_CODEX_LAUNCH_PROMPT;
+}
+
+function buildClientCodexManualCommand() {
+  return buildCodexExecManualCommand({
+    prompt: buildClientCodexLaunchPrompt(),
+    full_auto: true
+  });
 }
 
 function resolveRunsDir(projectDir) {
@@ -570,6 +589,30 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
   return { readyPath, sessionPath, planId: plan.planId };
 }
 
+async function runClientCodexLaunch({ projectDir, planId }) {
+  return await runCodexAction({
+    plan_id: planId,
+    action_type: "start",
+    prompt: buildClientCodexLaunchPrompt(),
+    full_auto: true,
+    cwd: projectDir
+  });
+}
+
+function printClientCodexLaunchOutcome(result, manualCommand) {
+  if (result?.status === "completed") {
+    info("Codex auto-launch started successfully.");
+    return;
+  }
+  const reason =
+    result?.failure_signature ||
+    result?.stderr_tail ||
+    result?.recovery_hint ||
+    "Codex auto-launch failed.";
+  warn(`Codex auto-launch failed: ${reason}`);
+  info(`Manual fallback: ${manualCommand}`);
+}
+
 async function removeIfExists(filePath) {
   if (!fs.existsSync(filePath)) {
     return false;
@@ -775,7 +818,7 @@ async function runServeHealthCheck(projectDir, port) {
   }
 }
 
-async function runBootstrapOnce(options) {
+async function runBootstrapOnce(options, runtime = {}) {
   const preflightOk = await assertProjectPreflight(options.project);
   if (!preflightOk) {
     throw createClientOnboardingError(
@@ -873,10 +916,12 @@ async function runBootstrapOnce(options) {
   }
 
   info("Client bootstrap completed successfully.");
-  printClientDocsHints(options.project);
-  printClientNextCommandHints();
-  info("Cleanup command after completion: kfc client done");
-  info("Next steps in this client repo should use `kfc ...` commands.");
+  if (!runtime.suppressSuccessHints) {
+    printClientDocsHints(options.project);
+    printClientNextCommandHints();
+    info("Cleanup command after completion: kfc client done");
+    info("Next steps in this client repo should use `kfc ...` commands.");
+  }
 }
 
 async function runBootstrapWithSmartRecovery(options, runtime = {}) {
@@ -890,7 +935,7 @@ async function runBootstrapWithSmartRecovery(options, runtime = {}) {
     )
   );
   try {
-    await runBootstrapOnce(options);
+    await runBootstrapOnce(options, runtime);
     const payload = buildClientOnboardingPassPayload(false);
     await emitClientOnboardingEvent(options.project, payload);
     if (shouldPrintPass) {
@@ -930,7 +975,7 @@ async function runBootstrapWithSmartRecovery(options, runtime = {}) {
     }
 
     try {
-      await runBootstrapOnce({ ...options, force: true });
+      await runBootstrapOnce({ ...options, force: true }, runtime);
       const payload = buildClientOnboardingPassPayload(true);
       await emitClientOnboardingEvent(options.project, payload);
       if (shouldPrintPass) {
@@ -1053,7 +1098,14 @@ async function runClientStart(options) {
     );
   }
 
-  const bootstrap = await runBootstrapWithSmartRecovery(options, { printPass: false });
+  const bootstrap = await runBootstrapWithSmartRecovery(options, {
+    printPass: false,
+    suppressSuccessHints: true
+  });
+  return await runClientReadyHandoff(options, bootstrap);
+}
+
+async function runClientReadyHandoff(options, bootstrap) {
   if (bootstrap.code !== 0) {
     return bootstrap.code;
   }
@@ -1079,17 +1131,44 @@ async function runClientStart(options) {
     return 1;
   }
 
+  const manualCommand = buildClientCodexManualCommand();
+  let launchResult = null;
+  if (!options.noLaunchCodex) {
+    launchResult = await runClientCodexLaunch({
+      projectDir: options.project,
+      planId: ready.planId
+    });
+  }
+
+  const launchSucceeded = launchResult?.status === "completed";
   const readyPayload = {
     ...buildClientOnboardingPassPayload(bootstrap.recoveryUsed),
     stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
-    reason: "Client onboarding handoff artifacts are ready.",
-    next: "Read .kfc/CODEX_READY.md and execute the mission.",
-    next_steps: ["Read .kfc/CODEX_READY.md and execute the mission."]
+    reason: launchSucceeded
+      ? "Client onboarding handoff artifacts are ready and Codex auto-launch started."
+      : "Client onboarding handoff artifacts are ready.",
+    next: options.noLaunchCodex
+      ? manualCommand
+      : launchSucceeded
+        ? "Let Codex continue from .kfc/CODEX_READY.md."
+        : manualCommand,
+    next_steps: [
+      options.noLaunchCodex
+        ? manualCommand
+        : launchSucceeded
+          ? "Let Codex continue from .kfc/CODEX_READY.md."
+          : manualCommand
+    ]
   };
   await emitClientOnboardingEvent(options.project, readyPayload);
   printClientOnboardingPass(readyPayload);
   info(`Ready file: ${ready.readyPath}`);
-  info("Tell Codex: read .kfc/CODEX_READY.md and execute the mission.");
+  if (options.noLaunchCodex) {
+    info("Codex auto-launch skipped (--no-launch-codex).");
+    info(`Manual start: ${manualCommand}`);
+  } else {
+    printClientCodexLaunchOutcome(launchResult, manualCommand);
+  }
   info("Finish cleanup: kfc client done");
   return 0;
 }
@@ -1139,8 +1218,11 @@ export async function runClient(options) {
   }
 
   if (parsed.subcommand === "bootstrap") {
-    const result = await runBootstrapWithSmartRecovery(parsed);
-    return result.code;
+    const result = await runBootstrapWithSmartRecovery(parsed, {
+      printPass: false,
+      suppressSuccessHints: true
+    });
+    return await runClientReadyHandoff(parsed, result);
   }
 
   if (parsed.subcommand === "done") {
