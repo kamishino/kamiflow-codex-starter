@@ -65,6 +65,19 @@ npm run dogfood:link
 npm run dogfood:smoke
 ```
 
+Test paths:
+
+```bash
+# fast default (no live Codex invocation)
+npm run test
+
+# explicit integration (live Codex path)
+npm run test:integration
+
+# fast + integration
+npm run test:full
+```
+
 If you want the desktop shell for KFP UI (single window with restore):
 
 ```bash

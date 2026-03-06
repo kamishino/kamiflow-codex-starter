@@ -21,6 +21,8 @@ export interface CodexActionResult {
 }
 
 const CODEX_ACTION_TIMEOUT_MS = 5 * 60 * 1000;
+const CODEX_ACTION_TIMEOUT_ENV = "KFP_CODEX_ACTION_TIMEOUT_MS";
+const CODEX_EXECUTABLES_ENV = "KFP_CODEX_EXECUTABLES";
 const REQUEST_USER_INPUT_PATTERN = /\brequest_user_input\b/i;
 const PLAN_MODE_NEGOTIATION_ERROR_PATTERNS = [
   "unexpected argument '--profile'",
@@ -42,6 +44,21 @@ function tail(text: string, maxChars = 4000): string {
     return text;
   }
   return text.slice(text.length - maxChars);
+}
+
+function parsePositiveInteger(raw: string | undefined): number | null {
+  if (!raw || raw.trim().length === 0) {
+    return null;
+  }
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return null;
+  }
+  return parsed;
+}
+
+function resolveCodexActionTimeoutMs(): number {
+  return parsePositiveInteger(process.env[CODEX_ACTION_TIMEOUT_ENV]) ?? CODEX_ACTION_TIMEOUT_MS;
 }
 
 function applyPlanModePromptHint(prompt: string): string {
@@ -99,6 +116,13 @@ function buildPrompt(input: CodexActionInput): string {
 }
 
 function codexExecutableCandidates(): string[] {
+  const envCandidates = String(process.env[CODEX_EXECUTABLES_ENV] ?? "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  if (envCandidates.length > 0) {
+    return envCandidates;
+  }
   if (process.platform !== "win32") {
     return ["codex"];
   }
@@ -254,7 +278,7 @@ async function runWithExecutable(
         run_id,
         error_code: "TIMEOUT"
       });
-    }, CODEX_ACTION_TIMEOUT_MS);
+    }, resolveCodexActionTimeoutMs());
 
     child.stdout.on("data", (chunk) => {
       stdout += chunk.toString();

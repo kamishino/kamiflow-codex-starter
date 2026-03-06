@@ -23,6 +23,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 let failed = 0;
+const cliArgs = new Set(process.argv.slice(2));
+const testMode = cliArgs.has("--full") ? "full" : cliArgs.has("--integration") ? "integration" : "fast";
+const runIntegrationCases = testMode !== "fast";
+const originalCodexExecutableOverride = process.env.KFP_CODEX_EXECUTABLES;
+const originalCodexTimeoutOverride = process.env.KFP_CODEX_ACTION_TIMEOUT_MS;
+
+if (testMode === "fast") {
+  process.env.KFP_CODEX_EXECUTABLES = "__kfp_missing_codex__";
+  process.env.KFP_CODEX_ACTION_TIMEOUT_MS = "1500";
+} else {
+  delete process.env.KFP_CODEX_EXECUTABLES;
+  if (!process.env.KFP_CODEX_ACTION_TIMEOUT_MS) {
+    process.env.KFP_CODEX_ACTION_TIMEOUT_MS = "15000";
+  }
+}
+
+console.log(`[test] mode=${testMode}`);
 
 async function runCase(name, fn) {
   try {
@@ -33,6 +50,14 @@ async function runCase(name, fn) {
     console.error(`[test] FAIL ${name}`);
     console.error(`  ${err instanceof Error ? err.message : String(err)}`);
   }
+}
+
+async function runCaseIf(name, enabled, fn) {
+  if (!enabled) {
+    console.log(`[test] SKIP ${name}`);
+    return;
+  }
+  await runCase(name, fn);
 }
 
 async function withTempDir(fn) {
@@ -573,6 +598,10 @@ await runCase("codex runner does not throw on spawn failures", async () => {
   assert.equal(typeof result.status, "string");
   assert.equal(typeof result.run_id, "string");
   assert.ok(result.status === "failed" || result.status === "completed");
+  if (testMode === "fast") {
+    assert.equal(result.status, "failed");
+    assert.ok(result.error_code === "CODEX_NOT_FOUND" || result.error_code === "SPAWN_FAILED");
+  }
   if (result.status === "failed") {
     assert.ok(result.error_code === "SPAWN_FAILED" || result.error_code === "CODEX_NOT_FOUND");
     assert.ok(
@@ -586,6 +615,42 @@ await runCase("codex runner does not throw on spawn failures", async () => {
     assert.equal(typeof result.failure_signature, "string");
   } else {
     assert.equal(typeof result.exit_code, "number");
+  }
+});
+
+await runCaseIf("codex runner integration path remains available", runIntegrationCases, async () => {
+  const previousExecutables = process.env.KFP_CODEX_EXECUTABLES;
+  const previousTimeout = process.env.KFP_CODEX_ACTION_TIMEOUT_MS;
+  try {
+    delete process.env.KFP_CODEX_EXECUTABLES;
+    process.env.KFP_CODEX_ACTION_TIMEOUT_MS = "15000";
+    const result = await runCodexAction({
+      plan_id: "PLAN-TEST-001-INTEGRATION",
+      action_type: "plan",
+      prompt: "Integration smoke test."
+    });
+    assert.equal(typeof result.status, "string");
+    assert.equal(typeof result.run_id, "string");
+    assert.ok(result.status === "failed" || result.status === "completed");
+    if (result.status === "failed") {
+      assert.ok(
+        result.error_code === "CODEX_NOT_FOUND" ||
+          result.error_code === "SPAWN_FAILED" ||
+          result.error_code === "TIMEOUT" ||
+          result.error_code === "NON_ZERO_EXIT"
+      );
+    }
+  } finally {
+    if (previousExecutables === undefined) {
+      delete process.env.KFP_CODEX_EXECUTABLES;
+    } else {
+      process.env.KFP_CODEX_EXECUTABLES = previousExecutables;
+    }
+    if (previousTimeout === undefined) {
+      delete process.env.KFP_CODEX_ACTION_TIMEOUT_MS;
+    } else {
+      process.env.KFP_CODEX_ACTION_TIMEOUT_MS = previousTimeout;
+    }
   }
 });
 
@@ -1519,6 +1584,17 @@ await runCase("sse stream supports replay and heartbeat", async () => {
   assert.ok(payload.includes("event: plan_updated"));
   assert.ok(payload.includes("event: heartbeat"));
 });
+
+if (originalCodexExecutableOverride === undefined) {
+  delete process.env.KFP_CODEX_EXECUTABLES;
+} else {
+  process.env.KFP_CODEX_EXECUTABLES = originalCodexExecutableOverride;
+}
+if (originalCodexTimeoutOverride === undefined) {
+  delete process.env.KFP_CODEX_ACTION_TIMEOUT_MS;
+} else {
+  process.env.KFP_CODEX_ACTION_TIMEOUT_MS = originalCodexTimeoutOverride;
+}
 
 if (failed > 0) {
   process.exitCode = 1;
