@@ -1153,6 +1153,10 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("Next step"));
     assert.ok(appJsResponse.payload.includes("Stage "));
     assert.ok(appJsResponse.payload.includes("Next "));
+    assert.ok(appJsResponse.payload.includes("activity-timeline-badge-"));
+    assert.ok(appJsResponse.payload.includes("activity-timeline-item-"));
+    assert.ok(appJsResponse.payload.includes("activity-progress-kv-updated"));
+    assert.ok(appJsResponse.payload.includes("renderInlineMarkdown"));
     assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
     assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
 
@@ -1193,6 +1197,13 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".activity-timeline-list"));
     assert.ok(stylesResponse.payload.includes(".activity-debug-details"));
     assert.ok(stylesResponse.payload.includes(".activity-progress-strip"));
+    assert.ok(stylesResponse.payload.includes(".activity-progress-kv-tasks"));
+    assert.ok(stylesResponse.payload.includes(".activity-current-signal"));
+    assert.ok(stylesResponse.payload.includes(".activity-timeline-badge-status"));
+    assert.ok(stylesResponse.payload.includes(".activity-timeline-message"));
+    assert.ok(stylesResponse.payload.includes(".implementation-flow-mermaid svg"));
+    assert.ok(stylesResponse.payload.includes("height: 100% !important"));
+    assert.ok(stylesResponse.payload.includes("height: clamp(208px, 38vh, 420px)"));
     assert.ok(stylesResponse.payload.includes(".journal-filter-group"));
     assert.ok(stylesResponse.payload.includes(".toolbar-field-selected"));
     assert.ok(stylesResponse.payload.includes("--space-4"));

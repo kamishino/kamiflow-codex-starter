@@ -1015,7 +1015,19 @@ effect(() => {
 });
 
 effect(() => {
-  render(<ActivityJournal items={activityItems.value} filter={activityFilter.value} detail={detail.value} />, activityEl);
+  const activeDetail = detail.value;
+  const projectDir = activeDetail
+    ? projectDirById.get(activeDetail.summary.project_id || currentProjectId()) || ""
+    : "";
+  render(
+    <ActivityJournal
+      items={activityItems.value}
+      filter={activityFilter.value}
+      detail={activeDetail}
+      projectDir={projectDir}
+    />,
+    activityEl
+  );
 });
 
 setConnectionState("disconnected");

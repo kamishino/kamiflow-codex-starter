@@ -877,18 +877,28 @@ textarea {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-1);
-  padding: var(--space-3);
+  padding: var(--space-2);
+  height: clamp(208px, 38vh, 420px);
   min-height: clamp(208px, 38vh, 420px);
-  overflow: auto;
+  overflow: hidden;
+  display: flex;
+  align-items: stretch;
 }
 
 .implementation-flow-mermaid {
-  min-height: 80px;
+  flex: 1 1 auto;
+  min-height: 100%;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+  justify-content: stretch;
 }
 
 .implementation-flow-mermaid svg {
-  max-width: 100%;
-  height: auto;
+  width: 100%;
+  height: 100% !important;
+  min-height: 100%;
+  max-width: none;
 }
 
 .implementation-flow-warning {
@@ -1339,24 +1349,87 @@ textarea {
 }
 
 .activity-progress-kv {
-  border: 1px solid var(--border-soft);
+  border: 1px solid var(--activity-kv-border, var(--border-soft));
   border-radius: var(--radius-sm);
-  background: var(--surface-1);
+  background: var(--activity-kv-bg, var(--surface-1));
   padding: var(--space-2);
   display: grid;
   gap: var(--space-1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--activity-kv-border, var(--border-soft)) 24%, transparent);
 }
 
 .activity-progress-kv span {
   font-size: var(--text-caption);
-  color: var(--text-3);
+  color: var(--activity-kv-text, var(--text-3));
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .activity-progress-kv strong {
   font-size: var(--text-body);
+  color: var(--activity-kv-accent, var(--foreground));
+}
+
+.activity-progress-kv-tasks {
+  --activity-kv-accent: var(--progress-triad-a);
+  --activity-kv-bg: var(--progress-triad-a-soft);
+  --activity-kv-border: var(--progress-triad-a-border);
+  --activity-kv-text: var(--progress-triad-a-text);
+}
+
+.activity-progress-kv-acceptance {
+  --activity-kv-accent: var(--progress-triad-b);
+  --activity-kv-bg: var(--progress-triad-b-soft);
+  --activity-kv-border: var(--progress-triad-b-border);
+  --activity-kv-text: var(--progress-triad-b-text);
+}
+
+.activity-progress-kv-updated {
+  --activity-kv-accent: var(--progress-triad-c);
+  --activity-kv-bg: var(--progress-triad-c-soft);
+  --activity-kv-border: var(--progress-triad-c-border);
+  --activity-kv-text: var(--progress-triad-c-text);
+}
+
+.activity-current-signal {
+  border: 1px solid var(--timeline-current-border);
+  border-radius: var(--radius-sm);
+  background: var(--timeline-current-bg);
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-current-signal-label {
+  margin: var(--space-0);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+}
+
+.activity-current-signal-main {
+  margin: var(--space-0);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.activity-current-signal-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-current-signal-message {
+  margin: var(--space-0);
   color: var(--foreground);
+  font-size: var(--text-body);
+  line-height: var(--lh-normal);
+  font-weight: 600;
 }
 
 .activity-timeline-list {
@@ -1369,37 +1442,91 @@ textarea {
 
 .activity-timeline-item {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: var(--space-2);
-}
-
-.activity-timeline-node {
-  width: var(--space-6);
-  height: var(--space-6);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--border-info);
-  background: var(--semantic-info-soft);
-  color: var(--semantic-info);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-caption);
-  font-weight: 700;
-}
-
-.activity-timeline-content {
+  gap: var(--space-1);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-sm);
   background: var(--surface-1);
   padding: var(--space-2);
 }
 
-.activity-timeline-content p {
+.activity-timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.activity-timeline-head time {
+  font-size: var(--text-caption);
+  color: var(--muted-foreground);
+}
+
+.activity-timeline-badge {
+  gap: var(--space-1);
+}
+
+.activity-timeline-badge-status {
+  border-color: var(--border-success);
+  background: var(--semantic-success-soft);
+  color: var(--semantic-success);
+}
+
+.activity-timeline-badge-blockers {
+  border-color: var(--border-danger);
+  background: var(--semantic-danger-soft);
+  color: var(--semantic-danger);
+}
+
+.activity-timeline-badge-next_step {
+  border-color: var(--border-warning);
+  background: var(--warning-soft);
+  color: var(--semantic-warning);
+}
+
+.activity-timeline-item-status {
+  border-color: var(--border-success);
+  background: color-mix(in srgb, var(--semantic-success-soft) 64%, var(--surface-1));
+}
+
+.activity-timeline-item-blockers {
+  border-color: var(--border-danger);
+  background: color-mix(in srgb, var(--semantic-danger-soft) 48%, var(--surface-1));
+}
+
+.activity-timeline-item-next_step {
+  border-color: var(--border-warning);
+  background: color-mix(in srgb, var(--warning-soft) 64%, var(--surface-1));
+}
+
+.activity-timeline-item-other {
+  border-color: var(--border-soft);
+}
+
+.activity-timeline-message {
   margin: var(--space-0);
   color: var(--foreground);
   font-size: var(--text-body);
   line-height: var(--lh-normal);
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.activity-timeline-message .inline-code-chip,
+.activity-timeline-message .plan-file-link {
+  vertical-align: baseline;
+}
+
+.activity-timeline-message .plan-file-link {
+  font-weight: 600;
+}
+
+.activity-timeline-message .inline-code-chip {
+  font-weight: 700;
 }
 
 .activity-timeline-empty {
@@ -2142,6 +2269,7 @@ pre {
   }
 
   .implementation-flow-diagram-wrap {
+    height: clamp(196px, 36vh, 360px);
     min-height: clamp(196px, 36vh, 360px);
   }
 }
@@ -2197,6 +2325,7 @@ pre {
   }
 
   .implementation-flow-diagram-wrap {
+    height: clamp(176px, 44vh, 320px);
     min-height: clamp(176px, 44vh, 320px);
   }
 }

@@ -112,6 +112,7 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
     if (!force && userAdjustedViewRef.current) {
       return;
     }
+    panZoom.resize?.();
     panZoom.resetZoom?.();
     panZoom.fit?.();
     panZoom.center?.();
@@ -199,6 +200,10 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
         }
         const svg = host.querySelector("svg");
         if (svg) {
+          svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+          svg.style.width = "100%";
+          svg.style.height = "100%";
+          svg.style.maxWidth = "none";
           try {
             const svgPanZoom = await loadSvgPanZoom();
             if (!disposed) {
@@ -213,6 +218,7 @@ export function TechnicalSolutionDiagramPanel(props: TechnicalSolutionDiagramPan
               });
               unlockAutoFit();
               setPanZoomReady(true);
+              panZoomRef.current.resize?.();
               scheduleAutoFit(true);
             }
           } catch {
