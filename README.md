@@ -106,6 +106,7 @@ kfc client
 Then tell Codex:
 
 - Read `.kfc/CODEX_READY.md` and execute the mission.
+- Use the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`.
 - Run routine `kfc ...` flow commands autonomously (no user reminder loop).
 - Run check validation before final response and report `Check: PASS|BLOCK`.
 

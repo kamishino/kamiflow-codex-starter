@@ -9,6 +9,7 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const REQUIRED_PATTERNS = [
   { label: "start command", regex: /\bkfc client\b/ },
   { label: "ready file", regex: /\.kfc\/CODEX_READY\.md/ },
+  { label: "project-local skill", regex: /\.agents\/skills\/kamiflow-core\/SKILL\.md/ },
   { label: "cleanup command", regex: /\bkfc client done\b/ },
   { label: "autonomous flow execution", regex: /\bautonom(?:ous|ously)\b/i },
   { label: "auto check gate", regex: /Check:\s*PASS\|BLOCK/i }
@@ -31,7 +32,8 @@ const FILE_SPECIFIC_PATTERNS = {
   "src/commands/client.js": [
     { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
     { label: "structured onboarding error code output", regex: /Error Code:/ },
-    { label: "smart recovery execution", regex: /smart recovery cycle/i }
+    { label: "smart recovery execution", regex: /smart recovery cycle/i },
+    { label: "project-local skill sync", regex: /Project-local skill synced:/ }
   ]
 };
 

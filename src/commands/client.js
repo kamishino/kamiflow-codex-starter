@@ -30,6 +30,12 @@ import {
   normalizeManagedRulesContent,
   validateRulesProfile
 } from "../lib/rules.js";
+import {
+  getProjectSkillsTargetDir,
+  getSkillsSourceDir,
+  resolveSkillArtifactPath,
+  syncSkillsArtifacts
+} from "../lib/skill-sync.js";
 import { error, info, warn } from "../lib/logger.js";
 import { buildCodexExecManualCommand, runCodexAction } from "../lib/codex-runner.js";
 import { runDoctor } from "./doctor.js";
@@ -51,6 +57,7 @@ const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOF
 const CLIENT_READY_FILE = path.join(".kfc", "CODEX_READY.md");
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read .kfc/CODEX_READY.md and execute the mission.";
+const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 
 function usage() {
   info("Usage: kfc client [options]");
@@ -58,6 +65,7 @@ function usage() {
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
   info("Client kickoff prompt: ./node_modules/@kamishino/kamiflow-codex/resources/docs/CLIENT_KICKOFF_PROMPT.md");
+  info("Project-local runtime skill path: .agents/skills/kamiflow-core/SKILL.md");
   info("Examples:");
   info("  kfc client");
   info("  kfc client --goal \"Implement X with tests\"");
@@ -413,6 +421,10 @@ function resolveClientSessionPath(projectDir) {
   return path.join(projectDir, CLIENT_SESSION_FILE);
 }
 
+function resolveClientSkillArtifactPath(projectDir, skillName = CLIENT_RUNTIME_SKILL) {
+  return resolveSkillArtifactPath(getProjectSkillsTargetDir(projectDir), skillName);
+}
+
 function parseSimpleFrontmatter(markdown) {
   if (!String(markdown).startsWith("---")) {
     return {};
@@ -761,6 +773,28 @@ async function ensureProjectRules({ projectDir, profileName, force }) {
   return { changed: true, targetPath };
 }
 
+async function ensureProjectSkills({ projectDir }) {
+  const targetDir = getProjectSkillsTargetDir(projectDir);
+  const artifactPath = resolveClientSkillArtifactPath(projectDir);
+  const result = await syncSkillsArtifacts({
+    sourceDir: getSkillsSourceDir(getRepoRootDir()),
+    targetDir,
+    includeSkills: [CLIENT_RUNTIME_SKILL],
+    force: true
+  });
+
+  if (!fs.existsSync(artifactPath)) {
+    throw new Error(`Skill sync did not produce runtime artifact: ${artifactPath}`);
+  }
+
+  info(`Project-local skill synced: ${artifactPath}`);
+  return {
+    changed: result.copied > 0,
+    targetDir,
+    artifactPath
+  };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -862,6 +896,18 @@ async function runBootstrapOnce(options, runtime = {}) {
   } catch (err) {
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED,
+      err instanceof Error ? err.message : String(err),
+      "kfc client bootstrap --project . --force"
+    );
+  }
+
+  try {
+    await ensureProjectSkills({
+      projectDir: options.project
+    });
+  } catch (err) {
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.SKILL_SYNC_FAILED,
       err instanceof Error ? err.message : String(err),
       "kfc client bootstrap --project . --force"
     );
@@ -1076,6 +1122,14 @@ async function runClientDoctorChecks(options) {
     } else {
       warn("Rules profile header not found or invalid.");
     }
+  }
+
+  const skillPath = resolveClientSkillArtifactPath(options.project);
+  if (!fs.existsSync(skillPath)) {
+    error(`Missing project-local KFC skill: ${skillPath}`);
+    ok = false;
+  } else {
+    info(`Project-local KFC skill OK: ${skillPath}`);
   }
 
   if (ok) {

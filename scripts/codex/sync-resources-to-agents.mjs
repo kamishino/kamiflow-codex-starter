@@ -13,12 +13,17 @@ import {
   readRulesProfileFromProjectConfig,
   validateRulesProfile
 } from "../../src/lib/rules.js";
+import {
+  getProjectSkillsTargetDir,
+  getRepoSkillsTargetDir,
+  getSkillsSourceDir,
+  syncSkillsArtifacts
+} from "../../src/lib/skill-sync.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = getRepoRootDir();
-const SKILLS_SOURCE = path.join(ROOT_DIR, "resources", "skills");
-const SKILLS_TARGET = path.join(ROOT_DIR, ".agents", "skills");
+const SKILLS_SOURCE = getSkillsSourceDir(ROOT_DIR);
 
 const args = process.argv.slice(2);
 const force = process.argv.includes("--force");
@@ -48,7 +53,7 @@ console.log(
 );
 
 if (only === "all" || only === "skills") {
-  syncSkills();
+  await syncSkills();
 }
 
 if (only === "all" || only === "rules") {
@@ -87,96 +92,38 @@ function ensureDir(dirPath) {
   }
 }
 
-function shouldSkipFile(name) {
-  return name === ".gitkeep" || name === "README.md";
-}
-
-function filesAreIdentical(leftPath, rightPath) {
-  try {
-    const leftStat = fs.statSync(leftPath);
-    const rightStat = fs.statSync(rightPath);
-    if (leftStat.size !== rightStat.size) {
-      return false;
-    }
-    const left = fs.readFileSync(leftPath);
-    const right = fs.readFileSync(rightPath);
-    return left.equals(right);
-  } catch {
-    return false;
-  }
-}
-
 function isEperm(err) {
   return Boolean(err && typeof err === "object" && err.code === "EPERM");
 }
-
-function copyRecursiveSkills(fromDir, toDir) {
-  ensureDir(toDir);
-  const entries = fs.readdirSync(fromDir, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (shouldSkipFile(entry.name)) {
-      continue;
-    }
-
-    const fromPath = path.join(fromDir, entry.name);
-    const toPath = path.join(toDir, entry.name);
-
-    if (entry.isDirectory()) {
-      copyRecursiveSkills(fromPath, toPath);
-      continue;
-    }
-
-    if (force && fs.existsSync(toPath) && filesAreIdentical(fromPath, toPath)) {
-      total.skipped += 1;
-      stats.skills.skipped += 1;
-      continue;
-    }
-
-    if (fs.existsSync(toPath) && !force) {
-      total.skipped += 1;
-      stats.skills.skipped += 1;
-      continue;
-    }
-
-    ensureDir(path.dirname(toPath));
-    try {
-      fs.copyFileSync(fromPath, toPath);
-    } catch (err) {
-      if (isEperm(err) && fs.existsSync(toPath) && filesAreIdentical(fromPath, toPath)) {
-        total.skipped += 1;
-        stats.skills.skipped += 1;
-        skillsEpermSkipped += 1;
-        console.warn(`[codex-sync] Skip unchanged protected file (EPERM): ${toPath}`);
-        continue;
-      }
-
-      if (isEperm(err) && force && fs.existsSync(toPath)) {
-        try {
-          fs.chmodSync(toPath, 0o666);
-          fs.copyFileSync(fromPath, toPath);
-          total.copied += 1;
-          stats.skills.copied += 1;
-          continue;
-        } catch (retryErr) {
-          throw onEperm(retryErr, toPath);
-        }
-      }
-
-      throw onEperm(err, toPath);
-    }
-    total.copied += 1;
-    stats.skills.copied += 1;
+function buildSkillTargets() {
+  if (scope === "project") {
+    return [getProjectSkillsTargetDir(resolveProjectDir())];
   }
+  if (scope === "home") {
+    console.log("[codex-sync] Skills sync does not support --scope home; skipping skills.");
+    return [];
+  }
+  return [getRepoSkillsTargetDir(ROOT_DIR)];
 }
 
-function syncSkills() {
+async function syncSkills() {
   if (!fs.existsSync(SKILLS_SOURCE)) {
     console.log(`[codex-sync] Skip missing source: ${SKILLS_SOURCE}`);
     return;
   }
 
-  copyRecursiveSkills(SKILLS_SOURCE, SKILLS_TARGET);
+  for (const target of buildSkillTargets()) {
+    const result = await syncSkillsArtifacts({
+      sourceDir: SKILLS_SOURCE,
+      targetDir: target,
+      force
+    });
+    total.copied += result.copied;
+    total.skipped += result.skipped;
+    stats.skills.copied += result.copied;
+    stats.skills.skipped += result.skipped;
+    skillsEpermSkipped += result.protected_skips;
+  }
 }
 
 function resolveCodexHome() {

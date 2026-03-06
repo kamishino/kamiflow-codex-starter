@@ -576,6 +576,26 @@ await runCase("detectProjectRoot prefers git root then package then cwd", async 
   });
 });
 
+await runCase("project skill sync writes kamiflow-core runtime artifact", async () => {
+  const repoRoot = path.resolve(__dirname, "../../..");
+  const syncModule = await import(pathToFileURL(path.join(repoRoot, "src/lib/skill-sync.js")).href);
+
+  await withTempDir(async (tempDir) => {
+    const targetDir = path.join(tempDir, ".agents", "skills");
+    const result = await syncModule.syncSkillsArtifacts({
+      sourceDir: syncModule.getSkillsSourceDir(repoRoot),
+      targetDir,
+      includeSkills: ["kamiflow-core"],
+      force: true
+    });
+
+    assert.ok(result.synced_skills.includes("kamiflow-core"));
+    const skillPath = syncModule.resolveSkillArtifactPath(targetDir, "kamiflow-core");
+    const content = await fs.readFile(skillPath, "utf8");
+    assert.match(content, /name:\s*kamiflow-core/);
+  });
+});
+
 await runCase("global KFP contrast policy check passes", async () => {
   const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfp-contrast.mjs");
   const policyModule = await import(pathToFileURL(policyPath).href);

@@ -132,6 +132,20 @@ function runStep(title, command, args, cwd) {
   };
 }
 
+function verifyFileExistsStep(title, filePath, cwd) {
+  const ok = fs.existsSync(filePath);
+  return {
+    title,
+    cwd,
+    command: `assert file exists ${shellEscape(filePath)}`,
+    ok,
+    statusCode: ok ? 0 : 1,
+    durationMs: 0,
+    stdout: ok ? filePath : "",
+    stderr: ok ? "" : `Missing file: ${filePath}`
+  };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -328,6 +342,15 @@ async function main() {
         projectDir
       )
     );
+    if (steps.at(-1).ok) {
+      steps.push(
+        verifyFileExistsStep(
+          "verify project-local kamiflow-core skill",
+          path.join(projectDir, ".agents", "skills", "kamiflow-core", "SKILL.md"),
+          projectDir
+        )
+      );
+    }
     return finalize(steps, outPath, projectDir, args.link);
   }
 

@@ -23,7 +23,7 @@ kfc client --force
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-Bootstrap now includes one smart-recovery cycle, creates `.kfc/CODEX_READY.md`, and auto-launches:
+Bootstrap now includes one smart-recovery cycle, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, and auto-launches:
 
 ```bash
 codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
@@ -41,7 +41,7 @@ Goal:
 
 Rules:
 1) Use only `kfc ...` commands in this client project.
-2) Start from `.kfc/CODEX_READY.md` mission and plan context.
+2) Start from `.kfc/CODEX_READY.md` mission and plan context, with `kamiflow-core` available from `.agents/skills/kamiflow-core/SKILL.md`.
 3) Run routine flow commands autonomously; do not ask the user to run normal `kfc` commands.
 4) Before any implementation route (`build`/`fix`), always run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.
 5) Touch active plan markdown twice per request: at route start and before final response.

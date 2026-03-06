@@ -56,6 +56,7 @@ What one-command client setup verifies:
 - valid config (creates if missing)
 - plan UI dependency available
 - project rules synced to `.codex/rules/kamiflow.rules`
+- project-local runtime skill synced to `.agents/skills/kamiflow-core/SKILL.md`
 - plan exists and validates
 - KFP health endpoint responds OK
 
@@ -114,8 +115,9 @@ Validation is complete when all are true:
 
 1. `kfc` works in external repo context.
 2. `kfc client --force` completes PASS in external repo.
-3. plan file is created and validated in external repo.
-4. smoke log is captured and reviewable.
+3. project-local `kamiflow-core` exists in `.agents/skills/kamiflow-core/SKILL.md`.
+4. plan file is created and validated in external repo.
+5. smoke log is captured and reviewable.
 
 Optional extended criteria:
 

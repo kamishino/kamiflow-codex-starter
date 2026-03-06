@@ -20,7 +20,7 @@ kfc client --force
 ```
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
-This generates `.kfc/CODEX_READY.md` for Codex handoff and auto-launches Codex by default.
+This installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates `.kfc/CODEX_READY.md` for Codex handoff, and auto-launches Codex by default.
 Client bootstrap includes one smart-recovery cycle and prints `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 If auto-launch is disabled or fails, use the exact manual fallback command printed by KFC.
 
@@ -32,6 +32,7 @@ If auto-launch is disabled or fails, use the exact manual fallback command print
 
 2. Environment and Plan Readiness
 - Use `.kfc/CODEX_READY.md` as mission + plan contract.
+- Use `.agents/skills/kamiflow-core/SKILL.md` as the visible project-local runtime skill artifact.
 - Codex should execute routine flow commands autonomously without user reminders.
 - Auto-launch is the preferred handoff path; use the printed fallback command only if launch was skipped or failed.
 - Before any implementation route (`build`/`fix`), Codex should run `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.
