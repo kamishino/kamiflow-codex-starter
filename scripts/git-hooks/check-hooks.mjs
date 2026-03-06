@@ -6,6 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../..");
 const EXPECTED_HOOKS_PATH = ".githooks";
+const REQUIRED_HOOK_NAMES = ["commit-msg", "post-merge"];
 const gitConfigPath = resolveGitConfigPath(ROOT_DIR);
 
 const configText = fs.readFileSync(gitConfigPath, "utf8");
@@ -23,7 +24,15 @@ if (normalizePathValue(hooksPathValue) !== normalizePathValue(EXPECTED_HOOKS_PAT
   );
 }
 
+for (const hookName of REQUIRED_HOOK_NAMES) {
+  const hookPath = path.join(ROOT_DIR, EXPECTED_HOOKS_PATH, hookName);
+  if (!fs.existsSync(hookPath)) {
+    fail(`Missing hook file: ${hookPath}. Run "npm run hooks:enable".`);
+  }
+}
+
 console.log(`[hooks] OK: core.hooksPath=${hooksPathValue}`);
+console.log(`[hooks] OK: required hooks present (${REQUIRED_HOOK_NAMES.join(", ")})`);
 
 function resolveGitConfigPath(rootDir) {
   const gitEntryPath = path.join(rootDir, ".git");
