@@ -16,6 +16,7 @@ import {
   shouldPreferPlanInteractiveMode
 } from "../dist/lib/codex-runner.js";
 import { buildPlanDiagramTabsModel, buildTechnicalSolutionDiagramModel } from "../dist/lib/plan-diagram.js";
+import { lintAndRepairMermaid } from "../dist/lib/mermaid-safety.js";
 import { readRunlogSignal } from "../dist/lib/runlog.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -748,6 +749,80 @@ await runCase("technical solution diagram model reads mermaid from solution sect
   assert.ok(first.warnings.some((item) => item.includes("landscape")));
 });
 
+await runCase("mermaid safety lints and repairs unsafe pipe in node labels", async () => {
+  const source = "flowchart LR\nA{resources/skills|rules changed?} --> B[Apply]";
+  const result = lintAndRepairMermaid(source);
+  assert.equal(result.valid, false);
+  assert.equal(result.issues.length, 1);
+  assert.equal(result.issues[0].code, "unsafe_label_pipe");
+  assert.ok(result.repaired_source.includes("resources/skills / rules changed?"));
+});
+
+await runCase("validate fails when required technical diagram contains unsafe pipe label", async () => {
+  const markdown = `---
+plan_id: PLAN-2026-03-06-777
+title: Mermaid safety validation
+status: in_progress
+decision: GO
+selected_mode: Build
+next_mode: Plan
+next_command: check
+updated_at: 2026-03-06T13:00:00+07:00
+diagram_mode: required
+---
+
+## Start Summary
+- Required: no
+- Reason: clear request
+- Selected Idea: enforce mermaid safety
+- Alternatives Considered: none
+- Pre-mortem Risk: false positive
+- Handoff Confidence: 5
+
+## Goal
+- Validate Mermaid safety for technical diagrams.
+
+## Scope (In/Out)
+- In: required technical diagrams
+- Out: non-required diagrams
+
+## Constraints
+- Technical: none
+- Time: now
+- Risk: low
+
+## Assumptions
+- A1: enforce label safety
+
+## Technical Solution Diagram
+\`\`\`mermaid
+flowchart LR
+F --> H{resources/skills|rules changed?}
+\`\`\`
+
+## Implementation Tasks
+- [ ] Add Mermaid safety checks.
+
+## Acceptance Criteria
+- [ ] Validation reports unsafe node labels.
+
+## Validation Commands
+- npm --prefix packages/kamiflow-plan-ui test
+
+## Go/No-Go Checklist
+- [ ] No blocking issues remain.
+
+## WIP Log
+- 2026-03-06T13:00:00+07:00 - Status: validate.
+- 2026-03-06T13:00:00+07:00 - Blockers: none.
+- 2026-03-06T13:00:00+07:00 - Next step: fix syntax.
+`;
+
+  const parsed = parsePlanFileContent(markdown, "/tmp/plan.md");
+  const errors = validateParsedPlan(parsed);
+  assert.ok(errors.some((item) => item.includes("Mermaid safety violation")));
+});
+
 await runCase("technical solution diagram model derives placeholder when section is missing", async () => {
   const model = buildTechnicalSolutionDiagramModel({
     summary: { plan_id: "PLAN-TEST-DIAGRAM-002" },
@@ -791,6 +866,18 @@ await runCase("diagram tabs default to tasks when required mode has no technical
     }
   });
   assert.equal(model.tabs.some((tab) => tab.key === "technical"), false);
+  assert.equal(model.default_tab, "tasks");
+});
+
+await runCase("diagram tabs default to tasks when technical diagram is invalid", async () => {
+  const model = buildPlanDiagramTabsModel({
+    summary: { plan_id: "PLAN-TEST-DIAGRAM-004C", diagram_mode: "required" },
+    sections: {
+      "Implementation Tasks": "- [ ] Task One\n- [x] Task Two",
+      "Technical Solution Diagram": "```mermaid\nflowchart LR\nA --> B\n"
+    }
+  });
+  assert.equal(model.tabs.some((tab) => tab.key === "technical"), true);
   assert.equal(model.default_tab, "tasks");
 });
 

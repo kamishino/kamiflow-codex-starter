@@ -35,6 +35,7 @@ const RULES = [
       "after each completed task/subtask, immediately mutate the active plan file",
       "Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.",
       "After user clarifies answers in Brainstorm/Plan, decide whether a technical diagram is needed",
+      "Mermaid safety standard: avoid raw `|` in node labels",
       "YYYY-MM-DD-<seq>-<route>-<topic-slug>.md",
       "## Response Handoff Contract"
     ]
@@ -87,6 +88,7 @@ const RULES = [
       "allowed values: `required|auto|hidden`",
       "Run Diagram Need Decision after planning details are clear",
       "Technical Solution Diagram section exists with Mermaid content",
+      "Mermaid safety: avoid raw `|` in node labels",
       "Route confidence for `plan` must be `>=4` before execution."
     ]
   },
@@ -193,6 +195,7 @@ const RULES = [
     required: [
       "Next command: build",
       "## Plan Lifecycle Mutation",
+      "Mermaid safety: avoid raw `|` in node labels",
       "## Optional Response Handoff (Compact)",
       "Next step: <one line>"
     ]

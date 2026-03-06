@@ -1,6 +1,7 @@
 import { REQUIRED_FRONTMATTER_FIELDS, REQUIRED_SECTIONS } from "../constants.js";
 import type { ParsedPlan } from "../types.js";
 import { resolveDiagramMode } from "../lib/diagram-mode.js";
+import { lintAndRepairMermaid } from "../lib/mermaid-safety.js";
 
 function parseStartSummary(sectionText: string): Record<string, string> {
   const lines = sectionText.split(/\r?\n/);
@@ -45,8 +46,16 @@ export function validateParsedPlan(plan: ParsedPlan) {
 
   if (diagramMode.mode === "required") {
     const technical = String(plan.sections["Technical Solution Diagram"] || "").trim();
-    if (!/```mermaid[\s\S]*?```/i.test(technical)) {
+    const mermaidMatch = technical.match(/```mermaid\s*([\s\S]*?)```/i);
+    if (!mermaidMatch?.[1]?.trim()) {
       errors.push("`Technical Solution Diagram` must include a Mermaid block when `diagram_mode` is required.");
+    } else {
+      const safety = lintAndRepairMermaid(mermaidMatch[1].trim());
+      for (const issue of safety.issues) {
+        errors.push(
+          `Mermaid safety violation (${issue.code}) in Technical Solution Diagram at line ${issue.line}: ${issue.message}`
+        );
+      }
     }
   }
 

@@ -139,6 +139,7 @@ KFP Activity panel is observer-first; use it as evidence, not control.
 - Preferred control plane is chat-driven Codex execution; KFP remains read/observe oriented.
 - Mermaid/flow diagrams in KFP should be shown in a dedicated **Technical Solution Diagram** section, not embedded inside PlanSnapshot status visualization.
 - `Technical Solution Diagram` should contain a ```mermaid code block to persist chosen solution logic for future sessions/models.
+- Mermaid safety standard: avoid raw `|` in node labels (for example decision text); use `/` or `or` in node label text to avoid parser failures.
 - KFP may render a minimal derived placeholder when the section/block is missing, but canonical solution intent must come from plan markdown.
 - KFP attempts pan/zoom controls via `svg-pan-zoom`; if unavailable, it falls back to static Mermaid rendering.
 - Mermaid visualization is for humans; canonical execution truth is still plan markdown frontmatter + checklist sections.

@@ -18,6 +18,7 @@
 flowchart LR
   IDEA["Selected Solution"] --> BUILD["Implementation"] --> CHECK["Validation"]
 ```
+- Mermaid safety: avoid raw `|` in node labels; use `/` or `or` in label text.
 
 ## Task Breakdown
 1. <task with file path>

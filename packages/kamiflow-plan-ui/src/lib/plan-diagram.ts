@@ -1,4 +1,5 @@
 import { resolveDiagramMode } from "./diagram-mode.js";
+import { lintAndRepairMermaid } from "./mermaid-safety.js";
 
 export interface DiagramPlanSummaryInput {
   plan_id: string;
@@ -117,6 +118,7 @@ function cleanLabel(input: string): string {
   return String(input || "")
     .replace(/\r?\n+/g, " ")
     .replace(/\s+/g, " ")
+    .replace(/\s*\|\s*/g, " / ")
     .trim()
     .replace(/"/g, '\\"');
 }
@@ -208,7 +210,15 @@ export function buildTechnicalSolutionDiagramModel(input: DiagramPlanInput): Tec
     };
   }
 
-  const normalized = forceLandscapeOrientation(source);
+  const safety = lintAndRepairMermaid(source);
+  for (const issue of safety.issues) {
+    warnings.push(`Mermaid safety: ${issue.message} (line ${issue.line}).`);
+  }
+  if (safety.repaired) {
+    warnings.push("Mermaid render auto-repaired for safe display; source markdown is unchanged.");
+  }
+
+  const normalized = forceLandscapeOrientation(safety.repaired_source || source);
   if (normalized.changed) {
     warnings.push("Mermaid render normalized to landscape orientation (LR) for 16:9 viewing.");
   }
@@ -408,7 +418,7 @@ export function buildPlanDiagramTabsModel(input: DiagramPlanInput): PlanDiagramT
     warnings: summary.warnings
   });
 
-  const defaultTab = canShowTechnical
+  const defaultTab = canShowTechnical && technical.content_state === "ready"
     ? "technical"
     : tasks.content_state === "ready"
       ? "tasks"

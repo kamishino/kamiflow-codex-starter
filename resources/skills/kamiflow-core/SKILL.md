@@ -115,6 +115,7 @@ Pick mode before executing route logic:
 - Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.
 - `diagram_mode` policy must be explicit in plan frontmatter (`required|auto|hidden`) and respected during Start/Plan/Build routes.
 - After user clarifies answers in Brainstorm/Plan, decide whether a technical diagram is needed; if needed, set `diagram_mode: required` and update the plan file with Mermaid content before handoff.
+- Mermaid safety standard: avoid raw `|` in node labels inside `Technical Solution Diagram`; use `/` or `or` in label text to prevent parser errors.
 - Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.

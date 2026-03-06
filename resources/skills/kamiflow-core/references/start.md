@@ -69,6 +69,7 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 15. Persist `diagram_mode` in target plan markdown and apply policy:
 - set `diagram_mode: required|auto|hidden`
 - when `required`, include `## Technical Solution Diagram` with one ```mermaid block that captures selected solution logic
+- Mermaid safety: avoid raw `|` in node labels; use `/` or `or` in label text
 - when `auto|hidden`, Technical section may be omitted (KFP falls back to Tasks/Subtasks)
 16. End with one handoff route: `plan`, `build`, or `research`.
 17. Include concise next-step guidance when useful; do not require verbose response footer fields.
