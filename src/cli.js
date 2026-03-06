@@ -20,7 +20,7 @@ Commands:
   plan       Run kfp plan workflow (init|serve|validate)
   flow       Deterministic plan guardrails (ensure-plan|ready|apply|next)
   client     Client-project one-command setup, diagnostics, and cleanup
-  session    Codex session transfer helpers (where|find|copy)
+  session    Codex session transfer helpers (where|find|copy|push|pull)
   run        Execute Kami Flow with plan guardrails
   help       Show this usage
 
@@ -54,6 +54,8 @@ session options:
   kfc session where
   kfc session find --id <session-id> [--from <path>]
   kfc session copy --to <path> [--from <path>] [--date <YYYY-MM-DD|YYYY/MM/DD>|--id <session-id>] [--overwrite|--merge]
+  kfc session push --to <transfer-path> [--id <session-id>] [--from <path>] [--merge]
+  kfc session pull --from <transfer-path> [--id <session-id>] [--to <path>] [--merge]
 `);
 }
 

@@ -78,18 +78,24 @@ During normal implementation turns, Codex should run check validations automatic
 ## Copy Codex Sessions Between Machines
 
 ```bash
-# find exact session file by id
-kfc session find --id 019caccc-f25d-7151-ad1d-6eab893d714d
+# set shared passphrase on both machines (required for secure push/pull)
+# PowerShell:
+$env:KFC_SESSION_PASSPHRASE = "your-strong-shared-passphrase"
 
-# copy exact session file by id into transfer folder
-kfc session copy --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
+# source machine: push active session (auto-id: --id > CODEX_THREAD_ID > latest session file)
+kfc session push --to E:/transfer/codex-sessions
 
-# source machine: export one day into transfer folder
-kfc session copy --to E:/transfer/codex-sessions --date 2026-03-04
+# source machine: push exact session id
+kfc session push --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
 
-# destination machine: import into local Codex sessions root
-kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merge
+# destination machine: pull latest indexed session into ~/.codex/sessions
+kfc session pull --from E:/transfer/codex-sessions
+
+# destination machine: pull exact session id
+kfc session pull --from E:/transfer/codex-sessions --id 019caccc-f25d-7151-ad1d-6eab893d714d
 ```
+
+Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata index (`kfc-session-index.json`).
 
 ## Troubleshooting
 
@@ -100,6 +106,8 @@ kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merg
 - If onboarding reports `Onboarding Status: BLOCK`, follow the printed `Recovery:` command exactly.
 - Rules mismatch: rerun `kfc client --force`.
 - Cannot find local Codex sessions folder: run `kfc session where`.
+- `kfc session push/pull` says missing passphrase: set `KFC_SESSION_PASSPHRASE` in your shell first.
+- Pull decrypt/auth failure: verify the same `KFC_SESSION_PASSPHRASE` is used on both machines.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
 ## Next Docs
