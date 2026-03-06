@@ -78,9 +78,14 @@ During normal implementation turns, Codex should run check validations automatic
 ## Copy Codex Sessions Between Machines
 
 ```bash
-# set shared passphrase on both machines (required for secure push/pull)
-# PowerShell:
-$env:KFC_SESSION_PASSPHRASE = "your-strong-shared-passphrase"
+# on each machine once: generate local age key + trust self
+kfc session key gen --name <device-name>
+
+# view your public key (share this with trusted devices)
+kfc session key show
+
+# add trusted destination device(s) on source machine
+kfc session trust add --name <peer-device> --pubkey <age1...>
 
 # source machine: push active session (auto-id: --id > CODEX_THREAD_ID > latest session file)
 kfc session push --to E:/transfer/codex-sessions
@@ -95,7 +100,7 @@ kfc session pull --from E:/transfer/codex-sessions
 kfc session pull --from E:/transfer/codex-sessions --id 019caccc-f25d-7151-ad1d-6eab893d714d
 ```
 
-Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata index (`kfc-session-index.json`).
+Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata index (`kfc-session-index.json`) using age recipient encryption.
 
 ## Troubleshooting
 
@@ -106,8 +111,8 @@ Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata inde
 - If onboarding reports `Onboarding Status: BLOCK`, follow the printed `Recovery:` command exactly.
 - Rules mismatch: rerun `kfc client --force`.
 - Cannot find local Codex sessions folder: run `kfc session where`.
-- `kfc session push/pull` says missing passphrase: set `KFC_SESSION_PASSPHRASE` in your shell first.
-- Pull decrypt/auth failure: verify the same `KFC_SESSION_PASSPHRASE` is used on both machines.
+- `kfc session push` says no trusted recipients: run `kfc session key gen --name <device>` then `kfc session trust add --name <peer> --pubkey <age1...>`.
+- Pull decrypt failure: verify local key exists (`kfc session key show`) and source machine encrypted for your recipient.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
 ## Next Docs

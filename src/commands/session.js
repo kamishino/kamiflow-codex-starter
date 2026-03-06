@@ -2,21 +2,25 @@ import fs from "node:fs/promises";
 import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { error, info } from "../lib/logger.js";
 
-const PASS_ENV_NAME = "KFC_SESSION_PASSPHRASE";
 const INDEX_FILE_NAME = "kfc-session-index.json";
-const ENVELOPE_FORMAT = "kfc-session-envelope-v1";
-const KDF_ITERATIONS = 210000;
-const KDF_KEY_LENGTH = 32;
-const GCM_IV_BYTES = 12;
-const SALT_BYTES = 16;
+const ENVELOPE_FORMAT = "kfc-session-age-envelope-v1";
+const LEGACY_ENVELOPE_FORMAT = "kfc-session-envelope-v1";
+const TRUST_FILE_NAME = "trusted-recipients.json";
+const DEFAULT_SESSION_KEY_DIR = path.join(os.homedir(), ".kfc", "session");
+const DEFAULT_SESSION_KEY_PATH = path.join(DEFAULT_SESSION_KEY_DIR, "age.key");
 
 function usage() {
-  info("Usage: kfc session <where|find|copy|push|pull> [options]");
+  info("Usage: kfc session <where|find|copy|push|pull|key|trust> [options]");
   info("Examples:");
   info("  kfc session where");
   info("  kfc session find --id 019caccc-f25d-7151-ad1d-6eab893d714d");
+  info("  kfc session key gen --name workstation");
+  info("  kfc session key show");
+  info("  kfc session trust list");
+  info("  kfc session trust add --name laptop --pubkey age1...");
   info("  kfc session push --to E:/transfer/codex-sessions");
   info("  kfc session push --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions");
   info("  kfc session pull --from E:/transfer/codex-sessions");
@@ -28,9 +32,12 @@ function usage() {
   info("  --to <path>        Target sessions root or transfer folder (required for push/copy)");
   info("  --id <session-id>  Find/copy/push/pull one session by id");
   info("  --date <YYYY-MM-DD|YYYY/MM/DD>  Copy only one session day folder");
+  info("  --key <path>       Override local age private key path");
+  info("  --name <text>      Device display name for key/trust operations");
+  info("  --pubkey <age1...> Recipient public key for trust add/remove or push");
   info("  --overwrite        Replace destination path if it already exists");
   info("  --merge            Keep existing destination file/path when present");
-  info(`Security: set ${PASS_ENV_NAME} for encrypted push/pull.`);
+  info("Security: push/pull uses age recipient encryption (no passphrase mode).");
 }
 
 function defaultSessionsRoot() {
@@ -105,14 +112,6 @@ function hashSha256(data) {
   return crypto.createHash("sha256").update(data).digest("hex");
 }
 
-function requireSyncPassphrase() {
-  const value = String(process.env[PASS_ENV_NAME] || "").trim();
-  if (!value) {
-    throw new Error(`Missing ${PASS_ENV_NAME}. Set this environment variable before using session push/pull.`);
-  }
-  return value;
-}
-
 async function pathExists(targetPath) {
   try {
     await fs.access(targetPath);
@@ -132,19 +131,29 @@ async function assertDirectoryExists(targetPath, label) {
 function parseArgs(baseCwd, args) {
   const parsed = {
     subcommand: "",
+    action: "",
     from: defaultSessionsRoot(),
     to: "",
     id: "",
     date: "",
+    key: DEFAULT_SESSION_KEY_PATH,
+    name: "",
+    pubkey: "",
+    recipients: [],
     overwrite: false,
     merge: false,
     fromProvided: false,
-    toProvided: false
+    toProvided: false,
+    keyProvided: false
   };
 
   let rest = args;
   if (rest.length > 0 && !String(rest[0]).startsWith("-")) {
     parsed.subcommand = rest[0];
+    rest = rest.slice(1);
+  }
+  if (rest.length > 0 && !String(rest[0]).startsWith("-")) {
+    parsed.action = rest[0];
     rest = rest.slice(1);
   }
 
@@ -188,6 +197,42 @@ function parseArgs(baseCwd, args) {
       i += 1;
       continue;
     }
+    if (token === "--key") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --key.");
+      }
+      parsed.key = value;
+      parsed.keyProvided = true;
+      i += 1;
+      continue;
+    }
+    if (token === "--name") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --name.");
+      }
+      parsed.name = String(value).trim();
+      i += 1;
+      continue;
+    }
+    if (token === "--pubkey" || token === "--recipient") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error(`Missing value for ${token}.`);
+      }
+      const parsedValues = String(value)
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (!parsedValues.length) {
+        throw new Error(`Invalid value for ${token}.`);
+      }
+      parsed.recipients.push(...parsedValues);
+      parsed.pubkey = parsedValues[0];
+      i += 1;
+      continue;
+    }
     if (token === "--overwrite") {
       parsed.overwrite = true;
       continue;
@@ -205,6 +250,8 @@ function parseArgs(baseCwd, args) {
 
   parsed.from = resolvePath(baseCwd, parsed.from);
   parsed.to = resolvePath(baseCwd, parsed.to);
+  parsed.key = resolvePath(baseCwd, parsed.key);
+  parsed.recipients = Array.from(new Set(parsed.recipients.map((item) => String(item).trim()).filter(Boolean)));
   return parsed;
 }
 
@@ -306,58 +353,230 @@ async function resolveSessionSourceForPush(parsed) {
   return { sourceFile: latestFile, sessionId: sessionIdFromFilePath(latestFile), reason: "latest-file" };
 }
 
-function deriveKey(passphrase, salt) {
-  return crypto.pbkdf2Sync(passphrase, salt, KDF_ITERATIONS, KDF_KEY_LENGTH, "sha256");
+function resolveTrustStorePath(parsed) {
+  return path.join(path.dirname(parsed.key || DEFAULT_SESSION_KEY_PATH), TRUST_FILE_NAME);
 }
 
-function encryptSessionBuffer(plaintextBuffer, metadata, passphrase) {
-  const salt = crypto.randomBytes(SALT_BYTES);
-  const iv = crypto.randomBytes(GCM_IV_BYTES);
-  const key = deriveKey(passphrase, salt);
-  const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-  const encrypted = Buffer.concat([cipher.update(plaintextBuffer), cipher.final()]);
-  const authTag = cipher.getAuthTag();
+function normalizeRecipient(value) {
+  return String(value || "").trim();
+}
+
+function assertAgeRecipient(value, label = "recipient") {
+  const recipient = normalizeRecipient(value);
+  if (!/^age1[0-9a-z]+$/.test(recipient)) {
+    throw new Error(`Invalid ${label}. Expected an age recipient key (age1...).`);
+  }
+  return recipient;
+}
+
+async function runProcessCapture(command, args, options = {}) {
+  return await new Promise((resolve, reject) => {
+    const child = spawn(command, args, {
+      stdio: ["pipe", "pipe", "pipe"],
+      cwd: options.cwd || process.cwd()
+    });
+    let stdout = "";
+    let stderr = "";
+
+    child.stdout.on("data", (chunk) => {
+      stdout += String(chunk);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr += String(chunk);
+    });
+    child.on("error", (err) => {
+      reject(new Error(`Failed to start \`${command}\`: ${err instanceof Error ? err.message : String(err)}`));
+    });
+    child.on("close", (code) => {
+      resolve({ code: code ?? 1, stdout, stderr });
+    });
+
+    if (options.input !== undefined && options.input !== null) {
+      child.stdin.write(options.input);
+    }
+    child.stdin.end();
+  });
+}
+
+async function ensureAgeTool(command, checkArgs = ["--version"]) {
+  try {
+    const result = await runProcessCapture(command, checkArgs);
+    if (result.code !== 0) {
+      const detail = (result.stderr || result.stdout || "<empty>").trim();
+      throw new Error(`\`${command}\` returned non-zero exit code. ${detail}`);
+    }
+  } catch (err) {
+    throw new Error(
+      `${command} is required for session encryption. Install age tools and ensure \`${command}\` is available in PATH. ${
+        err instanceof Error ? err.message : String(err)
+      }`
+    );
+  }
+}
+
+function extractPublicKey(rawText) {
+  const match = String(rawText || "").match(/age1[0-9a-z]+/);
+  return match ? match[0] : "";
+}
+
+async function getPublicKeyFromPrivateKey(keyPath) {
+  const result = await runProcessCapture("age-keygen", ["-y", keyPath]);
+  if (result.code !== 0) {
+    throw new Error(`Cannot derive public key from private key: ${(result.stderr || result.stdout || "<empty>").trim()}`);
+  }
+  const pubkey = extractPublicKey(result.stdout || result.stderr);
+  if (!pubkey) {
+    throw new Error("age-keygen did not return a valid public key.");
+  }
+  return assertAgeRecipient(pubkey, "public key");
+}
+
+async function readTrustedRecipients(parsed) {
+  const trustPath = resolveTrustStorePath(parsed);
+  if (!(await pathExists(trustPath))) {
+    return {
+      path: trustPath,
+      data: {
+        version: 1,
+        updated_at: null,
+        devices: []
+      }
+    };
+  }
+  let parsedJson;
+  try {
+    parsedJson = JSON.parse(await fs.readFile(trustPath, "utf8"));
+  } catch {
+    throw new Error(`Invalid trusted recipients file: ${trustPath}`);
+  }
+  const devices = Array.isArray(parsedJson?.devices) ? parsedJson.devices : [];
+  return {
+    path: trustPath,
+    data: {
+      version: Number(parsedJson?.version || 1),
+      updated_at: parsedJson?.updated_at || null,
+      devices
+    }
+  };
+}
+
+async function writeTrustedRecipients(trustPath, trustData) {
+  await fs.mkdir(path.dirname(trustPath), { recursive: true });
+  await fs.writeFile(
+    trustPath,
+    JSON.stringify(
+      {
+        version: 1,
+        updated_at: new Date().toISOString(),
+        devices: Array.isArray(trustData?.devices) ? trustData.devices : []
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+}
+
+function upsertTrustedRecipient(devices, recipient, name) {
+  const safeRecipient = assertAgeRecipient(recipient, "recipient");
+  const safeName = String(name || "").trim() || "device";
+  const next = Array.isArray(devices) ? [...devices] : [];
+  const filtered = next.filter((item) => normalizeRecipient(item?.recipient) !== safeRecipient);
+  filtered.push({
+    recipient: safeRecipient,
+    name: safeName,
+    added_at: new Date().toISOString()
+  });
+  filtered.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
+  return filtered;
+}
+
+function removeTrustedRecipient(devices, recipient = "", name = "") {
+  const safeRecipient = normalizeRecipient(recipient);
+  const safeName = String(name || "").trim().toLowerCase();
+  const current = Array.isArray(devices) ? devices : [];
+  if (!safeRecipient && !safeName) {
+    throw new Error("Missing selector for trust remove. Provide --pubkey or --name.");
+  }
+  return current.filter((item) => {
+    const recipientMatches = safeRecipient && normalizeRecipient(item?.recipient) === safeRecipient;
+    const nameMatches = safeName && String(item?.name || "").trim().toLowerCase() === safeName;
+    return !(recipientMatches || nameMatches);
+  });
+}
+
+async function resolvePushRecipients(parsed) {
+  if (parsed.recipients.length) {
+    return parsed.recipients.map((item, index) => assertAgeRecipient(item, `recipient #${index + 1}`));
+  }
+
+  const trusted = await readTrustedRecipients(parsed);
+  const recipients = trusted.data.devices
+    .map((item) => normalizeRecipient(item?.recipient))
+    .filter(Boolean)
+    .map((item, index) => assertAgeRecipient(item, `trusted recipient #${index + 1}`));
+
+  if (!recipients.length) {
+    throw new Error(
+      `No trusted recipients found at ${trusted.path}. Run \`kfc session key gen --name <device>\` and \`kfc session trust add --name <device> --pubkey <age1...>\` first.`
+    );
+  }
+  return Array.from(new Set(recipients));
+}
+
+async function encryptSessionBuffer(plaintextBuffer, metadata, recipients) {
+  await ensureAgeTool("age");
+  const args = ["--encrypt", "--armor"];
+  for (const recipient of recipients) {
+    args.push("-r", recipient);
+  }
+  const result = await runProcessCapture("age", args, { input: plaintextBuffer });
+  if (result.code !== 0) {
+    throw new Error(`Session encryption failed: ${(result.stderr || result.stdout || "<empty>").trim()}`);
+  }
 
   return {
     format: ENVELOPE_FORMAT,
     created_at: new Date().toISOString(),
-    kdf: {
-      name: "pbkdf2-sha256",
-      iterations: KDF_ITERATIONS,
-      salt_b64: salt.toString("base64"),
-      key_length: KDF_KEY_LENGTH
-    },
     cipher: {
-      name: "aes-256-gcm",
-      iv_b64: iv.toString("base64"),
-      tag_b64: authTag.toString("base64")
+      name: "age",
+      armor: true,
+      recipient_count: recipients.length
     },
     metadata,
-    payload_b64: encrypted.toString("base64")
+    payload: result.stdout
   };
 }
 
-function decryptSessionEnvelope(envelope, passphrase) {
-  if (!envelope || envelope.format !== ENVELOPE_FORMAT) {
+async function decryptSessionEnvelope(envelope, parsed) {
+  if (!envelope || !envelope.format) {
     throw new Error("Invalid session envelope format.");
   }
-  const salt = Buffer.from(String(envelope?.kdf?.salt_b64 || ""), "base64");
-  const iv = Buffer.from(String(envelope?.cipher?.iv_b64 || ""), "base64");
-  const tag = Buffer.from(String(envelope?.cipher?.tag_b64 || ""), "base64");
-  const encrypted = Buffer.from(String(envelope?.payload_b64 || ""), "base64");
-  if (!salt.length || !iv.length || !tag.length || !encrypted.length) {
+  if (envelope.format === LEGACY_ENVELOPE_FORMAT) {
+    throw new Error(
+      "Legacy passphrase artifacts are no longer supported. Re-export the session using current `kfc session push`."
+    );
+  }
+  if (envelope.format !== ENVELOPE_FORMAT) {
+    throw new Error(`Unsupported session envelope format: ${String(envelope.format)}`);
+  }
+
+  const payload = String(envelope?.payload || "");
+  if (!payload.trim()) {
     throw new Error("Corrupt session envelope payload.");
   }
 
-  const key = deriveKey(passphrase, salt);
-  const decipher = crypto.createDecipheriv("aes-256-gcm", key, iv);
-  decipher.setAuthTag(tag);
-  let plaintext;
-  try {
-    plaintext = Buffer.concat([decipher.update(encrypted), decipher.final()]);
-  } catch {
-    throw new Error("Session decryption failed. Check KFC_SESSION_PASSPHRASE or artifact integrity.");
+  await ensureAgeTool("age");
+  const keyPath = parsed.key || DEFAULT_SESSION_KEY_PATH;
+  if (!(await pathExists(keyPath))) {
+    throw new Error(`Missing age private key: ${keyPath}. Run \`kfc session key gen --name <device>\` first.`);
   }
+
+  const result = await runProcessCapture("age", ["--decrypt", "-i", keyPath], { input: payload });
+  if (result.code !== 0) {
+    throw new Error(`Session decryption failed: ${(result.stderr || result.stdout || "<empty>").trim()}`);
+  }
+  const plaintext = Buffer.from(result.stdout, "utf8");
 
   const sha = hashSha256(plaintext);
   const expectedSha = String(envelope?.metadata?.sha256 || "");
@@ -545,7 +764,7 @@ async function runPush(parsed) {
     throw new Error("`kfc session push` does not support --date. Use --id or auto-detect mode.");
   }
 
-  const passphrase = requireSyncPassphrase();
+  const recipients = await resolvePushRecipients(parsed);
   const source = await resolveSessionSourceForPush(parsed);
   const sourceBuffer = await fs.readFile(source.sourceFile);
   const sourceRelative = path.relative(parsed.from, source.sourceFile);
@@ -560,7 +779,7 @@ async function runPush(parsed) {
     sha256: hashSha256(sourceBuffer)
   };
 
-  const envelope = encryptSessionBuffer(sourceBuffer, metadata, passphrase);
+  const envelope = await encryptSessionBuffer(sourceBuffer, metadata, recipients);
   const artifactRelPath = joinPortable([datePath, `${source.sessionId}.kfcsess`]);
   const artifactPath = path.join(parsed.to, ...artifactRelPath.split("/"));
 
@@ -578,6 +797,8 @@ async function runPush(parsed) {
     session_id: source.sessionId,
     date_path: datePath,
     artifact_relpath: artifactRelPath,
+    envelope_format: ENVELOPE_FORMAT,
+    recipient_count: recipients.length,
     sha256: metadata.sha256,
     bytes: metadata.bytes,
     updated_at: new Date().toISOString()
@@ -586,6 +807,7 @@ async function runPush(parsed) {
 
   info(`Pushed encrypted session: ${source.sessionId}`);
   info(`Selection: ${source.reason}`);
+  info(`Recipients: ${recipients.length}`);
   info(`Artifact: ${artifactPath}`);
   info(`Index: ${resolveIndexPath(parsed.to)}`);
 }
@@ -612,7 +834,6 @@ async function runPull(parsed) {
     throw new Error("`kfc session pull` does not support --date. Use --id or latest indexed session.");
   }
 
-  const passphrase = requireSyncPassphrase();
   await assertDirectoryExists(parsed.from, "Transfer sessions root");
   const index = await readSessionIndex(parsed.from);
   const entry = selectIndexEntry(index, parsed.id);
@@ -636,7 +857,7 @@ async function runPull(parsed) {
     throw new Error(`Invalid encrypted artifact JSON: ${artifactPath}`);
   }
 
-  const decrypted = decryptSessionEnvelope(envelope, passphrase);
+  const decrypted = await decryptSessionEnvelope(envelope, parsed);
   const metadata = decrypted.metadata || {};
   const sessionId = String(metadata.session_id || entry.session_id || parsed.id || "").trim();
   if (!sessionId) {
@@ -673,6 +894,134 @@ async function runPull(parsed) {
   info(`Destination: ${destinationPath}`);
 }
 
+async function runKeyGen(parsed) {
+  await ensureAgeTool("age-keygen", ["--help"]);
+  const keyPath = parsed.key || DEFAULT_SESSION_KEY_PATH;
+  const keyExists = await pathExists(keyPath);
+  if (keyExists && !parsed.overwrite) {
+    throw new Error(`Key already exists: ${keyPath}. Use --overwrite to replace it.`);
+  }
+
+  await fs.mkdir(path.dirname(keyPath), { recursive: true });
+  const result = await runProcessCapture("age-keygen", ["-o", keyPath]);
+  if (result.code !== 0) {
+    throw new Error(`age-keygen failed: ${(result.stderr || result.stdout || "<empty>").trim()}`);
+  }
+
+  let publicKey = extractPublicKey(`${result.stdout}\n${result.stderr}`);
+  if (!publicKey) {
+    publicKey = await getPublicKeyFromPrivateKey(keyPath);
+  }
+  publicKey = assertAgeRecipient(publicKey, "generated public key");
+
+  const deviceName = String(parsed.name || os.hostname() || "current-device").trim();
+  const trust = await readTrustedRecipients(parsed);
+  trust.data.devices = upsertTrustedRecipient(trust.data.devices, publicKey, deviceName);
+  await writeTrustedRecipients(trust.path, trust.data);
+
+  info(`Generated age key: ${keyPath}`);
+  info(`Public key: ${publicKey}`);
+  info(`Trusted recipients updated: ${trust.path}`);
+}
+
+async function runKeyShow(parsed) {
+  await ensureAgeTool("age-keygen", ["--help"]);
+  const keyPath = parsed.key || DEFAULT_SESSION_KEY_PATH;
+  if (!(await pathExists(keyPath))) {
+    throw new Error(`Missing key file: ${keyPath}. Run \`kfc session key gen --name <device>\`.`);
+  }
+  const publicKey = await getPublicKeyFromPrivateKey(keyPath);
+  const trust = await readTrustedRecipients(parsed);
+  const trusted = trust.data.devices.some((item) => normalizeRecipient(item?.recipient) === publicKey);
+
+  info(`Key: ${keyPath}`);
+  info(`Public key: ${publicKey}`);
+  info(`Trust store: ${trust.path}`);
+  info(`Trusted locally: ${trusted ? "yes" : "no"}`);
+}
+
+function runKeyWhere(parsed) {
+  info(`Key: ${parsed.key || DEFAULT_SESSION_KEY_PATH}`);
+  info(`Trust store: ${resolveTrustStorePath(parsed)}`);
+}
+
+async function runKey(parsed) {
+  const action = String(parsed.action || "show").trim().toLowerCase();
+  if (["gen", "generate"].includes(action)) {
+    await runKeyGen(parsed);
+    return;
+  }
+  if (["show", "public"].includes(action)) {
+    await runKeyShow(parsed);
+    return;
+  }
+  if (["where", "path"].includes(action)) {
+    runKeyWhere(parsed);
+    return;
+  }
+  throw new Error(`Unknown key action: ${action}. Use gen|show|where.`);
+}
+
+async function runTrustList(parsed) {
+  const trust = await readTrustedRecipients(parsed);
+  info(`Trust store: ${trust.path}`);
+  if (!trust.data.devices.length) {
+    info("No trusted recipients configured.");
+    return;
+  }
+  trust.data.devices.forEach((item, index) => {
+    info(`${index + 1}. ${String(item?.name || "device")} -> ${String(item?.recipient || "")}`);
+  });
+}
+
+async function runTrustAdd(parsed) {
+  const recipient = parsed.pubkey || parsed.recipients[0];
+  if (!recipient) {
+    throw new Error("Missing --pubkey for `kfc session trust add`.");
+  }
+  const safeRecipient = assertAgeRecipient(recipient, "pubkey");
+  const name = String(parsed.name || "trusted-device").trim();
+  const trust = await readTrustedRecipients(parsed);
+  trust.data.devices = upsertTrustedRecipient(trust.data.devices, safeRecipient, name);
+  await writeTrustedRecipients(trust.path, trust.data);
+  info(`Trusted recipient saved: ${name} -> ${safeRecipient}`);
+  info(`Trust store: ${trust.path}`);
+}
+
+async function runTrustRemove(parsed) {
+  const trust = await readTrustedRecipients(parsed);
+  const before = trust.data.devices.length;
+  trust.data.devices = removeTrustedRecipient(trust.data.devices, parsed.pubkey || parsed.recipients[0], parsed.name);
+  const removed = before - trust.data.devices.length;
+  if (removed <= 0) {
+    throw new Error("No trusted recipient matched. Provide an existing --pubkey or --name.");
+  }
+  await writeTrustedRecipients(trust.path, trust.data);
+  info(`Removed trusted recipient(s): ${removed}`);
+  info(`Trust store: ${trust.path}`);
+}
+
+async function runTrust(parsed) {
+  const action = String(parsed.action || "list").trim().toLowerCase();
+  if (action === "list") {
+    await runTrustList(parsed);
+    return;
+  }
+  if (action === "add") {
+    await runTrustAdd(parsed);
+    return;
+  }
+  if (["remove", "rm", "delete"].includes(action)) {
+    await runTrustRemove(parsed);
+    return;
+  }
+  if (["where", "path"].includes(action)) {
+    info(resolveTrustStorePath(parsed));
+    return;
+  }
+  throw new Error(`Unknown trust action: ${action}. Use list|add|remove|where.`);
+}
+
 export async function runSession(options) {
   let parsed;
   try {
@@ -706,6 +1055,26 @@ export async function runSession(options) {
   if (parsed.subcommand === "copy") {
     try {
       await runCopy(parsed);
+      return 0;
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
+  }
+
+  if (parsed.subcommand === "key") {
+    try {
+      await runKey(parsed);
+      return 0;
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
+  }
+
+  if (parsed.subcommand === "trust") {
+    try {
+      await runTrust(parsed);
       return 0;
     } catch (err) {
       error(err instanceof Error ? err.message : String(err));
