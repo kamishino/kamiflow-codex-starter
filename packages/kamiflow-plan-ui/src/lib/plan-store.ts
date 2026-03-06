@@ -6,6 +6,12 @@ import { resolveDonePlansDir, resolvePlansDir } from "./paths.js";
 import { resolveDiagramMode } from "./diagram-mode.js";
 import type { ParsedPlan, PlanRecord, PlanSummary } from "../types.js";
 
+interface PlanLoadOptions {
+  includeDone?: boolean;
+  plansDir?: string;
+  donePlansDir?: string;
+}
+
 function toSummary(parsed: ParsedPlan, errors: string[], archivedAt?: string): PlanSummary {
   const normalizedPath = path.normalize(parsed.filePath);
   const archivedMarker = `${path.sep}done${path.sep}`;
@@ -48,13 +54,14 @@ async function listMarkdownFiles(plansDir) {
     .map((entry) => path.join(plansDir, entry.name));
 }
 
-export async function loadPlans(projectDir, options?: { includeDone?: boolean }) {
+export async function loadPlans(projectDir, options?: PlanLoadOptions) {
   const includeDone = options?.includeDone ?? false;
-  const plansDir = resolvePlansDir(projectDir);
+  const plansDir = path.resolve(options?.plansDir || resolvePlansDir(projectDir));
+  const donePlansDir = path.resolve(options?.donePlansDir || resolveDonePlansDir(projectDir));
   const files = await listMarkdownFiles(plansDir);
   let allFiles = files;
   if (includeDone) {
-    const doneFiles = await listMarkdownFiles(resolveDonePlansDir(projectDir));
+    const doneFiles = await listMarkdownFiles(donePlansDir);
     allFiles = [...files, ...doneFiles];
   }
   const plans: PlanRecord[] = [];
@@ -126,12 +133,12 @@ export async function loadPlans(projectDir, options?: { includeDone?: boolean })
   return plans;
 }
 
-export async function loadPlanById(projectDir, planId, options?: { includeDone?: boolean }) {
+export async function loadPlanById(projectDir, planId, options?: PlanLoadOptions) {
   const plans = await loadPlans(projectDir, options);
   return plans.find((item) => item.summary.plan_id === planId) ?? null;
 }
 
-export async function loadPlanByFilePath(projectDir, filePath, options?: { includeDone?: boolean }) {
+export async function loadPlanByFilePath(projectDir, filePath, options?: PlanLoadOptions) {
   const plans = await loadPlans(projectDir, options);
   const normalizedPath = path.resolve(filePath);
   return plans.find((item) => path.resolve(item.summary.file_path) === normalizedPath) ?? null;

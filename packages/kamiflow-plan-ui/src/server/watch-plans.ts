@@ -2,8 +2,8 @@ import chokidar from "chokidar";
 import path from "node:path";
 import { resolvePlansDir } from "../lib/paths.js";
 
-export function watchPlans(projectDir, onEvent) {
-  const plansDir = resolvePlansDir(projectDir);
+export function watchPlans(projectDir, onEvent, options?: { plansDir?: string }) {
+  const plansDir = options?.plansDir ? path.resolve(options.plansDir) : resolvePlansDir(projectDir);
   const glob = path.join(plansDir, "**/*.md").replace(/\\/g, "/");
 
   const watcher = chokidar.watch(glob, {

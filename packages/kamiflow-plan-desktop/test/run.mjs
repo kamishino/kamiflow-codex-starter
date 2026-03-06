@@ -5,11 +5,14 @@ import path from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import {
   DESKTOP_STATE_DEFAULTS,
+  deriveRootFromPlansDir,
   extractHashFromUrl,
   normalizeWindowBounds,
   readDesktopState,
+  sanitizeDesktopTarget,
   sanitizeDesktopState,
   sanitizeHashRoute,
+  withRecentTarget,
   writeDesktopState
 } from "../src/state-store.js";
 
@@ -72,8 +75,51 @@ await runCase("sanitize desktop state fallback", async () => {
   const next = sanitizeDesktopState(null);
   assert.deepEqual(next, {
     lastHash: "#/",
-    windowBounds: {}
+    windowBounds: {},
+    activeTarget: null,
+    recentTargets: []
   });
+});
+
+await runCase("sanitize desktop target variants", async () => {
+  const rootTarget = sanitizeDesktopTarget({
+    mode: "root",
+    rootDir: "."
+  });
+  assert.equal(rootTarget.mode, DESKTOP_STATE_DEFAULTS.TARGET_MODE_ROOT);
+  assert.equal(typeof rootTarget.rootDir, "string");
+
+  const plansTarget = sanitizeDesktopTarget({
+    mode: "plans_dir",
+    plansDir: ".local/plans"
+  });
+  assert.equal(plansTarget.mode, DESKTOP_STATE_DEFAULTS.TARGET_MODE_PLANS_DIR);
+  assert.equal(typeof plansTarget.plansDir, "string");
+  assert.equal(typeof plansTarget.rootDir, "string");
+
+  const invalid = sanitizeDesktopTarget({
+    mode: "plans_dir"
+  });
+  assert.equal(invalid, null);
+});
+
+await runCase("derive root from plans dir", async () => {
+  const fromStandard = deriveRootFromPlansDir(path.join("D:/work/repo", ".local", "plans"));
+  assert.equal(fromStandard, path.resolve("D:/work/repo"));
+
+  const fromCustom = deriveRootFromPlansDir(path.join("D:/shared", "plans-store"));
+  assert.equal(fromCustom, path.resolve("D:/shared"));
+});
+
+await runCase("recent targets keep latest unique items", async () => {
+  let state = sanitizeDesktopState({});
+  state = withRecentTarget(state, { mode: "root", rootDir: "D:/repo-a" });
+  state = withRecentTarget(state, { mode: "root", rootDir: "D:/repo-b" });
+  state = withRecentTarget(state, { mode: "root", rootDir: "D:/repo-a" });
+  assert.equal(state.recentTargets.length, 2);
+  assert.equal(state.recentTargets[0].rootDir, path.resolve("D:/repo-a"));
+  assert.equal(state.recentTargets[1].rootDir, path.resolve("D:/repo-b"));
+  assert.equal(state.activeTarget.rootDir, path.resolve("D:/repo-a"));
 });
 
 if (!process.exitCode) {

@@ -1,12 +1,26 @@
 import path from "node:path";
+import fs from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { app, BrowserWindow } from "electron";
-import { extractHashFromUrl, readDesktopState, sanitizeHashRoute, writeDesktopState } from "./state-store.js";
+import { app, BrowserWindow, Menu, dialog } from "electron";
+import {
+  DESKTOP_STATE_DEFAULTS,
+  deriveRootFromPlansDir,
+  extractHashFromUrl,
+  readDesktopState,
+  sanitizeDesktopState,
+  sanitizeDesktopTarget,
+  sanitizeHashRoute,
+  withRecentTarget,
+  writeDesktopState
+} from "./state-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const KFP_CREATE_SERVER_MODULE = path.resolve(__dirname, "../../kamiflow-plan-ui/dist/server/create-server.js");
 const DESKTOP_STATE_FILENAME = "kfp-desktop-state.json";
+const LAUNCH_CWD = path.resolve(process.cwd());
+const TARGET_MODE_ROOT = DESKTOP_STATE_DEFAULTS.TARGET_MODE_ROOT;
+const TARGET_MODE_PLANS_DIR = DESKTOP_STATE_DEFAULTS.TARGET_MODE_PLANS_DIR;
 const WINDOW_DEFAULTS = {
   width: 1440,
   height: 920,
@@ -21,13 +35,149 @@ const WINDOW_DEFAULTS = {
   }
 };
 
-const projectDir = path.resolve(process.env.KFP_PROJECT_DIR || process.cwd());
-
 let mainWindow = null;
 let kfpServer = null;
 let appUrl = "";
-let persistedState = { lastHash: "#/", windowBounds: {} };
+let persistedState = sanitizeDesktopState({});
+let activeTarget = null;
 let isQuitting = false;
+const externalNoticeSeen = new Set();
+
+function parseArgValue(flag) {
+  const idx = process.argv.indexOf(flag);
+  if (idx === -1) {
+    return "";
+  }
+  const value = process.argv[idx + 1];
+  if (!value || String(value).startsWith("--")) {
+    return "";
+  }
+  return String(value).trim();
+}
+
+function resolveTargetFromRuntimeInput() {
+  const argProject = parseArgValue("--project");
+  const argPlansDir = parseArgValue("--plans-dir");
+  const envProject = String(process.env.KFP_PROJECT_DIR || "").trim();
+  const envPlansDir = String(process.env.KFP_PLANS_DIR || "").trim();
+
+  const plansDir = argPlansDir || envPlansDir;
+  if (plansDir) {
+    const rootDir = argProject || envProject || deriveRootFromPlansDir(plansDir);
+    return sanitizeDesktopTarget({
+      mode: TARGET_MODE_PLANS_DIR,
+      rootDir,
+      plansDir
+    });
+  }
+
+  const projectDir = argProject || envProject;
+  if (projectDir) {
+    return sanitizeDesktopTarget({
+      mode: TARGET_MODE_ROOT,
+      rootDir: projectDir
+    });
+  }
+
+  return null;
+}
+
+async function isDirectory(dirPath) {
+  try {
+    const stat = await fs.stat(dirPath);
+    return stat.isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+function describeTarget(target) {
+  if (!target) {
+    return "(none)";
+  }
+  if (target.mode === TARGET_MODE_PLANS_DIR) {
+    return `plans: ${target.plansDir}`;
+  }
+  return `root: ${target.rootDir}`;
+}
+
+async function validateTarget(target) {
+  const normalized = sanitizeDesktopTarget(target);
+  if (!normalized) {
+    return { ok: false, message: "Invalid folder selection." };
+  }
+
+  if (normalized.mode === TARGET_MODE_PLANS_DIR) {
+    const ok = await isDirectory(normalized.plansDir);
+    if (!ok) {
+      return {
+        ok: false,
+        message: `The selected plans directory does not exist:\n${normalized.plansDir}`
+      };
+    }
+    return { ok: true, message: "" };
+  }
+
+  const plansDir = path.join(normalized.rootDir, ".local", "plans");
+  const ok = await isDirectory(plansDir);
+  if (!ok) {
+    return {
+      ok: false,
+      message: `This folder does not contain .local/plans:\n${normalized.rootDir}\n\nPlease choose your project root (or use Open Plans Directory in Advanced mode).`
+    };
+  }
+  return { ok: true, message: "" };
+}
+
+function buildServerOptionsForTarget(target) {
+  if (target.mode === TARGET_MODE_PLANS_DIR) {
+    return {
+      projectDir: target.rootDir || deriveRootFromPlansDir(target.plansDir),
+      plansDir: target.plansDir,
+      donePlansDir: path.join(target.plansDir, "done")
+    };
+  }
+  return {
+    projectDir: target.rootDir
+  };
+}
+
+function isWithin(baseDir, candidateDir) {
+  const base = path.resolve(baseDir);
+  const candidate = path.resolve(candidateDir);
+  if (base.toLowerCase() === candidate.toLowerCase()) {
+    return true;
+  }
+  const relative = path.relative(base, candidate);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+function isExternalTarget(target) {
+  if (!target) {
+    return false;
+  }
+  const candidate = target.mode === TARGET_MODE_PLANS_DIR ? target.plansDir : target.rootDir;
+  return !isWithin(LAUNCH_CWD, candidate);
+}
+
+async function notifyExternalTarget(target) {
+  if (!target || !isExternalTarget(target)) {
+    return;
+  }
+  const key = describeTarget(target).toLowerCase();
+  if (externalNoticeSeen.has(key)) {
+    return;
+  }
+  externalNoticeSeen.add(key);
+  await dialog.showMessageBox({
+    type: "info",
+    buttons: ["OK"],
+    defaultId: 0,
+    title: "External Folder",
+    message: "You are viewing plans from a folder outside the current project.",
+    detail: "This is useful for shared/cross-machine plan storage. Continue only if this is your intended source."
+  });
+}
 
 async function resolveCreateServer() {
   const candidates = [
@@ -47,10 +197,13 @@ async function resolveCreateServer() {
   throw new Error("Cannot load KFP server module. Run `npm run -w @kamishino/kamiflow-plan-ui build` first.");
 }
 
-async function startEmbeddedServer() {
+async function startEmbeddedServer(target) {
   const createServer = await resolveCreateServer();
+  const runtime = buildServerOptionsForTarget(target);
   kfpServer = await createServer({
-    projectDir,
+    projectDir: runtime.projectDir,
+    plansDir: runtime.plansDir,
+    donePlansDir: runtime.donePlansDir,
     withWatcher: true,
     uiMode: "observer"
   });
@@ -90,6 +243,7 @@ function restoredWindowOptions() {
 }
 
 async function persistCurrentState() {
+  persistedState = sanitizeDesktopState(persistedState);
   if (mainWindow && !mainWindow.isDestroyed()) {
     const bounds = mainWindow.getBounds();
     const currentUrl = mainWindow.webContents.getURL();
@@ -107,9 +261,185 @@ async function persistCurrentState() {
   await writeDesktopState(stateFilePath(), persistedState);
 }
 
+async function pickTarget(mode) {
+  const title =
+    mode === TARGET_MODE_PLANS_DIR ? "Select Plans Directory (.local/plans)" : "Select Project Root (must contain .local/plans)";
+  const response = await dialog.showOpenDialog({
+    title,
+    properties: ["openDirectory", "dontAddToRecent"]
+  });
+  if (response.canceled || !response.filePaths?.[0]) {
+    return null;
+  }
+  const selected = response.filePaths[0];
+  if (mode === TARGET_MODE_PLANS_DIR) {
+    return sanitizeDesktopTarget({
+      mode: TARGET_MODE_PLANS_DIR,
+      plansDir: selected,
+      rootDir: deriveRootFromPlansDir(selected)
+    });
+  }
+  return sanitizeDesktopTarget({
+    mode: TARGET_MODE_ROOT,
+    rootDir: selected
+  });
+}
+
+async function requestValidTarget(mode, initialWarning = "") {
+  let warning = initialWarning;
+  while (true) {
+    if (warning) {
+      await dialog.showMessageBox({
+        type: "warning",
+        buttons: ["Choose Folder"],
+        defaultId: 0,
+        title: "Folder Check",
+        message: warning
+      });
+    }
+    const selected = await pickTarget(mode);
+    if (!selected) {
+      return null;
+    }
+    const validation = await validateTarget(selected);
+    if (validation.ok) {
+      return selected;
+    }
+    warning = validation.message || "Selected folder is not valid for KFP.";
+  }
+}
+
+async function resolveInitialTarget() {
+  const fromRuntime = resolveTargetFromRuntimeInput();
+  if (fromRuntime) {
+    const runtimeValidation = await validateTarget(fromRuntime);
+    if (runtimeValidation.ok) {
+      return fromRuntime;
+    }
+  }
+
+  const fromState = sanitizeDesktopTarget(persistedState.activeTarget);
+  if (fromState) {
+    const stateValidation = await validateTarget(fromState);
+    if (stateValidation.ok) {
+      return fromState;
+    }
+  }
+
+  return await requestValidTarget(
+    TARGET_MODE_ROOT,
+    "KFP Desktop needs your project root folder (must contain .local/plans)."
+  );
+}
+
+function buildRecentMenuItems() {
+  const recents = Array.isArray(persistedState.recentTargets) ? persistedState.recentTargets : [];
+  if (recents.length === 0) {
+    return [{ label: "No recent locations", enabled: false }];
+  }
+  return recents.map((target, index) => {
+    const label = target.mode === TARGET_MODE_PLANS_DIR ? `Plans: ${target.plansDir}` : `Root: ${target.rootDir}`;
+    return {
+      label: `${index + 1}. ${label}`,
+      click: () => {
+        void safeApplyTarget(target);
+      }
+    };
+  });
+}
+
+function refreshMenu() {
+  const template = [
+    {
+      label: "File",
+      submenu: [
+        {
+          label: "Open Project Root...",
+          click: () => {
+            void chooseAndApplyTarget(TARGET_MODE_ROOT);
+          }
+        },
+        {
+          label: "Open Plans Directory (Advanced)...",
+          click: () => {
+            void chooseAndApplyTarget(TARGET_MODE_PLANS_DIR);
+          }
+        },
+        { type: "separator" },
+        {
+          label: "Recent Locations",
+          submenu: buildRecentMenuItems()
+        },
+        { type: "separator" },
+        { role: "quit" }
+      ]
+    }
+  ];
+  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+}
+
+async function chooseAndApplyTarget(mode) {
+  const target = await requestValidTarget(mode);
+  if (!target) {
+    return;
+  }
+  await safeApplyTarget(target);
+}
+
+async function safeApplyTarget(target) {
+  try {
+    await applyTarget(target, { showExternalNotice: true });
+  } catch (err) {
+    await dialog.showMessageBox({
+      type: "error",
+      buttons: ["OK"],
+      defaultId: 0,
+      title: "Unable to Switch Folder",
+      message: err instanceof Error ? err.message : String(err)
+    });
+  }
+}
+
+async function applyTarget(target, options = {}) {
+  const showExternalNotice = options.showExternalNotice !== false;
+  const normalized = sanitizeDesktopTarget(target);
+  if (!normalized) {
+    throw new Error("Invalid target.");
+  }
+  const validation = await validateTarget(normalized);
+  if (!validation.ok) {
+    throw new Error(validation.message || "Invalid target.");
+  }
+
+  const activeHash =
+    mainWindow && !mainWindow.isDestroyed() ? extractHashFromUrl(mainWindow.webContents.getURL()) : persistedState.lastHash;
+  const hash = sanitizeHashRoute(activeHash);
+
+  persistedState = withRecentTarget(persistedState, normalized);
+  persistedState.lastHash = hash;
+  activeTarget = normalized;
+
+  await stopEmbeddedServer();
+  await startEmbeddedServer(normalized);
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    await mainWindow.loadURL(`${appUrl}${hash}`);
+    mainWindow.show();
+  }
+
+  refreshMenu();
+  await persistCurrentState();
+  if (showExternalNotice) {
+    await notifyExternalTarget(normalized);
+  }
+}
+
 async function createMainWindow() {
   if (!appUrl) {
-    await startEmbeddedServer();
+    if (!activeTarget) {
+      return;
+    }
+    await startEmbeddedServer(activeTarget);
   }
 
   mainWindow = new BrowserWindow(restoredWindowOptions());
@@ -140,8 +470,16 @@ async function createMainWindow() {
 
 async function bootstrap() {
   persistedState = await readDesktopState(stateFilePath());
-  await startEmbeddedServer();
+  activeTarget = await resolveInitialTarget();
+  if (!activeTarget) {
+    app.quit();
+    return;
+  }
+  persistedState = withRecentTarget(persistedState, activeTarget);
+  refreshMenu();
+  await startEmbeddedServer(activeTarget);
   await createMainWindow();
+  await notifyExternalTarget(activeTarget);
 }
 
 const gotLock = app.requestSingleInstanceLock();

@@ -161,6 +161,13 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     }
   }
 
+  function planLoadOptions(project: any) {
+    return {
+      plansDir: project?.project_plans_dir || undefined,
+      donePlansDir: project?.project_done_plans_dir || undefined
+    };
+  }
+
   async function completePlan(projectId: string, planId: string) {
     const project = getProject(projectId);
     if (!project) {
@@ -169,7 +176,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
         payload: { error: "Project not found", error_code: "PROJECT_NOT_FOUND", project_id: projectId }
       };
     }
-    const existing = await loadPlanById(project.project_dir, planId);
+    const existing = await loadPlanById(project.project_dir, planId, planLoadOptions(project));
     if (!existing) {
       return {
         statusCode: 404,
@@ -199,8 +206,13 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       };
     }
 
-    const archivedPath = await archivePlanFile(project.project_dir, existing.summary.file_path);
-    const updated = await loadPlanById(project.project_dir, planId, { includeDone: true });
+    const archivedPath = await archivePlanFile(project.project_dir, existing.summary.file_path, {
+      doneDir: project.project_done_plans_dir
+    });
+    const updated = await loadPlanById(project.project_dir, planId, {
+      includeDone: true,
+      ...planLoadOptions(project)
+    });
     await broadcastPlanEvent(projectId, planId, "plan_updated");
     stream.publish(
       "plan_archived",
@@ -265,7 +277,10 @@ export function registerApiRoutes(fastify: any, deps: any): void {
         payload: { error: "Project not found", error_code: "PROJECT_NOT_FOUND", project_id: projectId }
       };
     }
-    const existing = await loadPlanById(project.project_dir, planId, { includeDone: true });
+    const existing = await loadPlanById(project.project_dir, planId, {
+      includeDone: true,
+      ...planLoadOptions(project)
+    });
     if (!existing) {
       return {
         statusCode: 404,
@@ -447,7 +462,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     const query = request.query as { include_done?: string };
     const includeDone = query?.include_done === "true";
     const project = getProject(defaultProjectId)!;
-    const plans = await loadPlans(project.project_dir, { includeDone });
+    const plans = await loadPlans(project.project_dir, { includeDone, ...planLoadOptions(project) });
     return {
       plans: plans.map((item) => withProjectSummary(defaultProjectId, item).summary)
     };
@@ -458,7 +473,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     const query = request.query as { include_done?: string };
     const includeDone = query?.include_done === "true";
     const project = getProject(defaultProjectId)!;
-    const plan = await loadPlanById(project.project_dir, id, { includeDone });
+    const plan = await loadPlanById(project.project_dir, id, { includeDone, ...planLoadOptions(project) });
     if (!plan) {
       reply.code(404);
       return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: id };
@@ -632,7 +647,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     }
     const query = request.query as { include_done?: string };
     const includeDone = query?.include_done === "true";
-    const plans = await loadPlans(project.project_dir, { includeDone });
+    const plans = await loadPlans(project.project_dir, { includeDone, ...planLoadOptions(project) });
     return {
       plans: plans.map((item) => withProjectSummary(project_id, item).summary)
     };
@@ -647,7 +662,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     }
     const query = request.query as { include_done?: string };
     const includeDone = query?.include_done === "true";
-    const plan = await loadPlanById(project.project_dir, id, { includeDone });
+    const plan = await loadPlanById(project.project_dir, id, { includeDone, ...planLoadOptions(project) });
     if (!plan) {
       reply.code(404);
       return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: id };

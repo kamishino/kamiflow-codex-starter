@@ -2,8 +2,12 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { resolveDonePlansDir } from "./paths.js";
 
-export async function archivePlanFile(projectDir: string, sourceFilePath: string): Promise<string> {
-  const doneDir = resolveDonePlansDir(projectDir);
+export async function archivePlanFile(
+  projectDir: string,
+  sourceFilePath: string,
+  options?: { doneDir?: string }
+): Promise<string> {
+  const doneDir = options?.doneDir ? path.resolve(options.doneDir) : resolveDonePlansDir(projectDir);
   await fs.mkdir(doneDir, { recursive: true });
 
   const parsed = path.parse(sourceFilePath);

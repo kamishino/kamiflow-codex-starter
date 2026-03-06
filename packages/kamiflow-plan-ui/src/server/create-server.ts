@@ -27,6 +27,8 @@ import type { ParsedPlan, PlanRecord } from "../types.js";
 interface ProjectContext {
   project_id: string;
   project_dir: string;
+  project_plans_dir?: string;
+  project_done_plans_dir?: string;
 }
 
 function scopeKey(projectId: string, planId: string) {
@@ -58,6 +60,8 @@ function normalizeProjects(options): ProjectContext[] {
     return options.projects.map((item) => {
       const project_id = String(item.project_id || "").trim();
       const project_dir = path.resolve(item.project_dir);
+      const project_plans_dir = item.project_plans_dir ? path.resolve(item.project_plans_dir) : undefined;
+      const project_done_plans_dir = item.project_done_plans_dir ? path.resolve(item.project_done_plans_dir) : undefined;
       if (!project_id) {
         throw new Error("Invalid project_id in projects.");
       }
@@ -65,10 +69,24 @@ function normalizeProjects(options): ProjectContext[] {
         throw new Error(`Duplicate project_id: ${project_id}`);
       }
       seen.add(project_id);
-      return { project_id, project_dir };
+      return { project_id, project_dir, project_plans_dir, project_done_plans_dir };
     });
   }
-  return [{ project_id: "default", project_dir: path.resolve(options.projectDir ?? process.cwd()) }];
+  return [
+    {
+      project_id: "default",
+      project_dir: path.resolve(options.projectDir ?? process.cwd()),
+      project_plans_dir: options.plansDir ? path.resolve(options.plansDir) : undefined,
+      project_done_plans_dir: options.donePlansDir ? path.resolve(options.donePlansDir) : undefined
+    }
+  ];
+}
+
+function planLoadOptions(project: ProjectContext) {
+  return {
+    plansDir: project.project_plans_dir,
+    donePlansDir: project.project_done_plans_dir
+  };
 }
 
 function checklistAllChecked(section: string | undefined): boolean {
@@ -110,7 +128,10 @@ export async function createServer(options) {
     if (!project) {
       return;
     }
-    const plan = await loadPlanById(project.project_dir, planId, { includeDone: true });
+    const plan = await loadPlanById(project.project_dir, planId, {
+      includeDone: true,
+      ...planLoadOptions(project)
+    });
     const payload = plan
       ? {
           event_type: type,
@@ -137,7 +158,7 @@ export async function createServer(options) {
       };
     }
 
-    const existing = await loadPlanById(project.project_dir, planId);
+    const existing = await loadPlanById(project.project_dir, planId, planLoadOptions(project));
     if (!existing) {
       return {
         statusCode: 404,
@@ -188,7 +209,10 @@ export async function createServer(options) {
     await fs.writeFile(existing.summary.file_path, markdown, "utf8");
     await broadcastPlanEvent(projectId, planId, "plan_updated");
 
-    const updated = await loadPlanById(project.project_dir, planId, { includeDone: true });
+    const updated = await loadPlanById(project.project_dir, planId, {
+      includeDone: true,
+      ...planLoadOptions(project)
+    });
     return {
       statusCode: 200,
       payload: {
@@ -230,22 +254,29 @@ export async function createServer(options) {
   const pendingRunlogs = new Map<string, { timer: NodeJS.Timeout }>();
   if (withWatcher) {
     for (const project of projectContexts) {
-      const watcher = watchPlans(project.project_dir, async ({ type, filePath }) => {
-        const existing = await loadPlanByFilePath(project.project_dir, filePath, { includeDone: true });
-        const fallbackPlanId = (filePath.split(/[\\/]/).pop() || "unknown").replace(/\.md$/i, "");
-        const planId = existing?.summary.plan_id ?? fallbackPlanId;
-        const eventType = existing && existing.errors.length > 0 ? "plan_invalid" : type;
-        const key = scopeKey(project.project_id, planId);
-        const existingPending = pending.get(key);
-        if (existingPending) {
-          clearTimeout(existingPending.timer);
-        }
-        const timer = setTimeout(async () => {
-          pending.delete(key);
-          await broadcastPlanEvent(project.project_id, planId, eventType);
-        }, 150);
-        pending.set(key, { timer });
-      });
+      const watcher = watchPlans(
+        project.project_dir,
+        async ({ type, filePath }) => {
+          const existing = await loadPlanByFilePath(project.project_dir, filePath, {
+            includeDone: true,
+            ...planLoadOptions(project)
+          });
+          const fallbackPlanId = (filePath.split(/[\\/]/).pop() || "unknown").replace(/\.md$/i, "");
+          const planId = existing?.summary.plan_id ?? fallbackPlanId;
+          const eventType = existing && existing.errors.length > 0 ? "plan_invalid" : type;
+          const key = scopeKey(project.project_id, planId);
+          const existingPending = pending.get(key);
+          if (existingPending) {
+            clearTimeout(existingPending.timer);
+          }
+          const timer = setTimeout(async () => {
+            pending.delete(key);
+            await broadcastPlanEvent(project.project_id, planId, eventType);
+          }, 150);
+          pending.set(key, { timer });
+        },
+        { plansDir: project.project_plans_dir }
+      );
       watchers.push(watcher);
 
       const runlogWatcher = watchRunlogs(project.project_dir, async ({ type, filePath }) => {
