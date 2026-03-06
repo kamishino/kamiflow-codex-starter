@@ -1107,10 +1107,10 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("Implementation Plan Status"));
     assert.ok(!indexResponse.payload.includes("Next Step"));
     assert.ok(!indexResponse.payload.includes("Plan Health"));
-    assert.ok(indexResponse.payload.includes("Activity Stream"));
+    assert.ok(indexResponse.payload.includes("Execution Timeline"));
     assert.ok(indexResponse.payload.includes("1. Now"));
     assert.ok(indexResponse.payload.includes("2. Plan Status"));
-    assert.ok(indexResponse.payload.includes("3. Activity"));
+    assert.ok(indexResponse.payload.includes("3. Timeline"));
 
     const appJsResponse = await server.inject({
       method: "GET",
@@ -1138,7 +1138,7 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("_ts="));
     assert.ok(appJsResponse.payload.includes("cache-control"));
     assert.ok(appJsResponse.payload.includes("Plan hot-reloaded from file changes."));
-    assert.ok(appJsResponse.payload.includes("Flow Snapshot"));
+    assert.ok(appJsResponse.payload.includes("Execution Timeline"));
     assert.ok(appJsResponse.payload.includes("Technical Solution Diagram"));
     assert.ok(appJsResponse.payload.includes("View Mermaid source"));
     assert.ok(appJsResponse.payload.includes("buildTechnicalSolutionDiagramModel"));
@@ -1146,16 +1146,13 @@ updated_at: 2026-03-01
     assert.ok(appJsResponse.payload.includes("svg-pan-zoom"));
     assert.ok(appJsResponse.payload.includes("Pan/Zoom"));
     assert.ok(appJsResponse.payload.includes("work-surface-stack"));
-    assert.ok(appJsResponse.payload.includes("Confidence "));
-    assert.ok(appJsResponse.payload.includes("Now"));
-    assert.ok(appJsResponse.payload.includes("Plan Status"));
-    assert.ok(appJsResponse.payload.includes("Activity"));
-    assert.ok(appJsResponse.payload.includes("Evidence"));
-    assert.ok(appJsResponse.payload.includes("Needs evidence"));
-    assert.ok(appJsResponse.payload.includes("Evidence ready"));
+    assert.ok(appJsResponse.payload.includes("Current Signal"));
+    assert.ok(appJsResponse.payload.includes("Debug Events"));
+    assert.ok(appJsResponse.payload.includes("No milestones yet."));
+    assert.ok(appJsResponse.payload.includes("Timeline will update from WIP Log entries in the plan file."));
     assert.ok(appJsResponse.payload.includes("Next step"));
-    assert.ok(appJsResponse.payload.includes("Success "));
-    assert.ok(appJsResponse.payload.includes("Fail "));
+    assert.ok(appJsResponse.payload.includes("Stage "));
+    assert.ok(appJsResponse.payload.includes("Next "));
     assert.ok(appJsResponse.payload.includes("normalizedStage === \"Done\""));
     assert.ok(appJsResponse.payload.includes("\"data-state\": state"));
 
@@ -1193,6 +1190,9 @@ updated_at: 2026-03-01
     assert.ok(stylesResponse.payload.includes(".activity-block-evidence-missing"));
     assert.ok(stylesResponse.payload.includes(".activity-evidence-state"));
     assert.ok(stylesResponse.payload.includes(".activity-confidence-chip"));
+    assert.ok(stylesResponse.payload.includes(".activity-timeline-list"));
+    assert.ok(stylesResponse.payload.includes(".activity-debug-details"));
+    assert.ok(stylesResponse.payload.includes(".activity-progress-strip"));
     assert.ok(stylesResponse.payload.includes(".journal-filter-group"));
     assert.ok(stylesResponse.payload.includes(".toolbar-field-selected"));
     assert.ok(stylesResponse.payload.includes("--space-4"));

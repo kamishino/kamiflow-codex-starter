@@ -72,11 +72,11 @@
       <section class="activity panel journal">
         <div class="journal-header">
           <div>
-            <p class="panel-kicker">3. Activity</p>
-            <h2>Activity Stream</h2>
+            <p class="panel-kicker">3. Timeline</p>
+            <h2>Execution Timeline</h2>
           </div>
           <div class="journal-filter-group">
-            <label for="activity-filter" class="journal-filter-label">Filter</label>
+            <label for="activity-filter" class="journal-filter-label">Debug Filter</label>
             <select id="activity-filter">
               <option value="all">All</option>
               <option value="plan">Plan</option>

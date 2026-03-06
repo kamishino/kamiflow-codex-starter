@@ -1015,7 +1015,7 @@ effect(() => {
 });
 
 effect(() => {
-  render(<ActivityJournal items={activityItems.value} filter={activityFilter.value} />, activityEl);
+  render(<ActivityJournal items={activityItems.value} filter={activityFilter.value} detail={detail.value} />, activityEl);
 });
 
 setConnectionState("disconnected");

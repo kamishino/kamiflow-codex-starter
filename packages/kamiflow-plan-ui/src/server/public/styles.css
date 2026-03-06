@@ -1301,6 +1301,11 @@ textarea {
   background: var(--surface-3);
 }
 
+.activity-overview-card-timeline {
+  border-color: var(--timeline-current-border);
+  background: var(--timeline-current-bg);
+}
+
 .activity-overview-head {
   display: flex;
   align-items: center;
@@ -1324,6 +1329,114 @@ textarea {
 .activity-overview-stack {
   display: grid;
   gap: var(--space-2);
+}
+
+.activity-progress-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.activity-progress-kv {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  padding: var(--space-2);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-progress-kv span {
+  font-size: var(--text-caption);
+  color: var(--text-3);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.activity-progress-kv strong {
+  font-size: var(--text-body);
+  color: var(--foreground);
+}
+
+.activity-timeline-list {
+  margin: var(--space-2) 0 0;
+  padding: var(--space-0);
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.activity-timeline-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.activity-timeline-node {
+  width: var(--space-6);
+  height: var(--space-6);
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-info);
+  background: var(--semantic-info-soft);
+  color: var(--semantic-info);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+
+.activity-timeline-content {
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-1);
+  padding: var(--space-2);
+}
+
+.activity-timeline-content p {
+  margin: var(--space-0);
+  color: var(--foreground);
+  font-size: var(--text-body);
+  line-height: var(--lh-normal);
+}
+
+.activity-timeline-empty {
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+  padding: var(--space-2);
+  background: var(--surface-1);
+  display: grid;
+  gap: var(--space-1);
+}
+
+.activity-debug-details {
+  margin-top: var(--space-1);
+}
+
+.activity-debug-details summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  cursor: pointer;
+  color: var(--semantic-info);
+  font-size: var(--text-caption);
+  font-weight: 700;
+}
+
+.activity-debug-list {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: var(--space-0);
+  display: grid;
+  gap: var(--space-2);
+}
+
+.activity-debug-empty {
+  margin: var(--space-2) 0 0;
+  color: var(--muted-foreground);
+  font-size: var(--text-caption);
 }
 
 .activity-block {
@@ -2077,6 +2190,10 @@ pre {
   #activity-filter {
     justify-self: start;
     text-align: left;
+  }
+
+  .activity-progress-strip {
+    grid-template-columns: 1fr;
   }
 
   .implementation-flow-diagram-wrap {
