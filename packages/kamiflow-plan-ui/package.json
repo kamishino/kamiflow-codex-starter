@@ -13,10 +13,14 @@
     "build:server": "tsc -p tsconfig.json",
     "build:client": "node scripts/build-client.mjs",
     "build": "npm run build:server && npm run build:client",
-    "kfp": "npm run build && node bin/kfp.js",
-    "start": "npm run kfp --",
-    "serve": "npm run kfp -- serve",
-    "test": "npm run build && node test/run.mjs"
+    "test": "npm run build && node test/run.mjs",
+    "verify": "npm run test",
+    "dev:cli": "npm run build && node bin/kfp.js",
+    "dev": "npm run dev:cli --",
+    "dev:serve": "npm run dev:cli -- serve",
+    "kfp": "npm run dev:cli --",
+    "start": "npm run dev --",
+    "serve": "npm run dev:serve"
   },
   "dependencies": {
     "@kamishino/kamiflow-codex": "file:../..",

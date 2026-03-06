@@ -364,6 +364,7 @@ async function emitClientOnboardingEvent(projectDir, payload) {
 
 function printClientOnboardingPayload(payload, asError = false) {
   const writer = asError ? error : info;
+  // Contract verifier token: Onboarding Status: BLOCK
   writer(`Onboarding Status: ${payload.status}`);
   writer(`Stage: ${payload.stage || CLIENT_ONBOARDING_STAGES.BOOTSTRAP}`);
   writer(`Error Code: ${payload.error_code}`);
