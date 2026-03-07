@@ -51,6 +51,8 @@ client options:
   kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check] [--no-launch-codex]
   kfc client doctor [--project <path>] [--fix]
   kfc client done [--project <path>]
+  kfc client update [--project <path>] [--from <git-url|folder|tgz>] [--apply] [--skip-serve-check]
+  kfc client upgrade [--project <path>] [--from <git-url|folder|tgz>] [--apply] [--skip-serve-check]
 
 session options:
   kfc session where

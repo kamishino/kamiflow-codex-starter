@@ -64,7 +64,7 @@ const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"])
 
 function usage() {
   info("Usage: kfc client [options]");
-  info("Usage: kfc client <bootstrap|doctor|done> [options]");
+  info("Usage: kfc client <bootstrap|doctor|done|update|upgrade> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
   info("Client kickoff prompt: ./node_modules/@kamishino/kamiflow-codex/resources/docs/CLIENT_KICKOFF_PROMPT.md");
@@ -78,7 +78,11 @@ function usage() {
   info("  kfc client bootstrap --project . --profile client --port 4310 --no-launch-codex");
   info("  kfc client doctor --project .");
   info("  kfc client doctor --project . --fix");
+  info("  kfc client update --project .");
+  info("  kfc client update --project . --apply");
+  info("  kfc client update --project . --from <git-url|folder|tgz> --apply");
   info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle and Codex auto-launch by default.");
+  info("Note: `kfc client update` defaults to preview; use --apply to execute the update and refresh flow.");
 }
 
 function parseMajorVersion(version) {
@@ -103,7 +107,9 @@ function parseArgs(baseCwd, args) {
     fix: false,
     skipServeCheck: false,
     noLaunchCodex: false,
-    goal: ""
+    goal: "",
+    apply: false,
+    from: ""
   };
 
   for (let i = 0; i < rest.length; i += 1) {
@@ -160,6 +166,19 @@ function parseArgs(baseCwd, args) {
       i += 1;
       continue;
     }
+    if (token === "--apply") {
+      parsed.apply = true;
+      continue;
+    }
+    if (token === "--from") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --from.");
+      }
+      parsed.from = String(value).trim();
+      i += 1;
+      continue;
+    }
     if (token === "--help" || token === "-h") {
       parsed.subcommand = "help";
       return parsed;
@@ -186,11 +205,22 @@ function runNodeNpm(args, cwd) {
   };
 }
 
+function runNodeNpmNoThrow(args, cwd) {
+  return runNodeNpm(args, cwd);
+}
+
 function quoteForCmd(arg) {
   if (!/[ \t"&<>|^]/.test(arg)) {
     return arg;
   }
   return `"${String(arg).replace(/"/g, "\"\"")}"`;
+}
+
+function shellEscapeLiteral(value) {
+  if (/^[a-zA-Z0-9_./:@+-]+$/.test(String(value || ""))) {
+    return String(value || "");
+  }
+  return `"${String(value || "").replace(/"/g, '\\"')}"`;
 }
 
 function checkCommandInPath(commandCandidates, args, label) {
@@ -757,6 +787,306 @@ function determineProfile(explicitProfile, configData) {
     return validateRulesProfile(fromConfig, "kamiflow.config.json");
   }
   return DEFAULT_RULES_PROFILE;
+}
+
+function loadProjectPackageJson(projectDir) {
+  const packageJsonPath = projectJsonPath(projectDir);
+  const raw = fs.readFileSync(packageJsonPath, "utf8");
+  return {
+    packageJsonPath,
+    data: JSON.parse(raw)
+  };
+}
+
+function dependencyReference(pkg, packageName) {
+  const buckets = ["dependencies", "devDependencies", "optionalDependencies", "peerDependencies"];
+  for (const bucket of buckets) {
+    const value = pkg?.[bucket]?.[packageName];
+    if (typeof value === "string" && value.trim().length > 0) {
+      return { bucket, spec: value.trim() };
+    }
+  }
+  return null;
+}
+
+function isGitSpec(spec) {
+  const value = String(spec || "").trim().toLowerCase();
+  return (
+    value.startsWith("git+") ||
+    value.startsWith("git://") ||
+    value.startsWith("github:") ||
+    value.startsWith("gitlab:") ||
+    value.startsWith("bitbucket:") ||
+    value.includes("github.com") ||
+    value.includes("gitlab.com") ||
+    value.includes("bitbucket.org") ||
+    value.endsWith(".git")
+  );
+}
+
+function isFileLikeSpec(spec) {
+  const value = String(spec || "").trim();
+  if (!value) {
+    return false;
+  }
+  const lower = value.toLowerCase();
+  if (lower.startsWith("file:")) {
+    return true;
+  }
+  if (lower.endsWith(".tgz") || lower.endsWith(".tar.gz")) {
+    return true;
+  }
+  if (value.startsWith(".") || value.startsWith("..") || path.isAbsolute(value)) {
+    return true;
+  }
+  return false;
+}
+
+function normalizeInstallSource(raw, projectDir) {
+  const value = String(raw || "").trim();
+  if (!value) {
+    return "";
+  }
+  if (value.startsWith("file:")) {
+    return value;
+  }
+  if (isGitSpec(value)) {
+    return value;
+  }
+  if (isFileLikeSpec(value)) {
+    const absolute = path.isAbsolute(value) ? value : path.resolve(projectDir, value);
+    const relative = path.relative(projectDir, absolute).replace(/\\/g, "/");
+    const normalizedRelative = relative.startsWith(".") ? relative : `./${relative}`;
+    return `file:${normalizedRelative}`;
+  }
+  return value;
+}
+
+async function detectClientInstallSource(projectDir) {
+  const packageName = loadPackageName();
+  const { packageJsonPath, data } = loadProjectPackageJson(projectDir);
+  const dependency = dependencyReference(data, packageName);
+  const installedPath = path.join(projectDir, "node_modules", packageName);
+
+  let installed = false;
+  let realPath = "";
+  let isSymlink = false;
+  try {
+    const stat = await fsp.lstat(installedPath);
+    installed = true;
+    isSymlink = stat.isSymbolicLink();
+    realPath = await fsp.realpath(installedPath);
+  } catch {
+    installed = false;
+  }
+
+  let sourceType = "registry_or_unknown";
+  if (isSymlink) {
+    sourceType = "link";
+  } else if (dependency?.spec && isGitSpec(dependency.spec)) {
+    sourceType = "git";
+  } else if (dependency?.spec && isFileLikeSpec(dependency.spec)) {
+    sourceType = "file_or_tarball";
+  }
+
+  let currentVersion = "";
+  if (installed) {
+    const installedPackageJson = path.join(installedPath, "package.json");
+    if (fs.existsSync(installedPackageJson)) {
+      try {
+        currentVersion = JSON.parse(await fsp.readFile(installedPackageJson, "utf8")).version || "";
+      } catch {
+        currentVersion = "";
+      }
+    }
+  }
+
+  return {
+    packageName,
+    packageJsonPath,
+    installed,
+    installedPath,
+    realPath,
+    isSymlink,
+    dependencyBucket: dependency?.bucket || "",
+    dependencySpec: dependency?.spec || "",
+    currentVersion,
+    sourceType
+  };
+}
+
+function buildUpdateManualRecovery(parsed, reason) {
+  if (parsed.from) {
+    return `kfc client update --project . --from ${parsed.from} --apply`;
+  }
+  if (reason === "link") {
+    return `npm link ${loadPackageName()} && kfc client update --project . --apply`;
+  }
+  return "kfc client --force --no-launch-codex";
+}
+
+function formatDependencyImpact(detection, nextSpec) {
+  if (detection.sourceType === "link") {
+    return "package.json unchanged";
+  }
+  if (!detection.dependencyBucket) {
+    return nextSpec ? "no saved dependency; apply uses one-off install" : "no saved dependency";
+  }
+  return nextSpec && nextSpec !== detection.dependencySpec
+    ? `${detection.dependencyBucket} will update from ${detection.dependencySpec || "<empty>"} to ${nextSpec}`
+    : `${detection.dependencyBucket} unchanged`;
+}
+
+function buildClientUpdatePlan(parsed, detection) {
+  const overrideSpec = parsed.from ? normalizeInstallSource(parsed.from, parsed.project) : "";
+  const targetSpec = overrideSpec || detection.dependencySpec || "";
+  const base = {
+    sourceType: detection.sourceType,
+    targetSpec,
+    action: "blocked",
+    summary: "",
+    dependencyImpact: formatDependencyImpact(detection, targetSpec),
+    mutateManifest: false,
+    requiresFrom: false
+  };
+
+  if (detection.sourceType === "link") {
+    return {
+      ...base,
+      action: "refresh",
+      summary: detection.realPath
+        ? `Linked install detected at ${detection.realPath}; apply will refresh client artifacts only.`
+        : "Linked install detected; apply will refresh client artifacts only."
+    };
+  }
+
+  if (detection.sourceType === "git") {
+    if (!targetSpec) {
+      return {
+        ...base,
+        action: "blocked",
+        summary: "Git install detected but no saved source spec is available.",
+        requiresFrom: true
+      };
+    }
+    return {
+      ...base,
+      action: "reinstall",
+      summary: `Git install detected; apply will reinstall from ${targetSpec}.`,
+      mutateManifest: Boolean(parsed.from && detection.dependencyBucket)
+    };
+  }
+
+  if (detection.sourceType === "file_or_tarball") {
+    if (!overrideSpec) {
+      return {
+        ...base,
+        action: "blocked",
+        summary: "File/tarball install detected; provide --from <folder|tgz> to upgrade.",
+        requiresFrom: true
+      };
+    }
+    return {
+      ...base,
+      action: "reinstall",
+      summary: `File/tarball override detected; apply will reinstall from ${overrideSpec}.`,
+      mutateManifest: Boolean(detection.dependencyBucket)
+    };
+  }
+
+  return {
+    ...base,
+    action: "blocked",
+    summary: "Unsupported install source. V1 supports link, git, and explicit file/tarball sources."
+  };
+}
+
+function printClientUpdatePreview(parsed, detection, plan) {
+  info("Update Status: PREVIEW");
+  info(`Source Type: ${plan.sourceType}`);
+  info(`Installed: ${detection.installed ? "yes" : "no"}`);
+  if (detection.currentVersion) {
+    info(`Current Version: ${detection.currentVersion}`);
+  }
+  if (detection.dependencySpec) {
+    info(`Current Source: ${detection.dependencySpec}`);
+  } else if (detection.realPath) {
+    info(`Current Source: ${detection.realPath}`);
+  }
+  info(`Action: ${plan.action}`);
+  info(`Summary: ${plan.summary}`);
+  info(`Dependency Impact: ${plan.dependencyImpact}`);
+  info("Aftercare: rebootstrap + verify without Codex auto-launch");
+  const applyParts = ["kfc client update", "--project", "."];
+  if (parsed.from) {
+    applyParts.push("--from", parsed.from);
+  }
+  applyParts.push("--apply");
+  info(`Apply Command: ${applyParts.map(shellEscapeLiteral).join(" ")}`);
+  if (plan.action === "blocked") {
+    info(`Recovery: ${buildUpdateManualRecovery(parsed, detection.sourceType === "link" ? "link" : "blocked")}`);
+  }
+}
+
+async function installClientPackageFromSpec(projectDir, spec, dependencyBucket) {
+  const packageName = loadPackageName();
+  const installSpec = isGitSpec(spec)
+    ? `${packageName}@${spec}`
+    : spec;
+  const args = ["install"];
+  if (!dependencyBucket) {
+    args.push("--no-save");
+  } else if (dependencyBucket === "devDependencies") {
+    args.push("-D");
+  } else if (dependencyBucket === "optionalDependencies") {
+    args.push("-O");
+  }
+  args.push(installSpec);
+  return runNodeNpmNoThrow(args, projectDir);
+}
+
+async function applyClientUpdate(parsed, detection, plan) {
+  if (plan.action === "blocked") {
+    error(`Update blocked: ${plan.summary}`);
+    info(`Recovery: ${buildUpdateManualRecovery(parsed, detection.sourceType === "link" ? "link" : "blocked")}`);
+    return 1;
+  }
+
+  info(`Source Type: ${plan.sourceType}`);
+  info(`Action: ${plan.action}`);
+
+  if (plan.action === "reinstall") {
+    const install = await installClientPackageFromSpec(parsed.project, plan.targetSpec, detection.dependencyBucket);
+    if (!install.ok) {
+      error(`Update install failed. stdout: ${install.stdout.trim() || "<empty>"} stderr: ${install.stderr.trim() || "<empty>"}`);
+      info(`Recovery: ${buildUpdateManualRecovery(parsed, "blocked")}`);
+      return 1;
+    }
+  }
+
+  const result = await runBootstrapWithSmartRecovery(
+    {
+      ...parsed,
+      force: true,
+      noLaunchCodex: true
+    },
+    {
+      printPass: false,
+      suppressSuccessHints: true
+    }
+  );
+  if (result.code !== 0) {
+    error("Update rebootstrap failed.");
+    info("Recovery: kfc client doctor --project . --fix");
+    return result.code;
+  }
+
+  info("Update Status: PASS");
+  info(`Source Type: ${plan.sourceType}`);
+  info(`Action: ${plan.action}`);
+  info("Aftercare: bootstrap + verify completed without Codex auto-launch.");
+  printClientDocsHints(parsed.project);
+  return 0;
 }
 
 async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
@@ -1395,6 +1725,18 @@ async function runClientDone(options) {
   return 0;
 }
 
+async function runClientUpdate(options) {
+  const detection = await detectClientInstallSource(options.project);
+  const plan = buildClientUpdatePlan(options, detection);
+
+  if (!options.apply) {
+    printClientUpdatePreview(options, detection, plan);
+    return 0;
+  }
+
+  return await applyClientUpdate(options, detection, plan);
+}
+
 export async function runClient(options) {
   const parsed = parseArgs(options.cwd, options.args);
 
@@ -1429,6 +1771,15 @@ export async function runClient(options) {
   if (parsed.subcommand === "done") {
     try {
       return await runClientDone(parsed);
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
+  }
+
+  if (parsed.subcommand === "update" || parsed.subcommand === "upgrade") {
+    try {
+      return await runClientUpdate(parsed);
     } catch (err) {
       error(err instanceof Error ? err.message : String(err));
       return 1;

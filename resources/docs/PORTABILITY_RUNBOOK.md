@@ -64,6 +64,11 @@ What one-command client setup verifies:
 - KFP health endpoint responds OK
 - Codex auto-launch is intentionally skipped in the smoke so portability checks stay deterministic
 
+When link mode is enabled, the smoke also verifies:
+
+- `kfc client update` preview works in the external repo
+- `kfc client update --apply` refreshes the linked client repo without auto-launching Codex
+
 ## Step 3 (Optional): Run Canonical Route Loop
 
 Use `kamiflow-core` command flow against the active plan file (reuse-first):

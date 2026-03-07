@@ -177,6 +177,46 @@ function verifyFileContainsStep(title, filePath, patterns, cwd) {
   };
 }
 
+function ensureProjectSeed(projectDir) {
+  if (fs.existsSync(projectDir)) {
+    if (!fs.statSync(projectDir).isDirectory()) {
+      throw new Error(`Project path exists but is not a directory: ${projectDir}`);
+    }
+    const packageJsonPath = path.join(projectDir, "package.json");
+    if (!fs.existsSync(packageJsonPath)) {
+      fs.writeFileSync(
+        packageJsonPath,
+        JSON.stringify(
+          {
+            name: path.basename(projectDir),
+            version: "0.0.0",
+            private: true
+          },
+          null,
+          2
+        ) + "\n",
+        "utf8"
+      );
+    }
+    return;
+  }
+
+  fs.mkdirSync(projectDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(projectDir, "package.json"),
+    JSON.stringify(
+      {
+        name: path.basename(projectDir),
+        version: "0.0.0",
+        private: true
+      },
+      null,
+      2
+    ) + "\n",
+    "utf8"
+  );
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -314,9 +354,7 @@ async function main() {
   }
 
   const projectDir = path.resolve(process.cwd(), args.project);
-  if (!fs.existsSync(projectDir) || !fs.statSync(projectDir).isDirectory()) {
-    throw new Error(`Project path does not exist or is not a directory: ${projectDir}`);
-  }
+  ensureProjectSeed(projectDir);
 
   const token = timestampToken();
   const defaultOut = path.join(
@@ -375,6 +413,38 @@ async function main() {
       )
     );
     if (steps.at(-1).ok) {
+      if (args.link) {
+        steps.push(
+          runStep(
+            "kfc client update preview",
+            NODE,
+            [NPM_CLI, "exec", "--no-install", "--", "kfc", "client", "update", "--project", "."],
+            projectDir
+          )
+        );
+        if (steps.at(-1).ok) {
+          steps.push(
+            runStep(
+              "kfc client update --apply",
+              NODE,
+              [
+                NPM_CLI,
+                "exec",
+                "--no-install",
+                "--",
+                "kfc",
+                "client",
+                "update",
+                "--project",
+                ".",
+                "--apply",
+                "--skip-serve-check"
+              ],
+              projectDir
+            )
+          );
+        }
+      }
       steps.push(
         verifyPathExistsStep(
           "verify project-local kamiflow-core skill",

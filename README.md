@@ -31,6 +31,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc flow ensure-plan|ready|apply|next`
 - `kfc client` (default client setup + Codex-ready handoff + one smart-recovery cycle)
 - `kfc client done` (cleanup)
+- `kfc client update|upgrade` (source-aware client-project refresh or reinstall + rebootstrap)
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
 - `kfc remote serve|stop|token` (mobile-first remote server for mirrored session + queued prompts)
@@ -117,6 +118,15 @@ After Codex finishes:
 ```bash
 kfc client done
 ```
+
+To refresh or upgrade KFC inside a client repo:
+
+```bash
+kfc client update --project .
+kfc client update --project . --apply
+```
+
+`update` is preview-first. `upgrade` is an alias.
 
 ## Copy Codex Sessions
 

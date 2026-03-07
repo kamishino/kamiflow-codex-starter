@@ -72,6 +72,33 @@ kfc client done
 
 During normal implementation turns, Codex should run check validations automatically and report `Check: PASS|BLOCK` before final response.
 
+## Update KFC In Client Project
+
+If the client project already has KFC installed, use the client-side update flow:
+
+```bash
+kfc client update --project .
+```
+
+This is preview-only by default. It reports:
+
+- detected install source (`link|git|file_or_tarball|unknown`)
+- whether `package.json` will change
+- exact apply command
+
+To execute the update:
+
+```bash
+kfc client update --project . --apply
+```
+
+Important behavior:
+
+- linked installs: refresh-only; no dependency rewrite
+- git installs: reinstall from saved spec or `--from`
+- file/tarball installs: require `--from <folder|tgz>` for apply
+- apply always reruns client refresh/verification without auto-launching Codex
+
 ## Copy Codex Sessions Between Machines
 
 ```bash
@@ -122,6 +149,7 @@ Recommended network model: private reachability such as Tailscale. See `resource
 - Missing project-local KFC skill: rerun `kfc client --force`.
 - Missing client lessons file: rerun `kfc client --force`.
 - Codex did not auto-launch: rerun the exact `Manual fallback:` command printed by KFC, or use `kfc client --force --no-launch-codex` if you want setup only.
+- `kfc client update` is blocked for file/tarball installs: rerun with `--from <folder|tgz> --apply`.
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
 - Flow behavior mismatch: run `kfc client doctor --project . --fix`.
 - If onboarding reports `Onboarding Status: BLOCK`, follow the printed `Recovery:` command exactly.
