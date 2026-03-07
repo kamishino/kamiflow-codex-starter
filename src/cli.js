@@ -6,6 +6,7 @@ import { runPlan } from "./commands/plan.js";
 import { runFlow } from "./commands/flow.js";
 import { runClient } from "./commands/client.js";
 import { runSession } from "./commands/session.js";
+import { runRemote } from "./commands/remote.js";
 import { error } from "./lib/logger.js";
 
 function printUsage() {
@@ -21,6 +22,7 @@ Commands:
   flow       Deterministic plan guardrails (ensure-plan|ready|apply|next)
   client     Client-project one-command setup, diagnostics, and cleanup
   session    Codex session transfer helpers (where|find|copy|push|pull|key|trust)
+  remote     Mobile-first remote server for mirrored session + queued prompts
   run        Execute Kami Flow with plan guardrails
   help       Show this usage
 
@@ -59,6 +61,11 @@ session options:
   kfc session push --to <transfer-path> [--id <session-id>] [--from <path>] [--merge]
   kfc session push --to <transfer-path> [--recipient <age1...>] [--recipient <age1...>]
   kfc session pull --from <transfer-path> [--id <session-id>] [--to <path>] [--key <path>] [--merge]
+
+remote options:
+  kfc remote serve [--project <path>] [--host <host>] [--port <n>] [--token <text>] [--detach] [--detach-file <path>]
+  kfc remote stop [--project <path>] [--detach-file <path>] [--pid <n>]
+  kfc remote token <gen|show|revoke> [--project <path>] [--token <text>] [--overwrite]
 `);
 }
 
@@ -119,6 +126,10 @@ export async function runCli(argv) {
 
     if (command === "session") {
       return await runSession({ cwd: global.cwd, args: commandArgs });
+    }
+
+    if (command === "remote") {
+      return await runRemote({ cwd: global.cwd, args: commandArgs });
     }
 
     error(`Unknown command: ${command}`);

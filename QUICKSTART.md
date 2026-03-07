@@ -102,6 +102,22 @@ kfc session pull --from E:/transfer/codex-sessions --id 019caccc-f25d-7151-ad1d-
 
 Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata index (`kfc-session-index.json`) using age recipient encryption.
 
+## Mobile Remote Surface
+
+Optional advanced usage:
+
+```bash
+kfc remote serve --project . --host 127.0.0.1 --port 4320
+```
+
+This starts a separate mobile-friendly web surface for:
+
+- viewing the mirrored session state
+- reading the transcript
+- sending serialized prompts into the workstation queue
+
+Recommended network model: private reachability such as Tailscale. See `resources/docs/REMOTE_RUNBOOK.md`.
+
 ## Troubleshooting
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
@@ -126,3 +142,4 @@ Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata inde
 - `resources/docs/CODEX_KFP_RUNBOOK.md`
 - `resources/docs/CODEX_RULES_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
+- `resources/docs/REMOTE_RUNBOOK.md`

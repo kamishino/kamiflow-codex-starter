@@ -33,6 +33,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc client done` (cleanup)
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
+- `kfc remote serve|stop|token` (mobile-first remote server for mirrored session + queued prompts)
 - `kfc run` (guardrails + deterministic route loop with Codex execution and runlog evidence)
 - `kf` is an alias for `kfc`
 
@@ -136,6 +137,21 @@ kfc session copy --to E:/transfer/codex-sessions --date 2026-03-04
 kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merge
 ```
 
+## Remote Mobile Surface
+
+```bash
+kfc remote serve --project . --host 127.0.0.1 --port 4320
+```
+
+Phase 1 is a private mobile web surface for:
+
+- mirrored session state
+- transcript viewing
+- serialized prompt submission through the workstation
+
+Recommended network model: Tailscale or another private network layer.
+Runbook: `resources/docs/REMOTE_RUNBOOK.md`
+
 ## Versioning (No Publish)
 
 ### Run in KFC Repo
@@ -194,6 +210,7 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 - `resources/docs/CODEX_COMMIT_FLOW.md`
 - `resources/docs/VERSIONING_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
+- `resources/docs/REMOTE_RUNBOOK.md`
 
 ## `.codex` Policy
 
