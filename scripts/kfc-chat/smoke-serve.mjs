@@ -90,9 +90,16 @@ await withTempDir(async (tempDir) => {
   assert.match(htmlText, /Bound Codex Session Chat/);
   assert.match(htmlText, /Bound Session Timeline/);
 
+  const transcript = await fetch(`${listener.url}/api/chat/transcript`, {
+    headers: { Authorization: "Bearer smoke-token" }
+  });
+  const transcriptPayload = await transcript.json();
+  assert.equal(transcriptPayload.items[0].type, "message_group");
+
   const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=smoke-token`);
   const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
   assert.equal(bootstrap.payload.session.bound_session.session_id, sessionId);
+  assert.equal(bootstrap.payload.transcript[0].type, "message_group");
   ws.close();
   await server.close();
 

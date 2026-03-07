@@ -5,6 +5,7 @@ import path from "node:path";
 import { WebSocket } from "ws";
 import {
   bindCodexSession,
+  buildTranscriptDisplayBlocks,
   readTranscript,
   resolveBoundSession,
   unbindCodexSession
@@ -107,6 +108,24 @@ await runCase("bind/show/unbind manage the canonical client session file", async
   });
 });
 
+await runCase("display model groups conversational transcript items for human-first rendering", async () => {
+  const blocks = buildTranscriptDisplayBlocks([
+    { id: "a1", role: "assistant", kind: "codex_tail", text: "First reply", created_at: "2026-03-08T00:01:00.000Z", status: "synced" },
+    { id: "a2", role: "assistant", kind: "codex_result", text: "Second reply", created_at: "2026-03-08T00:02:00.000Z", status: "completed" },
+    { id: "u1", role: "user", kind: "prompt", text: "Follow up", created_at: "2026-03-08T00:03:00.000Z", status: "queued" },
+    { id: "e1", role: "system", kind: "prompt_error", text: "Blocked", created_at: "2026-03-08T00:04:00.000Z", status: "blocked" }
+  ]);
+
+  assert.equal(blocks.length, 3);
+  assert.equal(blocks[0].type, "message_group");
+  assert.equal(blocks[0].role, "assistant");
+  assert.equal(blocks[0].items.length, 2);
+  assert.equal(blocks[1].type, "message_group");
+  assert.equal(blocks[1].role, "user");
+  assert.equal(blocks[2].type, "event_row");
+  assert.equal(blocks[2].label, "Blocked");
+});
+
 await runCase("server exposes health/session/transcript and streams prompt updates over WebSocket", async () => {
   await withTempDir(async (tempDir) => {
     const projectDir = path.join(tempDir, "project");
@@ -159,7 +178,7 @@ await runCase("server exposes health/session/transcript and streams prompt updat
 
     const script = await fetch(`${listener.url}/assets/kfc-chat.js`);
     const scriptText = await script.text();
-    assert.match(scriptText, /groupTranscriptItems/);
+    assert.doesNotMatch(scriptText, /groupTranscriptItems/);
     assert.match(scriptText, /message-bubble/);
 
     const verify = await fetch(`${listener.url}/api/chat/token/verify`, {
@@ -176,11 +195,22 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     assert.equal(sessionPayload.bound_session.session_id, "019-chat-bravo");
     assert.equal(sessionPayload.manual_resume_command, 'codex resume "019-chat-bravo"');
 
+    const transcript = await fetch(`${listener.url}/api/chat/transcript`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    const transcriptPayload = await transcript.json();
+    assert.equal(transcriptPayload.items[0].type, "message_group");
+    assert.equal(transcriptPayload.items[0].label, "Codex");
+
     const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=chat-token`);
     const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
     assert.equal(Array.isArray(bootstrap.payload.transcript), true);
+    assert.equal(bootstrap.payload.transcript[0].type, "message_group");
 
     ws.send(JSON.stringify({ type: "submit_prompt", prompt: "Continue the investigation" }));
+
+    const transcriptUpdated = await waitForMessage(ws, (message) => message.type === "transcript_updated");
+    assert.ok(transcriptUpdated.payload.items.some((item) => item.type === "message_group"));
 
     const completed = await waitForMessage(ws, (message) => message.type === "prompt_completed");
     assert.match(completed.payload.result.text, /Handled prompt/);

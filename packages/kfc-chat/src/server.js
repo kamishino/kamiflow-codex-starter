@@ -3,6 +3,7 @@ import { WebSocketServer } from "ws";
 import { runCodexResumeAction } from "../../../src/lib/codex-runner.js";
 import {
   appendTranscriptEntry,
+  buildTranscriptDisplayBlocks,
   describeCodexResult,
   ensureChatRuntimeSession,
   hydrateTranscriptFromCodex,
@@ -72,6 +73,12 @@ export async function createKfcChatServer(options = {}) {
     };
   }
 
+  function buildTranscriptPayload() {
+    return {
+      items: buildTranscriptDisplayBlocks(transcriptCache.slice(-300))
+    };
+  }
+
   function broadcast(type, payload) {
     const message = JSON.stringify({ type, payload });
     for (const client of wsClients) {
@@ -103,7 +110,7 @@ export async function createKfcChatServer(options = {}) {
     while (transcriptCache.length > 300) {
       transcriptCache.shift();
     }
-    broadcast("transcript_appended", persisted);
+    broadcast("transcript_updated", buildTranscriptPayload());
     return persisted;
   }
 
@@ -112,13 +119,16 @@ export async function createKfcChatServer(options = {}) {
       return;
     }
     const result = await hydrateTranscriptFromCodex(projectDir, boundSession.session_path);
+    if (result.appended.length === 0) {
+      return;
+    }
     for (const entry of result.appended) {
       transcriptCache.push(entry);
       while (transcriptCache.length > 300) {
         transcriptCache.shift();
       }
-      broadcast("transcript_appended", entry);
     }
+    broadcast("transcript_updated", buildTranscriptPayload());
   }
 
   async function processQueue() {
@@ -289,7 +299,7 @@ export async function createKfcChatServer(options = {}) {
       return denied;
     }
     await syncFromCodexTail();
-    return { items: transcriptCache.slice(-300) };
+    return buildTranscriptPayload();
   });
 
   fastify.server.on("upgrade", (request, socket, head) => {
@@ -321,7 +331,7 @@ export async function createKfcChatServer(options = {}) {
       type: "bootstrap",
       payload: {
         session: buildSessionPayload(),
-        transcript: transcriptCache.slice(-300)
+        transcript: buildTranscriptPayload().items
       }
     }));
 

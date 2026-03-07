@@ -165,6 +165,110 @@ function extractCodexTailEntry(rawLine) {
   }
 }
 
+function isEventTranscriptItem(item) {
+  const kind = String(item?.kind || "").toLowerCase();
+  const role = String(item?.role || "").toLowerCase();
+  return kind === "prompt_error" || role === "system" || role === "raw";
+}
+
+function normalizeDisplayRole(item) {
+  const kind = String(item?.kind || "").toLowerCase();
+  const role = String(item?.role || item?.kind || "event").toLowerCase();
+  if (kind === "prompt_error") {
+    return "prompt_error";
+  }
+  if (role === "assistant" || role === "codex_result" || role === "codex_tail") {
+    return "assistant";
+  }
+  if (role === "user") {
+    return "user";
+  }
+  return role || "event";
+}
+
+function prettyDisplayLabel(role) {
+  if (role === "assistant") {
+    return "Codex";
+  }
+  if (role === "user") {
+    return "You";
+  }
+  if (role === "prompt_error") {
+    return "Blocked";
+  }
+  if (role === "system") {
+    return "System";
+  }
+  if (role === "raw") {
+    return "Synced";
+  }
+  return role ? role.replace(/_/g, " ") : "Event";
+}
+
+function normalizeTranscriptItemForDisplay(item, index) {
+  const role = normalizeDisplayRole(item);
+  return {
+    id: String(item?.id || `entry_${index}`),
+    role,
+    kind: String(item?.kind || ""),
+    label: prettyDisplayLabel(role),
+    text: compactText(item?.text || "", 3000),
+    created_at: String(item?.created_at || ""),
+    status: String(item?.status || ""),
+    is_event: isEventTranscriptItem(item),
+    align: role === "user" ? "right" : "left"
+  };
+}
+
+export function buildTranscriptDisplayBlocks(items) {
+  const normalized = (items || []).map((item, index) => normalizeTranscriptItemForDisplay(item, index));
+  const blocks = [];
+  for (const item of normalized) {
+    const previous = blocks[blocks.length - 1];
+    if (!item.is_event && previous && previous.type === "message_group" && previous.role === item.role) {
+      previous.items.push({
+        id: item.id,
+        text: item.text,
+        created_at: item.created_at,
+        status: item.status
+      });
+      previous.created_at = item.created_at || previous.created_at;
+      previous.status = item.status || previous.status;
+      continue;
+    }
+    if (item.is_event) {
+      blocks.push({
+        type: "event_row",
+        id: item.id,
+        role: item.role,
+        label: item.label,
+        text: item.text,
+        created_at: item.created_at,
+        status: item.status
+      });
+      continue;
+    }
+    blocks.push({
+      type: "message_group",
+      id: item.id,
+      role: item.role,
+      label: item.label,
+      align: item.align,
+      created_at: item.created_at,
+      status: item.status,
+      items: [
+        {
+          id: item.id,
+          text: item.text,
+          created_at: item.created_at,
+          status: item.status
+        }
+      ]
+    });
+  }
+  return blocks;
+}
+
 export function defaultSessionsRoot() {
   return path.join(os.homedir(), ".codex", "sessions");
 }
