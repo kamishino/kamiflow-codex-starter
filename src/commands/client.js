@@ -56,8 +56,11 @@ const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
 const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOFF_PROMPT.md");
 const CLIENT_READY_FILE = path.join(".kfc", "CODEX_READY.md");
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
+const CLIENT_LESSONS_FILE = path.join(".kfc", "LESSONS.md");
+const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read .kfc/CODEX_READY.md and execute the mission.";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
+const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
 
 function usage() {
   info("Usage: kfc client [options]");
@@ -183,9 +186,21 @@ function runNodeNpm(args, cwd) {
   };
 }
 
+function quoteForCmd(arg) {
+  if (!/[ \t"&<>|^]/.test(arg)) {
+    return arg;
+  }
+  return `"${String(arg).replace(/"/g, "\"\"")}"`;
+}
+
 function checkCommandInPath(commandCandidates, args, label) {
   for (const candidate of commandCandidates) {
-    const result = spawnSync(candidate, args, { encoding: "utf8" });
+    const useCmdWrapper = process.platform === "win32" && String(candidate).toLowerCase().endsWith(".cmd");
+    const result = useCmdWrapper
+      ? spawnSync("cmd.exe", ["/d", "/s", "/c", `${candidate} ${args.map(quoteForCmd).join(" ")}`], {
+          encoding: "utf8"
+        })
+      : spawnSync(candidate, args, { encoding: "utf8" });
     if (result.error && result.error.code === "EPERM") {
       warn(`${label} check skipped: command spawn is restricted in this environment.`);
       return true;
@@ -308,6 +323,13 @@ function printClientDocsHints(projectDir) {
   } else {
     info(`Client kickoff prompt path (after install/link): ${kickoffPath}`);
   }
+
+  const lessonsPath = resolveClientLessonsPath(projectDir);
+  if (fs.existsSync(lessonsPath)) {
+    info(`Client lessons: ${lessonsPath}`);
+  } else {
+    info(`Client lessons path: ${lessonsPath}`);
+  }
 }
 
 function printClientNextCommandHints() {
@@ -421,8 +443,94 @@ function resolveClientSessionPath(projectDir) {
   return path.join(projectDir, CLIENT_SESSION_FILE);
 }
 
+function resolveClientLessonsPath(projectDir) {
+  return path.join(projectDir, CLIENT_LESSONS_FILE);
+}
+
+function resolveClientRawLessonsDir(projectDir) {
+  return path.join(projectDir, CLIENT_RAW_LESSONS_DIR);
+}
+
+function resolveClientRawLessonPaths(projectDir) {
+  const baseDir = resolveClientRawLessonsDir(projectDir);
+  return {
+    baseDir,
+    incidentsDir: path.join(baseDir, "incidents"),
+    decisionsDir: path.join(baseDir, "decisions")
+  };
+}
+
 function resolveClientSkillArtifactPath(projectDir, skillName = CLIENT_RUNTIME_SKILL) {
   return resolveSkillArtifactPath(getProjectSkillsTargetDir(projectDir), skillName);
+}
+
+function buildClientLessonsTemplate() {
+  return [
+    "# Client Lessons",
+    "",
+    "Use this file for durable project-specific lessons that Codex should remember in future sessions.",
+    "",
+    "## What Belongs Here",
+    "- repeated failure guardrails",
+    "- anti-hallucination facts about this project/domain",
+    "- stable workflow constraints that are easy to forget",
+    "",
+    "## What Does Not Belong Here",
+    "- one-off debugging notes",
+    "- temporary task progress already tracked in plans",
+    "- noisy historical logs",
+    "",
+    "## Promotion Rule",
+    "- keep raw lesson history under `.local/kfc-lessons/`",
+    "- promote only durable lessons after user confirmation",
+    "",
+    "## Active Lessons",
+    "- None yet.",
+    ""
+  ].join("\n");
+}
+
+async function ensureClientGitignoreEntries(projectDir) {
+  const gitignorePath = path.join(projectDir, ".gitignore");
+  const existing = fs.existsSync(gitignorePath) ? await fsp.readFile(gitignorePath, "utf8") : "";
+  const lines = existing.length > 0 ? existing.split(/\r?\n/) : [];
+  const normalized = new Set(lines.map((line) => line.trim()));
+  const missing = CLIENT_GITIGNORE_ENTRIES.filter((entry) => !normalized.has(entry));
+  if (missing.length === 0) {
+    info(`Private ignore entries already present: ${gitignorePath}`);
+    return { changed: false, gitignorePath, added: [] };
+  }
+
+  const prefix = [...missing, ""].join("\n");
+  const next = existing.length > 0 ? `${prefix}${existing}` : `${missing.join("\n")}\n`;
+  await fsp.writeFile(gitignorePath, next, "utf8");
+  info(`Prepended private ignore entries: ${gitignorePath}`);
+  return { changed: true, gitignorePath, added: missing };
+}
+
+async function ensureClientLessonsScaffold(projectDir) {
+  const lessonsPath = resolveClientLessonsPath(projectDir);
+  const raw = resolveClientRawLessonPaths(projectDir);
+  await fsp.mkdir(path.dirname(lessonsPath), { recursive: true });
+  await fsp.mkdir(raw.incidentsDir, { recursive: true });
+  await fsp.mkdir(raw.decisionsDir, { recursive: true });
+
+  let lessonsCreated = false;
+  if (!fs.existsSync(lessonsPath)) {
+    await fsp.writeFile(lessonsPath, buildClientLessonsTemplate(), "utf8");
+    lessonsCreated = true;
+    info(`Client lessons scaffolded: ${lessonsPath}`);
+  } else {
+    info(`Client lessons preserved: ${lessonsPath}`);
+  }
+
+  return {
+    changed: lessonsCreated,
+    lessonsPath,
+    rawLessonsDir: raw.baseDir,
+    incidentsDir: raw.incidentsDir,
+    decisionsDir: raw.decisionsDir
+  };
 }
 
 function parseSimpleFrontmatter(markdown) {
@@ -525,15 +633,17 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     "",
     "## First-Run Sequence",
     "1. Read this file and `AGENTS.md` before implementation.",
-    "2. Ensure plan + readiness: `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
-    "3. Execute exactly one route and mutate the active plan markdown (`updated_at` + `WIP Log`).",
-    "4. After build/fix work, run checks and report `Check: PASS|BLOCK` with evidence.",
-    "5. If blocked, return exact `Recovery: <command>` and stop until recovered.",
+    "2. If `.kfc/LESSONS.md` exists, read it as curated project memory before implementation.",
+    "3. Ensure plan + readiness: `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
+    "4. Execute exactly one route and mutate the active plan markdown (`updated_at` + `WIP Log`).",
+    "5. After build/fix work, run checks and report `Check: PASS|BLOCK` with evidence.",
+    "6. If blocked, return exact `Recovery: <command>` and stop until recovered.",
     "",
     "## Session Bootstrap (Every Session)",
     "1. Read `AGENTS.md` first, then re-read this file before implementation.",
-    "2. Resolve one active non-done plan in `.local/plans/` before route output.",
-    "3. Touch the active plan at route start and again before final response (`updated_at` + timestamped `WIP Log` line).",
+    "2. Read `.kfc/LESSONS.md` when present; it is the curated durable memory for this client project.",
+    "3. Resolve one active non-done plan in `.local/plans/` before route output.",
+    "4. Touch the active plan at route start and again before final response (`updated_at` + timestamped `WIP Log` line).",
     "",
     "## Autonomous Execution Contract",
     "1. Use only `kfc ...` commands in this client project.",
@@ -913,6 +1023,17 @@ async function runBootstrapOnce(options, runtime = {}) {
     );
   }
 
+  try {
+    await ensureClientGitignoreEntries(options.project);
+    await ensureClientLessonsScaffold(options.project);
+  } catch (err) {
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.PRIVATE_STATE_FAILED,
+      err instanceof Error ? err.message : String(err),
+      "kfc client bootstrap --project . --force"
+    );
+  }
+
   const doctorCode = await runDoctor({ cwd: options.project, args: [] });
   if (doctorCode !== 0) {
     throw createClientOnboardingError(
@@ -1130,6 +1251,32 @@ async function runClientDoctorChecks(options) {
     ok = false;
   } else {
     info(`Project-local KFC skill OK: ${skillPath}`);
+  }
+
+  const lessonsPath = resolveClientLessonsPath(options.project);
+  if (!fs.existsSync(lessonsPath)) {
+    error(`Missing client lessons file: ${lessonsPath}`);
+    ok = false;
+  } else {
+    info(`Client lessons file OK: ${lessonsPath}`);
+  }
+
+  const rawLessons = resolveClientRawLessonPaths(options.project);
+  if (!fs.existsSync(rawLessons.incidentsDir) || !fs.existsSync(rawLessons.decisionsDir)) {
+    error(`Missing raw lesson directories under: ${rawLessons.baseDir}`);
+    ok = false;
+  } else {
+    info(`Raw lesson directories OK: ${rawLessons.baseDir}`);
+  }
+
+  const gitignorePath = path.join(options.project, ".gitignore");
+  const gitignoreText = fs.existsSync(gitignorePath) ? await fsp.readFile(gitignorePath, "utf8") : "";
+  const missingIgnoreEntries = CLIENT_GITIGNORE_ENTRIES.filter((entry) => !gitignoreText.includes(entry));
+  if (missingIgnoreEntries.length > 0) {
+    error(`Missing private gitignore entries in ${gitignorePath}: ${missingIgnoreEntries.join(", ")}`);
+    ok = false;
+  } else {
+    info(`Private gitignore entries OK: ${gitignorePath}`);
   }
 
   if (ok) {

@@ -4,6 +4,7 @@ export const CLIENT_ONBOARDING_CODES = Object.freeze({
   PLAN_UI_MISSING: "CLIENT_PLAN_UI_MISSING",
   RULES_SYNC_FAILED: "CLIENT_RULES_SYNC_FAILED",
   SKILL_SYNC_FAILED: "CLIENT_SKILL_SYNC_FAILED",
+  PRIVATE_STATE_FAILED: "CLIENT_PRIVATE_STATE_FAILED",
   DOCTOR_FAILED: "CLIENT_DOCTOR_FAILED",
   ENSURE_PLAN_FAILED: "CLIENT_ENSURE_PLAN_FAILED",
   PLAN_VALIDATE_FAILED: "CLIENT_PLAN_VALIDATE_FAILED",
@@ -60,6 +61,7 @@ function stageForCode(code) {
     code === CLIENT_ONBOARDING_CODES.PLAN_UI_MISSING ||
     code === CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED ||
     code === CLIENT_ONBOARDING_CODES.SKILL_SYNC_FAILED ||
+    code === CLIENT_ONBOARDING_CODES.PRIVATE_STATE_FAILED ||
     code === CLIENT_ONBOARDING_CODES.DOCTOR_FAILED ||
     code === CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED
   ) {
@@ -103,6 +105,9 @@ function recoveryForCode(code) {
   if (code === CLIENT_ONBOARDING_CODES.SKILL_SYNC_FAILED) {
     return "kfc client bootstrap --project . --force";
   }
+  if (code === CLIENT_ONBOARDING_CODES.PRIVATE_STATE_FAILED) {
+    return "kfc client bootstrap --project . --force";
+  }
   if (code === CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED) {
     return "kfc client bootstrap --project . --force --skip-serve-check";
   }
@@ -121,6 +126,7 @@ function codeFromMessage(message) {
   if (text.includes("plan ui")) return CLIENT_ONBOARDING_CODES.PLAN_UI_MISSING;
   if (text.includes("rules")) return CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED;
   if (text.includes("skill")) return CLIENT_ONBOARDING_CODES.SKILL_SYNC_FAILED;
+  if (text.includes("gitignore") || text.includes("lesson")) return CLIENT_ONBOARDING_CODES.PRIVATE_STATE_FAILED;
   if (text.includes("`kfc doctor` failed")) return CLIENT_ONBOARDING_CODES.DOCTOR_FAILED;
   if (text.includes("`kfc flow ensure-plan` failed")) return CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED;
   if (text.includes("`kfc plan validate` failed")) return CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED;

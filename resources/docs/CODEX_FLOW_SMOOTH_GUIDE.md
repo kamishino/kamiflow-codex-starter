@@ -76,7 +76,7 @@ When route execution fails or context is incomplete, use this exact order:
 
 1. Resolve active plan from `.local/plans/*.md` and continue on that file.
 2. If no active plan exists, recover with `kfc flow ensure-plan --project .`.
-3. Re-read `AGENTS.md` and `.kfc/CODEX_READY.md` (if present) before rerouting.
+3. Re-read `AGENTS.md`, `.kfc/CODEX_READY.md`, and `.kfc/LESSONS.md` (when present) before rerouting.
 4. If shell/profile startup crashes, rerun in no-profile/non-login shell.
 5. If route remains blocked, return `Status: BLOCK` with one concrete recovery step.
 

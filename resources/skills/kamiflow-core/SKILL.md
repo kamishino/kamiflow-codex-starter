@@ -110,6 +110,7 @@ Pick mode before executing route logic:
 - If route confidence is below `4`, reroute instead of forcing the selected route.
 - If mode does not satisfy route requirements, do not continue.
 - Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
+- In client projects, if `.kfc/LESSONS.md` exists, read it as curated durable project memory before implementation.
 - Every top-level implementation or workflow request must resolve one active non-done plan in `.local/plans` before route output.
 - Low-risk operational requests may use the no-plan fast path when they do not need acceptance criteria, phase/archive tracking, or multi-step workflow state.
 - Allowed no-plan fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow maintenance chores with low workflow risk.

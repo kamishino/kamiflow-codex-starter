@@ -132,17 +132,48 @@ function runStep(title, command, args, cwd) {
   };
 }
 
-function verifyFileExistsStep(title, filePath, cwd) {
-  const ok = fs.existsSync(filePath);
+function verifyPathExistsStep(title, targetPath, cwd, kind = "path") {
+  const ok = fs.existsSync(targetPath);
+  const stat = ok ? fs.statSync(targetPath) : null;
+  const kindOk =
+    kind === "directory" ? stat?.isDirectory() : kind === "file" ? stat?.isFile() : ok;
   return {
     title,
     cwd,
-    command: `assert file exists ${shellEscape(filePath)}`,
-    ok,
-    statusCode: ok ? 0 : 1,
+    command: `assert ${kind} exists ${shellEscape(targetPath)}`,
+    ok: Boolean(kindOk),
+    statusCode: kindOk ? 0 : 1,
     durationMs: 0,
-    stdout: ok ? filePath : "",
-    stderr: ok ? "" : `Missing file: ${filePath}`
+    stdout: kindOk ? targetPath : "",
+    stderr: kindOk ? "" : `Missing ${kind}: ${targetPath}`
+  };
+}
+
+function verifyFileContainsStep(title, filePath, patterns, cwd) {
+  if (!fs.existsSync(filePath)) {
+    return {
+      title,
+      cwd,
+      command: `assert file contains patterns ${shellEscape(filePath)}`,
+      ok: false,
+      statusCode: 1,
+      durationMs: 0,
+      stdout: "",
+      stderr: `Missing file: ${filePath}`
+    };
+  }
+
+  const content = fs.readFileSync(filePath, "utf8");
+  const missing = patterns.filter((pattern) => !content.includes(pattern));
+  return {
+    title,
+    cwd,
+    command: `assert file contains patterns ${shellEscape(filePath)}`,
+    ok: missing.length === 0,
+    statusCode: missing.length === 0 ? 0 : 1,
+    durationMs: 0,
+    stdout: missing.length === 0 ? filePath : "",
+    stderr: missing.length === 0 ? "" : `Missing patterns: ${missing.join(", ")}`
   };
 }
 
@@ -324,7 +355,7 @@ async function main() {
   if (!args.legacySteps) {
     steps.push(
       runStep(
-        "kfc client --force",
+        "kfc client --force --no-launch-codex",
         NODE,
         [
           NPM_CLI,
@@ -334,6 +365,7 @@ async function main() {
           "kfc",
           "client",
           "--force",
+          "--no-launch-codex",
           "--project",
           ".",
           "--port",
@@ -344,9 +376,42 @@ async function main() {
     );
     if (steps.at(-1).ok) {
       steps.push(
-        verifyFileExistsStep(
+        verifyPathExistsStep(
           "verify project-local kamiflow-core skill",
           path.join(projectDir, ".agents", "skills", "kamiflow-core", "SKILL.md"),
+          projectDir,
+          "file"
+        )
+      );
+      steps.push(
+        verifyPathExistsStep(
+          "verify client lessons file",
+          path.join(projectDir, ".kfc", "LESSONS.md"),
+          projectDir,
+          "file"
+        )
+      );
+      steps.push(
+        verifyPathExistsStep(
+          "verify raw lesson incidents directory",
+          path.join(projectDir, ".local", "kfc-lessons", "incidents"),
+          projectDir,
+          "directory"
+        )
+      );
+      steps.push(
+        verifyPathExistsStep(
+          "verify raw lesson decisions directory",
+          path.join(projectDir, ".local", "kfc-lessons", "decisions"),
+          projectDir,
+          "directory"
+        )
+      );
+      steps.push(
+        verifyFileContainsStep(
+          "verify private gitignore entries",
+          path.join(projectDir, ".gitignore"),
+          [".kfc/", ".local/", ".agents/"],
           projectDir
         )
       );

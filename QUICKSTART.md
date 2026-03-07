@@ -37,7 +37,7 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
-`kfc client --force` now runs one smart-recovery cycle by default, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, and auto-launches:
+`kfc client --force` now runs one smart-recovery cycle by default, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, and auto-launches:
 
 ```bash
 codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
@@ -62,9 +62,10 @@ Low-level equivalent (only when you need manual bootstrap control):
 kfc client bootstrap --project . --profile client --force
 ```
 
-If auto-launch is disabled or fails, run the exact fallback command printed by KFC. Codex should then read `.kfc/CODEX_READY.md` and continue autonomously.
+If auto-launch is disabled or fails, run the exact fallback command printed by KFC. Codex should then read `.kfc/CODEX_READY.md`, read `.kfc/LESSONS.md` when present, and continue autonomously.
 
 This flow is designed for no user reminder loop after bootstrap. Codex should continue from the generated brief and the project-local skill without waiting for routine chat reminders.
+The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
 
 After work is complete, cleanup is required:
 
@@ -106,6 +107,7 @@ Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata inde
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
 - Missing plan UI: rerun `kfc client --force`.
 - Missing project-local KFC skill: rerun `kfc client --force`.
+- Missing client lessons file: rerun `kfc client --force`.
 - Codex did not auto-launch: rerun the exact `Manual fallback:` command printed by KFC, or use `kfc client --force --no-launch-codex` if you want setup only.
 - Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
 - Flow behavior mismatch: run `kfc client doctor --project . --fix`.

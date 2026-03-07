@@ -26,6 +26,7 @@ const RULES = [
       "All non-trivial route responses must use compact sections:",
       "Must not:",
       "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
+      "In client projects, if `.kfc/LESSONS.md` exists, read it as curated durable project memory before implementation.",
       "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
       "## Smooth Flow Checklist",
       "If request is trivial and low-risk operational, do not force this skill; use the no-plan fast path instead.",

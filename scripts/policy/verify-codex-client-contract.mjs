@@ -9,6 +9,7 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const REQUIRED_PATTERNS = [
   { label: "start command", regex: /\bkfc client\b/ },
   { label: "ready file", regex: /\.kfc\/CODEX_READY\.md/ },
+  { label: "lessons file", regex: /\.kfc\/LESSONS\.md/ },
   { label: "project-local skill", regex: /\.agents\/skills\/kamiflow-core\/SKILL\.md/ },
   { label: "cleanup command", regex: /\bkfc client done\b/ },
   { label: "autonomous flow execution", regex: /\bautonom(?:ous|ously)\b/i },
@@ -33,7 +34,9 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
     { label: "structured onboarding error code output", regex: /Error Code:/ },
     { label: "smart recovery execution", regex: /smart recovery cycle/i },
-    { label: "project-local skill sync", regex: /Project-local skill synced:/ }
+    { label: "project-local skill sync", regex: /Project-local skill synced:/ },
+    { label: "client lessons scaffold", regex: /Client lessons scaffolded:|Client lessons preserved:/ },
+    { label: "private gitignore prep", regex: /Prepended private ignore entries:|Private ignore entries already present:/ }
   ]
 };
 

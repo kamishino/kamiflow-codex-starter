@@ -70,7 +70,8 @@ try {
     "AP-012",
     "AP-013",
     "AP-014",
-    "AP-015"
+    "AP-015",
+    "AP-016"
   ]) {
     assertIncludes(antiPatterns, antiPatternsFile, token, errors);
   }
@@ -110,6 +111,7 @@ try {
     "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
     "Emoji is allowed in human-facing markdown summaries/docs when it improves readability.",
     "Every route invocation persists plan-state changes directly in markdown",
+    "In client projects, if `.kfc/LESSONS.md` exists, read it as curated durable project memory before implementation.",
     "Build/Fix phase focuses on `Implementation Tasks`; Check phase evaluates `Acceptance Criteria`.",
     "## Route Confidence Gate",
     "Assign `Route Confidence` (`1-5`)",

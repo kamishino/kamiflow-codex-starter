@@ -48,7 +48,7 @@ npm i -D @kamishino/kamiflow-plan-ui
 
 ```bash
 npx --no-install kfc --help
-npx --no-install kfc client --force --port 4310
+npx --no-install kfc client --force --port 4310 --no-launch-codex
 ```
 
 What one-command client setup verifies:
@@ -57,8 +57,12 @@ What one-command client setup verifies:
 - plan UI dependency available
 - project rules synced to `.codex/rules/kamiflow.rules`
 - project-local runtime skill synced to `.agents/skills/kamiflow-core/SKILL.md`
+- curated lesson file scaffolded at `.kfc/LESSONS.md`
+- raw lesson directories scaffolded under `.local/kfc-lessons/`
+- client `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`
 - plan exists and validates
 - KFP health endpoint responds OK
+- Codex auto-launch is intentionally skipped in the smoke so portability checks stay deterministic
 
 ## Step 3 (Optional): Run Canonical Route Loop
 
@@ -116,8 +120,9 @@ Validation is complete when all are true:
 1. `kfc` works in external repo context.
 2. `kfc client --force` completes PASS in external repo.
 3. project-local `kamiflow-core` exists in `.agents/skills/kamiflow-core/SKILL.md`.
-4. plan file is created and validated in external repo.
-5. smoke log is captured and reviewable.
+4. client lesson scaffold exists in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
+5. plan file is created and validated in external repo.
+6. smoke log is captured and reviewable.
 
 Optional extended criteria:
 
