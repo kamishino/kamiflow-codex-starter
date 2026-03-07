@@ -157,6 +157,24 @@ This starts a separate mobile-friendly web surface for:
 
 Recommended network model: private reachability such as Tailscale. See `resources/docs/REMOTE_RUNBOOK.md`.
 
+## Bound Codex Session Chat
+
+Optional advanced utility:
+
+```bash
+kfc-chat bind --project . --session-id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-chat serve --project .
+```
+
+This starts a separate browser surface for:
+
+- one bound Codex session per project
+- WebSocket live transcript and session state
+- guarded prompt submission via `codex exec resume <SESSION_ID> <prompt>`
+- manual `codex resume <SESSION_ID>` handoff for terminal-style continuation
+
+Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`.
+
 ## Troubleshooting
 
 - `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
@@ -172,6 +190,7 @@ Recommended network model: private reachability such as Tailscale. See `resource
 - Cannot find local Codex sessions folder: run `kfc session where`.
 - `kfc session push` says no trusted recipients: run `kfc session key gen --name <device>` then `kfc session trust add --name <peer> --pubkey <age1...>`.
 - Pull decrypt failure: verify local key exists (`kfc session key show`) and source machine encrypted for your recipient.
+- `kfc-chat` says no Codex session is bound: run `kfc-chat bind --project . --session-id <id>` first.
 - In KFC repo after skill edits, if runtime instructions are stale: run `npm run codex:sync:skills -- --force`.
 
 ## Next Docs
@@ -183,3 +202,4 @@ Recommended network model: private reachability such as Tailscale. See `resource
 - `resources/docs/CODEX_RULES_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
 - `resources/docs/REMOTE_RUNBOOK.md`
+- `resources/docs/KFC_CHAT_RUNBOOK.md`

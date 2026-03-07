@@ -1,0 +1,21 @@
+{
+  "name": "@kamishino/kfc-chat",
+  "version": "0.1.0",
+  "description": "Web-first bound Codex session chat utility.",
+  "type": "module",
+  "bin": {
+    "kfc-chat": "bin/kfc-chat.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "node bin/kfc-chat.js serve",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "fastify": "5.6.1",
+    "ws": "8.18.3"
+  },
+  "license": "UNLICENSED"
+}

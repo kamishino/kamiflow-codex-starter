@@ -37,6 +37,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
 - `kfc remote serve|stop|token` (mobile-first remote server for mirrored session + queued prompts)
 - `kfc-session` (separate web-first Codex session manager utility)
+- `kfc-chat` (separate web-first bound Codex session chat utility)
 - `kfc run` (guardrails + deterministic route loop with Codex execution and runlog evidence)
 - `kf` is an alias for `kfc`
 
@@ -92,6 +93,12 @@ If you want the separate Codex session manager utility:
 
 ```bash
 npm run kfc-session:serve
+```
+
+If you want the separate bound-session chat utility:
+
+```bash
+npm run kfc-chat:serve -- --project .
 ```
 
 If you need client linking, prepare the package from this repo:
@@ -184,6 +191,22 @@ kfc-session restore --id 019caccc-f25d-7151-ad1d-6eab893d714d
 
 Runbook: `resources/docs/KFC_SESSION_RUNBOOK.md`
 
+## KFC Chat
+
+KFC Chat is also separate from KFC:
+
+- `kfc`: workflow/bootstrap/plan discipline
+- `kfc-chat`: one bound Codex session per project with guarded browser prompting
+
+```bash
+kfc-chat bind --project . --session-id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-chat bind show --project .
+kfc-chat serve --project .
+kfc-chat unbind --project .
+```
+
+Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`
+
 ## Remote Mobile Surface
 
 ```bash
@@ -258,6 +281,7 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 - `resources/docs/VERSIONING_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
 - `resources/docs/REMOTE_RUNBOOK.md`
+- `resources/docs/KFC_CHAT_RUNBOOK.md`
 - `resources/docs/KFC_SESSION_RUNBOOK.md`
 
 ## `.codex` Policy

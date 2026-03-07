@@ -44,6 +44,11 @@ function buildPositionalPromptCommand(prompt, fullAuto = false) {
   return `${prefix} ${JSON.stringify(String(prompt || ""))}`;
 }
 
+function buildResumePromptCommand(sessionId, prompt, fullAuto = false) {
+  const prefix = fullAuto ? "codex exec --full-auto" : "codex exec";
+  return `${prefix} resume ${JSON.stringify(String(sessionId || ""))} ${JSON.stringify(String(prompt || ""))}`;
+}
+
 function codexExecutableCandidates() {
   if (process.platform !== "win32") {
     return ["codex"];
@@ -156,8 +161,8 @@ function withFailureMetadata(result) {
   };
 }
 
-async function runWithExecutable(executable, args, prompt, runId, timeoutMs, cwd = process.cwd()) {
-  const command = `${executable} ${args.map((item) => JSON.stringify(item)).join(" ")} <stdin>`;
+async function runWithExecutable(executable, args, prompt, runId, timeoutMs, cwd = process.cwd(), promptMode = "stdin") {
+  const command = `${executable} ${args.map((item) => JSON.stringify(item)).join(" ")}${promptMode === "stdin" ? " <stdin>" : ""}`;
   const useCmdWrapper = process.platform === "win32" && executable.toLowerCase().endsWith(".cmd");
 
   return await new Promise((resolve) => {
@@ -222,7 +227,7 @@ async function runWithExecutable(executable, args, prompt, runId, timeoutMs, cwd
     child.stdin?.on("error", (err) => {
       stderr += `\nstdin_error: ${err instanceof Error ? err.message : String(err)}`;
     });
-    child.stdin?.end(prompt);
+    child.stdin?.end(promptMode === "stdin" ? prompt : undefined);
 
     child.on("error", (err) => {
       if (finished) {
@@ -266,6 +271,18 @@ export function buildCodexExecManualCommand(input) {
     throw new Error("buildCodexExecManualCommand requires prompt.");
   }
   return buildPositionalPromptCommand(prompt, Boolean(input?.full_auto));
+}
+
+export function buildCodexResumeManualCommand(input) {
+  const sessionId = String(input?.session_id || "").trim();
+  const prompt = String(input?.prompt || "").trim();
+  if (!sessionId) {
+    throw new Error("buildCodexResumeManualCommand requires session_id.");
+  }
+  if (!prompt) {
+    throw new Error("buildCodexResumeManualCommand requires prompt.");
+  }
+  return buildResumePromptCommand(sessionId, prompt, Boolean(input?.full_auto));
 }
 
 export async function runCodexAction(input) {
@@ -325,6 +342,61 @@ export async function runCodexAction(input) {
     lastResult || {
       status: "failed",
       command: buildPositionalPromptCommand(prompt, fullAuto),
+      stdout_tail: "",
+      stderr_tail: "No executable candidate available.",
+      exit_code: -1,
+      run_id: runId,
+      error_code: "CODEX_NOT_FOUND"
+    }
+  );
+}
+
+export async function runCodexResumeAction(input) {
+  const planId = String(input?.plan_id || "").trim();
+  const actionType = String(input?.action_type || "").trim();
+  const sessionId = String(input?.session_id || "").trim();
+  const prompt = String(input?.prompt || "").trim();
+  if (!planId) {
+    throw new Error("runCodexResumeAction requires plan_id.");
+  }
+  if (!actionType) {
+    throw new Error("runCodexResumeAction requires action_type.");
+  }
+  if (!sessionId) {
+    throw new Error("runCodexResumeAction requires session_id.");
+  }
+  if (!prompt) {
+    throw new Error("runCodexResumeAction requires prompt.");
+  }
+
+  const timeoutMs = Number.isInteger(input?.timeout_ms) && input.timeout_ms > 0
+    ? input.timeout_ms
+    : DEFAULT_TIMEOUT_MS;
+  const runId = String(input?.run_id || `run_${Date.now()}`);
+  const cwd = String(input?.cwd || "").trim() || process.cwd();
+  const fullAuto = Boolean(input?.full_auto);
+  const args = ["exec", ...(fullAuto ? ["--full-auto"] : []), "resume", sessionId, prompt];
+  const executables = codexExecutableCandidates();
+  let lastResult = null;
+
+  for (const executable of executables) {
+    const result = withFailureMetadata(
+      await runWithExecutable(executable, args, "", runId, timeoutMs, cwd, "argv")
+    );
+    lastResult = result;
+    if (result.status === "completed") {
+      return result;
+    }
+    if (shouldTryNextExecutable(result)) {
+      continue;
+    }
+    return result;
+  }
+
+  return withFailureMetadata(
+    lastResult || {
+      status: "failed",
+      command: buildResumePromptCommand(sessionId, prompt, fullAuto),
       stdout_tail: "",
       stderr_tail: "No executable candidate available.",
       exit_code: -1,
