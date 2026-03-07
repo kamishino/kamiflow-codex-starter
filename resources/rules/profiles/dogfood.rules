@@ -38,8 +38,8 @@ prefix_rule(
 
 prefix_rule(
   decision = "allow",
-  pattern = ["npm", "run", "-w", "@kamishino/kamiflow-plan-ui", "build"],
-  match = ["npm run -w @kamishino/kamiflow-plan-ui build"],
+  pattern = ["npm", "run", "-w", "@kamishino/kfc-plan-web", "build"],
+  match = ["npm run -w @kamishino/kfc-plan-web build"],
   not_match = ["npm install"]
 )
 
@@ -49,3 +49,4 @@ prefix_rule(
   match = ["npm pack --silent"],
   not_match = ["npm pack"]
 )
+

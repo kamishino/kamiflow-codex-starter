@@ -14,7 +14,7 @@ const TARGET_FILES = [
   "resources/docs/CLIENT_KICKOFF_PROMPT.md",
   "resources/docs/CLIENT_A2Z_PLAYBOOK.md",
   "resources/docs/PORTABILITY_RUNBOOK.md",
-  "resources/docs/CODEX_KFP_RUNBOOK.md",
+  "resources/docs/CODEX_KFC_PLAN_RUNBOOK.md",
   "resources/docs/CODEX_RULES_RUNBOOK.md"
 ];
 
@@ -151,3 +151,4 @@ try {
   );
   process.exit(1);
 }
+

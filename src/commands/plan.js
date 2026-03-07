@@ -8,7 +8,7 @@ import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../..");
-const REPO_KFP_BIN = path.join(REPO_ROOT, "packages", "kamiflow-plan-ui", "bin", "kfp.js");
+const REPO_KFC_PLAN_BIN = path.join(REPO_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
 
 function parseProjectDir(defaultCwd, args) {
   const idx = args.indexOf("--project");
@@ -43,36 +43,36 @@ async function pathExists(filePath) {
   }
 }
 
-async function resolveKfpRunner(projectDir) {
-  if (path.resolve(projectDir) === REPO_ROOT && (await pathExists(REPO_KFP_BIN))) {
+async function resolveKfcPlanRunner(projectDir) {
+  if (path.resolve(projectDir) === REPO_ROOT && (await pathExists(REPO_KFC_PLAN_BIN))) {
     return {
       command: process.execPath,
-      args: [REPO_KFP_BIN]
+      args: [REPO_KFC_PLAN_BIN]
     };
   }
 
-  const localKfpBin = path.join(
+  const localKfcPlanBin = path.join(
     projectDir,
     "node_modules",
     ".bin",
-    process.platform === "win32" ? "kfp.cmd" : "kfp"
+    process.platform === "win32" ? "kfc-plan.cmd" : "kfc-plan"
   );
-  if (await pathExists(localKfpBin)) {
+  if (await pathExists(localKfcPlanBin)) {
     return {
-      command: localKfpBin,
+      command: localKfcPlanBin,
       args: []
     };
   }
 
-  if (await pathExists(REPO_KFP_BIN)) {
+  if (await pathExists(REPO_KFC_PLAN_BIN)) {
     return {
       command: process.execPath,
-      args: [REPO_KFP_BIN]
+      args: [REPO_KFC_PLAN_BIN]
     };
   }
 
   throw new Error(
-    "Cannot find `kfp` for this project. Install it with `npm i -D @kamishino/kamiflow-plan-ui`."
+    "Cannot find `kfc-plan` for this project. Install it with `npm i -D @kamishino/kfc-plan-web`."
   );
 }
 
@@ -91,7 +91,7 @@ export async function runPlan(options) {
   const [subcommand, ...rest] = options.args;
 
   if (!subcommand || subcommand === "help" || subcommand === "--help" || subcommand === "-h") {
-    info("Usage: kfc plan <init|serve|validate|workspace> [kfp options]");
+    info("Usage: kfc plan <init|serve|validate|workspace> [kfc-plan options]");
     info("Examples:");
     info("  kfc plan init --topic \"improve flow\" --route plan");
     info("  kfc plan serve --port 4310");
@@ -116,7 +116,7 @@ export async function runPlan(options) {
 
   let runner;
   try {
-    runner = await resolveKfpRunner(projectDir);
+    runner = await resolveKfcPlanRunner(projectDir);
   } catch (err) {
     if (subcommand === "init") {
       await createLocalPlanTemplate(projectDir, {
@@ -143,3 +143,4 @@ export async function runPlan(options) {
   }
   return exitCode;
 }
+

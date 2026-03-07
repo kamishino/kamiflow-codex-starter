@@ -1,0 +1,20 @@
+{
+  "name": "@kamishino/kfc-session",
+  "version": "0.1.0",
+  "description": "Web-first Codex session manager utility.",
+  "type": "module",
+  "bin": {
+    "kfc-session": "bin/kfc-session.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "node bin/kfc-session.js serve",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "fastify": "5.6.1"
+  },
+  "license": "UNLICENSED"
+}

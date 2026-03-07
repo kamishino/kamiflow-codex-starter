@@ -6,10 +6,10 @@ import { ensureTechnicalSolutionDiagramSection } from "./technical-solution-diag
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../..");
-const REPO_KFP_TEMPLATE = path.join(
+const REPO_KFC_PLAN_TEMPLATE = path.join(
   REPO_ROOT,
   "packages",
-  "kamiflow-plan-ui",
+  "kfc-plan-web",
   "templates",
   "plan-template.md"
 );
@@ -256,7 +256,7 @@ async function resolveUniqueNewPlanPath(plansDir, options = {}) {
 
 async function readPlanTemplate() {
   try {
-    return await fs.readFile(REPO_KFP_TEMPLATE, "utf8");
+    return await fs.readFile(REPO_KFC_PLAN_TEMPLATE, "utf8");
   } catch {
     return FALLBACK_PLAN_TEMPLATE;
   }
@@ -287,8 +287,8 @@ export async function createLocalPlanTemplate(projectDir, options = {}) {
       if (log) {
         log(`Plan bootstrap fallback used: ${targetPath}`);
       }
-      console.log(`[kfp] Template already exists: ${targetPath}`);
-      console.log(`[kfp] Plans directory ready: ${plansDir}`);
+      console.log(`[kfc-plan] Template already exists: ${targetPath}`);
+      console.log(`[kfc-plan] Plans directory ready: ${plansDir}`);
       return targetPath;
     } catch {
       // Continue and create template.
@@ -300,8 +300,8 @@ export async function createLocalPlanTemplate(projectDir, options = {}) {
   if (log) {
     log(`Plan bootstrap fallback used: ${targetPath}`);
   }
-  console.log(`[kfp] Created template: ${targetPath}`);
-  console.log(`[kfp] Plans directory ready: ${plansDir}`);
+  console.log(`[kfc-plan] Created template: ${targetPath}`);
+  console.log(`[kfc-plan] Plans directory ready: ${plansDir}`);
   return targetPath;
 }
 
@@ -314,3 +314,4 @@ export async function ensurePlanFileTechnicalSolutionDiagram(filePath, options =
   await fs.writeFile(filePath, normalized.markdown, "utf8");
   return { changed: true, filePath };
 }
+

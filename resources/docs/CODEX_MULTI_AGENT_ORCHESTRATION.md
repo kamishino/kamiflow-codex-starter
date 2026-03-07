@@ -51,7 +51,7 @@ Codex tooling pattern:
 - Keep one route per response even when sub-agents run in parallel.
 - Require explicit ownership per worker to reduce merge collisions.
 - Do not skip evidence gate: unresolved claims must be marked `Unknown`.
-- Keep observer-first behavior for KFP; avoid unsafe mutation controls.
+- Keep observer-first behavior for KFC Plan; avoid unsafe mutation controls.
 - If orchestration fails, fall back to single-agent deterministic slice.
 
 ## Minimal Execution Template
@@ -61,3 +61,4 @@ Codex tooling pattern:
 3. `Workers`: implement slice A/B/C in parallel.
 4. `Reviewer`: run acceptance checks and report findings.
 5. `Lead`: integrate, update plan, return `State/Doing/Next`.
+

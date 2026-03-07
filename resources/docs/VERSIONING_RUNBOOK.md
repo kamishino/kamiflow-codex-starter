@@ -47,7 +47,7 @@ npm run pack:commit
 
 `release:cut` does:
 
-1. bump version in root `package.json` and `packages/kamiflow-plan-ui/package.json`
+1. bump version in root `package.json` and `packages/kfc-plan-web/package.json`
 2. commit with `chore(release): vX.Y.Z` (via `commit:codex`)
 3. create annotated tag `vX.Y.Z`
 4. print push instructions
@@ -67,5 +67,6 @@ Example:
 ## Notes
 
 - No per-commit `package.json` version churn.
-- Workspace packages share one release version (`@kamishino/kamiflow-codex` and `@kamishino/kamiflow-plan-ui`).
+- Workspace packages share one release version (`@kamishino/kamiflow-codex` and `@kamishino/kfc-plan-web`).
 - In restricted/sandboxed shells that block child-process spawn, run release commands in a normal local terminal.
+

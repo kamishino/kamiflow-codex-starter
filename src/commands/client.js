@@ -47,8 +47,8 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const PACKAGE_JSON_PATH = path.join(PACKAGE_ROOT, "package.json");
 const KFC_BIN = path.join(PACKAGE_ROOT, "bin", "kamiflow.js");
-const REPO_KFP_BIN = path.join(PACKAGE_ROOT, "packages", "kamiflow-plan-ui", "bin", "kfp.js");
-const PLAN_UI_PACKAGE = "@kamishino/kamiflow-plan-ui";
+const REPO_KFC_PLAN_BIN = path.join(PACKAGE_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
+const PLAN_UI_PACKAGE = "@kamishino/kfc-plan-web";
 const DEFAULT_PORT = 4310;
 const DEFAULT_HEALTH_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_POLL_MS = 500;
@@ -1628,18 +1628,18 @@ async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
 }
 
 async function ensurePlanUi(projectDir) {
-  const kfpBin = path.join(
+  const kfcPlanBin = path.join(
     projectDir,
     "node_modules",
     ".bin",
-    process.platform === "win32" ? "kfp.cmd" : "kfp"
+    process.platform === "win32" ? "kfc-plan.cmd" : "kfc-plan"
   );
-  if (fs.existsSync(kfpBin)) {
-    info("Plan UI dependency already available.");
+  if (fs.existsSync(kfcPlanBin)) {
+    info("KFC Plan dependency already available.");
     return;
   }
 
-  if (fs.existsSync(REPO_KFP_BIN)) {
+  if (fs.existsSync(REPO_KFC_PLAN_BIN)) {
     info("Using bundled plan UI fallback from linked KFC repository.");
     return;
   }
@@ -1755,7 +1755,7 @@ async function runServeHealthCheck(projectDir, port) {
 
   if (!healthy) {
     throw new Error(
-      `KFP health check failed at ${healthUrl}. stdout: ${stdout.trim() || "<empty>"} stderr: ${stderr.trim() || "<empty>"}`
+      `KFC Plan health check failed at ${healthUrl}. stdout: ${stdout.trim() || "<empty>"} stderr: ${stderr.trim() || "<empty>"}`
     );
   }
 }
@@ -2010,20 +2010,20 @@ async function runClientDoctorChecks(options) {
     ok = false;
   }
 
-  const kfpBin = path.join(
+  const kfcPlanBin = path.join(
     options.project,
     "node_modules",
     ".bin",
-    process.platform === "win32" ? "kfp.cmd" : "kfp"
+    process.platform === "win32" ? "kfc-plan.cmd" : "kfc-plan"
   );
-  if (!fs.existsSync(kfpBin) && !fs.existsSync(REPO_KFP_BIN)) {
-    error(`Missing plan UI binary: ${kfpBin}`);
+  if (!fs.existsSync(kfcPlanBin) && !fs.existsSync(REPO_KFC_PLAN_BIN)) {
+    error(`Missing KFC Plan binary: ${kfcPlanBin}`);
     ok = false;
   } else {
     info(
-      fs.existsSync(kfpBin)
-        ? `Plan UI binary OK: ${kfpBin}`
-        : `Plan UI fallback OK: ${REPO_KFP_BIN}`
+      fs.existsSync(kfcPlanBin)
+        ? `KFC Plan binary OK: ${kfcPlanBin}`
+        : `KFC Plan fallback OK: ${REPO_KFC_PLAN_BIN}`
     );
   }
 
@@ -2267,3 +2267,4 @@ export async function runClient(options) {
   usage();
   return 1;
 }
+

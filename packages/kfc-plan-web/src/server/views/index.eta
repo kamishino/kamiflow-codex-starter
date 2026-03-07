@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= it.title %></title>
+  <script>
+    (function () {
+      var storageKey = "kfc-plan.theme.preference.v1";
+      var params = new URLSearchParams(window.location.search);
+      var queryPreference = params.get("theme_pref");
+      var env = params.get("theme_env");
+      var preference = "system";
+      if (queryPreference === "dark" || queryPreference === "light" || queryPreference === "system") {
+        preference = queryPreference;
+      } else if (env !== "desktop") {
+        try {
+          var stored = localStorage.getItem(storageKey);
+          if (stored === "dark" || stored === "light" || stored === "system") {
+            preference = stored;
+          }
+        } catch (_err) {
+          preference = "system";
+        }
+      }
+      var systemDark = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+      var resolved = preference === "dark" ? "dark" : preference === "light" ? "light" : (systemDark ? "dark" : "light");
+      document.documentElement.dataset.themePreference = preference;
+      document.documentElement.dataset.theme = resolved;
+      document.documentElement.style.colorScheme = resolved;
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body data-ui-mode="<%= it.uiMode || 'observer' %>">
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="topbar-row-main">
+        <div class="topbar-left">
+          <p class="topbar-eyebrow">Observer-first review workspace</p>
+          <h1>KamiFlow Plan Review</h1>
+          <p id="status">Waiting for updates...</p>
+        </div>
+        <div class="topbar-right">
+          <span id="connection-badge" class="chip chip-muted">disconnected</span>
+        </div>
+      </div>
+      <div id="connection-alert" class="topbar-connection-alert ui-alert ui-alert-warning" hidden>
+        <p id="connection-alert-title" class="topbar-connection-alert-title">Connection stale</p>
+        <p id="connection-alert-description" class="topbar-connection-alert-description">Last update unknown. Auto-resync in progress.</p>
+      </div>
+      <div id="toolbar-controls" class="topbar-controls">
+        <div class="toolbar-field toolbar-field-project">
+          <label for="project-filter">Project</label>
+          <select id="project-filter"></select>
+        </div>
+        <div class="toolbar-field toolbar-field-compact toolbar-field-view">
+          <label for="plan-filter">Plan View</label>
+          <select id="plan-filter">
+            <option value="active">Active</option>
+            <option value="done">Done</option>
+            <option value="all">All</option>
+          </select>
+        </div>
+        <div class="toolbar-field toolbar-field-compact toolbar-field-theme">
+          <label for="theme-preference">Theme</label>
+          <select id="theme-preference">
+            <option value="system">System</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+        <div class="toolbar-field toolbar-field-plan" id="plan-picker-wrap">
+          <label for="plan-search-input">Plan Picker</label>
+          <div class="plan-search-wrap">
+            <input id="plan-search-input" type="text" placeholder="No selected plan. Click to browse or type to filter." autocomplete="off" />
+          </div>
+          <div id="plan-search-results" class="plan-search-results" hidden></div>
+        </div>
+        <div class="toolbar-field toolbar-field-selected">
+          <small id="plan-selection-help" class="plan-selection-help">Selected plan: none.</small>
+        </div>
+      </div>
+    </header>
+
+    <div class="content-grid">
+      <main class="main">
+        <section class="panel" id="snapshot-panel">
+          <p class="panel-kicker">2. Plan Status</p>
+          <h2>Implementation Plan Status</h2>
+          <div id="work-surface"></div>
+        </section>
+      </main>
+
+      <aside class="side-rail">
+        <section class="panel" id="timeline-panel">
+          <p class="panel-kicker">1. Now</p>
+          <h2>Phase Timeline</h2>
+          <div id="workflow-rail" class="workflow-rail"></div>
+        </section>
+
+        <section class="activity panel journal">
+          <div class="journal-header">
+            <div>
+              <p class="panel-kicker">3. Timeline</p>
+              <h2>Execution Timeline</h2>
+            </div>
+            <div class="journal-filter-group">
+              <label for="activity-filter" class="journal-filter-label">Execution Type</label>
+              <select id="activity-filter">
+                <option value="all">All</option>
+                <option value="timeline">Timeline</option>
+                <option value="runtime">Runtime</option>
+                <option value="plan">Plan</option>
+              </select>
+              <label for="activity-density" class="journal-filter-label">Density</label>
+              <select id="activity-density">
+                <option value="compact">Compact</option>
+                <option value="expanded">Expanded</option>
+              </select>
+            </div>
+          </div>
+          <ul id="activity-feed"></ul>
+        </section>
+      </aside>
+    </div>
+  </div>
+  <script src="/assets/app.js" type="module"></script>
+</body>
+</html>

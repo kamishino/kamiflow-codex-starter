@@ -179,7 +179,7 @@ Recommended network model: private reachability such as Tailscale. See `resource
 - `resources/docs/CLIENT_KICKOFF_PROMPT.md`
 - `resources/docs/CLIENT_A2Z_PLAYBOOK.md`
 - `resources/docs/COMMAND_BOUNDARY_POLICY.md`
-- `resources/docs/CODEX_KFP_RUNBOOK.md`
+- `resources/docs/CODEX_KFC_PLAN_RUNBOOK.md`
 - `resources/docs/CODEX_RULES_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
 - `resources/docs/REMOTE_RUNBOOK.md`

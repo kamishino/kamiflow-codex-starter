@@ -1,0 +1,94 @@
+import { resolveProjectDir } from "../lib/paths.js";
+import { loadWorkspaceProjects } from "../lib/workspace-registry.js";
+
+function resolvePort(args) {
+  const idx = args.indexOf("--port");
+  if (idx === -1) {
+    return 4310;
+  }
+  const value = Number.parseInt(args[idx + 1], 10);
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error("Invalid value for --port.");
+  }
+  return value;
+}
+
+function resolveWorkspace(args) {
+  const idx = args.indexOf("--workspace");
+  if (idx === -1) {
+    return null;
+  }
+  const value = args[idx + 1];
+  if (!value) {
+    throw new Error("Missing value for --workspace.");
+  }
+  return value;
+}
+
+function resolveMode(args) {
+  const idx = args.indexOf("--mode");
+  if (idx === -1) {
+    return "observer";
+  }
+  const value = (args[idx + 1] || "").trim().toLowerCase();
+  if (!value) {
+    throw new Error("Missing value for --mode.");
+  }
+  if (value !== "observer" && value !== "operator") {
+    throw new Error("Invalid value for --mode. Use observer or operator.");
+  }
+  return value;
+}
+
+export async function runServe(args) {
+  const workspaceName = resolveWorkspace(args);
+  const projectDir = workspaceName ? null : resolveProjectDir(args);
+  const port = resolvePort(args);
+  const uiMode = resolveMode(args);
+  const host = "127.0.0.1";
+
+  let createServer;
+  try {
+    ({ createServer } = await import("../server/create-server.js"));
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      (err.code === "ERR_MODULE_NOT_FOUND" || err.code === "MODULE_NOT_FOUND")
+    ) {
+      console.error("[kfc-plan] ERROR: Missing server dependencies.");
+      console.error(
+        "[kfc-plan] Run `npm install` from repo root and retry `kfc-plan serve`."
+      );
+      return 1;
+    }
+    throw err;
+  }
+
+  const projects = workspaceName ? await loadWorkspaceProjects(workspaceName) : undefined;
+  const server = await createServer({
+    projectDir: projectDir ?? undefined,
+    projects,
+    withWatcher: true,
+    workspaceName: workspaceName ?? undefined,
+    uiMode
+  });
+  await server.listen({ host, port });
+
+  console.log(`[kfc-plan] Server running at http://${host}:${port}`);
+  if (workspaceName) {
+    console.log(`[kfc-plan] Workspace: ${workspaceName}`);
+    console.log(`[kfc-plan] Projects: ${projects?.length ?? 0}`);
+  } else {
+    console.log(`[kfc-plan] Project: ${projectDir}`);
+  }
+  console.log(`[kfc-plan] UI mode: ${uiMode}`);
+
+  const shutdown = async () => {
+    await server.close();
+    process.exit(0);
+  };
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
+  return 0;
+}

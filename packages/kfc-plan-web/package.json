@@ -1,0 +1,53 @@
+{
+  "name": "@kamishino/kfc-plan-web",
+  "version": "0.1.0",
+  "description": "Standalone private plan UI CLI for Kami Flow projects.",
+  "type": "module",
+  "bin": {
+    "kfc-plan": "bin/kfc-plan.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:server": "tsc -p tsconfig.json",
+    "build:client": "node scripts/build-client.mjs",
+    "build": "npm run build:server && npm run build:client",
+    "test": "npm run test:fast",
+    "test:fast": "npm run build:server && node test/run.mjs --fast",
+    "test:integration": "npm run build:server && node test/integration-codex-runner.mjs",
+    "test:browser:install": "playwright install chromium",
+    "test:browser": "npm run build && playwright test",
+    "test:browser:headed": "npm run build && playwright test --headed",
+    "test:full": "npm run build && node test/run.mjs --fast && node test/integration-codex-runner.mjs",
+    "verify": "npm run test:full",
+    "dev:cli": "npm run build && node bin/kfc-plan.js",
+    "dev": "npm run dev:cli --",
+    "dev:serve": "npm run dev:cli -- serve",
+    "kfc-plan": "npm run dev:cli --",
+    "start": "npm run dev --",
+    "serve": "npm run dev:serve"
+  },
+  "dependencies": {
+    "@kamishino/kamiflow-codex": "file:../..",
+    "@preact/signals": "2.5.1",
+    "chokidar": "4.0.3",
+    "eta": "3.5.0",
+    "fastify": "5.6.1",
+    "lucide-preact": "0.542.0",
+    "preact": "10.26.5"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "22.13.10",
+    "esbuild-wasm": "0.25.10",
+    "typescript": "5.8.2"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "templates",
+    "README.md"
+  ],
+  "license": "UNLICENSED"
+}

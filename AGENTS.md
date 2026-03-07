@@ -3,7 +3,7 @@
 This repository has four active scopes:
 
 1. CLI product development in `src/` and `bin/`.
-2. Plan UI product work in `packages/kamiflow-plan-ui/` (Preact + signals + Eta shell, built browser assets in `dist/server/public`).
+2. Plan UI product work in `packages/kfc-plan-web/` (Preact + signals + Eta shell, built browser assets in `dist/server/public`).
 3. Dogfooding in `dogfood/` using linked or packed installs.
 4. In-repo Codex skill/rules dogfooding from SSOT.
 
@@ -95,7 +95,7 @@ This repository has four active scopes:
 - Build/Fix route scope: mutate and complete `Implementation Tasks` only; do not treat Acceptance Criteria as build-phase completion evidence.
 - `Technical Solution Diagram` policy is controlled by `diagram_mode` (`required|auto|hidden`).
 - `diagram_mode: required` means the Mermaid section is mandatory and must reflect implementation.
-- `diagram_mode: auto|hidden` means Technical diagram is optional; KFP should fall back to Tasks/Subtasks when absent.
+- `diagram_mode: auto|hidden` means Technical diagram is optional; KFC Plan should fall back to Tasks/Subtasks when absent.
 - Accountability rule: after user clarification/answer in Brainstorm/Plan, decide if a technical diagram is needed; if needed, set `diagram_mode: required` and update the plan file with a Mermaid diagram (do not leave required mode without diagram content).
 - Check route scope: verify/test `Acceptance Criteria` and decide PASS/BLOCK from evidence.
 - After finishing implementation in a `build`/`fix` slice, run check validations before final response and report `Check: PASS|BLOCK` with evidence.
@@ -124,22 +124,22 @@ This repository has four active scopes:
 - Keep machine contracts and command examples deterministic; avoid emoji inside command literals or parse-sensitive fields.
 - Prefer light, consistent emoji markers (section headers, status cues), not decorative overuse.
 
-## KFP UI Rules
+## KFC Plan UI Rules
 
-- Keep KFP observer-first by default; do not reintroduce unsafe mutation/execute controls in observer mode.
-- Preserve current KFP architecture in `packages/kamiflow-plan-ui` (Preact components + signal-driven UI state + Eta shell).
-- Keep semantic, tokenized styles in `packages/kamiflow-plan-ui/src/server/public/styles.css`.
+- Keep KFC Plan observer-first by default; do not reintroduce unsafe mutation/execute controls in observer mode.
+- Preserve current KFC Plan architecture in `packages/kfc-plan-web` (Preact components + signal-driven UI state + Eta shell).
+- Keep semantic, tokenized styles in `packages/kfc-plan-web/src/server/public/styles.css`.
 - Avoid adding ad-hoc raw colors/spacing when semantic tokens already exist.
-- For browser-facing KFP changes, run the targeted Playwright lane: `npm run ui:test:browser`.
+- For browser-facing KFC Plan changes, run the targeted Playwright lane: `npm run kfc-plan:test:browser`.
 - Do not treat the Playwright lane as a repo-wide mandatory test for non-UI tasks.
 
 ## Design-System Gates
 
-- KFP UI changes must pass:
-- `npm run docs:verify:kfp-contrast`
-- `npm run docs:verify:kfp-spacing-grid`
-- `npm run docs:verify:kfp-design-system`
-- `node packages/kamiflow-plan-ui/test/run.mjs` (or `npm run -w @kamishino/kamiflow-plan-ui test`)
+- KFC Plan UI changes must pass:
+- `npm run docs:verify:kfc-plan-contrast`
+- `npm run docs:verify:kfc-plan-spacing-grid`
+- `npm run docs:verify:kfc-plan-design-system`
+- `node packages/kfc-plan-web/test/run.mjs` (or `npm run -w @kamishino/kfc-plan-web test`)
 - Color system policy is dual strategy: sRGB fallback + OKLCH harmonies.
 - Layout spacing policy is 4px rhythm for layout spacing properties.
 - Accessibility policy is WCAG 2.1 AA ratio + APCA-oriented thresholds via policy scripts.
@@ -170,3 +170,4 @@ This repository has four active scopes:
 - Do not run destructive git commands unless explicitly requested.
 - Do not revert unrelated user changes.
 - Do not manually edit generated runtime outputs unless the task explicitly targets generated output behavior.
+

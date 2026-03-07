@@ -46,7 +46,7 @@ This route should leave no major ambiguity for the build phase.
    - allowed values: `required|auto|hidden`
    - `required`: ensure `## Technical Solution Diagram` exists with a ```mermaid block representing chosen solution logic
    - Mermaid safety: avoid raw `|` in node labels; use `/` or `or` in label text
-   - `auto|hidden`: Technical section is optional; KFP falls back to Tasks/Subtasks when missing
+   - `auto|hidden`: Technical section is optional; KFC Plan falls back to Tasks/Subtasks when missing
 15. Ensure `Start Summary` is present in plan file and non-placeholder:
    - if request is vague -> `Required: yes` with concrete values
    - if not vague -> `Required: no` with clear reason
@@ -103,3 +103,4 @@ When ready, ensure handoff fields are persisted in plan frontmatter (`decision: 
 - Ready output includes `decision: GO`, `next_command: build`, and `next_mode: Build`.
 - Plan file is mutated directly before response is returned.
 - Handoff metadata is persisted in plan frontmatter.
+

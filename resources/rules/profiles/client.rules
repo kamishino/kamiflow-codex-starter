@@ -65,11 +65,11 @@ prefix_rule(
   not_match = ["npm run release:plan"]
 )
 
-# AP-002: client-facing flow must use kfc, not direct kfp commands.
+# AP-002: client-facing flow must use kfc, not direct kfc-plan commands.
 prefix_rule(
   decision = "forbidden",
-  pattern = ["kfp"],
-  match = ["kfp serve --project ."],
+  pattern = ["kfc-plan"],
+  match = ["kfc-plan serve --project ."],
   not_match = ["kfc plan validate --project ."]
 )
 
@@ -121,3 +121,4 @@ prefix_rule(
   match = ["kfc flow apply --project . --plan PLAN-1 --route build --result progress"],
   not_match = ["kfc flow next --project . --plan PLAN-1"]
 )
+

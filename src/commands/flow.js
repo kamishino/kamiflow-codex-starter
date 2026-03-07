@@ -57,7 +57,7 @@ function resolveBaseUrl(args) {
   if (fromArg) {
     return fromArg.replace(/\/+$/, "");
   }
-  const fromEnv = process.env.KFP_BASE_URL;
+  const fromEnv = process.env.KFC_PLAN_BASE_URL;
   if (fromEnv && fromEnv.trim().length > 0) {
     return fromEnv.trim().replace(/\/+$/, "");
   }
@@ -286,7 +286,7 @@ async function createPlanViaInit(projectDir, cwd, options = {}) {
   try {
     const result = await runNode(initArgs, cwd);
     if (result.code === 0) {
-      const match = result.stdout.match(/\[kfp\] Created template:\s*(.+)/);
+      const match = result.stdout.match(/\[kfc-plan\] Created template:\s*(.+)/);
       if (match) {
         return path.resolve(match[1].trim());
       }
@@ -857,3 +857,4 @@ async function runNext(options, args) {
   console.log(`Next Mode: ${payload.next_mode}`);
   return 0;
 }
+

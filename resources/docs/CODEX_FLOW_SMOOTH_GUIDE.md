@@ -103,7 +103,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `🧭` Chat is the control plane: Codex executes normal flow commands directly.
 - `🤝` Do not push routine CLI steps back to the user when the agent can run them.
 - `🧱` If execution is blocked by environment boundaries, report the blocker and request the smallest possible user action.
-- `👀` KFP stays observer-first: direct UI/API Codex execution is disabled; Activity Stream relies on plan + run-log (`.local/runs/*.jsonl`) events.
+- `👀` KFC Plan stays observer-first: direct UI/API Codex execution is disabled; Activity Stream relies on plan + run-log (`.local/runs/*.jsonl`) events.
 - `🧠` Diagram policy: Mermaid/flow visuals are derived from canonical plan markdown; never treat diagrams as writable execution state.
 - `🗺️` Place solution-logic Mermaid in a dedicated `Technical Solution Diagram` section; keep PlanSnapshot focused on progress/checklist status.
 
@@ -151,3 +151,4 @@ When route execution fails or context is incomplete, use this exact order:
 - Recommended role loop: `Lead -> Explorer(s) -> Worker(s) -> Reviewer -> Lead`.
 - Keep one route per response even when sub-agents run in parallel.
 - For detailed patterns and tool mapping, use `resources/docs/CODEX_MULTI_AGENT_ORCHESTRATION.md`.
+

@@ -18,7 +18,7 @@ Usage:
 Commands:
   init       Create kamiflow.config.json in current directory
   doctor     Validate environment, config, and resources directory
-  plan       Run kfp plan workflow (init|serve|validate)
+  plan       Run kfc-plan plan workflow (init|serve|validate)
   flow       Deterministic plan guardrails (ensure-plan|ready|apply|next)
   client     Client-project one-command setup, diagnostics, and cleanup
   session    Codex session transfer helpers (where|find|copy|push|pull|key|trust)
@@ -142,3 +142,4 @@ export async function runCli(argv) {
     return 1;
   }
 }
+

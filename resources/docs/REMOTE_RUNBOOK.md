@@ -15,7 +15,7 @@ Phase 1 does **not** provide:
 
 - public internet exposure
 - raw shell control from mobile
-- direct KFP mutation controls
+- direct KFC Plan mutation controls
 - a true multi-client shared Codex thread API
 
 The workstation remains the canonical execution controller. The mobile view is a mirrored session with a guarded prompt queue.
@@ -114,3 +114,4 @@ Codex can read these files locally, but they should not be committed.
 - `REMOTE_SESSION_NOT_BOUND`: regenerate `.kfc/session.json` via `kfc client --force --no-launch-codex`
 - no transcript updates: verify the workstation can still run Codex locally
 - mobile cannot connect: verify the port/host and Tailscale reachability
+

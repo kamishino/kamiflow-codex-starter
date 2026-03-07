@@ -10,7 +10,7 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 const ROOT_LOCKFILE_PATH = path.join(ROOT_DIR, "package-lock.json");
 const VERSIONED_PACKAGE_JSON_PATHS = [
   path.join(ROOT_DIR, "package.json"),
-  path.join(ROOT_DIR, "packages", "kamiflow-plan-ui", "package.json")
+  path.join(ROOT_DIR, "packages", "kfc-plan-web", "package.json")
 ];
 const VALID_BUMPS = new Set(["major", "minor", "patch"]);
 

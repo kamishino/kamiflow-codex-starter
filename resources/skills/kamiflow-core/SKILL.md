@@ -122,7 +122,7 @@ Pick mode before executing route logic:
 - `diagram_mode` policy must be explicit in plan frontmatter (`required|auto|hidden`) and respected during Start/Plan/Build routes.
 - After user clarifies answers in Brainstorm/Plan, decide whether a technical diagram is needed; if needed, set `diagram_mode: required` and update the plan file with Mermaid content before handoff.
 - Mermaid safety standard: avoid raw `|` in node labels inside `Technical Solution Diagram`; use `/` or `or` in label text to prevent parser errors.
-- Client-facing command guidance must use `kfc` (not direct `kfp`), except package-internal docs.
+- Client-facing command guidance must use `kfc` (not direct `kfc-plan`), except package-internal docs.
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
 
@@ -205,3 +205,4 @@ When current mode is incompatible, output:
 - Verbose response footers are optional.
 - Route handoff state is authoritative in plan markdown (`selected_mode`, `next_command`, `next_mode`, `lifecycle_phase`, `updated_at`).
 - Prefer one concise next-step sentence in user-facing output when it improves clarity.
+

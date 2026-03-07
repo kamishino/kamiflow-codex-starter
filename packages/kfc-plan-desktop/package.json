@@ -1,0 +1,22 @@
+{
+  "name": "@kamishino/kfc-plan-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop shell for KFC Plan.",
+  "type": "module",
+  "main": "src/main.js",
+  "scripts": {
+    "predev": "npm run -w @kamishino/kfc-plan-web build",
+    "dev": "electron src/main.js",
+    "start": "npm run dev",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "@kamishino/kfc-plan-web": "file:../kfc-plan-web"
+  },
+  "devDependencies": {
+    "electron": "35.0.0"
+  },
+  "license": "UNLICENSED"
+}
+

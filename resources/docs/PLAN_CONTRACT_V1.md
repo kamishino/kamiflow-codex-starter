@@ -6,7 +6,7 @@ This contract defines when a plan file in `.local/plans/*.md` is ready for each 
 
 - Plan files live in `.local/plans/`.
 - `.local/` is private and gitignored.
-- `kfc plan ...` is the client-facing entrypoint; it delegates to `kfp` for plan read/validate/serve.
+- `kfc plan ...` is the client-facing entrypoint; it delegates to `kfc-plan` for plan read/validate/serve.
 
 ## Required Frontmatter
 
@@ -70,3 +70,4 @@ Use this transition order:
 - `plan` route updates plan to decision-complete and build-ready.
 - `build` route executes only explicitly listed tasks.
 - `check` route verifies findings and pass/block against acceptance criteria.
+

@@ -709,7 +709,7 @@ async function main() {
 function finalize(steps, outPath, projectDir, linkMode) {
   const outputBlob = steps.map((step) => `${step.stdout || ""}\n${step.stderr || ""}`).join("\n");
   const jsonPlanPathMatch = outputBlob.match(/"plan_path"\s*:\s*"([^"]+)"/);
-  const createdTemplateMatch = outputBlob.match(/\[kfp\] Created template:\s*(.+)/);
+  const createdTemplateMatch = outputBlob.match(/\[kfc-plan\] Created template:\s*(.+)/);
   const createdPlanPath = (jsonPlanPathMatch?.[1] || createdTemplateMatch?.[1] || "").trim();
   const result = steps.every((step) => step.ok) ? "PASS" : "BLOCK";
   const report = toMarkdownReport(
@@ -738,3 +738,4 @@ main().catch((err) => {
   console.error(`[portability] Error: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 });
+

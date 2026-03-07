@@ -16,7 +16,7 @@ Prove external-repo portability baseline in an external repository:
 - npm in PATH
 - Codex CLI in PATH
 - Target repository is writable and uses project-local dependencies
-- `@kamishino/kamiflow-plan-ui` is available either in target repo (`devDependency`) or via linked KFC fallback
+- `@kamishino/kfc-plan-web` is available either in target repo (`devDependency`) or via linked KFC fallback
 
 ## Step 1: Link CLI into External Repo
 
@@ -39,7 +39,7 @@ npm link @kamishino/kamiflow-codex
 If missing, install plan UI package in external repo:
 
 ```bash
-npm i -D @kamishino/kamiflow-plan-ui
+npm i -D @kamishino/kfc-plan-web
 ```
 
 ## Step 2: Baseline `kfc` Checks (External Repo)
@@ -61,7 +61,7 @@ What one-command client setup verifies:
 - raw lesson directories scaffolded under `.local/kfc-lessons/`
 - client `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`
 - plan exists and validates
-- KFP health endpoint responds OK
+- KFC Plan health endpoint responds OK
 - Codex auto-launch is intentionally skipped in the smoke so portability checks stay deterministic
 
 When link mode is enabled, the smoke also verifies:
@@ -139,3 +139,4 @@ Optional extended criteria:
 - One external repo only (baseline portability proof).
 - No automation orchestration beyond smoke helper script.
 - Multi-repo matrix is a future phase.
+

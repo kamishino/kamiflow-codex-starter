@@ -70,7 +70,7 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 - set `diagram_mode: required|auto|hidden`
 - when `required`, include `## Technical Solution Diagram` with one ```mermaid block that captures selected solution logic
 - Mermaid safety: avoid raw `|` in node labels; use `/` or `or` in label text
-- when `auto|hidden`, Technical section may be omitted (KFP falls back to Tasks/Subtasks)
+- when `auto|hidden`, Technical section may be omitted (KFC Plan falls back to Tasks/Subtasks)
 16. End with one handoff route: `plan`, `build`, or `research`.
 17. Include concise next-step guidance when useful; do not require verbose response footer fields.
 18. Persist direct plan-file mutation before final output:
@@ -111,3 +111,4 @@ Use `../templates/start-report.md` shape.
 - One clear handoff route selected.
 - Active plan file is resolved (or created only when required) before response completes.
 - Handoff metadata is persisted in plan frontmatter.
+

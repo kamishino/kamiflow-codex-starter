@@ -36,7 +36,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
 - `kfc remote serve|stop|token` (mobile-first remote server for mirrored session + queued prompts)
-- `kfcs` (separate web-first Codex session manager utility)
+- `kfc-session` (separate web-first Codex session manager utility)
 - `kfc run` (guardrails + deterministic route loop with Codex execution and runlog evidence)
 - `kf` is an alias for `kfc`
 
@@ -82,7 +82,7 @@ npm run test:integration
 npm run test:full
 ```
 
-If you want the desktop shell for KFP UI (single window with restore):
+If you want the desktop shell for KFC Plan UI (single window with restore):
 
 ```bash
 npm run ui:desktop
@@ -91,7 +91,7 @@ npm run ui:desktop
 If you want the separate Codex session manager utility:
 
 ```bash
-npm run kfcs:serve
+npm run kfc-session:serve
 ```
 
 If you need client linking, prepare the package from this repo:
@@ -166,23 +166,23 @@ kfc session copy --to E:/transfer/codex-sessions --date 2026-03-04
 kfc session copy --from E:/transfer/codex-sessions --to ~/.codex/sessions --merge
 ```
 
-## KFCS Session Manager
+## KFC Session Session Manager
 
-KFCS is separate from KFC:
+KFC Session is separate from KFC:
 
 - `kfc`: workflow/bootstrap/plan discipline
-- `kfcs`: Codex session browser, import/export, and restore helper
+- `kfc-session`: Codex session browser, import/export, and restore helper
 
 ```bash
-kfcs serve
-kfcs index
-kfcs find --id 019caccc-f25d-7151-ad1d-6eab893d714d
-kfcs export --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
-kfcs import --from E:/transfer/codex-sessions
-kfcs restore --id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-session serve
+kfc-session index
+kfc-session find --id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-session export --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
+kfc-session import --from E:/transfer/codex-sessions
+kfc-session restore --id 019caccc-f25d-7151-ad1d-6eab893d714d
 ```
 
-Runbook: `resources/docs/KFCS_RUNBOOK.md`
+Runbook: `resources/docs/KFC_SESSION_RUNBOOK.md`
 
 ## Remote Mobile Surface
 
@@ -247,7 +247,7 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 - `resources/docs/CLIENT_KICKOFF_PROMPT.md`
 - `resources/docs/CLIENT_A2Z_PLAYBOOK.md`
 - `resources/docs/COMMAND_BOUNDARY_POLICY.md`
-- `resources/docs/CODEX_KFP_RUNBOOK.md`
+- `resources/docs/CODEX_KFC_PLAN_RUNBOOK.md`
 - `resources/docs/CODEX_RULES_RUNBOOK.md`
 - `resources/docs/CODEX_ANTI_PATTERNS.md`
 - `resources/docs/CODEX_INCIDENT_LEDGER.md`
@@ -258,7 +258,7 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 - `resources/docs/VERSIONING_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
 - `resources/docs/REMOTE_RUNBOOK.md`
-- `resources/docs/KFCS_RUNBOOK.md`
+- `resources/docs/KFC_SESSION_RUNBOOK.md`
 
 ## `.codex` Policy
 
@@ -280,3 +280,4 @@ Rules policy:
 - Keep SSOT in `resources/rules/base.rules` and `resources/rules/profiles/*.rules`.
 - Treat `.codex/rules/kamiflow.rules` as generated runtime output.
 - Keep `.codex/rules/default.rules` for Codex-managed approvals; do not overwrite it from SSOT.
+
