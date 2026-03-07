@@ -130,6 +130,8 @@ This repository has four active scopes:
 - Preserve current KFP architecture in `packages/kamiflow-plan-ui` (Preact components + signal-driven UI state + Eta shell).
 - Keep semantic, tokenized styles in `packages/kamiflow-plan-ui/src/server/public/styles.css`.
 - Avoid adding ad-hoc raw colors/spacing when semantic tokens already exist.
+- For browser-facing KFP changes, run the targeted Playwright lane: `npm run ui:test:browser`.
+- Do not treat the Playwright lane as a repo-wide mandatory test for non-UI tasks.
 
 ## Design-System Gates
 

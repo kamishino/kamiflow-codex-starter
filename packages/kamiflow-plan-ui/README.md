@@ -15,6 +15,7 @@ Phase 2 includes:
 - guarded write actions for status/decision/task/gate
 - codex action bridge endpoint
 - completed plan archive flow (`.local/plans/done`)
+- optional Playwright browser smoke lane for hydrated KFP UI verification
 
 ## Usage
 
@@ -128,6 +129,15 @@ If your environment blocks registry access, `serve` cannot start until dependenc
 
 If global home path is restricted, set `KAMIFLOW_HOME` to override workspace config root.
 
+If you want the browser smoke lane:
+
+```bash
+npm run test:browser:install
+npm run test:browser
+```
+
+Use the Playwright lane for browser-facing KFP changes such as layout, theme, plan picker, or interaction behavior. It is intentionally not part of the default package `test` script.
+
 `workspace add` auto-detects project root when `--project` is omitted:
 1. nearest Git root
 2. nearest `package.json` root
@@ -169,3 +179,14 @@ Design system guardrails:
   - `npm run docs:verify:kfp-contrast` (WCAG 2.1 ratio + APCA-oriented thresholds)
   - `npm run docs:verify:kfp-spacing-grid` (4px grid policy)
   - `npm run docs:verify:kfp-design-system` (combined)
+
+Browser verification lane:
+
+- `npm run test:browser` builds KFP and runs Playwright smoke coverage in Chromium
+- current smoke coverage verifies:
+  - empty state rendering
+  - selected plan hydration
+  - plan picker switching
+  - theme switching
+  - compact/expanded phase timeline behavior
+- failure artifacts are kept in `test-results/`

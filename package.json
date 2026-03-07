@@ -40,6 +40,7 @@
     "ui:validate": "node scripts/plan-ui/run-kfp.mjs validate",
     "ui:build": "npm run -w @kamishino/kamiflow-plan-ui build",
     "ui:test": "npm --prefix packages/kamiflow-plan-ui run test:fast",
+    "ui:test:browser": "npm --prefix packages/kamiflow-plan-ui run test:browser",
     "ui:test:integration": "npm --prefix packages/kamiflow-plan-ui run test:integration",
     "ui:dev": "npm run ui:serve",
     "ui:desktop": "npm run -w @kamishino/kamiflow-plan-desktop dev",

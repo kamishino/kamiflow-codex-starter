@@ -16,6 +16,9 @@
     "test": "npm run test:fast",
     "test:fast": "npm run build:server && node test/run.mjs --fast",
     "test:integration": "npm run build:server && node test/integration-codex-runner.mjs",
+    "test:browser:install": "playwright install chromium",
+    "test:browser": "npm run build && playwright test",
+    "test:browser:headed": "npm run build && playwright test --headed",
     "test:full": "npm run build && node test/run.mjs --fast && node test/integration-codex-runner.mjs",
     "verify": "npm run test:full",
     "dev:cli": "npm run build && node bin/kfp.js",
@@ -35,6 +38,7 @@
     "preact": "10.26.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@types/node": "22.13.10",
     "esbuild-wasm": "0.25.10",
     "typescript": "5.8.2"

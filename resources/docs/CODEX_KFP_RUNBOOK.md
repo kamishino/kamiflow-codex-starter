@@ -131,6 +131,8 @@ Server resolution:
 - Run targeted validation after each slice.
 - Update WIP log in the plan each cycle.
 - If scope/risk increases, reroute to `plan` or `research`.
+- For browser-facing KFP UI changes, run `npm run ui:test:browser` in addition to the fast/package and design-system checks.
+- Treat Playwright as a targeted KFP UI gate, not a mandatory repo-wide test for non-UI work.
 
 ## Activity Signal Semantics
 

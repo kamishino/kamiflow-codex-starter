@@ -11,3 +11,5 @@ temp/
 .agents/
 .local/
 .kfc/
+playwright-report/
+test-results/
