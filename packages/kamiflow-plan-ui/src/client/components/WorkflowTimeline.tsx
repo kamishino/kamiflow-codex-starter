@@ -1,3 +1,4 @@
+import { useState } from "preact/hooks";
 import type { PlanDetail, TimelineStepState } from "../types";
 import { CheckCircle2, ClipboardList, Hammer, SearchCode, Sparkles } from "lucide-preact";
 import { buildTimelineStepStates, deriveStage } from "../utils";
@@ -10,6 +11,7 @@ interface WorkflowTimelineProps {
 }
 
 export function WorkflowTimeline(props: WorkflowTimelineProps) {
+  const [expanded, setExpanded] = useState(false);
   const stages = [
     { name: "Brainstorm", hint: "clarify and propose", icon: Sparkles },
     { name: "Plan", hint: "decision complete", icon: ClipboardList },
@@ -29,7 +31,7 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
       return "Completed";
     }
     if (state === "current") {
-      return "Active";
+      return "Current";
     }
     return "Next";
   }
@@ -49,30 +51,53 @@ export function WorkflowTimeline(props: WorkflowTimelineProps) {
           <span class="phase-next-mode">in {nextMode} mode</span>
         </p>
       </div>
-      <ol class="phase-timeline" role="list" aria-label="Phase timeline">
+      <ol class="phase-mini-track" role="list" aria-label="Phase summary">
         {stages.map((stage, i) => {
           const state = stepStates[i];
           return (
-            <li class={cn("phase-step", "phase-step-" + state)} data-stage={stage.name.toLowerCase()} data-state={state}>
-              {i < stages.length - 1 ? (
-                <span class={cn("phase-connector", i < index ? "phase-connector-done" : "")} aria-hidden="true" />
-              ) : null}
-              <span class="phase-node" aria-hidden="true">
-                <Icon icon={stage.icon} class="phase-node-icon" />
+            <li class={cn("phase-mini-step", "phase-mini-step-" + state)} data-stage={stage.name.toLowerCase()} data-state={state}>
+              <span class="phase-mini-node" aria-hidden="true">
+                <Icon icon={stage.icon} class="phase-mini-node-icon" />
               </span>
-              <div class="phase-content">
-                <div class="phase-title-row">
-                  <h3 class="phase-title" aria-current={state === "current" ? "step" : undefined}>
-                    {stage.name}
-                  </h3>
-                  <span class={cn("phase-badge", "phase-badge-" + state)}>{stateLabel(state)}</span>
-                </div>
-                <CardDescription class="phase-hint">{stage.hint}</CardDescription>
-              </div>
+              <span class="phase-mini-label">{stage.name}</span>
             </li>
           );
         })}
       </ol>
+      <button
+        type="button"
+        class="ui-button ui-button-ghost phase-toggle"
+        aria-expanded={expanded ? "true" : "false"}
+        onClick={() => setExpanded((value) => !value)}
+      >
+        {expanded ? "Hide full timeline" : "Show full timeline"}
+      </button>
+      {expanded ? (
+        <ol class="phase-timeline" role="list" aria-label="Phase timeline">
+          {stages.map((stage, i) => {
+            const state = stepStates[i];
+            return (
+              <li class={cn("phase-step", "phase-step-" + state)} data-stage={stage.name.toLowerCase()} data-state={state}>
+                {i < stages.length - 1 ? (
+                  <span class={cn("phase-connector", i < index ? "phase-connector-done" : "")} aria-hidden="true" />
+                ) : null}
+                <span class="phase-node" aria-hidden="true">
+                  <Icon icon={stage.icon} class="phase-node-icon" />
+                </span>
+                <div class="phase-content">
+                  <div class="phase-title-row">
+                    <h3 class="phase-title" aria-current={state === "current" ? "step" : undefined}>
+                      {stage.name}
+                    </h3>
+                    <span class={cn("phase-badge", "phase-badge-" + state)}>{stateLabel(state)}</span>
+                  </div>
+                  <CardDescription class="phase-hint">{stage.hint}</CardDescription>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      ) : null}
     </div>
   );
 }

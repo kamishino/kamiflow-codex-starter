@@ -1014,11 +1014,11 @@ effect(() => {
   render(<WorkflowTimeline detail={activeDetail} />, workflowEl);
   render(
     <div class="work-surface-stack">
-      <ImplementationFlowPanel detail={activeDetail} />
       <PlanSnapshot
         detail={activeDetail}
         projectDir={projectDirById.get(activeDetail.summary.project_id || currentProjectId()) || ""}
       />
+      <ImplementationFlowPanel detail={activeDetail} />
     </div>,
     workEl
   );
