@@ -32,6 +32,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc client` (default client setup + Codex-ready handoff + one smart-recovery cycle)
 - `kfc client done` (cleanup)
 - `kfc client update|upgrade` (source-aware client-project refresh or reinstall + rebootstrap)
+- `kfc client lessons capture|pending|show|promote|list` (private raw lessons + curated client memory)
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
 - `kfc remote serve|stop|token` (mobile-first remote server for mirrored session + queued prompts)
@@ -112,6 +113,17 @@ Then tell Codex:
 - Use the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`.
 - Run routine `kfc ...` flow commands autonomously (no user reminder loop).
 - Run check validation before final response and report `Check: PASS|BLOCK`.
+
+To store project-specific lessons:
+
+```bash
+kfc client lessons capture --project . --type incident --title "Broken setup" --lesson "Use KFC bootstrap first"
+kfc client lessons pending --project .
+kfc client lessons promote --project . --id LESSON-20260307-001 --summary "Bootstrap KFC before custom setup"
+kfc client lessons list --project .
+```
+
+Raw lesson history stays private in `.local/kfc-lessons/`. Curated durable memory lives in `.kfc/LESSONS.md`.
 
 After Codex finishes:
 

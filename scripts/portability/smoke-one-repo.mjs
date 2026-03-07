@@ -177,6 +177,55 @@ function verifyFileContainsStep(title, filePath, patterns, cwd) {
   };
 }
 
+function parseSimpleFrontmatter(markdown) {
+  const source = String(markdown || "");
+  if (!source.startsWith("---")) {
+    return {};
+  }
+  const lines = source.split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return {};
+  }
+  const frontmatter = {};
+  for (const line of lines.slice(1, endIdx)) {
+    const sep = line.indexOf(":");
+    if (sep <= 0) {
+      continue;
+    }
+    const key = line.slice(0, sep).trim();
+    const value = line.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
+    frontmatter[key] = value;
+  }
+  return frontmatter;
+}
+
+function findLatestRawLesson(projectDir) {
+  const baseDir = path.join(projectDir, ".local", "kfc-lessons");
+  const candidates = [];
+  for (const type of ["incidents", "decisions"]) {
+    const dirPath = path.join(baseDir, type);
+    if (!fs.existsSync(dirPath)) {
+      continue;
+    }
+    for (const name of fs.readdirSync(dirPath)) {
+      const filePath = path.join(dirPath, name);
+      if (!name.toLowerCase().endsWith(".md") || !fs.statSync(filePath).isFile()) {
+        continue;
+      }
+      candidates.push(filePath);
+    }
+  }
+  candidates.sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
+  return candidates[0] || "";
+}
+
 function ensureProjectSeed(projectDir) {
   if (fs.existsSync(projectDir)) {
     if (!fs.statSync(projectDir).isDirectory()) {
@@ -485,6 +534,146 @@ async function main() {
           projectDir
         )
       );
+      steps.push(
+        runStep(
+          "kfc client lessons capture",
+          NODE,
+          [
+            NPM_CLI,
+            "exec",
+            "--no-install",
+            "--",
+            "kfc",
+            "client",
+            "lessons",
+            "capture",
+            "--project",
+            ".",
+            "--type",
+            "incident",
+            "--title",
+            "Bootstrap lesson",
+            "--lesson",
+            "Use client bootstrap before custom setup.",
+            "--context",
+            "Portability smoke"
+          ],
+          projectDir
+        )
+      );
+      if (steps.at(-1).ok) {
+        const rawLessonPath = findLatestRawLesson(projectDir);
+        steps.push(
+          verifyPathExistsStep("verify captured raw lesson file", rawLessonPath, projectDir, "file")
+        );
+        if (steps.at(-1).ok) {
+          const lessonFrontmatter = parseSimpleFrontmatter(fs.readFileSync(rawLessonPath, "utf8"));
+          const lessonId = String(lessonFrontmatter.lesson_id || "").trim();
+          if (!lessonId) {
+            steps.push({
+              title: "resolve captured lesson id",
+              cwd: projectDir,
+              command: `read lesson_id ${shellEscape(rawLessonPath)}`,
+              ok: false,
+              statusCode: 1,
+              durationMs: 0,
+              stdout: "",
+              stderr: `Missing lesson_id in ${rawLessonPath}`
+            });
+          } else {
+            steps.push(
+              runStep(
+                "kfc client lessons pending",
+                NODE,
+                [
+                  NPM_CLI,
+                  "exec",
+                  "--no-install",
+                  "--",
+                  "kfc",
+                  "client",
+                  "lessons",
+                  "pending",
+                  "--project",
+                  "."
+                ],
+                projectDir
+              )
+            );
+            steps.push(
+              runStep(
+                "kfc client lessons show",
+                NODE,
+                [
+                  NPM_CLI,
+                  "exec",
+                  "--no-install",
+                  "--",
+                  "kfc",
+                  "client",
+                  "lessons",
+                  "show",
+                  "--project",
+                  ".",
+                  "--id",
+                  lessonId
+                ],
+                projectDir
+              )
+            );
+            steps.push(
+              runStep(
+                "kfc client lessons promote",
+                NODE,
+                [
+                  NPM_CLI,
+                  "exec",
+                  "--no-install",
+                  "--",
+                  "kfc",
+                  "client",
+                  "lessons",
+                  "promote",
+                  "--project",
+                  ".",
+                  "--id",
+                  lessonId,
+                  "--summary",
+                  "Run KFC client bootstrap before adding manual project setup."
+                ],
+                projectDir
+              )
+            );
+            steps.push(
+              runStep(
+                "kfc client lessons list",
+                NODE,
+                [
+                  NPM_CLI,
+                  "exec",
+                  "--no-install",
+                  "--",
+                  "kfc",
+                  "client",
+                  "lessons",
+                  "list",
+                  "--project",
+                  "."
+                ],
+                projectDir
+              )
+            );
+            steps.push(
+              verifyFileContainsStep(
+                "verify curated lessons content",
+                path.join(projectDir, ".kfc", "LESSONS.md"),
+                [lessonId, "Run KFC client bootstrap before adding manual project setup."],
+                projectDir
+              )
+            );
+          }
+        }
+      }
     }
     return finalize(steps, outPath, projectDir, args.link);
   }

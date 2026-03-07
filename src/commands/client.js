@@ -61,10 +61,11 @@ const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read .kfc/CODEX_READY.md and execute the mission.";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
+const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
 
 function usage() {
   info("Usage: kfc client [options]");
-  info("Usage: kfc client <bootstrap|doctor|done|update|upgrade> [options]");
+  info("Usage: kfc client <bootstrap|doctor|done|update|upgrade|lessons> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
   info("Client kickoff prompt: ./node_modules/@kamishino/kamiflow-codex/resources/docs/CLIENT_KICKOFF_PROMPT.md");
@@ -81,6 +82,11 @@ function usage() {
   info("  kfc client update --project .");
   info("  kfc client update --project . --apply");
   info("  kfc client update --project . --from <git-url|folder|tgz> --apply");
+  info("  kfc client lessons capture --project . --type incident --title \"Broken setup\" --lesson \"Remember X\" --context \"While bootstrapping\"");
+  info("  kfc client lessons pending --project .");
+  info("  kfc client lessons show --project . --id LESSON-20260307-001");
+  info("  kfc client lessons promote --project . --id LESSON-20260307-001 --summary \"Use X before Y\"");
+  info("  kfc client lessons list --project .");
   info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle and Codex auto-launch by default.");
   info("Note: `kfc client update` defaults to preview; use --apply to execute the update and refresh flow.");
 }
@@ -98,8 +104,15 @@ function parseArgs(baseCwd, args) {
     rest = args.slice(1);
   }
 
+  let action = "";
+  if (subcommand === "lessons" && rest.length > 0 && !String(rest[0]).startsWith("-")) {
+    action = String(rest[0]).trim();
+    rest = rest.slice(1);
+  }
+
   const parsed = {
     subcommand,
+    action,
     project: baseCwd,
     profile: "client",
     port: DEFAULT_PORT,
@@ -109,7 +122,13 @@ function parseArgs(baseCwd, args) {
     noLaunchCodex: false,
     goal: "",
     apply: false,
-    from: ""
+    from: "",
+    type: "",
+    title: "",
+    lesson: "",
+    context: "",
+    id: "",
+    summary: ""
   };
 
   for (let i = 0; i < rest.length; i += 1) {
@@ -182,6 +201,60 @@ function parseArgs(baseCwd, args) {
     if (token === "--help" || token === "-h") {
       parsed.subcommand = "help";
       return parsed;
+    }
+    if (token === "--type") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --type.");
+      }
+      parsed.type = String(value).trim().toLowerCase();
+      i += 1;
+      continue;
+    }
+    if (token === "--title") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --title.");
+      }
+      parsed.title = String(value).trim();
+      i += 1;
+      continue;
+    }
+    if (token === "--lesson") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --lesson.");
+      }
+      parsed.lesson = String(value).trim();
+      i += 1;
+      continue;
+    }
+    if (token === "--context") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --context.");
+      }
+      parsed.context = String(value).trim();
+      i += 1;
+      continue;
+    }
+    if (token === "--id") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --id.");
+      }
+      parsed.id = String(value).trim();
+      i += 1;
+      continue;
+    }
+    if (token === "--summary") {
+      const value = rest[i + 1];
+      if (!value) {
+        throw new Error("Missing value for --summary.");
+      }
+      parsed.summary = String(value).trim();
+      i += 1;
+      continue;
     }
     throw new Error(`Unknown option: ${token}`);
   }
@@ -561,6 +634,401 @@ async function ensureClientLessonsScaffold(projectDir) {
     incidentsDir: raw.incidentsDir,
     decisionsDir: raw.decisionsDir
   };
+}
+
+function normalizeWhitespace(value) {
+  return String(value || "").replace(/\s+/g, " ").trim();
+}
+
+function slugifyLessonTitle(value) {
+  const slug = String(value || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || "lesson";
+}
+
+function formatLessonDateParts(date = new Date()) {
+  const iso = new Date(date).toISOString();
+  return {
+    iso,
+    compactDate: iso.slice(0, 10).replaceAll("-", ""),
+    dashedDate: iso.slice(0, 10)
+  };
+}
+
+function formatLessonSequence(value) {
+  return String(value).padStart(3, "0");
+}
+
+function normalizeFrontmatterValue(value) {
+  return String(value ?? "").replace(/\r?\n/g, " ").trim();
+}
+
+function serializeSimpleFrontmatter(frontmatter) {
+  const lines = ["---"];
+  for (const [key, rawValue] of Object.entries(frontmatter)) {
+    lines.push(`${key}: ${JSON.stringify(normalizeFrontmatterValue(rawValue))}`);
+  }
+  lines.push("---", "");
+  return lines.join("\n");
+}
+
+function splitFrontmatter(markdown) {
+  const source = String(markdown || "");
+  if (!source.startsWith("---")) {
+    return { frontmatter: {}, body: source };
+  }
+  const lines = source.split(/\r?\n/);
+  let endIdx = -1;
+  for (let i = 1; i < lines.length; i += 1) {
+    if (lines[i].trim() === "---") {
+      endIdx = i;
+      break;
+    }
+  }
+  if (endIdx === -1) {
+    return { frontmatter: {}, body: source };
+  }
+  const body = lines.slice(endIdx + 1).join("\n").replace(/^\s+/, "");
+  return {
+    frontmatter: parseSimpleFrontmatter(source),
+    body
+  };
+}
+
+function parseMarkdownSections(markdown) {
+  const sections = {};
+  const source = String(markdown || "").trim();
+  if (!source) {
+    return sections;
+  }
+  const matches = source.matchAll(/^##\s+(.+)\r?\n([\s\S]*?)(?=^##\s+|\Z)/gm);
+  for (const match of matches) {
+    const heading = String(match[1] || "").trim().toLowerCase();
+    sections[heading] = String(match[2] || "").trim();
+  }
+  return sections;
+}
+
+function buildRawLessonMarkdown(entry) {
+  const frontmatter = serializeSimpleFrontmatter({
+    lesson_id: entry.lessonId,
+    type: entry.type,
+    status: entry.status,
+    title: entry.title,
+    created_at: entry.createdAt,
+    promoted_at: entry.promotedAt || ""
+  });
+  return [
+    frontmatter,
+    "## Context",
+    entry.context || "None provided.",
+    "",
+    "## Lesson",
+    entry.lesson,
+    "",
+    "## Proposed Durable Summary",
+    entry.proposedSummary || "",
+    ""
+  ].join("\n");
+}
+
+function buildCuratedLessonEntry(entry) {
+  return [
+    `### [${entry.lessonId}] ${entry.title}`,
+    `- Type: ${entry.type}`,
+    `- Summary: ${entry.summary}`,
+    `- Promoted: ${entry.promotedAt}`,
+    `- Source: \`${entry.relativePath}\``,
+    ""
+  ].join("\n");
+}
+
+function parseCuratedLessons(markdown) {
+  const source = String(markdown || "");
+  const entries = [];
+  const matches = source.matchAll(
+    /^### \[(.+?)\] (.+)\r?\n- Type: (.+)\r?\n- Summary: ([\s\S]*?)\r?\n- Promoted: (.+)\r?\n- Source: `(.+)`\r?$/gm
+  );
+  for (const match of matches) {
+    entries.push({
+      lessonId: String(match[1] || "").trim(),
+      title: String(match[2] || "").trim(),
+      type: String(match[3] || "").trim(),
+      summary: normalizeWhitespace(match[4] || ""),
+      promotedAt: String(match[5] || "").trim(),
+      relativePath: String(match[6] || "").trim()
+    });
+  }
+  return entries;
+}
+
+function validateClientLessonType(type) {
+  const normalized = String(type || "").trim().toLowerCase();
+  if (!VALID_CLIENT_LESSON_TYPES.includes(normalized)) {
+    throw new Error(`Invalid --type value. Use one of: ${VALID_CLIENT_LESSON_TYPES.join(", ")}.`);
+  }
+  return normalized;
+}
+
+function resolveClientRawLessonTypeDir(projectDir, type) {
+  const raw = resolveClientRawLessonPaths(projectDir);
+  return type === "incident" ? raw.incidentsDir : raw.decisionsDir;
+}
+
+async function listClientRawLessons(projectDir) {
+  const raw = resolveClientRawLessonPaths(projectDir);
+  const records = [];
+
+  for (const type of VALID_CLIENT_LESSON_TYPES) {
+    const dirPath = resolveClientRawLessonTypeDir(projectDir, type);
+    let entries = [];
+    try {
+      entries = await fsp.readdir(dirPath, { withFileTypes: true });
+    } catch (err) {
+      if (err && typeof err === "object" && err.code === "ENOENT") {
+        continue;
+      }
+      throw err;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
+        continue;
+      }
+      const filePath = path.join(dirPath, entry.name);
+      const rawMarkdown = await fsp.readFile(filePath, "utf8");
+      const { frontmatter, body } = splitFrontmatter(rawMarkdown);
+      const sections = parseMarkdownSections(body);
+      records.push({
+        lessonId: String(frontmatter.lesson_id || "").trim(),
+        type: String(frontmatter.type || type).trim().toLowerCase(),
+        status: String(frontmatter.status || "pending").trim().toLowerCase(),
+        title: String(frontmatter.title || path.basename(entry.name, ".md")).trim(),
+        createdAt: String(frontmatter.created_at || "").trim(),
+        promotedAt: String(frontmatter.promoted_at || "").trim(),
+        context: String(sections.context || "").trim(),
+        lesson: String(sections.lesson || "").trim(),
+        proposedSummary: String(sections["proposed durable summary"] || "").trim(),
+        filePath,
+        relativePath: path.relative(projectDir, filePath).replaceAll("\\", "/"),
+        filename: entry.name
+      });
+    }
+  }
+
+  records.sort((left, right) => {
+    return toTimestamp(right.createdAt, 0) - toTimestamp(left.createdAt, 0);
+  });
+
+  return records;
+}
+
+async function findClientRawLessonById(projectDir, lessonId) {
+  const normalizedId = String(lessonId || "").trim().toUpperCase();
+  const lessons = await listClientRawLessons(projectDir);
+  return lessons.find((entry) => entry.lessonId.toUpperCase() === normalizedId) || null;
+}
+
+async function allocateClientLessonIdentity(projectDir, title) {
+  const allLessons = await listClientRawLessons(projectDir);
+  const { compactDate, dashedDate, iso } = formatLessonDateParts();
+  let maxSeq = 0;
+  for (const lesson of allLessons) {
+    const match = lesson.lessonId.match(/^LESSON-(\d{8})-(\d{3})$/);
+    if (!match || match[1] !== compactDate) {
+      continue;
+    }
+    maxSeq = Math.max(maxSeq, Number.parseInt(match[2], 10) || 0);
+  }
+  const nextSeq = maxSeq + 1;
+  const seqToken = formatLessonSequence(nextSeq);
+  return {
+    lessonId: `LESSON-${compactDate}-${seqToken}`,
+    filename: `${dashedDate}-${seqToken}-${slugifyLessonTitle(title)}.md`,
+    createdAt: iso
+  };
+}
+
+async function appendCuratedClientLesson(projectDir, entry) {
+  const lessonsPath = resolveClientLessonsPath(projectDir);
+  const existing = fs.existsSync(lessonsPath)
+    ? await fsp.readFile(lessonsPath, "utf8")
+    : buildClientLessonsTemplate();
+  const marker = `### [${entry.lessonId}] `;
+  if (existing.includes(marker)) {
+    return { changed: false, lessonsPath };
+  }
+
+  const cleaned = existing.replace(/\r\n/g, "\n");
+  const withoutPlaceholder = cleaned.replace(/^## Active Lessons\s+- None yet\.\s*/m, "## Active Lessons\n\n");
+  const base = withoutPlaceholder.endsWith("\n") ? withoutPlaceholder : `${withoutPlaceholder}\n`;
+  const nextContent = `${base}${base.endsWith("\n\n") ? "" : "\n"}${buildCuratedLessonEntry(entry)}`;
+  await fsp.writeFile(lessonsPath, nextContent, "utf8");
+  return { changed: true, lessonsPath };
+}
+
+async function writeRawClientLesson(projectDir, entry) {
+  const dirPath = resolveClientRawLessonTypeDir(projectDir, entry.type);
+  await fsp.mkdir(dirPath, { recursive: true });
+  const filePath = path.join(dirPath, entry.filename);
+  await fsp.writeFile(filePath, buildRawLessonMarkdown(entry), "utf8");
+  return filePath;
+}
+
+function printClientLessonRecord(entry) {
+  info(`Lesson ID: ${entry.lessonId}`);
+  info(`Type: ${entry.type}`);
+  info(`Status: ${entry.status}`);
+  info(`Title: ${entry.title}`);
+  info(`Created: ${entry.createdAt || "Unknown"}`);
+  info(`Promoted: ${entry.promotedAt || "-"}`);
+  info(`Path: ${entry.relativePath || entry.filePath}`);
+  console.log("");
+  console.log("## Context");
+  console.log(entry.context || "None provided.");
+  console.log("");
+  console.log("## Lesson");
+  console.log(entry.lesson || "<empty>");
+  if (entry.proposedSummary) {
+    console.log("");
+    console.log("## Proposed Durable Summary");
+    console.log(entry.proposedSummary);
+  }
+}
+
+async function runClientLessons(options) {
+  await ensureClientLessonsScaffold(options.project);
+
+  if (!options.action) {
+    throw new Error("Missing lessons action. Use one of: capture, pending, show, promote, list.");
+  }
+
+  if (options.action === "capture") {
+    const type = validateClientLessonType(options.type);
+    const title = String(options.title || "").trim();
+    const lesson = String(options.lesson || "").trim();
+    const context = String(options.context || "").trim();
+    if (!title) {
+      throw new Error("Missing required --title for `kfc client lessons capture`.");
+    }
+    if (!lesson) {
+      throw new Error("Missing required --lesson for `kfc client lessons capture`.");
+    }
+
+    const identity = await allocateClientLessonIdentity(options.project, title);
+    const filePath = await writeRawClientLesson(options.project, {
+      lessonId: identity.lessonId,
+      filename: identity.filename,
+      type,
+      status: "pending",
+      title,
+      createdAt: identity.createdAt,
+      promotedAt: "",
+      context,
+      lesson,
+      proposedSummary: ""
+    });
+    info("Lesson captured.");
+    info(`Lesson ID: ${identity.lessonId}`);
+    info(`Path: ${filePath}`);
+    return 0;
+  }
+
+  if (options.action === "pending") {
+    const lessons = await listClientRawLessons(options.project);
+    const filtered = lessons.filter((entry) => {
+      if (entry.status === "promoted") {
+        return false;
+      }
+      if (!options.type) {
+        return true;
+      }
+      return entry.type === validateClientLessonType(options.type);
+    });
+    if (filtered.length === 0) {
+      info("No pending lessons.");
+      return 0;
+    }
+    for (const entry of filtered) {
+      info(`[${entry.lessonId}] (${entry.type}) ${entry.title}`);
+    }
+    return 0;
+  }
+
+  if (options.action === "show") {
+    if (!options.id) {
+      throw new Error("Missing required --id for `kfc client lessons show`.");
+    }
+    const entry = await findClientRawLessonById(options.project, options.id);
+    if (!entry) {
+      throw new Error(`Unknown lesson id: ${options.id}`);
+    }
+    printClientLessonRecord(entry);
+    return 0;
+  }
+
+  if (options.action === "promote") {
+    if (!options.id) {
+      throw new Error("Missing required --id for `kfc client lessons promote`.");
+    }
+    const entry = await findClientRawLessonById(options.project, options.id);
+    if (!entry) {
+      throw new Error(`Unknown lesson id: ${options.id}`);
+    }
+    const summary = normalizeWhitespace(options.summary || entry.proposedSummary || entry.lesson);
+    if (!summary) {
+      throw new Error("Cannot promote a lesson without a durable summary. Provide --summary.");
+    }
+    const promotedAt = new Date().toISOString();
+    const curatedEntry = {
+      lessonId: entry.lessonId,
+      type: entry.type,
+      title: entry.title,
+      summary,
+      promotedAt,
+      relativePath: entry.relativePath
+    };
+    const appendResult = await appendCuratedClientLesson(options.project, curatedEntry);
+    await fsp.writeFile(
+      entry.filePath,
+      buildRawLessonMarkdown({
+        lessonId: entry.lessonId,
+        filename: entry.filename,
+        type: entry.type,
+        status: "promoted",
+        title: entry.title,
+        createdAt: entry.createdAt,
+        promotedAt,
+        context: entry.context,
+        lesson: entry.lesson,
+        proposedSummary: summary
+      }),
+      "utf8"
+    );
+    info(appendResult.changed ? "Lesson promoted." : "Lesson already existed in curated lessons; raw status refreshed.");
+    info(`Lesson ID: ${entry.lessonId}`);
+    info(`Curated file: ${resolveClientLessonsPath(options.project)}`);
+    return 0;
+  }
+
+  if (options.action === "list") {
+    const lessonsPath = resolveClientLessonsPath(options.project);
+    const content = fs.existsSync(lessonsPath) ? await fsp.readFile(lessonsPath, "utf8") : "";
+    const entries = parseCuratedLessons(content);
+    if (entries.length === 0) {
+      info("No curated lessons.");
+      return 0;
+    }
+    for (const entry of entries) {
+      info(`[${entry.lessonId}] (${entry.type}) ${entry.title}`);
+      info(`  Summary: ${entry.summary}`);
+    }
+    return 0;
+  }
+
+  throw new Error(`Unknown lessons action: ${options.action}`);
 }
 
 function parseSimpleFrontmatter(markdown) {
@@ -1780,6 +2248,15 @@ export async function runClient(options) {
   if (parsed.subcommand === "update" || parsed.subcommand === "upgrade") {
     try {
       return await runClientUpdate(parsed);
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
+  }
+
+  if (parsed.subcommand === "lessons") {
+    try {
+      return await runClientLessons(parsed);
     } catch (err) {
       error(err instanceof Error ? err.message : String(err));
       return 1;

@@ -35,6 +35,7 @@ If auto-launch is disabled or fails, use the exact manual fallback command print
 - Use `.kfc/LESSONS.md` as curated private project memory when present.
 - Use `.agents/skills/kamiflow-core/SKILL.md` as the visible project-local runtime skill artifact.
 - Keep raw lesson history private under `.local/kfc-lessons/`.
+- Use `kfc client lessons capture|pending|show|promote|list` to maintain the private-history -> curated-memory lesson flow.
 - Codex should execute routine flow commands autonomously without user reminders.
 - Auto-launch is the preferred handoff path; use the printed fallback command only if launch was skipped or failed.
 - Before any implementation route (`build`/`fix`), Codex should run `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.

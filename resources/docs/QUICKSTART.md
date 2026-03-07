@@ -64,6 +64,18 @@ If auto-launch is disabled or fails, run the exact fallback command printed by K
 This flow is designed for no user reminder loop after bootstrap. Codex should continue from the generated brief and the project-local skill without waiting for routine chat reminders.
 The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
 
+To manage private project lessons after bootstrap:
+
+```bash
+kfc client lessons capture --project . --type incident --title "Broken setup" --lesson "Use X before Y" --context "Short trigger/context"
+kfc client lessons pending --project .
+kfc client lessons show --project . --id LESSON-20260307-001
+kfc client lessons promote --project . --id LESSON-20260307-001 --summary "Durable lesson Codex should remember"
+kfc client lessons list --project .
+```
+
+Use `.local/kfc-lessons/` for raw private history and `.kfc/LESSONS.md` for the curated lessons Codex should read in future sessions.
+
 After work is complete, cleanup is required:
 
 ```bash
