@@ -44,7 +44,7 @@ async function defaultExecutePrompt({ projectDir, prompt, planId, sessionId, tim
 export async function createKfcChatServer(options = {}) {
   const projectDir = options.projectDir;
   const host = String(options.host || "127.0.0.1");
-  const port = Number(options.port || 4322);
+  const port = Number.isInteger(options.port) && options.port >= 0 ? Number(options.port) : 4322;
   const timeoutMs = Number.isInteger(options.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : 5 * 60 * 1000;
   const projectName = String(options.projectName || projectDir.split(/[\\/]/).filter(Boolean).pop() || "KFC Chat");
   const sessionsRoot = options.sessionsRoot;

@@ -88,6 +88,7 @@ await withTempDir(async (tempDir) => {
   const html = await fetch(`${listener.url}/`);
   const htmlText = await html.text();
   assert.match(htmlText, /Bound Codex Session Chat/);
+  assert.match(htmlText, /Bound Session Timeline/);
 
   const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=smoke-token`);
   const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");

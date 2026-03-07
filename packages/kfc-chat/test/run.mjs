@@ -147,6 +147,21 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     const health = await fetch(`${listener.url}/api/chat/health`);
     assert.equal(health.status, 200);
 
+    const html = await fetch(`${listener.url}/`);
+    const htmlText = await html.text();
+    assert.match(htmlText, /Bound Session Timeline/);
+    assert.match(htmlText, /conversation-summary/);
+
+    const styles = await fetch(`${listener.url}/assets/kfc-chat.css`);
+    const stylesText = await styles.text();
+    assert.match(stylesText, /\.message-group/);
+    assert.match(stylesText, /\.transcript-event/);
+
+    const script = await fetch(`${listener.url}/assets/kfc-chat.js`);
+    const scriptText = await script.text();
+    assert.match(scriptText, /groupTranscriptItems/);
+    assert.match(scriptText, /message-bubble/);
+
     const verify = await fetch(`${listener.url}/api/chat/token/verify`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
