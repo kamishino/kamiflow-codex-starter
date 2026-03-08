@@ -8,6 +8,7 @@ import { error, info } from "../lib/logger.js";
 const INDEX_FILE_NAME = "kfc-session-index.json";
 const ENVELOPE_FORMAT = "kfc-session-age-envelope-v1";
 const LEGACY_ENVELOPE_FORMAT = "kfc-session-envelope-v1";
+const SESSION_ARTIFACT_SUFFIX = ".kfc-session.json";
 const TRUST_FILE_NAME = "trusted-recipients.json";
 const DEFAULT_SESSION_KEY_DIR = path.join(os.homedir(), ".kfc", "session");
 const DEFAULT_SESSION_KEY_PATH = path.join(DEFAULT_SESSION_KEY_DIR, "age.key");
@@ -780,7 +781,7 @@ async function runPush(parsed) {
   };
 
   const envelope = await encryptSessionBuffer(sourceBuffer, metadata, recipients);
-  const artifactRelPath = joinPortable([datePath, `${source.sessionId}.kfcsess`]);
+  const artifactRelPath = joinPortable([datePath, `${source.sessionId}${SESSION_ARTIFACT_SUFFIX}`]);
   const artifactPath = path.join(parsed.to, ...artifactRelPath.split("/"));
 
   const artifactExists = await pathExists(artifactPath);

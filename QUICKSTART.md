@@ -139,7 +139,7 @@ kfc session pull --from E:/transfer/codex-sessions
 kfc session pull --from E:/transfer/codex-sessions --id 019caccc-f25d-7151-ad1d-6eab893d714d
 ```
 
-Transfer folder stores encrypted `.kfcsess` artifacts plus minimal metadata index (`kfc-session-index.json`) using age recipient encryption.
+Transfer folder stores encrypted `.kfc-session.json` artifacts plus minimal metadata index (`kfc-session-index.json`) using age recipient encryption.
 
 ## Mobile Remote Surface
 

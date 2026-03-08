@@ -12,7 +12,7 @@ Cross-project validation templates:
 
 Kami Flow prompt templates:
 
-- `resources/templates/kamiflow-start-template.md`
-- `resources/templates/kamiflow-plan-template.md`
-- `resources/templates/kamiflow-build-template.md`
-- `resources/templates/kamiflow-check-template.md`
+- `resources/templates/kfc-start-template.md`
+- `resources/templates/kfc-plan-template.md`
+- `resources/templates/kfc-build-template.md`
+- `resources/templates/kfc-check-template.md`
