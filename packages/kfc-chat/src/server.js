@@ -30,6 +30,14 @@ function compactText(value, max = 4000) {
   return text.length > max ? `${text.slice(0, max - 3)}...` : text;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isMissingPathError(err) {
+  return Boolean(err) && typeof err === "object" && (err.code === "ENOENT" || err.code === "ENOTDIR");
+}
+
 async function defaultExecutePrompt({ projectDir, prompt, planId, sessionId, timeoutMs }) {
   return await runCodexResumeAction({
     plan_id: planId,
@@ -60,6 +68,7 @@ export async function createKfcChatServer(options = {}) {
   let boundSession = await resolveBoundSession(projectDir, sessionsRoot);
   const wsClients = new Set();
   let processing = false;
+  let shuttingDown = false;
 
   const wss = new WebSocketServer({ noServer: true });
 
@@ -89,6 +98,9 @@ export async function createKfcChatServer(options = {}) {
   }
 
   async function persistSession() {
+    if (shuttingDown) {
+      return;
+    }
     chatSession = {
       ...chatSession,
       updated_at: nowIso(),
@@ -96,7 +108,15 @@ export async function createKfcChatServer(options = {}) {
       busy: processing || promptQueue.length > 0,
       connection_count: wsClients.size
     };
-    await saveChatSession(projectDir, chatSession);
+    try {
+      await saveChatSession(projectDir, chatSession);
+    } catch (err) {
+      if (isMissingPathError(err)) {
+        shuttingDown = true;
+        return;
+      }
+      throw err;
+    }
     broadcast("session_updated", buildSessionPayload());
   }
 
@@ -395,6 +415,9 @@ export async function createKfcChatServer(options = {}) {
 
     ws.on("close", async () => {
       wsClients.delete(ws);
+      if (shuttingDown) {
+        return;
+      }
       await persistSession();
     });
   });
@@ -425,6 +448,17 @@ export async function createKfcChatServer(options = {}) {
       };
     },
     async close() {
+      shuttingDown = true;
+      for (let attempt = 0; attempt < 100 && processing; attempt += 1) {
+        await sleep(10);
+      }
+      for (const client of wsClients) {
+        try {
+          client.close();
+        } catch {
+          // Ignore shutdown close errors.
+        }
+      }
       wss.close();
       await fastify.close();
     }

@@ -15,6 +15,10 @@ import { createKfcChatServer } from "../src/server.js";
 
 let failed = 0;
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function runCase(name, fn) {
   try {
     await fn();
@@ -31,7 +35,17 @@ async function withTempDir(fn) {
   try {
     await fn(tempDir);
   } finally {
-    await fs.rm(tempDir, { recursive: true, force: true });
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      try {
+        await fs.rm(tempDir, { recursive: true, force: true });
+        break;
+      } catch (err) {
+        if (attempt === 9) {
+          throw err;
+        }
+        await sleep(25);
+      }
+    }
   }
 }
 
@@ -113,17 +127,17 @@ await runCase("display model groups conversational transcript items for human-fi
     { id: "a1", role: "assistant", kind: "codex_tail", text: "First reply", created_at: "2026-03-08T00:01:00.000Z", status: "synced" },
     { id: "a2", role: "assistant", kind: "codex_result", text: "Second reply", created_at: "2026-03-08T00:02:00.000Z", status: "completed" },
     { id: "u1", role: "user", kind: "prompt", text: "Follow up", created_at: "2026-03-08T00:03:00.000Z", status: "queued" },
-    { id: "e1", role: "system", kind: "prompt_error", text: "Blocked", created_at: "2026-03-08T00:04:00.000Z", status: "blocked" }
+    { id: "e1", role: "system", kind: "function_call_output", text: "Tool output", created_at: "2026-03-08T00:04:00.000Z", status: "synced" }
   ]);
 
   assert.equal(blocks.length, 3);
-  assert.equal(blocks[0].type, "message_group");
-  assert.equal(blocks[0].role, "assistant");
-  assert.equal(blocks[0].items.length, 2);
+  assert.equal(blocks[0].type, "event_row");
+  assert.equal(blocks[0].label, "Tool Output");
   assert.equal(blocks[1].type, "message_group");
   assert.equal(blocks[1].role, "user");
-  assert.equal(blocks[2].type, "event_row");
-  assert.equal(blocks[2].label, "Blocked");
+  assert.equal(blocks[2].type, "message_group");
+  assert.equal(blocks[2].role, "assistant");
+  assert.equal(blocks[2].items.length, 2);
 });
 
 await runCase("server exposes health/session/transcript and streams prompt updates over WebSocket", async () => {
@@ -139,7 +153,8 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     const executePrompt = async ({ prompt }) => {
       await fs.appendFile(
         sessionPath,
-        JSON.stringify({ role: "assistant", text: `Codex handled: ${prompt}`, updated_at: "2026-03-08T00:02:00.000Z" }) + "\n",
+        JSON.stringify({ role: "assistant", text: `Codex handled: ${prompt}`, updated_at: "2026-03-08T00:02:00.000Z" }) + "\n" +
+        JSON.stringify({ timestamp: "2026-03-08T00:02:30.000Z", type: "response_item", payload: { type: "function_call_output", output: `Tool output for: ${prompt}` } }) + "\n",
         "utf8"
       );
       return {
@@ -210,10 +225,28 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     ws.send(JSON.stringify({ type: "submit_prompt", prompt: "Continue the investigation" }));
 
     const transcriptUpdated = await waitForMessage(ws, (message) => message.type === "transcript_updated");
+    assert.ok(Array.isArray(transcriptUpdated.payload.items));
     assert.ok(transcriptUpdated.payload.items.some((item) => item.type === "message_group"));
 
     const completed = await waitForMessage(ws, (message) => message.type === "prompt_completed");
     assert.match(completed.payload.result.text, /Handled prompt/);
+
+    const settled = await waitForMessage(ws, (message) =>
+      message.type === "session_updated" &&
+      message.payload?.busy === false &&
+      Number(message.payload?.queue_depth || 0) === 0 &&
+      message.payload?.status === "done" &&
+      String(message.payload?.last_result?.text || "").includes("Handled prompt")
+    );
+    assert.equal(settled.payload.busy, false);
+
+    const finalTranscript = await fetch(`${listener.url}/api/chat/transcript`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    const finalTranscriptPayload = await finalTranscript.json();
+    assert.ok(finalTranscriptPayload.items.some((item) => item.type === "event_row" && item.label === "Tool Output"));
+    assert.ok(finalTranscriptPayload.items.some((item) => item.type === "message_group" && item.role === "user"));
+    assert.ok(finalTranscriptPayload.items.some((item) => item.type === "message_group" && item.label === "Codex"));
 
     const transcriptItems = await readTranscript(projectDir, 50);
     assert.ok(transcriptItems.some((item) => item.kind === "prompt" && item.text.includes("Continue the investigation")));

@@ -25,6 +25,10 @@ function hashFingerprint(value) {
   return crypto.createHash("sha1").update(String(value || "")).digest("hex");
 }
 
+function isPlainRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
 async function readJsonIfExists(targetPath, fallback = null) {
   try {
     const raw = await fsp.readFile(targetPath, "utf8");
@@ -136,18 +140,46 @@ function extractCodexTailEntry(rawLine) {
   const fingerprint = `codex:${hashFingerprint(trimmed)}`;
   try {
     const payload = JSON.parse(trimmed);
-    const fields = [payload.message, payload.text, payload.summary, payload.content, payload.reason, payload.prompt];
+    const nested = isPlainRecord(payload.payload) ? payload.payload : null;
+    const record = nested || payload;
+    const fields = [
+      record.message,
+      record.text,
+      record.summary,
+      record.content,
+      record.reason,
+      record.prompt,
+      record.output,
+      payload.message,
+      payload.text,
+      payload.summary,
+      payload.content,
+      payload.reason,
+      payload.prompt
+    ];
     const content = fields.find((item) => String(item || "").trim().length > 0);
+    const nestedType = String(record.type || "").toLowerCase();
+    const topType = String(payload.type || payload.event_type || "").toLowerCase();
+    const isToolEvent = ["function_call_output", "function_call", "tool_call", "tool_result"].includes(nestedType);
+    const role = isToolEvent
+      ? "system"
+      : String(record.role || payload.role || record.type || payload.type || payload.event_type || "event");
+    const kind = isToolEvent ? nestedType : "codex_tail";
+    const status = String(record.status || payload.status || (isToolEvent ? "synced" : "synced"));
+    const text = isToolEvent
+      ? compactText(record.output || record.text || record.summary || trimmed, 3000)
+      : compactText(content || trimmed, 3000);
     return {
-      created_at: String(payload.updated_at || payload.created_at || payload.timestamp || nowIso()),
-      role: String(payload.role || payload.type || payload.event_type || "event"),
-      kind: "codex_tail",
-      text: compactText(content || trimmed, 3000),
-      status: String(payload.status || "synced"),
+      created_at: String(record.updated_at || record.created_at || payload.updated_at || payload.created_at || payload.timestamp || nowIso()),
+      role,
+      kind,
+      text,
+      status,
       fingerprint,
       meta: {
         source: "codex_session",
-        raw_role: String(payload.role || payload.type || payload.event_type || "event")
+        raw_role: String(record.role || payload.role || record.type || payload.type || payload.event_type || "event"),
+        raw_type: nestedType || topType || ""
       }
     };
   } catch {
@@ -168,7 +200,7 @@ function extractCodexTailEntry(rawLine) {
 function isEventTranscriptItem(item) {
   const kind = String(item?.kind || "").toLowerCase();
   const role = String(item?.role || "").toLowerCase();
-  return kind === "prompt_error" || role === "system" || role === "raw";
+  return kind === "prompt_error" || kind === "function_call_output" || kind === "function_call" || kind === "tool_call" || kind === "tool_result" || role === "system" || role === "raw";
 }
 
 function normalizeDisplayRole(item) {
@@ -199,6 +231,15 @@ function prettyDisplayLabel(role) {
   if (role === "system") {
     return "System";
   }
+  if (role === "function_call_output") {
+    return "Tool Output";
+  }
+  if (role === "function_call" || role === "tool_call") {
+    return "Tool Call";
+  }
+  if (role === "tool_result") {
+    return "Tool Result";
+  }
   if (role === "raw") {
     return "Synced";
   }
@@ -207,11 +248,13 @@ function prettyDisplayLabel(role) {
 
 function normalizeTranscriptItemForDisplay(item, index) {
   const role = normalizeDisplayRole(item);
+  const kind = String(item?.kind || "");
+  const labelKey = isEventTranscriptItem(item) ? kind.toLowerCase() || role : role;
   return {
     id: String(item?.id || `entry_${index}`),
     role,
-    kind: String(item?.kind || ""),
-    label: prettyDisplayLabel(role),
+    kind,
+    label: prettyDisplayLabel(labelKey),
     text: compactText(item?.text || "", 3000),
     created_at: String(item?.created_at || ""),
     status: String(item?.status || ""),
@@ -221,7 +264,16 @@ function normalizeTranscriptItemForDisplay(item, index) {
 }
 
 export function buildTranscriptDisplayBlocks(items) {
-  const normalized = (items || []).map((item, index) => normalizeTranscriptItemForDisplay(item, index));
+  const normalized = (items || [])
+    .map((item, index) => normalizeTranscriptItemForDisplay(item, index))
+    .sort((left, right) => {
+      const leftTime = Number.isFinite(Date.parse(left.created_at)) ? Date.parse(left.created_at) : 0;
+      const rightTime = Number.isFinite(Date.parse(right.created_at)) ? Date.parse(right.created_at) : 0;
+      if (rightTime !== leftTime) {
+        return rightTime - leftTime;
+      }
+      return String(right.id || "").localeCompare(String(left.id || ""));
+    });
   const blocks = [];
   for (const item of normalized) {
     const previous = blocks[blocks.length - 1];

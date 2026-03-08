@@ -59,7 +59,8 @@ await withTempDir(async (tempDir) => {
   await fs.mkdir(path.dirname(sessionPath), { recursive: true });
   await fs.writeFile(
     sessionPath,
-    JSON.stringify({ role: "assistant", text: "Smoke baseline.", updated_at: "2026-03-08T00:00:30.000Z" }) + "\n",
+    JSON.stringify({ role: "assistant", text: "Smoke baseline.", updated_at: "2026-03-08T00:00:30.000Z" }) + "\n" +
+    JSON.stringify({ timestamp: "2026-03-08T00:01:00.000Z", type: "response_item", payload: { type: "function_call_output", output: "Smoke tool output." } }) + "\n",
     "utf8"
   );
   await bindCodexSession(projectDir, sessionId, sessionsRoot);
@@ -94,12 +95,13 @@ await withTempDir(async (tempDir) => {
     headers: { Authorization: "Bearer smoke-token" }
   });
   const transcriptPayload = await transcript.json();
-  assert.equal(transcriptPayload.items[0].type, "message_group");
+  assert.equal(transcriptPayload.items[0].type, "event_row");
+  assert.equal(transcriptPayload.items[0].label, "Tool Output");
 
   const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=smoke-token`);
   const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
   assert.equal(bootstrap.payload.session.bound_session.session_id, sessionId);
-  assert.equal(bootstrap.payload.transcript[0].type, "message_group");
+  assert.equal(bootstrap.payload.transcript[0].type, "event_row");
   ws.close();
   await server.close();
 
