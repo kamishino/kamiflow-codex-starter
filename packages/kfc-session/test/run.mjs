@@ -119,13 +119,16 @@ await runCase("server exposes health, list, detail, export, import, and restore"
 
     const html = await server.fastify.inject({ method: "GET", url: "/" });
     assert.equal(html.statusCode, 200);
-    assert.ok(html.payload.includes("KFC Session Manager"));
-    assert.ok(html.payload.includes("Transcript Tail"));
+    assert.ok(html.payload.includes('id="app-root"'));
+    assert.ok(html.payload.includes('data-api-base="/api/sessions"'));
+    assert.ok(html.payload.includes('/assets/kfc-session.js'));
+    assert.ok(html.payload.includes('/assets/kfc-session.css'));
 
     const script = await server.fastify.inject({ method: "GET", url: "/assets/kfc-session.js" });
     assert.equal(script.statusCode, 200);
     assert.ok(script.payload.includes("copy-id-button"));
-    assert.ok(script.payload.includes("/api/sessions/export"));
+    assert.ok(script.payload.includes("apiBaseRaw"));
+    assert.ok(script.payload.includes("KFC Session Manager"));
 
     const styles = await server.fastify.inject({ method: "GET", url: "/assets/kfc-session.css" });
     assert.equal(styles.statusCode, 200);

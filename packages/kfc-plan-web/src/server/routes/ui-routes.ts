@@ -26,7 +26,8 @@ export function registerUiRoutes(fastify: any, options: { uiMode?: "observer" | 
     reply.type("text/html");
     return await renderView("index", {
       title: "KamiFlow Plan UI",
-      uiMode
+      uiMode,
+      apiBase: "/api"
     });
   });
 }

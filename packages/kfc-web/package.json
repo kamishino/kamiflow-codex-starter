@@ -1,0 +1,26 @@
+{
+  "name": "@kamishino/kfc-web",
+  "version": "0.1.0",
+  "description": "Unified KFC web shell for plan, session, and chat surfaces.",
+  "type": "module",
+  "bin": {
+    "kfc-web": "bin/kfc-web.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build:client": "vite build",
+    "build": "npm run build:client",
+    "serve": "npm run build && node bin/kfc-web.js serve",
+    "dev": "node bin/kfc-web.js dev",
+    "test": "node test/run.mjs"
+  },
+  "dependencies": {
+    "eta": "3.5.0",
+    "fastify": "5.6.1",
+    "http-proxy": "1.18.1",
+    "vite": "7.1.7"
+  },
+  "license": "UNLICENSED"
+}

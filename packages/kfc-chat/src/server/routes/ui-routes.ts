@@ -25,7 +25,9 @@ export function registerUiRoutes(fastify: any, options: { projectName: string; p
     return await renderView("index", {
       title: "KFC Chat",
       projectName: options.projectName,
-      projectDir: options.projectDir
+      projectDir: options.projectDir,
+      apiBase: "/api/chat",
+      wsPath: "/ws"
     });
   });
 }

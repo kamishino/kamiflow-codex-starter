@@ -13,6 +13,7 @@ if (!root) {
 
 const projectName = root.dataset.projectName || "KFC Chat";
 const projectDir = root.dataset.projectDir || "";
+const wsPath = root.dataset.wsPath || "/ws";
 let bindSessionId = "";
 let promptValue = "";
 
@@ -54,7 +55,8 @@ function disconnect() {
 function connectWebSocket() {
   disconnect();
   const protocol = location.protocol === "https:" ? "wss" : "ws";
-  const ws = new WebSocket(`${protocol}://${location.host}/ws?token=${encodeURIComponent(token.value)}`);
+  const normalizedWsPath = wsPath.startsWith("/") ? wsPath : `/${wsPath}`;
+  const ws = new WebSocket(`${protocol}://${location.host}${normalizedWsPath}?token=${encodeURIComponent(token.value)}`);
   wsRef.value = ws;
   ws.addEventListener("open", () => {
     connected.value = true;

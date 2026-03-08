@@ -1,0 +1,112 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createKfcWebServer } from "./server.js";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const packageDir = path.resolve(__dirname, "..");
+
+function usage() {
+  console.log(`KFC Web
+
+Usage:
+  kfc-web <serve|dev> [options]
+
+Options:
+  --project <path>     Project root (default: current directory)
+  --host <host>        Host for shell server (default: 127.0.0.1)
+  --port <n>           Port for shell server (default: 4300)
+  --focus <surface>    plan | session | chat
+  --vite-port <n>      Vite dev asset port (default: 5174)
+`);
+}
+
+function parseArgs(argv) {
+  const parsed = {
+    command: argv[0] || "",
+    project: process.cwd(),
+    host: "127.0.0.1",
+    port: 4300,
+    focus: "",
+    vitePort: 5174
+  };
+  for (let i = 1; i < argv.length; i += 1) {
+    const token = argv[i];
+    const next = argv[i + 1];
+    if (token === "--project") {
+      if (!next || next.startsWith("--")) throw new Error("Missing value for --project.");
+      parsed.project = path.resolve(next);
+      i += 1;
+      continue;
+    }
+    if (token === "--host") {
+      parsed.host = String(next || "").trim() || parsed.host;
+      i += 1;
+      continue;
+    }
+    if (token === "--port") {
+      const value = Number(next || "");
+      if (!Number.isInteger(value) || value <= 0 || value > 65535) throw new Error("Invalid --port value.");
+      parsed.port = value;
+      i += 1;
+      continue;
+    }
+    if (token === "--vite-port") {
+      const value = Number(next || "");
+      if (!Number.isInteger(value) || value <= 0 || value > 65535) throw new Error("Invalid --vite-port value.");
+      parsed.vitePort = value;
+      i += 1;
+      continue;
+    }
+    if (token === "--focus") {
+      parsed.focus = String(next || "").trim().toLowerCase();
+      i += 1;
+      continue;
+    }
+    if (token === "--help" || token === "-h") {
+      parsed.command = "help";
+      return parsed;
+    }
+    throw new Error(`Unknown option: ${token}`);
+  }
+  return parsed;
+}
+
+export async function runCli(argv) {
+  let parsed;
+  try {
+    parsed = parseArgs(argv);
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : String(err));
+    usage();
+    return 1;
+  }
+
+  if (!parsed.command || parsed.command === "help") {
+    usage();
+    return 0;
+  }
+  if (parsed.command !== "serve" && parsed.command !== "dev") {
+    console.error(`Unknown command: ${parsed.command}`);
+    usage();
+    return 1;
+  }
+
+  const server = await createKfcWebServer({
+    mode: parsed.command,
+    projectDir: parsed.project,
+    host: parsed.host,
+    port: parsed.port,
+    focus: parsed.focus,
+    vitePort: parsed.vitePort,
+    packageDir
+  });
+  await server.ready();
+  const listener = await server.listen();
+  console.log(`KFC Web listening at ${listener.url}`);
+  console.log(`Project: ${parsed.project}`);
+  console.log(`Plan: ${listener.urls.plan}`);
+  console.log(`Session: ${listener.urls.session}`);
+  console.log(`Chat: ${listener.urls.chat}`);
+  return 0;
+}

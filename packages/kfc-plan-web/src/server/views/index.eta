@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-api-base="<%= it.apiBase || '/api' %>">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -36,7 +36,13 @@
     href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap"
     rel="stylesheet"
   />
-  <link rel="stylesheet" href="/assets/styles.css" />
+  <% if (it.styleHrefs && it.styleHrefs.length) { %>
+    <% it.styleHrefs.forEach(function (href) { %>
+      <link rel="stylesheet" href="<%= href %>" />
+    <% }) %>
+  <% } else { %>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  <% } %>
 </head>
 <body data-ui-mode="<%= it.uiMode || 'observer' %>">
   <div class="app-shell">
@@ -131,6 +137,12 @@
       </aside>
     </div>
   </div>
-  <script src="/assets/app.js" type="module"></script>
+  <% if (it.scriptHrefs && it.scriptHrefs.length) { %>
+    <% it.scriptHrefs.forEach(function (href) { %>
+      <script src="<%= href %>" type="module"></script>
+    <% }) %>
+  <% } else { %>
+    <script src="/assets/app.js" type="module"></script>
+  <% } %>
 </body>
 </html>

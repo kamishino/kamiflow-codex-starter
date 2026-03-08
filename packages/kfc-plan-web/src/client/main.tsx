@@ -55,6 +55,7 @@ if (
 const ACTIVITY_STORAGE_PREFIX = "kfc-plan.activity.v2";
 const ACTIVITY_MAX_ITEMS = 120;
 const PLAN_PICKER_MAX_RESULTS = 50;
+const API_BASE = (document.documentElement.dataset.apiBase || "/api").replace(/\/$/, "");
 
 let currentStream: EventSource | null = null;
 let currentStreamScope = "";
@@ -751,7 +752,7 @@ function attachStream(projectId: string, planId: string): void {
   currentStreamScope = scope;
 
   currentStream = new EventSource(
-    "/api/projects/" + encodeURIComponent(projectId) + "/plans/" + encodeURIComponent(planId) + "/events"
+    API_BASE + "/projects/" + encodeURIComponent(projectId) + "/plans/" + encodeURIComponent(planId) + "/events"
   );
 
   if (staleTimer) {

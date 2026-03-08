@@ -1,7 +1,12 @@
 import type { PlanDetail, PlanSummary, ProjectInfo, ProjectsResponse } from "./types";
 
+function apiBase(): string {
+  const raw = document.documentElement.dataset.apiBase || "/api";
+  return raw.endsWith("/") ? raw.slice(0, -1) : raw;
+}
+
 function projectApiBase(projectId: string): string {
-  return "/api/projects/" + encodeURIComponent(projectId);
+  return apiBase() + "/projects/" + encodeURIComponent(projectId);
 }
 
 function withNoCache(url: string): string {
@@ -20,7 +25,7 @@ async function fetchJson(url: string): Promise<Response> {
 }
 
 export async function fetchProjects(): Promise<{ workspace: string; projects: ProjectInfo[] }> {
-  const res = await fetchJson("/api/projects");
+  const res = await fetchJson(apiBase() + "/projects");
   if (!res.ok) {
     throw new Error("Failed to load projects.");
   }

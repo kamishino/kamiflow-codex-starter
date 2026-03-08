@@ -7,12 +7,26 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="/assets/kfc-chat.css" />
+  <% if (it.styleHrefs && it.styleHrefs.length) { %>
+    <% it.styleHrefs.forEach(function (href) { %>
+      <link rel="stylesheet" href="<%= href %>" />
+    <% }) %>
+  <% } else { %>
+    <link rel="stylesheet" href="/assets/kfc-chat.css" />
+  <% } %>
 </head>
 <body>
   <div id="app-root"
     data-project-name="<%= it.projectName %>"
-    data-project-dir="<%= it.projectDir %>"></div>
-  <script src="/assets/kfc-chat.js" type="module"></script>
+    data-project-dir="<%= it.projectDir %>"
+    data-api-base="<%= it.apiBase || '/api/chat' %>"
+    data-ws-path="<%= it.wsPath || '/ws' %>"></div>
+  <% if (it.scriptHrefs && it.scriptHrefs.length) { %>
+    <% it.scriptHrefs.forEach(function (href) { %>
+      <script src="<%= href %>" type="module"></script>
+    <% }) %>
+  <% } else { %>
+    <script src="/assets/kfc-chat.js" type="module"></script>
+  <% } %>
 </body>
 </html>
