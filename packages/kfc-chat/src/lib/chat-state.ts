@@ -3,18 +3,41 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { buildInteractiveResumeCommand } from "../../../src/lib/session-actions.js";
+import { buildInteractiveResumeCommand } from "../../../../src/lib/session-actions.js";
 
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CHAT_SESSION_FILE = path.join(".kfc", "chat-session.json");
 const CHAT_STATE_DIR = path.join(".local", "chat");
 const CHAT_TRANSCRIPT_FILE = path.join(CHAT_STATE_DIR, "transcript.jsonl");
 
+export interface TranscriptEntry {
+  id?: string;
+  created_at?: string;
+  role?: string;
+  kind?: string;
+  text?: string;
+  status?: string;
+  fingerprint?: string;
+  meta?: Record<string, unknown>;
+}
+
+export interface TranscriptDisplayBlock {
+  type: "message_group" | "event_row";
+  id: string;
+  role: string;
+  label: string;
+  created_at: string;
+  status: string;
+  align?: string;
+  text?: string;
+  items?: Array<{ id: string; text: string; created_at: string; status: string }>;
+}
+
 function nowIso() {
   return new Date().toISOString();
 }
 
-function compactText(value, maxLength = 1600) {
+function compactText(value: unknown, maxLength = 1600) {
   const normalized = String(value || "").replace(/\s+/g, " ").trim();
   if (!normalized) {
     return "";
@@ -22,15 +45,15 @@ function compactText(value, maxLength = 1600) {
   return normalized.length > maxLength ? `${normalized.slice(0, maxLength - 3)}...` : normalized;
 }
 
-function hashFingerprint(value) {
+function hashFingerprint(value: unknown) {
   return crypto.createHash("sha1").update(String(value || "")).digest("hex");
 }
 
-function isPlainRecord(value) {
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
-function humanizeTypeLabel(value) {
+function humanizeTypeLabel(value: unknown) {
   return String(value || "")
     .trim()
     .replace(/[_-]+/g, " ")
@@ -38,24 +61,24 @@ function humanizeTypeLabel(value) {
     .replace(/\b\w/g, (match) => match.toUpperCase());
 }
 
-async function readJsonIfExists(targetPath, fallback = null) {
+async function readJsonIfExists<T>(targetPath: string, fallback: T): Promise<T> {
   try {
     const raw = await fsp.readFile(targetPath, "utf8");
-    return JSON.parse(raw);
-  } catch (err) {
-    if (err && typeof err === "object" && (err.code === "ENOENT" || err.code === "ENOTDIR")) {
+    return JSON.parse(raw) as T;
+  } catch (err: any) {
+    if (err && (err.code === "ENOENT" || err.code === "ENOTDIR")) {
       return fallback;
     }
     throw err;
   }
 }
 
-async function writeJson(targetPath, payload) {
+async function writeJson(targetPath: string, payload: unknown) {
   await fsp.mkdir(path.dirname(targetPath), { recursive: true });
   await fsp.writeFile(targetPath, JSON.stringify(payload, null, 2) + "\n", "utf8");
 }
 
-async function pathExists(targetPath) {
+async function pathExists(targetPath: string) {
   try {
     await fsp.access(targetPath);
     return true;
@@ -64,19 +87,19 @@ async function pathExists(targetPath) {
   }
 }
 
-async function assertDirectoryExists(targetPath, label) {
+async function assertDirectoryExists(targetPath: string, label: string) {
   const stat = await fsp.stat(targetPath);
   if (!stat.isDirectory()) {
     throw new Error(`${label} is not a directory: ${targetPath}`);
   }
 }
 
-async function walkFiles(rootDir) {
-  const files = [];
+async function walkFiles(rootDir: string) {
+  const files: string[] = [];
   const stack = [rootDir];
   while (stack.length > 0) {
-    const current = stack.pop();
-    let entries = [];
+    const current = stack.pop()!;
+    let entries: fs.Dirent[] = [];
     try {
       entries = await fsp.readdir(current, { withFileTypes: true });
     } catch {
@@ -96,21 +119,21 @@ async function walkFiles(rootDir) {
   return files;
 }
 
-async function selectLatestFile(filePaths) {
-  const scored = [];
+async function selectLatestFile(filePaths: string[]) {
+  const scored: Array<{ filePath: string; mtimeMs: number }> = [];
   for (const filePath of filePaths) {
     try {
       const stat = await fsp.stat(filePath);
       scored.push({ filePath, mtimeMs: stat.mtimeMs });
     } catch {
-      // Skip unreadable files.
+      // Ignore unreadable files.
     }
   }
   scored.sort((left, right) => right.mtimeMs - left.mtimeMs);
   return scored[0]?.filePath || "";
 }
 
-async function resolveSessionRecord(sessionsRoot, sessionId) {
+async function resolveSessionRecord(sessionsRoot: string, sessionId: string) {
   const matches = await findSessionMatches(sessionsRoot, sessionId);
   if (matches.length === 0) {
     throw new Error(`No session file found for id: ${sessionId}`);
@@ -122,12 +145,12 @@ async function resolveSessionRecord(sessionsRoot, sessionId) {
   };
 }
 
-async function readTranscriptFingerprints(projectDir) {
+async function readTranscriptFingerprints(projectDir: string) {
   const items = await readTranscript(projectDir, 1000);
   return new Set(items.map((item) => String(item.fingerprint || "")).filter(Boolean));
 }
 
-async function readTailText(filePath, maxBytes = 65536) {
+async function readTailText(filePath: string, maxBytes = 65536) {
   const handle = await fsp.open(filePath, "r");
   try {
     const stat = await handle.stat();
@@ -141,14 +164,14 @@ async function readTailText(filePath, maxBytes = 65536) {
   }
 }
 
-function extractCodexTailEntry(rawLine) {
+function extractCodexTailEntry(rawLine: string): TranscriptEntry | null {
   const trimmed = String(rawLine || "").trim();
   if (!trimmed) {
     return null;
   }
   const fingerprint = `codex:${hashFingerprint(trimmed)}`;
   try {
-    const payload = JSON.parse(trimmed);
+    const payload = JSON.parse(trimmed) as Record<string, any>;
     const nested = isPlainRecord(payload.payload) ? payload.payload : null;
     const record = nested || payload;
     const topType = String(payload.type || payload.event_type || "").toLowerCase();
@@ -156,10 +179,7 @@ function extractCodexTailEntry(rawLine) {
     const createdAt = String(record.updated_at || record.created_at || payload.updated_at || payload.created_at || payload.timestamp || nowIso());
     if (topType === "event_msg") {
       const eventType = nestedType || "event_msg";
-      const message = compactText(
-        record.message || record.text || record.summary || record.reason || record.content || "",
-        3000
-      );
+      const message = compactText(record.message || record.text || record.summary || record.reason || record.content || "", 3000);
       if (eventType === "token_count") {
         return null;
       }
@@ -171,11 +191,7 @@ function extractCodexTailEntry(rawLine) {
           text: message || "User message.",
           status: "synced",
           fingerprint,
-          meta: {
-            source: "codex_session",
-            raw_role: "user_message",
-            raw_type: eventType
-          }
+          meta: { source: "codex_session", raw_role: "user_message", raw_type: eventType }
         };
       }
       if (eventType === "agent_message") {
@@ -186,14 +202,10 @@ function extractCodexTailEntry(rawLine) {
           text: message || "Codex reply.",
           status: "synced",
           fingerprint,
-          meta: {
-            source: "codex_session",
-            raw_role: "agent_message",
-            raw_type: eventType
-          }
+          meta: { source: "codex_session", raw_role: "agent_message", raw_type: eventType }
         };
       }
-      const fallbackTextByType = {
+      const fallbackTextByType: Record<string, string> = {
         task_started: "Task started.",
         task_complete: "Task complete.",
         agent_reasoning: "Reasoning updated."
@@ -205,11 +217,7 @@ function extractCodexTailEntry(rawLine) {
         text: message || fallbackTextByType[eventType] || `${humanizeTypeLabel(eventType || "event")}.`,
         status: "synced",
         fingerprint,
-        meta: {
-          source: "codex_session",
-          raw_role: "event_msg",
-          raw_type: eventType
-        }
+        meta: { source: "codex_session", raw_role: "event_msg", raw_type: eventType }
       };
     }
     const fields = [
@@ -238,7 +246,7 @@ function extractCodexTailEntry(rawLine) {
       ? compactText(record.output || record.text || record.summary || trimmed, 3000)
       : compactText(content || trimmed, 3000);
     return {
-      created_at: String(record.updated_at || record.created_at || payload.updated_at || payload.created_at || payload.timestamp || nowIso()),
+      created_at: createdAt,
       role,
       kind,
       text,
@@ -258,20 +266,18 @@ function extractCodexTailEntry(rawLine) {
       text: compactText(trimmed, 3000),
       status: "synced",
       fingerprint,
-      meta: {
-        source: "codex_session"
-      }
+      meta: { source: "codex_session" }
     };
   }
 }
 
-function isEventTranscriptItem(item) {
+function isEventTranscriptItem(item: TranscriptEntry) {
   const kind = String(item?.kind || "").toLowerCase();
   const role = String(item?.role || "").toLowerCase();
   return kind === "prompt_error" || kind === "function_call_output" || kind === "function_call" || kind === "tool_call" || kind === "tool_result" || role === "system" || role === "raw";
 }
 
-function normalizeDisplayRole(item) {
+function normalizeDisplayRole(item: TranscriptEntry) {
   const kind = String(item?.kind || "").toLowerCase();
   const role = String(item?.role || item?.kind || "event").toLowerCase();
   if (kind === "prompt_error") {
@@ -286,44 +292,22 @@ function normalizeDisplayRole(item) {
   return role || "event";
 }
 
-function prettyDisplayLabel(role) {
-  if (role === "assistant") {
-    return "Codex";
-  }
-  if (role === "user") {
-    return "You";
-  }
-  if (role === "prompt_error") {
-    return "Blocked";
-  }
-  if (role === "system") {
-    return "System";
-  }
-  if (role === "function_call_output") {
-    return "Tool Output";
-  }
-  if (role === "function_call" || role === "tool_call") {
-    return "Tool Call";
-  }
-  if (role === "tool_result") {
-    return "Tool Result";
-  }
-  if (role === "task_started") {
-    return "Task Started";
-  }
-  if (role === "task_complete") {
-    return "Task Complete";
-  }
-  if (role === "agent_reasoning") {
-    return "Reasoning";
-  }
-  if (role === "raw") {
-    return "Synced";
-  }
+function prettyDisplayLabel(role: string) {
+  if (role === "assistant") return "Codex";
+  if (role === "user") return "You";
+  if (role === "prompt_error") return "Blocked";
+  if (role === "system") return "System";
+  if (role === "function_call_output") return "Tool Output";
+  if (role === "function_call" || role === "tool_call") return "Tool Call";
+  if (role === "tool_result") return "Tool Result";
+  if (role === "task_started") return "Task Started";
+  if (role === "task_complete") return "Task Complete";
+  if (role === "agent_reasoning") return "Reasoning";
+  if (role === "raw") return "Synced";
   return role ? humanizeTypeLabel(role) : "Event";
 }
 
-function normalizeTranscriptItemForDisplay(item, index) {
+function normalizeTranscriptItemForDisplay(item: TranscriptEntry, index: number) {
   const role = normalizeDisplayRole(item);
   const kind = String(item?.kind || "");
   const labelKey = isEventTranscriptItem(item) ? kind.toLowerCase() || role : role;
@@ -340,7 +324,7 @@ function normalizeTranscriptItemForDisplay(item, index) {
   };
 }
 
-export function buildTranscriptDisplayBlocks(items) {
+export function buildTranscriptDisplayBlocks(items: TranscriptEntry[]): TranscriptDisplayBlock[] {
   const normalized = (items || [])
     .map((item, index) => normalizeTranscriptItemForDisplay(item, index))
     .sort((left, right) => {
@@ -351,16 +335,11 @@ export function buildTranscriptDisplayBlocks(items) {
       }
       return String(right.id || "").localeCompare(String(left.id || ""));
     });
-  const blocks = [];
+  const blocks: TranscriptDisplayBlock[] = [];
   for (const item of normalized) {
     const previous = blocks[blocks.length - 1];
     if (!item.is_event && previous && previous.type === "message_group" && previous.role === item.role) {
-      previous.items.push({
-        id: item.id,
-        text: item.text,
-        created_at: item.created_at,
-        status: item.status
-      });
+      previous.items!.push({ id: item.id, text: item.text, created_at: item.created_at, status: item.status });
       previous.created_at = item.created_at || previous.created_at;
       previous.status = item.status || previous.status;
       continue;
@@ -385,14 +364,7 @@ export function buildTranscriptDisplayBlocks(items) {
       align: item.align,
       created_at: item.created_at,
       status: item.status,
-      items: [
-        {
-          id: item.id,
-          text: item.text,
-          created_at: item.created_at,
-          status: item.status
-        }
-      ]
+      items: [{ id: item.id, text: item.text, created_at: item.created_at, status: item.status }]
     });
   }
   return blocks;
@@ -402,17 +374,11 @@ export function defaultSessionsRoot() {
   return path.join(os.homedir(), ".codex", "sessions");
 }
 
-function buildUnboundSessionState(state, extras = {}) {
-  return {
-    bound: false,
-    state,
-    can_bind: false,
-    can_prompt: false,
-    ...extras
-  };
+function buildUnboundSessionState(state: string, extras: Record<string, unknown> = {}) {
+  return { bound: false, state, can_bind: false, can_prompt: false, ...extras };
 }
 
-export function resolveChatPaths(projectDir) {
+export function resolveChatPaths(projectDir: string) {
   return {
     projectDir,
     clientSessionPath: path.join(projectDir, CLIENT_SESSION_FILE),
@@ -422,58 +388,50 @@ export function resolveChatPaths(projectDir) {
   };
 }
 
-export async function ensureChatScaffold(projectDir) {
+export async function ensureChatScaffold(projectDir: string) {
   const paths = resolveChatPaths(projectDir);
   await fsp.mkdir(path.dirname(paths.clientSessionPath), { recursive: true });
   await fsp.mkdir(paths.chatStateDir, { recursive: true });
   return paths;
 }
 
-export async function loadClientSession(projectDir) {
-  return await readJsonIfExists(resolveChatPaths(projectDir).clientSessionPath, null);
+export async function loadClientSession(projectDir: string) {
+  return await readJsonIfExists<Record<string, any> | null>(resolveChatPaths(projectDir).clientSessionPath, null);
 }
 
-export async function saveClientSession(projectDir, payload) {
+export async function saveClientSession(projectDir: string, payload: unknown) {
   const paths = await ensureChatScaffold(projectDir);
   await writeJson(paths.clientSessionPath, payload);
   return paths.clientSessionPath;
 }
 
-export async function loadChatSession(projectDir) {
-  return await readJsonIfExists(resolveChatPaths(projectDir).chatSessionPath, null);
+export async function loadChatSession(projectDir: string) {
+  return await readJsonIfExists<Record<string, any> | null>(resolveChatPaths(projectDir).chatSessionPath, null);
 }
 
-export async function saveChatSession(projectDir, payload) {
+export async function saveChatSession(projectDir: string, payload: unknown) {
   const paths = await ensureChatScaffold(projectDir);
   await writeJson(paths.chatSessionPath, payload);
   return paths.chatSessionPath;
 }
 
-export async function findSessionMatches(sessionsRoot, sessionId) {
+export async function findSessionMatches(sessionsRoot: string, sessionId: string) {
   const needle = String(sessionId || "").trim().toLowerCase();
   if (!needle || needle.length < 8) {
     throw new Error("Invalid session id. Provide the full session id.");
   }
   await assertDirectoryExists(sessionsRoot, "Codex sessions root");
   const files = await walkFiles(sessionsRoot);
-  return files
-    .filter((item) => path.extname(item).toLowerCase() === ".jsonl")
-    .filter((item) => path.basename(item).toLowerCase().includes(needle))
-    .sort((left, right) => left.localeCompare(right));
+  return files.filter((item) => path.extname(item).toLowerCase() === ".jsonl").filter((item) => path.basename(item).toLowerCase().includes(needle)).sort((left, right) => left.localeCompare(right));
 }
 
-export async function bindCodexSession(projectDir, sessionId, sessionsRoot = defaultSessionsRoot()) {
+export async function bindCodexSession(projectDir: string, sessionId: string, sessionsRoot = defaultSessionsRoot()) {
   const clientSession = await loadClientSession(projectDir);
   if (!clientSession?.planId) {
     throw new Error("Missing .kfc/session.json. Run `kfc client --force --no-launch-codex` first.");
   }
   const record = await resolveSessionRecord(sessionsRoot, sessionId);
-  const next = {
-    ...clientSession,
-    codexSessionId: record.session_id,
-    codexSessionPath: record.session_path,
-    codexBoundAt: nowIso()
-  };
+  const next = { ...clientSession, codexSessionId: record.session_id, codexSessionPath: record.session_path, codexBoundAt: nowIso() };
   const clientSessionPath = await saveClientSession(projectDir, next);
   return {
     session_id: record.session_id,
@@ -483,7 +441,7 @@ export async function bindCodexSession(projectDir, sessionId, sessionsRoot = def
   };
 }
 
-export async function unbindCodexSession(projectDir) {
+export async function unbindCodexSession(projectDir: string) {
   const clientSession = await loadClientSession(projectDir);
   if (!clientSession) {
     return false;
@@ -496,7 +454,7 @@ export async function unbindCodexSession(projectDir) {
   return true;
 }
 
-export async function resolveBoundSession(projectDir, sessionsRoot = defaultSessionsRoot()) {
+export async function resolveBoundSession(projectDir: string, sessionsRoot = defaultSessionsRoot()) {
   const clientSession = await loadClientSession(projectDir);
   if (!clientSession?.planId) {
     return buildUnboundSessionState("client_session_missing", {
@@ -559,7 +517,7 @@ export async function resolveBoundSession(projectDir, sessionsRoot = defaultSess
   };
 }
 
-export async function ensureChatRuntimeSession(projectDir, options = {}) {
+export async function ensureChatRuntimeSession(projectDir: string, options: Record<string, any> = {}) {
   const previous = await loadChatSession(projectDir);
   const paths = resolveChatPaths(projectDir);
   const next = {
@@ -582,33 +540,30 @@ export async function ensureChatRuntimeSession(projectDir, options = {}) {
   return next;
 }
 
-export async function readTranscript(projectDir, limit = 200) {
+export async function readTranscript(projectDir: string, limit = 200): Promise<TranscriptEntry[]> {
   const transcriptPath = resolveChatPaths(projectDir).transcriptPath;
   let raw = "";
   try {
     raw = await fsp.readFile(transcriptPath, "utf8");
-  } catch (err) {
-    if (err && typeof err === "object" && err.code === "ENOENT") {
+  } catch (err: any) {
+    if (err && err.code === "ENOENT") {
       return [];
     }
     throw err;
   }
-  const lines = raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const items = [];
+  const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const items: TranscriptEntry[] = [];
   for (const line of lines.slice(-limit)) {
     try {
       items.push(JSON.parse(line));
     } catch {
-      // Skip malformed line.
+      // Ignore malformed line.
     }
   }
   return items;
 }
 
-export async function appendTranscriptEntry(projectDir, entry) {
+export async function appendTranscriptEntry(projectDir: string, entry: TranscriptEntry) {
   const paths = await ensureChatScaffold(projectDir);
   const payload = {
     id: entry?.id || `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -624,45 +579,32 @@ export async function appendTranscriptEntry(projectDir, entry) {
   return payload;
 }
 
-export async function hydrateTranscriptFromCodex(projectDir, sessionPath) {
+export async function hydrateTranscriptFromCodex(projectDir: string, sessionPath: string) {
   if (!sessionPath || !(await pathExists(sessionPath))) {
-    return { appended: [] };
+    return { appended: [] as TranscriptEntry[] };
   }
   const seenFingerprints = await readTranscriptFingerprints(projectDir);
   const tailText = await readTailText(sessionPath, 262144);
-  const lines = tailText
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean);
-  const appended = [];
+  const lines = tailText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const appended: TranscriptEntry[] = [];
   for (const line of lines) {
     const entry = extractCodexTailEntry(line);
-    if (!entry || seenFingerprints.has(entry.fingerprint)) {
+    if (!entry || seenFingerprints.has(entry.fingerprint!)) {
       continue;
     }
     const persisted = await appendTranscriptEntry(projectDir, entry);
     appended.push(persisted);
-    seenFingerprints.add(persisted.fingerprint);
+    seenFingerprints.add(String(persisted.fingerprint || ""));
   }
   return { appended };
 }
 
-export function describeCodexResult(result) {
+export function describeCodexResult(result: any) {
   if (!result) {
     return { state: "unknown", text: "No result." };
   }
   if (result.status === "completed") {
-    return {
-      state: "completed",
-      text: compactText(result.stdout_tail || "Codex prompt completed.", 3000)
-    };
+    return { state: "completed", text: compactText(result.stdout_tail || result.stderr_tail || "Prompt completed.", 3000) };
   }
-  return {
-    state: "blocked",
-    text: compactText(result.failure_signature || result.stderr_tail || result.recovery_hint || "Codex prompt failed.", 3000)
-  };
-}
-
-export function chatTokenPresent(projectDir) {
-  return fs.existsSync(resolveChatPaths(projectDir).chatSessionPath);
+  return { state: "blocked", text: compactText(result.stderr_tail || result.error_code || result.status || "Prompt failed.", 3000) };
 }

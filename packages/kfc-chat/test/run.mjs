@@ -3,16 +3,17 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { WebSocket } from "ws";
-import {
+
+const {
   bindCodexSession,
   buildTranscriptDisplayBlocks,
   hydrateTranscriptFromCodex,
   readTranscript,
   resolveBoundSession,
   unbindCodexSession
-} from "../src/chat-state.js";
-import { runCli } from "../src/cli.js";
-import { createKfcChatServer } from "../src/server.js";
+} = await import("../dist/lib/chat-state.js");
+const { runCli } = await import("../dist/cli.js");
+const { createKfcChatServer } = await import("../dist/server/create-server.js");
 
 let failed = 0;
 
@@ -351,20 +352,24 @@ await runCase("server exposes health/session/transcript and streams prompt updat
 
     const html = await fetch(`${listener.url}/`);
     const htmlText = await html.text();
-    assert.match(htmlText, /Bound Session Timeline/);
-    assert.match(htmlText, /conversation-summary/);
-    assert.match(htmlText, /bind-session-button/);
-    assert.match(htmlText, /copy-session-id-button/);
-    assert.match(htmlText, /reveal-session-file-button/);
+    assert.match(htmlText, /KFC Chat/);
+    assert.match(htmlText, /id=\"app-root\"/);
+    assert.match(htmlText, /data-project-name=/);
+    assert.match(htmlText, /assets\/kfc-chat\.js/);
+    assert.match(htmlText, /assets\/kfc-chat\.css/);
 
     const styles = await fetch(`${listener.url}/assets/kfc-chat.css`);
     const stylesText = await styles.text();
     assert.match(stylesText, /\.message-group/);
     assert.match(stylesText, /\.transcript-event/);
+    assert.match(stylesText, /\.message-group \{ display: grid; gap: 6px; width: 100%; justify-self: stretch; \}/);
+    assert.match(stylesText, /\.message-bubble \{ width: calc\(100% - 24px\); max-width: calc\(100% - 24px\);/);
+    assert.doesNotMatch(stylesText, /\.message-group \{ display: grid; gap: 6px; max-width: min\(72ch, 100%\); \}/);
 
     const script = await fetch(`${listener.url}/assets/kfc-chat.js`);
     const scriptText = await script.text();
-    assert.doesNotMatch(scriptText, /groupTranscriptItems/);
+    assert.match(scriptText, /ConversationPanel/);
+    assert.match(scriptText, /SessionPanel/);
     assert.match(scriptText, /message-bubble/);
 
     const verify = await fetch(`${listener.url}/api/chat/token/verify`, {

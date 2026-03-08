@@ -29,6 +29,7 @@
     "serve": "npm run dev:serve"
   },
   "dependencies": {
+    "@kamishino/kfc-web-ui": "file:../kfc-web-ui",
     "@kamishino/kamiflow-codex": "file:../..",
     "@preact/signals": "2.5.1",
     "chokidar": "4.0.3",

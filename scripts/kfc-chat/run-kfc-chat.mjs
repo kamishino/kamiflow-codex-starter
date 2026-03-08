@@ -15,10 +15,11 @@ const nextArgs = hasProjectArg(forwarded)
   ? forwarded
   : [...forwarded, "--project", resolveRepoRoot()];
 
-const child = spawn(process.execPath, ["packages/kfc-chat/bin/kfc-chat.js", ...nextArgs], {
+const child = spawn("npm.cmd", ["run", "-w", "@kamishino/kfc-chat", "serve", "--", ...nextArgs], {
   cwd: resolveRepoRoot(),
   stdio: "inherit",
-  windowsHide: true
+  windowsHide: true,
+  shell: false
 });
 
 child.on("exit", (code, signal) => {

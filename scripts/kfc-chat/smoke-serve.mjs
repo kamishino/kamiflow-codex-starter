@@ -3,8 +3,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { WebSocket } from "ws";
-import { bindCodexSession } from "../../packages/kfc-chat/src/chat-state.js";
-import { createKfcChatServer } from "../../packages/kfc-chat/src/server.js";
+
+const { bindCodexSession } = await import("../../packages/kfc-chat/dist/lib/chat-state.js");
+const { createKfcChatServer } = await import("../../packages/kfc-chat/dist/server/create-server.js");
 
 async function withTempDir(fn) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "kfc-chat-smoke-"));
@@ -94,11 +95,16 @@ await withTempDir(async (tempDir) => {
 
   const html = await fetch(`${listener.url}/`);
   const htmlText = await html.text();
-  assert.match(htmlText, /Bound Codex Session Chat/);
-  assert.match(htmlText, /Bound Session Timeline/);
-  assert.match(htmlText, /bind-session-button/);
-  assert.match(htmlText, /copy-session-id-button/);
-  assert.match(htmlText, /reveal-session-folder-button/);
+  assert.match(htmlText, /KFC Chat/);
+  assert.match(htmlText, /id=\"app-root\"/);
+  assert.match(htmlText, /assets\/kfc-chat\.js/);
+  assert.match(htmlText, /assets\/kfc-chat\.css/);
+
+  const styles = await fetch(`${listener.url}/assets/kfc-chat.css`);
+  const stylesText = await styles.text();
+  assert.match(stylesText, /\.message-group \{ display: grid; gap: 6px; width: 100%; justify-self: stretch; \}/);
+  assert.match(stylesText, /\.message-bubble \{ width: calc\(100% - 24px\); max-width: calc\(100% - 24px\);/);
+  assert.doesNotMatch(stylesText, /max-width: min\(72ch, 100%\)/);
 
   const transcript = await fetch(`${listener.url}/api/chat/transcript`, {
     headers: { Authorization: "Bearer smoke-token" }
