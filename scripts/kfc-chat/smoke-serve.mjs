@@ -59,7 +59,9 @@ await withTempDir(async (tempDir) => {
   await fs.mkdir(path.dirname(sessionPath), { recursive: true });
   await fs.writeFile(
     sessionPath,
-    JSON.stringify({ role: "assistant", text: "Smoke baseline.", updated_at: "2026-03-08T00:00:30.000Z" }) + "\n" +
+    JSON.stringify({ timestamp: "2026-03-08T00:00:30.000Z", type: "event_msg", payload: { type: "agent_message", message: "Smoke baseline." } }) + "\n" +
+    JSON.stringify({ timestamp: "2026-03-08T00:00:45.000Z", type: "event_msg", payload: { type: "agent_reasoning", message: "Smoke reasoning note." } }) + "\n" +
+    JSON.stringify({ timestamp: "2026-03-08T00:00:50.000Z", type: "event_msg", payload: { type: "token_count", total_tokens: 42 } }) + "\n" +
     JSON.stringify({ timestamp: "2026-03-08T00:01:00.000Z", type: "response_item", payload: { type: "function_call_output", output: "Smoke tool output." } }) + "\n",
     "utf8"
   );
@@ -104,6 +106,9 @@ await withTempDir(async (tempDir) => {
   const transcriptPayload = await transcript.json();
   assert.equal(transcriptPayload.items[0].type, "event_row");
   assert.equal(transcriptPayload.items[0].label, "Tool Output");
+  assert.ok(transcriptPayload.items.some((item) => item.type === "event_row" && item.label === "Reasoning"));
+  assert.ok(transcriptPayload.items.some((item) => item.type === "message_group" && item.role === "assistant"));
+  assert.equal(transcriptPayload.items.some((item) => item.text?.includes?.("token_count") || item.items?.some?.((entry) => entry.text.includes("token_count"))), false);
 
   const reveal = await fetch(`${listener.url}/api/chat/reveal`, {
     method: "POST",
@@ -119,6 +124,7 @@ await withTempDir(async (tempDir) => {
   const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
   assert.equal(bootstrap.payload.session.bound_session.session_id, sessionId);
   assert.equal(bootstrap.payload.transcript[0].type, "event_row");
+  assert.ok(bootstrap.payload.transcript.some((item) => item.type === "message_group" && item.role === "assistant"));
   ws.close();
   await server.close();
 

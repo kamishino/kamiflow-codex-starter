@@ -30,6 +30,14 @@ function isPlainRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function humanizeTypeLabel(value) {
+  return String(value || "")
+    .trim()
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\b\w/g, (match) => match.toUpperCase());
+}
+
 async function readJsonIfExists(targetPath, fallback = null) {
   try {
     const raw = await fsp.readFile(targetPath, "utf8");
@@ -143,6 +151,67 @@ function extractCodexTailEntry(rawLine) {
     const payload = JSON.parse(trimmed);
     const nested = isPlainRecord(payload.payload) ? payload.payload : null;
     const record = nested || payload;
+    const topType = String(payload.type || payload.event_type || "").toLowerCase();
+    const nestedType = String(record.type || "").toLowerCase();
+    const createdAt = String(record.updated_at || record.created_at || payload.updated_at || payload.created_at || payload.timestamp || nowIso());
+    if (topType === "event_msg") {
+      const eventType = nestedType || "event_msg";
+      const message = compactText(
+        record.message || record.text || record.summary || record.reason || record.content || "",
+        3000
+      );
+      if (eventType === "token_count") {
+        return null;
+      }
+      if (eventType === "user_message") {
+        return {
+          created_at: createdAt,
+          role: "user",
+          kind: "user_message",
+          text: message || "User message.",
+          status: "synced",
+          fingerprint,
+          meta: {
+            source: "codex_session",
+            raw_role: "user_message",
+            raw_type: eventType
+          }
+        };
+      }
+      if (eventType === "agent_message") {
+        return {
+          created_at: createdAt,
+          role: "assistant",
+          kind: "agent_message",
+          text: message || "Codex reply.",
+          status: "synced",
+          fingerprint,
+          meta: {
+            source: "codex_session",
+            raw_role: "agent_message",
+            raw_type: eventType
+          }
+        };
+      }
+      const fallbackTextByType = {
+        task_started: "Task started.",
+        task_complete: "Task complete.",
+        agent_reasoning: "Reasoning updated."
+      };
+      return {
+        created_at: createdAt,
+        role: "system",
+        kind: eventType,
+        text: message || fallbackTextByType[eventType] || `${humanizeTypeLabel(eventType || "event")}.`,
+        status: "synced",
+        fingerprint,
+        meta: {
+          source: "codex_session",
+          raw_role: "event_msg",
+          raw_type: eventType
+        }
+      };
+    }
     const fields = [
       record.message,
       record.text,
@@ -159,8 +228,6 @@ function extractCodexTailEntry(rawLine) {
       payload.prompt
     ];
     const content = fields.find((item) => String(item || "").trim().length > 0);
-    const nestedType = String(record.type || "").toLowerCase();
-    const topType = String(payload.type || payload.event_type || "").toLowerCase();
     const isToolEvent = ["function_call_output", "function_call", "tool_call", "tool_result"].includes(nestedType);
     const role = isToolEvent
       ? "system"
@@ -241,10 +308,19 @@ function prettyDisplayLabel(role) {
   if (role === "tool_result") {
     return "Tool Result";
   }
+  if (role === "task_started") {
+    return "Task Started";
+  }
+  if (role === "task_complete") {
+    return "Task Complete";
+  }
+  if (role === "agent_reasoning") {
+    return "Reasoning";
+  }
   if (role === "raw") {
     return "Synced";
   }
-  return role ? role.replace(/_/g, " ") : "Event";
+  return role ? humanizeTypeLabel(role) : "Event";
 }
 
 function normalizeTranscriptItemForDisplay(item, index) {

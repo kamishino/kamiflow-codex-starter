@@ -6,6 +6,7 @@ import { WebSocket } from "ws";
 import {
   bindCodexSession,
   buildTranscriptDisplayBlocks,
+  hydrateTranscriptFromCodex,
   readTranscript,
   resolveBoundSession,
   unbindCodexSession
@@ -182,6 +183,37 @@ await runCase("display model groups conversational transcript items for human-fi
   assert.equal(blocks[2].items.length, 2);
 });
 
+await runCase("event_msg transcript records become human-readable bubbles or notes", async () => {
+  await withTempDir(async (tempDir) => {
+    const projectDir = path.join(tempDir, "project");
+    const sessionsRoot = path.join(tempDir, "sessions");
+    await seedProject(projectDir);
+    const sessionPath = await writeSessionFile(sessionsRoot, "019-chat-event-msg", [
+      { timestamp: "2026-03-08T00:01:00.000Z", type: "event_msg", payload: { type: "task_started", message: "Started check run." } },
+      { timestamp: "2026-03-08T00:02:00.000Z", type: "event_msg", payload: { type: "user_message", message: "Please review the trace." } },
+      { timestamp: "2026-03-08T00:03:00.000Z", type: "event_msg", payload: { type: "agent_message", message: "I found the regression." } },
+      { timestamp: "2026-03-08T00:04:00.000Z", type: "event_msg", payload: { type: "agent_reasoning", message: "Comparing the latest parser branch." } },
+      { timestamp: "2026-03-08T00:05:00.000Z", type: "event_msg", payload: { type: "token_count", total_tokens: 1234 } },
+      { timestamp: "2026-03-08T00:06:00.000Z", type: "event_msg", payload: { type: "custom_signal" } },
+      { timestamp: "2026-03-08T00:07:00.000Z", type: "event_msg", payload: { type: "task_complete", message: "Check run completed." } }
+    ]);
+
+    const hydration = await hydrateTranscriptFromCodex(projectDir, sessionPath);
+    assert.equal(hydration.appended.length, 6);
+
+    const transcriptItems = await readTranscript(projectDir, 20);
+    assert.equal(transcriptItems.some((item) => item.kind === "token_count"), false);
+
+    const blocks = buildTranscriptDisplayBlocks(transcriptItems);
+    assert.ok(blocks.some((item) => item.type === "message_group" && item.role === "user" && item.items.some((entry) => entry.text.includes("Please review the trace"))));
+    assert.ok(blocks.some((item) => item.type === "message_group" && item.role === "assistant" && item.items.some((entry) => entry.text.includes("I found the regression"))));
+    assert.ok(blocks.some((item) => item.type === "event_row" && item.label === "Task Started" && item.text.includes("Started check run")));
+    assert.ok(blocks.some((item) => item.type === "event_row" && item.label === "Reasoning" && item.text.includes("Comparing the latest parser branch")));
+    assert.ok(blocks.some((item) => item.type === "event_row" && item.label === "Custom Signal" && item.text === "Custom Signal."));
+    assert.ok(blocks.some((item) => item.type === "event_row" && item.label === "Task Complete" && item.text.includes("Check run completed")));
+  });
+});
+
 await runCase("server exposes onboarding when the client session file is missing", async () => {
   await withTempDir(async (tempDir) => {
     const projectDir = path.join(tempDir, "project");
@@ -272,14 +304,16 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     const sessionsRoot = path.join(tempDir, "sessions");
     await seedProject(projectDir);
     const sessionPath = await writeSessionFile(sessionsRoot, "019-chat-bravo", [
-      { role: "assistant", text: "Existing Codex reply.", updated_at: "2026-03-08T00:01:00.000Z" }
+      { timestamp: "2026-03-08T00:01:00.000Z", type: "event_msg", payload: { type: "agent_message", message: "Existing Codex reply." } }
     ]);
     await bindCodexSession(projectDir, "019-chat-bravo", sessionsRoot);
 
     const executePrompt = async ({ prompt }) => {
       await fs.appendFile(
         sessionPath,
-        JSON.stringify({ role: "assistant", text: `Codex handled: ${prompt}`, updated_at: "2026-03-08T00:02:00.000Z" }) + "\n" +
+        JSON.stringify({ timestamp: "2026-03-08T00:02:00.000Z", type: "event_msg", payload: { type: "agent_message", message: `Codex handled: ${prompt}` } }) + "\n" +
+        JSON.stringify({ timestamp: "2026-03-08T00:02:15.000Z", type: "event_msg", payload: { type: "agent_reasoning", message: `Investigating: ${prompt}` } }) + "\n" +
+        JSON.stringify({ timestamp: "2026-03-08T00:02:20.000Z", type: "event_msg", payload: { type: "token_count", total_tokens: 77 } }) + "\n" +
         JSON.stringify({ timestamp: "2026-03-08T00:02:30.000Z", type: "response_item", payload: { type: "function_call_output", output: `Tool output for: ${prompt}` } }) + "\n",
         "utf8"
       );
@@ -397,12 +431,15 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     });
     const finalTranscriptPayload = await finalTranscript.json();
     assert.ok(finalTranscriptPayload.items.some((item) => item.type === "event_row" && item.label === "Tool Output"));
+    assert.ok(finalTranscriptPayload.items.some((item) => item.type === "event_row" && item.label === "Reasoning"));
     assert.ok(finalTranscriptPayload.items.some((item) => item.type === "message_group" && item.role === "user"));
     assert.ok(finalTranscriptPayload.items.some((item) => item.type === "message_group" && item.label === "Codex"));
+    assert.equal(finalTranscriptPayload.items.some((item) => item.text?.includes?.("token_count") || item.items?.some?.((entry) => entry.text.includes("token_count"))), false);
 
     const transcriptItems = await readTranscript(projectDir, 50);
     assert.ok(transcriptItems.some((item) => item.kind === "prompt" && item.text.includes("Continue the investigation")));
-    assert.ok(transcriptItems.some((item) => item.kind === "codex_tail" && item.text.includes("Codex handled: Continue the investigation")));
+    assert.ok(transcriptItems.some((item) => item.kind === "agent_message" && item.text.includes("Codex handled: Continue the investigation")));
+    assert.equal(transcriptItems.some((item) => item.kind === "token_count"), false);
 
     ws.close();
     await server.close();
