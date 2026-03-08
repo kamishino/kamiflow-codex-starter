@@ -48,7 +48,7 @@
     "kfc-session:serve": "npm run -w @kamishino/kfc-session serve",
     "kfc-session:test": "npm run -w @kamishino/kfc-session test",
     "kfc-session:smoke": "node scripts/kfc-session/smoke-serve.mjs",
-    "kfc-chat:serve": "npm run -w @kamishino/kfc-chat serve",
+    "kfc-chat:serve": "node scripts/kfc-chat/run-kfc-chat.mjs serve",
     "kfc-chat:test": "npm run -w @kamishino/kfc-chat test",
     "kfc-chat:smoke": "node scripts/kfc-chat/smoke-serve.mjs",
     "dogfood:link": "node scripts/dogfood/link-all.mjs",

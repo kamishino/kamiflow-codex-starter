@@ -326,6 +326,16 @@ export function defaultSessionsRoot() {
   return path.join(os.homedir(), ".codex", "sessions");
 }
 
+function buildUnboundSessionState(state, extras = {}) {
+  return {
+    bound: false,
+    state,
+    can_bind: false,
+    can_prompt: false,
+    ...extras
+  };
+}
+
 export function resolveChatPaths(projectDir) {
   return {
     projectDir,
@@ -413,33 +423,55 @@ export async function unbindCodexSession(projectDir) {
 export async function resolveBoundSession(projectDir, sessionsRoot = defaultSessionsRoot()) {
   const clientSession = await loadClientSession(projectDir);
   if (!clientSession?.planId) {
-    return {
-      bound: false,
-      reason: "Missing .kfc/session.json. Run `kfc client --force --no-launch-codex` first."
-    };
+    return buildUnboundSessionState("client_session_missing", {
+      reason: "Missing .kfc/session.json. Run `kfc client --force --no-launch-codex` first.",
+      onboarding_command: "kfc client --force --no-launch-codex",
+      onboarding_title: "Initialize the project runtime first."
+    });
   }
   const sessionId = String(clientSession.codexSessionId || "").trim();
   if (!sessionId) {
-    return {
-      bound: false,
-      reason: "No Codex session bound. Run `kfc-chat bind --project . --session-id <id>` first."
-    };
+    return buildUnboundSessionState("session_unbound", {
+      reason: "No Codex session bound. Paste a Codex session id to bind this project.",
+      onboarding_title: "Bind a Codex session to this project.",
+      can_bind: true,
+      plan_id: String(clientSession.planId || ""),
+      plan_path: String(clientSession.planPath || ""),
+      profile: String(clientSession.profile || ""),
+      generated_at: String(clientSession.generatedAt || "")
+    });
   }
 
   let sessionPath = String(clientSession.codexSessionPath || "").trim();
   if (!sessionPath || !(await pathExists(sessionPath))) {
-    const resolved = await resolveSessionRecord(sessionsRoot, sessionId);
-    sessionPath = resolved.session_path;
-    await saveClientSession(projectDir, {
-      ...clientSession,
-      codexSessionId: resolved.session_id,
-      codexSessionPath: resolved.session_path,
-      codexBoundAt: clientSession.codexBoundAt || nowIso()
-    });
+    try {
+      const resolved = await resolveSessionRecord(sessionsRoot, sessionId);
+      sessionPath = resolved.session_path;
+      await saveClientSession(projectDir, {
+        ...clientSession,
+        codexSessionId: resolved.session_id,
+        codexSessionPath: resolved.session_path,
+        codexBoundAt: clientSession.codexBoundAt || nowIso()
+      });
+    } catch {
+      return buildUnboundSessionState("session_stale", {
+        reason: "The bound Codex session could not be found. Paste a session id to bind or rebind this project.",
+        onboarding_title: "Rebind the missing Codex session.",
+        can_bind: true,
+        session_id: sessionId,
+        plan_id: String(clientSession.planId || ""),
+        plan_path: String(clientSession.planPath || ""),
+        profile: String(clientSession.profile || ""),
+        generated_at: String(clientSession.generatedAt || "")
+      });
+    }
   }
 
   return {
     bound: true,
+    state: "bound",
+    can_bind: true,
+    can_prompt: true,
     plan_id: String(clientSession.planId),
     plan_path: String(clientSession.planPath || ""),
     profile: String(clientSession.profile || ""),

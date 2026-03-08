@@ -4,6 +4,7 @@ import { runCodexResumeAction } from "../../../src/lib/codex-runner.js";
 import { resolveRevealTargetPath, revealPath as sharedRevealPath } from "../../../src/lib/session-actions.js";
 import {
   appendTranscriptEntry,
+  bindCodexSession,
   buildTranscriptDisplayBlocks,
   describeCodexResult,
   ensureChatRuntimeSession,
@@ -77,6 +78,8 @@ export async function createKfcChatServer(options = {}) {
     await sharedRevealPath(resolved.path, { target: resolved.target });
     return resolved;
   });
+  const bindSession = options.bindSession || (async ({ projectDir: nextProjectDir, sessionId, sessionsRoot: nextSessionsRoot }) =>
+    await bindCodexSession(nextProjectDir, sessionId, nextSessionsRoot));
 
   function buildSessionPayload() {
     return {
@@ -354,6 +357,38 @@ export async function createKfcChatServer(options = {}) {
       return {
         error: err instanceof Error ? err.message : String(err),
         error_code: "KFC_CHAT_REVEAL_FAILED"
+      };
+    }
+  });
+
+  fastify.post("/api/chat/bind", async (request, reply) => {
+    const denied = await requireAuth(request, reply);
+    if (denied) {
+      return denied;
+    }
+    const sessionId = String(request.body?.session_id || "").trim();
+    if (!sessionId) {
+      reply.code(400);
+      return { error: "Missing `session_id` for bind.", error_code: "KFC_CHAT_BIND_ID_REQUIRED" };
+    }
+    try {
+      await bindSession({
+        projectDir,
+        sessionId,
+        sessionsRoot
+      });
+      await refreshBoundSession();
+      await persistSession();
+      return {
+        ok: true,
+        session: buildSessionPayload()
+      };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      reply.code(message.includes(".kfc/session.json") ? 409 : 400);
+      return {
+        error: message,
+        error_code: message.includes(".kfc/session.json") ? "KFC_CHAT_CLIENT_SESSION_MISSING" : "KFC_CHAT_BIND_FAILED"
       };
     }
   });

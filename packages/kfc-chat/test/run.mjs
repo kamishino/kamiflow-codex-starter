@@ -182,6 +182,90 @@ await runCase("display model groups conversational transcript items for human-fi
   assert.equal(blocks[2].items.length, 2);
 });
 
+await runCase("server exposes onboarding when the client session file is missing", async () => {
+  await withTempDir(async (tempDir) => {
+    const projectDir = path.join(tempDir, "project");
+    const sessionsRoot = path.join(tempDir, "sessions");
+    await fs.mkdir(projectDir, { recursive: true });
+
+    const server = await createKfcChatServer({
+      projectDir,
+      sessionsRoot,
+      host: "127.0.0.1",
+      port: 0,
+      token: "chat-token"
+    });
+    await server.ready();
+    const listener = await server.listen();
+
+    const session = await fetch(`${listener.url}/api/chat/session`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    const sessionPayload = await session.json();
+    assert.equal(sessionPayload.bound_session.bound, false);
+    assert.equal(sessionPayload.bound_session.state, "client_session_missing");
+    assert.equal(sessionPayload.bound_session.can_bind, false);
+    assert.equal(sessionPayload.bound_session.onboarding_command, "kfc client --force --no-launch-codex");
+
+    const bindResult = await fetch(`${listener.url}/api/chat/bind`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer chat-token",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: "019-chat-missing" })
+    });
+    assert.equal(bindResult.status, 409);
+
+    await server.close();
+  });
+});
+
+await runCase("server binds an unbound project runtime from the browser", async () => {
+  await withTempDir(async (tempDir) => {
+    const projectDir = path.join(tempDir, "project");
+    const sessionsRoot = path.join(tempDir, "sessions");
+    await seedProject(projectDir);
+    const sessionPath = await writeSessionFile(sessionsRoot, "019-chat-delta", [
+      { role: "assistant", text: "Ready to bind.", updated_at: "2026-03-08T00:05:00.000Z" }
+    ]);
+
+    const server = await createKfcChatServer({
+      projectDir,
+      sessionsRoot,
+      host: "127.0.0.1",
+      port: 0,
+      token: "chat-token"
+    });
+    await server.ready();
+    const listener = await server.listen();
+
+    const session = await fetch(`${listener.url}/api/chat/session`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    const sessionPayload = await session.json();
+    assert.equal(sessionPayload.bound_session.bound, false);
+    assert.equal(sessionPayload.bound_session.state, "session_unbound");
+    assert.equal(sessionPayload.bound_session.can_bind, true);
+
+    const bindResult = await fetch(`${listener.url}/api/chat/bind`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer chat-token",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ session_id: "019-chat-delta" })
+    });
+    assert.equal(bindResult.status, 200);
+    const bindPayload = await bindResult.json();
+    assert.equal(bindPayload.session.bound_session.bound, true);
+    assert.equal(bindPayload.session.bound_session.session_id, "019-chat-delta");
+    assert.equal(bindPayload.session.bound_session.session_path, sessionPath);
+
+    await server.close();
+  });
+});
+
 await runCase("server exposes health/session/transcript and streams prompt updates over WebSocket", async () => {
   await withTempDir(async (tempDir) => {
     const projectDir = path.join(tempDir, "project");
@@ -235,6 +319,7 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     const htmlText = await html.text();
     assert.match(htmlText, /Bound Session Timeline/);
     assert.match(htmlText, /conversation-summary/);
+    assert.match(htmlText, /bind-session-button/);
     assert.match(htmlText, /copy-session-id-button/);
     assert.match(htmlText, /reveal-session-file-button/);
 

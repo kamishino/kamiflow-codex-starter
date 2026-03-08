@@ -94,6 +94,7 @@ await withTempDir(async (tempDir) => {
   const htmlText = await html.text();
   assert.match(htmlText, /Bound Codex Session Chat/);
   assert.match(htmlText, /Bound Session Timeline/);
+  assert.match(htmlText, /bind-session-button/);
   assert.match(htmlText, /copy-session-id-button/);
   assert.match(htmlText, /reveal-session-folder-button/);
 
