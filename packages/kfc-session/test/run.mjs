@@ -115,6 +115,7 @@ await runCase("server exposes health, list, detail, export, import, and restore"
     assert.equal(restoreResult.statusCode, 200);
     const restorePayload = JSON.parse(restoreResult.payload);
     assert.ok(restorePayload.message.includes("Resume it manually"));
+    assert.equal(restorePayload.manual_resume_command, 'codex resume "019-session-imported"');
 
     const html = await server.fastify.inject({ method: "GET", url: "/" });
     assert.equal(html.statusCode, 200);

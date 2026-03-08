@@ -159,6 +159,7 @@ async function runRestore(parsed) {
   const result = await restoreSession(parsed.sessionsRoot, parsed.id);
   console.log(`Session ID: ${result.session_id}`);
   console.log(`Session Path: ${result.session_path}`);
+  console.log(`Manual Resume: ${result.manual_resume_command}`);
   console.log(result.message);
 }
 

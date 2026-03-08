@@ -3,6 +3,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
+import { buildInteractiveResumeCommand } from "../../../src/lib/session-actions.js";
 
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CHAT_SESSION_FILE = path.join(".kfc", "chat-session.json");
@@ -373,14 +374,6 @@ export async function findSessionMatches(sessionsRoot, sessionId) {
     .filter((item) => path.extname(item).toLowerCase() === ".jsonl")
     .filter((item) => path.basename(item).toLowerCase().includes(needle))
     .sort((left, right) => left.localeCompare(right));
-}
-
-export function buildInteractiveResumeCommand(sessionId) {
-  const normalized = String(sessionId || "").trim();
-  if (!normalized) {
-    return "";
-  }
-  return `codex resume ${JSON.stringify(normalized)}`;
 }
 
 export async function bindCodexSession(projectDir, sessionId, sessionsRoot = defaultSessionsRoot()) {

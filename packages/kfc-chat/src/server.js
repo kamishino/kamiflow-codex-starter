@@ -1,6 +1,7 @@
 import Fastify from "fastify";
 import { WebSocketServer } from "ws";
 import { runCodexResumeAction } from "../../../src/lib/codex-runner.js";
+import { resolveRevealTargetPath, revealPath as sharedRevealPath } from "../../../src/lib/session-actions.js";
 import {
   appendTranscriptEntry,
   buildTranscriptDisplayBlocks,
@@ -71,6 +72,11 @@ export async function createKfcChatServer(options = {}) {
   let shuttingDown = false;
 
   const wss = new WebSocketServer({ noServer: true });
+  const revealTarget = options.revealTarget || (async ({ binding, target }) => {
+    const resolved = resolveRevealTargetPath(binding, target);
+    await sharedRevealPath(resolved.path, { target: resolved.target });
+    return resolved;
+  });
 
   function buildSessionPayload() {
     return {
@@ -320,6 +326,36 @@ export async function createKfcChatServer(options = {}) {
     }
     await syncFromCodexTail();
     return buildTranscriptPayload();
+  });
+
+  fastify.post("/api/chat/reveal", async (request, reply) => {
+    const denied = await requireAuth(request, reply);
+    if (denied) {
+      return denied;
+    }
+    await refreshBoundSession();
+    if (!boundSession.bound) {
+      reply.code(409);
+      return { error: boundSession.reason || "No Codex session bound.", error_code: "KFC_CHAT_NOT_BOUND" };
+    }
+    try {
+      const target = String(request.body?.target || "file").trim() || "file";
+      const result = await revealTarget({
+        binding: boundSession,
+        target
+      });
+      return {
+        ok: true,
+        target: result.target,
+        path: result.path
+      };
+    } catch (err) {
+      reply.code(400);
+      return {
+        error: err instanceof Error ? err.message : String(err),
+        error_code: "KFC_CHAT_REVEAL_FAILED"
+      };
+    }
   });
 
   fastify.server.on("upgrade", (request, socket, head) => {

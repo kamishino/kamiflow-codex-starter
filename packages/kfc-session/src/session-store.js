@@ -2,6 +2,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { buildInteractiveResumeCommand } from "../../../src/lib/session-actions.js";
 
 let fixtureWriteTick = 0;
 
@@ -320,7 +321,8 @@ export async function restoreSession(sessionsRoot, sessionId) {
   return {
     session_id: record.session_id,
     session_path: record.file_path,
-    message: "Session is present in the Codex sessions root and ready for manual resume."
+    manual_resume_command: buildInteractiveResumeCommand(record.session_id),
+    message: "Session is present in the Codex sessions root. Resume it manually with the printed command."
   };
 }
 

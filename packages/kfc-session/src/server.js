@@ -96,7 +96,8 @@ export async function createKfcSessionServer(options = {}) {
     try {
       const result = await restoreSession(sessionsRoot, payload.id);
       return {
-        message: `${result.session_id} is present in ${sessionsRoot}. Resume it manually from Codex using the session id.`,
+        message: result.message,
+        manual_resume_command: result.manual_resume_command,
         result
       };
     } catch (err) {

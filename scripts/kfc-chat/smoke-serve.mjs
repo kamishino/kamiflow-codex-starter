@@ -71,6 +71,10 @@ await withTempDir(async (tempDir) => {
     host: "127.0.0.1",
     port: 0,
     token: "smoke-token",
+    revealTarget: async ({ binding, target }) => ({
+      target,
+      path: target === "folder" ? path.dirname(binding.session_path) : binding.session_path
+    }),
     executePrompt: async ({ prompt }) => ({
       status: "completed",
       command: `codex exec resume ${sessionId} ${JSON.stringify(prompt)}`,
@@ -90,6 +94,8 @@ await withTempDir(async (tempDir) => {
   const htmlText = await html.text();
   assert.match(htmlText, /Bound Codex Session Chat/);
   assert.match(htmlText, /Bound Session Timeline/);
+  assert.match(htmlText, /copy-session-id-button/);
+  assert.match(htmlText, /reveal-session-folder-button/);
 
   const transcript = await fetch(`${listener.url}/api/chat/transcript`, {
     headers: { Authorization: "Bearer smoke-token" }
@@ -97,6 +103,16 @@ await withTempDir(async (tempDir) => {
   const transcriptPayload = await transcript.json();
   assert.equal(transcriptPayload.items[0].type, "event_row");
   assert.equal(transcriptPayload.items[0].label, "Tool Output");
+
+  const reveal = await fetch(`${listener.url}/api/chat/reveal`, {
+    method: "POST",
+    headers: {
+      Authorization: "Bearer smoke-token",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ target: "folder" })
+  });
+  assert.equal(reveal.status, 200);
 
   const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=smoke-token`);
   const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");

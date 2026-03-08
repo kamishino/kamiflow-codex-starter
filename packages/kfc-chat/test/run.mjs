@@ -96,6 +96,22 @@ function waitForMessage(ws, predicate, timeoutMs = 5000) {
   });
 }
 
+async function captureCli(argv, deps = {}) {
+  const logs = [];
+  const errors = [];
+  const originalLog = console.log;
+  const originalError = console.error;
+  console.log = (...args) => logs.push(args.join(" "));
+  console.error = (...args) => errors.push(args.join(" "));
+  try {
+    const exitCode = await runCli(argv, deps);
+    return { exitCode, logs, errors };
+  } finally {
+    console.log = originalLog;
+    console.error = originalError;
+  }
+}
+
 await runCase("bind/show/unbind manage the canonical client session file", async () => {
   await withTempDir(async (tempDir) => {
     const projectDir = path.join(tempDir, "project");
@@ -112,8 +128,34 @@ await runCase("bind/show/unbind manage the canonical client session file", async
     assert.equal(binding.bound, true);
     assert.equal(binding.session_id, "019-chat-alpha");
 
-    const cliShow = await runCli(["bind", "show", "--project", projectDir, "--sessions-root", sessionsRoot]);
-    assert.equal(cliShow, 0);
+    const cliShow = await captureCli(["show", "--project", projectDir, "--sessions-root", sessionsRoot]);
+    assert.equal(cliShow.exitCode, 0);
+    assert.ok(cliShow.logs.some((line) => line.includes("Session ID: 019-chat-alpha")));
+
+    let copiedText = "";
+    const cliCopy = await captureCli(
+      ["copy", "--project", projectDir, "--sessions-root", sessionsRoot, "--field", "session-path"],
+      {
+        copyTextToClipboard: async (text) => {
+          copiedText = text;
+        }
+      }
+    );
+    assert.equal(cliCopy.exitCode, 0);
+    assert.equal(copiedText, sessionPath);
+
+    let revealed = null;
+    const cliReveal = await captureCli(
+      ["reveal", "--project", projectDir, "--sessions-root", sessionsRoot, "--target", "folder"],
+      {
+        revealPath: async (targetPath, options = {}) => {
+          revealed = { targetPath, options };
+        }
+      }
+    );
+    assert.equal(cliReveal.exitCode, 0);
+    assert.equal(revealed.targetPath, path.dirname(sessionPath));
+    assert.equal(revealed.options.target, "folder");
 
     const removed = await unbindCodexSession(projectDir);
     assert.equal(removed, true);
@@ -167,13 +209,21 @@ await runCase("server exposes health/session/transcript and streams prompt updat
       };
     };
 
+    let revealed = null;
     const server = await createKfcChatServer({
       projectDir,
       sessionsRoot,
       host: "127.0.0.1",
       port: 0,
       token: "chat-token",
-      executePrompt
+      executePrompt,
+      revealTarget: async ({ binding, target }) => {
+        revealed = { binding, target };
+        return {
+          target,
+          path: target === "folder" ? path.dirname(binding.session_path) : binding.session_path
+        };
+      }
     });
     await server.ready();
     const listener = await server.listen();
@@ -185,6 +235,8 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     const htmlText = await html.text();
     assert.match(htmlText, /Bound Session Timeline/);
     assert.match(htmlText, /conversation-summary/);
+    assert.match(htmlText, /copy-session-id-button/);
+    assert.match(htmlText, /reveal-session-file-button/);
 
     const styles = await fetch(`${listener.url}/assets/kfc-chat.css`);
     const stylesText = await styles.text();
@@ -216,6 +268,21 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     const transcriptPayload = await transcript.json();
     assert.equal(transcriptPayload.items[0].type, "message_group");
     assert.equal(transcriptPayload.items[0].label, "Codex");
+
+    const revealResult = await fetch(`${listener.url}/api/chat/reveal`, {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer chat-token",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ target: "folder" })
+    });
+    assert.equal(revealResult.status, 200);
+    const revealPayload = await revealResult.json();
+    assert.equal(revealPayload.target, "folder");
+    assert.equal(revealPayload.path, path.dirname(sessionPath));
+    assert.equal(revealed.binding.session_id, "019-chat-bravo");
+    assert.equal(revealed.target, "folder");
 
     const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=chat-token`);
     const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
