@@ -9,10 +9,22 @@ Boundary:
 
 ## Start
 
-From this repo:
+Preferred maintainer path from this repo:
 
 ```bash
-npm run kfc-session:serve
+npm run kfc-web:dev -- --project .
+```
+
+Production-style shell validation from this repo:
+
+```bash
+npm run kfc-web:serve -- --project .
+```
+
+Focused session wrapper from this repo (compatibility shim):
+
+```bash
+npm run kfc-session:serve -- --project .
 ```
 
 Direct package binary:

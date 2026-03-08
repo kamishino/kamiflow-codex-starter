@@ -25,20 +25,38 @@ For route execution discipline, also follow `resources/docs/CODEX_FLOW_SMOOTH_GU
 npm run codex:sync -- --profile dogfood --force
 ```
 
-2. Initialize private plans directory and template (markdown-first lifecycle):
+2. Start the unified maintainer web shell with HMR:
+
+```bash
+npm run kfc-web:dev -- --project .
+```
+
+Production-style validation path:
+
+```bash
+npm run kfc-web:serve -- --project .
+```
+
+Focused plan wrapper still exists as a compatibility shim:
+
+```bash
+npm run kfc-plan:serve -- --project .
+```
+
+3. Initialize private plans directory and template (markdown-first lifecycle):
 
 ```bash
 mkdir .local\plans
 kfc plan init --project . --new
 ```
 
-3. Validate plans:
+4. Validate plans:
 
 ```bash
 kfc plan validate --project .
 ```
 
-4. Serve local plan UI/API:
+5. Serve local plan UI/API directly when you specifically need the package-level route:
 
 ```bash
 kfc plan serve --project . --port 4310
@@ -55,7 +73,7 @@ kfc client doctor --project . --fix
 
 Run from the client repository root (external project folder, not `kamiflow-codex-starter`).
 
-5. Run Codex routes against one plan file:
+6. Run Codex routes against one plan file:
 
 - `start` route first when request is vague (missing 2+ core planning fields)
 - `start` final output must include `START_CONTEXT` + exact `Run next:` command

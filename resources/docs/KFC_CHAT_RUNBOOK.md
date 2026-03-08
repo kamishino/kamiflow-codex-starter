@@ -9,7 +9,19 @@ Boundary:
 
 ## Start
 
-From this repo:
+Preferred maintainer path from this repo:
+
+```bash
+npm run kfc-web:dev -- --project .
+```
+
+Production-style shell validation from this repo:
+
+```bash
+npm run kfc-web:serve -- --project .
+```
+
+Focused chat wrapper from this repo (compatibility shim):
 
 ```bash
 npm run kfc-chat:serve -- --project .

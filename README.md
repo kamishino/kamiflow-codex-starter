@@ -89,16 +89,36 @@ If you want the desktop shell for KFC Plan UI (single window with restore):
 npm run ui:desktop
 ```
 
-If you want the separate Codex session manager utility:
+For the unified maintainer web shell with HMR during development:
 
 ```bash
-npm run kfc-session:serve
+npm run kfc-web:dev -- --project .
 ```
 
-If you want the separate bound-session chat utility:
+For a production-style shell run from the repo:
 
 ```bash
+npm run kfc-web:serve -- --project .
+```
+
+Focused wrappers still exist as compatibility shims when you want one surface first:
+
+```bash
+npm run kfc-plan:serve -- --project .
+npm run kfc-session:serve -- --project .
 npm run kfc-chat:serve -- --project .
+```
+
+If you want the separate Codex session manager utility directly:
+
+```bash
+kfc-session serve
+```
+
+If you want the separate bound-session chat utility directly:
+
+```bash
+kfc-chat serve --project .
 ```
 
 If you need client linking, prepare the package from this repo:
