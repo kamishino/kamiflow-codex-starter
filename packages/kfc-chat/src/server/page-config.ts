@@ -1,6 +1,11 @@
 import { buildBrowserPageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
 
-export function buildChatPageModel(options) {
+export function buildChatPageModel(options: {
+  assets?: unknown;
+  projectName?: string;
+  projectDir?: string;
+  title?: string;
+}) {
   const { assets, projectName, projectDir, title = "KFC Chat" } = options;
   return buildBrowserPageModel({
     title,

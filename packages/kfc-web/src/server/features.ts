@@ -1,8 +1,8 @@
 import path from "node:path";
 import { createTemplateRenderer } from "./template-render.js";
-import { buildPlanPageModel } from "../../../kfc-plan-web/src/server/page-config.js";
-import { buildChatPageModel } from "../../../kfc-chat/src/server/page-config.js";
-import { buildSessionPageModel } from "../../../kfc-session/src/server/page-config.js";
+import { buildPlanPageModel } from "../../../kfc-plan-web/dist/server/page-config.js";
+import { buildChatPageModel } from "../../../kfc-chat/dist/server/page-config.js";
+import { buildSessionPageModel } from "../../../kfc-session/dist/server/page-config.js";
 
 function projectNameFromDir(projectDir) {
   return path.basename(projectDir) || "Project";

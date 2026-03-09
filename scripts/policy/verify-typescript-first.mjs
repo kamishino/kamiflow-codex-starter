@@ -15,16 +15,21 @@ const TS_FIRST_RULES = [
   {
     area: "packages/kfc-plan-web/src",
     root: "packages/kfc-plan-web/src",
-    allow: new Set(["server/page-config.js"])
+    allow: new Set()
   },
   {
     area: "packages/kfc-chat/src",
     root: "packages/kfc-chat/src",
-    allow: new Set(["server/page-config.js"])
+    allow: new Set()
   },
   {
     area: "packages/kfc-web-ui/src",
     root: "packages/kfc-web-ui/src",
+    allow: new Set()
+  },
+  {
+    area: "packages/kfc-session/src",
+    root: "packages/kfc-session/src",
     allow: new Set()
   }
 ];

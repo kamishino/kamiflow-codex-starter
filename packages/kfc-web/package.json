@@ -11,7 +11,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "build:server": "npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
+    "build:features": "npm run -w @kamishino/kfc-plan-web build:server && npm run -w @kamishino/kfc-session build:server && npm run -w @kamishino/kfc-chat build:server",
+    "build:server": "npm run build:features && npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
     "build:client": "vite build",
     "build": "npm run build:server && npm run build:client",
     "serve": "npm run build && node bin/kfc-web.js serve",

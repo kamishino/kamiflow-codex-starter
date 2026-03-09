@@ -12,7 +12,7 @@
   },
   "scripts": {
     "build:client": "npm run -w @kamishino/kfc-web-runtime build && node scripts/build-client.mjs",
-    "build:server": "npm --prefix ../.. run build:server && npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json && node scripts/sync-server-js.mjs",
+    "build:server": "npm --prefix ../.. run build:server && npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
     "build": "npm run build:server && npm run build:client",
     "serve": "npm run build && node bin/kfc-session.js serve",
     "test": "npm run build && node test/run.mjs"

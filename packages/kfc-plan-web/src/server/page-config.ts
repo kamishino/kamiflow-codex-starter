@@ -1,6 +1,10 @@
 import { buildBrowserPageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
 
-export function buildPlanPageModel(options = {}) {
+export function buildPlanPageModel(options: {
+  assets?: unknown;
+  uiMode?: string;
+  title?: string;
+} = {}) {
   const { assets, uiMode = "observer", title = "KamiFlow Plan UI" } = options;
   return buildBrowserPageModel({
     title,
