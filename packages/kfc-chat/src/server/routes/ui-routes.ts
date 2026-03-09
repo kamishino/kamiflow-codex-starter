@@ -5,19 +5,37 @@ import { renderView } from "../view-render.js";
 
 const PUBLIC_DIR = resolvePublicDir();
 
+function resolveAssetPath(assetPath: string) {
+  const normalized = path.posix.normalize(`/${assetPath}`).replace(/^\/+/, "");
+  const resolved = path.resolve(PUBLIC_DIR, normalized);
+  if (!resolved.startsWith(PUBLIC_DIR)) {
+    throw new Error("Invalid asset path.");
+  }
+  return resolved;
+}
+
 async function readPublicFile(fileName: string) {
-  return await fs.readFile(path.join(PUBLIC_DIR, fileName), "utf8");
+  return await fs.readFile(resolveAssetPath(fileName));
+}
+
+function contentType(fileName: string) {
+  if (fileName.endsWith(".css")) {
+    return "text/css; charset=utf-8";
+  }
+  if (fileName.endsWith(".js") || fileName.endsWith(".mjs")) {
+    return "application/javascript; charset=utf-8";
+  }
+  if (fileName.endsWith(".json")) {
+    return "application/json; charset=utf-8";
+  }
+  return "application/octet-stream";
 }
 
 export function registerUiRoutes(fastify: any, options: { projectName: string; projectDir: string }) {
-  fastify.get("/assets/kfc-chat.js", async (_request: any, reply: any) => {
-    reply.type("application/javascript; charset=utf-8");
-    return await readPublicFile("kfc-chat.js");
-  });
-
-  fastify.get("/assets/kfc-chat.css", async (_request: any, reply: any) => {
-    reply.type("text/css; charset=utf-8");
-    return await readPublicFile("kfc-chat.css");
+  fastify.get("/assets/*", async (request: any, reply: any) => {
+    const assetPath = String(request.params["*"] || "");
+    reply.type(contentType(assetPath));
+    return await readPublicFile(assetPath);
   });
 
   fastify.get("/", async (_request: any, reply: any) => {

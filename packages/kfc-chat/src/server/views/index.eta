@@ -14,6 +14,17 @@
   <% } else { %>
     <link rel="stylesheet" href="/assets/kfc-chat.css" />
   <% } %>
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "/assets/vendor/preact.mjs",
+        "preact/jsx-runtime": "/assets/vendor/preact-jsx-runtime.mjs",
+        "@preact/signals": "/assets/vendor/preact-signals.mjs",
+        "@preact/signals-core": "/assets/vendor/preact-signals-core.mjs",
+        "@kamishino/kfc-web-ui": "/assets/vendor/kfc-web-ui/index.js"
+      }
+    }
+  </script>
 </head>
 <body>
   <div id="app-root"

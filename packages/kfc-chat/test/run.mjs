@@ -357,6 +357,8 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     assert.match(htmlText, /data-project-name=/);
     assert.match(htmlText, /assets\/kfc-chat\.js/);
     assert.match(htmlText, /assets\/kfc-chat\.css/);
+    assert.match(htmlText, /type="importmap"/);
+    assert.match(htmlText, /@kamishino\/kfc-web-ui/);
 
     const styles = await fetch(`${listener.url}/assets/kfc-chat.css`);
     const stylesText = await styles.text();
@@ -368,9 +370,17 @@ await runCase("server exposes health/session/transcript and streams prompt updat
 
     const script = await fetch(`${listener.url}/assets/kfc-chat.js`);
     const scriptText = await script.text();
-    assert.match(scriptText, /ConversationPanel/);
-    assert.match(scriptText, /SessionPanel/);
-    assert.match(scriptText, /message-bubble/);
+    assert.match(scriptText, /client\/main\.js/);
+
+    const clientMain = await fetch(`${listener.url}/assets/client/main.js`);
+    const clientMainText = await clientMain.text();
+    assert.match(clientMainText, /ConversationPanel/);
+    assert.match(clientMainText, /SessionPanel/);
+
+    const sharedUi = await fetch(`${listener.url}/assets/vendor/kfc-web-ui/index.js`);
+    const sharedUiText = await sharedUi.text();
+    assert.match(sharedUiText, /Button/);
+    assert.match(sharedUiText, /Card/);
 
     const verify = await fetch(`${listener.url}/api/chat/token/verify`, {
       method: "POST",
