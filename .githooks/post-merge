@@ -1,2 +1,2 @@
 #!C:/nvm4w/nodejs/node.exe
-await import(new URL("../scripts/git-hooks/post-merge-auto.mjs", import.meta.url));
+await import(new URL("../dist/scripts/git-hooks/post-merge-auto.js", import.meta.url));

@@ -1,2 +1,2 @@
 #!C:/nvm4w/nodejs/node.exe
-await import(new URL("../scripts/git-hooks/commit-msg.mjs", import.meta.url));
+await import(new URL("../dist/scripts/git-hooks/commit-msg.js", import.meta.url));
