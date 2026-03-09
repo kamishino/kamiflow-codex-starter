@@ -607,14 +607,14 @@ await runCase("project skill sync writes kamiflow-core runtime artifact", async 
 });
 
 await runCase("global KFC Plan contrast policy check passes", async () => {
-  const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfc-plan-contrast.mjs");
+  const policyPath = path.resolve(__dirname, "../../../dist/scripts/policy/verify-kfc-plan-contrast.js");
   const policyModule = await import(pathToFileURL(policyPath).href);
   const result = await policyModule.verifyKfpContrast();
   assert.equal(result.failures.length, 0, result.failures.join("\n"));
 });
 
 await runCase("KFC Plan spacing grid policy check passes", async () => {
-  const policyPath = path.resolve(__dirname, "../../../scripts/policy/verify-kfc-plan-spacing-grid.mjs");
+  const policyPath = path.resolve(__dirname, "../../../dist/scripts/policy/verify-kfc-plan-spacing-grid.js");
   const policyModule = await import(pathToFileURL(policyPath).href);
   const result = await policyModule.verifyKfpSpacingGrid();
   assert.equal(result.violations.length, 0, result.violations.join("\n"));

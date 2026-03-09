@@ -76,6 +76,6 @@ Guardrail expectation:
 - `resources/skills/kamiflow-core/SKILL.md`
 - `resources/skills/kamiflow-core/references/build.md`
 - `resources/skills/kamiflow-core/references/fix.md`
-- `scripts/policy/verify-kamiflow-skill-contract.mjs`
+- `scripts/policy/verify-kamiflow-skill-contract.ts`
 - `resources/docs/CODEX_ANTI_PATTERNS.md`
 - Verification Command: `npm run docs:verify:skills-contract`

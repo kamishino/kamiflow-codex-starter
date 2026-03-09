@@ -1,10 +1,10 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { verifyKfpContrast } from "./verify-kfc-plan-contrast.mjs";
+import { verifyKfpContrast } from "./verify-kfc-plan-contrast.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const repoRoot = path.resolve(__dirname, "..", "..");
+const repoRoot = path.resolve(__dirname, "..", "..", "..");
 const defaultCssPath = path.join(repoRoot, "packages", "kfc-plan-web", "src", "server", "public", "styles.css");
 
 export async function verifyKfpTimelineContrast(cssPath = defaultCssPath) {
