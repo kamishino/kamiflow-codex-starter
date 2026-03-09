@@ -3,5 +3,8 @@
   "version": "0.1.0",
   "description": "Shared runtime helpers for KFC web surfaces.",
   "type": "module",
+  "dependencies": {
+    "eta": "3.5.0"
+  },
   "license": "UNLICENSED"
 }

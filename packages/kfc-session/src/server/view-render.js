@@ -1,15 +1,6 @@
-import { Eta } from "eta";
 import { resolveViewsDir } from "./runtime-paths.js";
+import { createViewRenderer } from "../../../kfc-web-runtime/src/view-render.js";
 
-const eta = new Eta({
-  views: resolveViewsDir(),
-  cache: false
+export const renderView = createViewRenderer({
+  viewsDir: resolveViewsDir()
 });
-
-export async function renderView(name, data) {
-  const output = await eta.renderAsync(`${name}.eta`, data);
-  if (!output) {
-    throw new Error(`Failed to render view: ${name}`);
-  }
-  return output;
-}
