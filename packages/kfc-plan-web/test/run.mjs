@@ -92,6 +92,16 @@ async function runNodeProcess(command, args, cwd) {
   });
 }
 
+async function withSuppressedConsoleError(fn) {
+  const originalConsoleError = console.error;
+  console.error = () => {};
+  try {
+    return await fn();
+  } finally {
+    console.error = originalConsoleError;
+  }
+}
+
 function toLocalDateStamp(date = new Date()) {
   const year = String(date.getFullYear());
   const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -426,7 +436,7 @@ await runCase("init --new creates unique incremented plan files", async () => {
 });
 
 await runCase("kfc-plan init rejects --project when value is another flag", async () => {
-  const exitCode = await runCli(["init", "--project", "--new"]);
+  const exitCode = await withSuppressedConsoleError(() => runCli(["init", "--project", "--new"]));
   assert.equal(exitCode, 1);
 });
 
