@@ -1,7 +1,7 @@
-import Fastify from "fastify";
 import { WebSocketServer } from "ws";
 import { runCodexResumeAction } from "../../../../src/lib/codex-runner.js";
 import { resolveRevealTargetPath, revealPath as sharedRevealPath } from "../../../../src/lib/session-actions.js";
+import { createFeatureServer } from "../../../kfc-web-runtime/src/feature-server.js";
 import {
   appendTranscriptEntry,
   bindCodexSession,
@@ -54,27 +54,22 @@ async function defaultExecutePrompt({ projectDir, prompt, planId, sessionId, tim
 }
 
 export async function createKfcChatServer(options: Record<string, any> = {}) {
-  const fastify = Fastify({ logger: false });
-  const feature = await registerKfcChatFeature(fastify, options);
-
-  return {
-    fastify,
-    ...feature,
-    async ready() {
-      await fastify.ready();
-    },
-    async listen() {
-      await fastify.listen({ host: feature.host, port: feature.port });
-      const address = fastify.server.address() as any;
-      const actualPort = address && typeof address === "object" && "port" in address ? Number(address.port) : feature.port;
-      const persisted = { ...((await loadChatSession(feature.projectDir)) || {}), port: actualPort, host: feature.host, updated_at: nowIso(), connection_count: feature.wsClients.size } as any;
+  return await createFeatureServer({
+    host: options.host || "127.0.0.1",
+    port: Number.isInteger(options.port) && options.port >= 0 ? Number(options.port) : 4322,
+    setup: async (fastify) => await registerKfcChatFeature(fastify, options),
+    onAfterListen: async ({ feature, host, port }) => {
+      const persisted = {
+        ...((await loadChatSession(feature.projectDir)) || {}),
+        port,
+        host,
+        updated_at: nowIso(),
+        connection_count: feature.wsClients.size
+      } as any;
       await saveChatSession(feature.projectDir, persisted);
-      return { port: actualPort, url: `http://${feature.host}:${actualPort}`, token: persisted.token };
-    },
-    async close() {
-      await fastify.close();
+      return { token: persisted.token };
     }
-  };
+  });
 }
 
 export async function registerKfcChatFeature(fastify: any, options: Record<string, any> = {}) {

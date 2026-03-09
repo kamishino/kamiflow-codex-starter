@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import { createFeatureServer } from "../../../kfc-web-runtime/src/feature-server.js";
 import {
   defaultSessionsRoot,
   ensureSessionsRoot,
@@ -104,30 +104,9 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
 }
 
 export async function createKfcSessionServer(options = {}) {
-  const fastify = Fastify({ logger: false });
-  const { sessionsRoot } = await registerKfcSessionFeature(fastify, options);
-
-  return {
-    fastify,
-    sessionsRoot,
-    async ready() {
-      await fastify.ready();
-    },
-    async listen() {
-      await fastify.listen({
-        host: options.host || "127.0.0.1",
-        port: Number(options.port || 0)
-      });
-      const address = fastify.server.address();
-      const port =
-        address && typeof address === "object" && "port" in address ? Number(address.port) : Number(options.port || 0);
-      return {
-        port,
-        url: `http://${options.host || "127.0.0.1"}:${port}`
-      };
-    },
-    async close() {
-      await fastify.close();
-    }
-  };
+  return await createFeatureServer({
+    host: options.host || "127.0.0.1",
+    port: Number(options.port || 0),
+    setup: async (fastify) => await registerKfcSessionFeature(fastify, options)
+  });
 }
