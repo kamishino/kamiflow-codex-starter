@@ -14,8 +14,8 @@
     "build:client": "node scripts/build-client.mjs",
     "build": "npm run build:server && npm run build:client",
     "test": "npm run test:fast",
-    "test:fast": "npm run build:server && node test/run.mjs --fast",
-    "test:integration": "npm run build:server && node test/integration-codex-runner.mjs",
+    "test:fast": "npm run build && node test/run.mjs --fast",
+    "test:integration": "npm run build && node test/integration-codex-runner.mjs",
     "test:browser:install": "playwright install chromium",
     "test:browser": "npm run build && playwright test",
     "test:browser:headed": "npm run build && playwright test --headed",
@@ -41,7 +41,6 @@
   "devDependencies": {
     "@playwright/test": "^1.58.2",
     "@types/node": "22.13.10",
-    "esbuild-wasm": "0.25.10",
     "typescript": "5.8.2"
   },
   "files": [

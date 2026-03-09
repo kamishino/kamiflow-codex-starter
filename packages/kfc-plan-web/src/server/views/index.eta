@@ -43,6 +43,19 @@
   <% } else { %>
     <link rel="stylesheet" href="/assets/styles.css" />
   <% } %>
+  <script type="importmap">
+    {
+      "imports": {
+        "preact": "/assets/vendor/preact.mjs",
+        "preact/hooks": "/assets/vendor/preact-hooks.mjs",
+        "preact/jsx-runtime": "/assets/vendor/preact-jsx-runtime.mjs",
+        "@preact/signals": "/assets/vendor/preact-signals.mjs",
+        "@preact/signals-core": "/assets/vendor/preact-signals-core.mjs",
+        "@kamishino/kfc-web-ui": "/assets/vendor/kfc-web-ui/index.js",
+        "lucide-preact": "/assets/vendor/lucide-preact/lucide-preact.js"
+      }
+    }
+  </script>
 </head>
 <body data-ui-mode="<%= it.uiMode || 'observer' %>">
   <div class="app-shell">

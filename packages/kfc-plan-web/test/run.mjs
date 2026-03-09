@@ -1223,6 +1223,8 @@ updated_at: 2026-03-01
     assert.ok(indexResponse.payload.includes("No selected plan. Click to browse or type to filter."));
     assert.ok(indexResponse.payload.includes("Plan Picker"));
     assert.ok(indexResponse.payload.includes("Plan View"));
+    assert.ok(indexResponse.payload.includes('type="importmap"'));
+    assert.ok(indexResponse.payload.includes("lucide-preact"));
     assert.ok(indexResponse.payload.includes("theme-preference"));
     assert.ok(indexResponse.payload.includes("Theme"));
     assert.ok(indexResponse.payload.includes("theme_pref"));
@@ -1247,8 +1249,23 @@ updated_at: 2026-03-01
       url: "/assets/app.js"
     });
     assert.equal(appJsResponse.statusCode, 200);
-    assert.ok(appJsResponse.payload.includes("No plan selected."));
-    assert.ok(appJsResponse.payload.includes("Choose a plan from the left list."));
+    assert.ok(appJsResponse.payload.includes('./client/main.js'));
+
+    const clientMainResponse = await server.inject({
+      method: "GET",
+      url: "/assets/client/main.js"
+    });
+    assert.equal(clientMainResponse.statusCode, 200);
+    assert.ok(clientMainResponse.payload.includes("No plan selected."));
+    assert.ok(clientMainResponse.payload.includes("Choose a plan from the toolbar plan picker."));
+
+    const vendorResponse = await server.inject({
+      method: "GET",
+      url: "/assets/vendor/kfc-web-ui/index.js"
+    });
+    assert.equal(vendorResponse.statusCode, 200);
+    assert.ok(vendorResponse.payload.includes("Card"));
+    assert.ok(vendorResponse.payload.includes("Badge"));
 
     const stylesResponse = await server.inject({
       method: "GET",
