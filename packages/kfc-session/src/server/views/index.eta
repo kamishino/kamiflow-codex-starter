@@ -4,22 +4,23 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= it.title || 'KFC Session' %></title>
-  <% if (it.styleHrefs && it.styleHrefs.length) { %>
-    <% it.styleHrefs.forEach(function (href) { %>
+  <% if (it.fontLinks && it.fontLinks.length) { %>
+    <% it.fontLinks.forEach(function (link) { %>
+      <link rel="<%= link.rel %>" href="<%= link.href %>"<% if (link.crossorigin) { %> crossorigin<% } %> />
+    <% }) %>
+  <% } %>
+  <% if (it.styleHrefsNormalized && it.styleHrefsNormalized.length) { %>
+    <% it.styleHrefsNormalized.forEach(function (href) { %>
       <link rel="stylesheet" href="<%= href %>" />
     <% }) %>
-  <% } else { %>
-    <link rel="stylesheet" href="/assets/kfc-session.css" />
   <% } %>
 </head>
 <body data-api-base="<%= it.apiBase || '/api/sessions' %>">
   <div id="app-root" data-sessions-root-label="<%= it.sessionsRootLabel || '~/.codex/sessions' %>"></div>
-  <% if (it.scriptHrefs && it.scriptHrefs.length) { %>
-    <% it.scriptHrefs.forEach(function (href) { %>
+  <% if (it.scriptHrefsNormalized && it.scriptHrefsNormalized.length) { %>
+    <% it.scriptHrefsNormalized.forEach(function (href) { %>
       <script src="<%= href %>" type="module"></script>
     <% }) %>
-  <% } else { %>
-    <script src="/assets/kfc-session.js" type="module"></script>
   <% } %>
 </body>
 </html>

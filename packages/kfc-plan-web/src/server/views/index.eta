@@ -30,32 +30,19 @@
       document.documentElement.style.colorScheme = resolved;
     })();
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Work+Sans:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  />
-  <% if (it.styleHrefs && it.styleHrefs.length) { %>
-    <% it.styleHrefs.forEach(function (href) { %>
+  <% if (it.fontLinks && it.fontLinks.length) { %>
+    <% it.fontLinks.forEach(function (link) { %>
+      <link rel="<%= link.rel %>" href="<%= link.href %>"<% if (link.crossorigin) { %> crossorigin<% } %> />
+    <% }) %>
+  <% } %>
+  <% if (it.styleHrefsNormalized && it.styleHrefsNormalized.length) { %>
+    <% it.styleHrefsNormalized.forEach(function (href) { %>
       <link rel="stylesheet" href="<%= href %>" />
     <% }) %>
-  <% } else { %>
-    <link rel="stylesheet" href="/assets/styles.css" />
   <% } %>
-  <script type="importmap">
-    {
-      "imports": {
-        "preact": "/assets/vendor/preact.mjs",
-        "preact/hooks": "/assets/vendor/preact-hooks.mjs",
-        "preact/jsx-runtime": "/assets/vendor/preact-jsx-runtime.mjs",
-        "@preact/signals": "/assets/vendor/preact-signals.mjs",
-        "@preact/signals-core": "/assets/vendor/preact-signals-core.mjs",
-        "@kamishino/kfc-web-ui": "/assets/vendor/kfc-web-ui/index.js",
-        "lucide-preact": "/assets/vendor/lucide-preact/lucide-preact.js"
-      }
-    }
-  </script>
+  <% if (it.importMapJson) { %>
+  <script type="importmap"><%~ it.importMapJson %></script>
+  <% } %>
 </head>
 <body data-ui-mode="<%= it.uiMode || 'observer' %>">
   <div class="app-shell">
@@ -150,12 +137,10 @@
       </aside>
     </div>
   </div>
-  <% if (it.scriptHrefs && it.scriptHrefs.length) { %>
-    <% it.scriptHrefs.forEach(function (href) { %>
+  <% if (it.scriptHrefsNormalized && it.scriptHrefsNormalized.length) { %>
+    <% it.scriptHrefsNormalized.forEach(function (href) { %>
       <script src="<%= href %>" type="module"></script>
     <% }) %>
-  <% } else { %>
-    <script src="/assets/app.js" type="module"></script>
   <% } %>
 </body>
 </html>

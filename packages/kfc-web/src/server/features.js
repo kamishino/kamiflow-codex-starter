@@ -1,5 +1,12 @@
 import path from "node:path";
 import { createTemplateRenderer } from "./template-render.js";
+import {
+  buildFontLinks,
+  buildImportMap,
+  normalizeScriptHrefs,
+  normalizeStyleHrefs,
+  stringifyImportMap
+} from "../../../kfc-web-runtime/src/browser-entry.js";
 
 function projectNameFromDir(projectDir) {
   return path.basename(projectDir) || "Project";
@@ -17,8 +24,19 @@ export function createFeatureDefinitions(context) {
         title: "KamiFlow Plan Review",
         uiMode: "observer",
         apiBase: "/api",
-        scriptHrefs: assets.scripts,
-        styleHrefs: assets.styles
+        fontLinks: buildFontLinks(true),
+        scriptHrefsNormalized: normalizeScriptHrefs(assets.scripts, "/assets/app.js"),
+        styleHrefsNormalized: normalizeStyleHrefs(assets.styles, "/assets/styles.css"),
+        importMapJson: stringifyImportMap(
+          buildImportMap({
+            preact: true,
+            preactHooks: true,
+            jsxRuntime: true,
+            signals: true,
+            webUi: true,
+            lucide: true
+          })
+        )
       }),
       mount: (implementations, fastify) =>
         implementations.plan(fastify, {
@@ -37,8 +55,9 @@ export function createFeatureDefinitions(context) {
       buildViewModel: ({ assets }) => ({
         title: "KFC Session",
         sessionsRootLabel: "~/.codex/sessions",
-        scriptHrefs: assets.scripts,
-        styleHrefs: assets.styles,
+        fontLinks: buildFontLinks(true),
+        scriptHrefsNormalized: normalizeScriptHrefs(assets.scripts, "/assets/kfc-session.js"),
+        styleHrefsNormalized: normalizeStyleHrefs(assets.styles, "/assets/kfc-session.css"),
         apiBase: "/api/sessions"
       }),
       mount: (implementations, fastify) =>
@@ -60,8 +79,17 @@ export function createFeatureDefinitions(context) {
         projectDir: context.projectDir,
         apiBase: "/api/chat",
         wsPath: "/ws",
-        scriptHrefs: assets.scripts,
-        styleHrefs: assets.styles
+        fontLinks: buildFontLinks(true),
+        scriptHrefsNormalized: normalizeScriptHrefs(assets.scripts, "/assets/kfc-chat.js"),
+        styleHrefsNormalized: normalizeStyleHrefs(assets.styles, "/assets/kfc-chat.css"),
+        importMapJson: stringifyImportMap(
+          buildImportMap({
+            preact: true,
+            jsxRuntime: true,
+            signals: true,
+            webUi: true
+          })
+        )
       }),
       mount: (implementations, fastify) =>
         implementations.chat(fastify, {
