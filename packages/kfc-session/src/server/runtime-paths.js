@@ -6,16 +6,21 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PACKAGE_DIR = path.resolve(__dirname, "..", "..");
 const DIST_SERVER_DIR = path.join(PACKAGE_DIR, "dist", "server");
-const SOURCE_SERVER_DIR = __dirname;
+const SOURCE_SERVER_DIR = path.join(PACKAGE_DIR, "src", "server");
 
-function resolveServerDir() {
-  return fs.existsSync(DIST_SERVER_DIR) ? DIST_SERVER_DIR : SOURCE_SERVER_DIR;
+function firstExisting(paths) {
+  for (const entry of paths) {
+    if (fs.existsSync(entry)) {
+      return entry;
+    }
+  }
+  return paths[0];
 }
 
 export function resolvePublicDir() {
-  return path.join(resolveServerDir(), "public");
+  return firstExisting([path.join(DIST_SERVER_DIR, "public"), path.join(SOURCE_SERVER_DIR, "public")]);
 }
 
 export function resolveViewsDir() {
-  return path.join(resolveServerDir(), "views");
+  return firstExisting([path.join(DIST_SERVER_DIR, "views"), path.join(SOURCE_SERVER_DIR, "views")]);
 }
