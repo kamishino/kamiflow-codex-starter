@@ -27,6 +27,22 @@ export const CLIENT_ONBOARDING_STAGES = Object.freeze({
   DONE: "done"
 });
 
+type ClientOnboardingCode = (typeof CLIENT_ONBOARDING_CODES)[keyof typeof CLIENT_ONBOARDING_CODES];
+type ClientOnboardingStage = (typeof CLIENT_ONBOARDING_STAGES)[keyof typeof CLIENT_ONBOARDING_STAGES];
+
+type ClientOnboardingError = Error & {
+  code?: string;
+  recovery?: string;
+};
+
+type ClientOnboardingFailureInput = {
+  message?: unknown;
+  code?: unknown;
+  recovery?: unknown;
+  stage?: unknown;
+  next?: unknown;
+};
+
 const PASS_NEXT_STEPS = Object.freeze([
   "kfc flow ensure-plan --project .",
   "kfc flow ready --project .",
@@ -37,16 +53,16 @@ function normalizeMessage(value) {
   return String(value || "").trim();
 }
 
-function normalizeStage(value) {
+function normalizeStage(value: unknown): ClientOnboardingStage {
   const normalized = String(value || "").trim().toLowerCase();
-  if (Object.values(CLIENT_ONBOARDING_STAGES).includes(normalized)) {
-    return normalized;
+  if ((Object.values(CLIENT_ONBOARDING_STAGES) as string[]).includes(normalized)) {
+    return normalized as ClientOnboardingStage;
   }
   return CLIENT_ONBOARDING_STAGES.BOOTSTRAP;
 }
 
-export function createClientOnboardingError(code, reason, recovery) {
-  const err = new Error(normalizeMessage(reason) || "Client onboarding failed.");
+export function createClientOnboardingError(code: ClientOnboardingCode, reason: unknown, recovery?: string): ClientOnboardingError {
+  const err = new Error(normalizeMessage(reason) || "Client onboarding failed.") as ClientOnboardingError;
   err.code = code;
   if (recovery) {
     err.recovery = String(recovery);
@@ -54,7 +70,7 @@ export function createClientOnboardingError(code, reason, recovery) {
   return err;
 }
 
-function stageForCode(code) {
+function stageForCode(code: string): ClientOnboardingStage {
   if (
     code === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
     code === CLIENT_ONBOARDING_CODES.CONFIG_INVALID ||
@@ -92,7 +108,7 @@ function nextForStage(stage) {
   return "kfc client doctor --project . --fix";
 }
 
-function recoveryForCode(code) {
+function recoveryForCode(code: string): string {
   if (code === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS) {
     return "kfc client done --project .";
   }
@@ -135,13 +151,14 @@ function codeFromMessage(message) {
   return CLIENT_ONBOARDING_CODES.BOOTSTRAP_FAILED;
 }
 
-export function classifyClientOnboardingFailure(input) {
-  const reason = normalizeMessage(input?.message || String(input || "Client onboarding failed."));
-  const explicitCode = normalizeMessage(input?.code || "");
-  const code = explicitCode && explicitCode.startsWith("CLIENT_") ? explicitCode : codeFromMessage(reason);
-  const recovery = normalizeMessage(input?.recovery || "") || recoveryForCode(code);
-  const stage = normalizeStage(input?.stage || stageForCode(code));
-  const next = normalizeMessage(input?.next || "") || recovery;
+export function classifyClientOnboardingFailure(input: ClientOnboardingFailureInput | ClientOnboardingError | unknown) {
+  const candidate = (input && typeof input === "object" ? input : {}) as ClientOnboardingFailureInput;
+  const reason = normalizeMessage(candidate.message || String(input || "Client onboarding failed."));
+  const explicitCode = normalizeMessage(candidate.code || "");
+  const code = (explicitCode && explicitCode.startsWith("CLIENT_") ? explicitCode : codeFromMessage(reason)) as ClientOnboardingCode;
+  const recovery = normalizeMessage(candidate.recovery || "") || recoveryForCode(code);
+  const stage = normalizeStage(candidate.stage || stageForCode(code));
+  const next = normalizeMessage(candidate.next || "") || recovery;
   return {
     status: "BLOCK",
     stage,

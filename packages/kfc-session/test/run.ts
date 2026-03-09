@@ -2,9 +2,14 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { runCli } from "../dist/cli.js";
-import { createKfcSessionServer } from "../dist/server.js";
-import { listSessions, writeFixtureSession } from "../dist/session-store.js";
+import { pathToFileURL } from "node:url";
+
+const packageDir = process.cwd();
+const { runCli } = await import(pathToFileURL(path.join(packageDir, "dist/cli.js")).href);
+const { createKfcSessionServer } = await import(pathToFileURL(path.join(packageDir, "dist/server.js")).href);
+const { listSessions, writeFixtureSession } = await import(
+  pathToFileURL(path.join(packageDir, "dist/session-store.js")).href
+);
 
 let failed = 0;
 

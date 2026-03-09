@@ -3,25 +3,35 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-import { runCli } from "../dist/cli.js";
-import { parsePlanFileContent } from "../dist/parser/plan-parser.js";
-import { validateParsedPlan } from "../dist/schema/validate-plan.js";
-import { SSEStream } from "../dist/server/sse-stream.js";
-import { detectProjectRoot } from "../dist/lib/project-detect.js";
-import {
+import { pathToFileURL } from "node:url";
+const packageDir = process.cwd();
+const { runCli } = await import(pathToFileURL(path.join(packageDir, "dist/cli.js")).href);
+const { parsePlanFileContent } = await import(
+  pathToFileURL(path.join(packageDir, "dist/parser/plan-parser.js")).href
+);
+const { validateParsedPlan } = await import(
+  pathToFileURL(path.join(packageDir, "dist/schema/validate-plan.js")).href
+);
+const { SSEStream } = await import(pathToFileURL(path.join(packageDir, "dist/server/sse-stream.js")).href);
+const { detectProjectRoot } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/project-detect.js")).href
+);
+const {
   buildCodexExecArgVariants,
   buildCodexExecManualCommand,
   classifyCodexFailure,
   runCodexAction,
   shouldPreferPlanInteractiveMode
-} from "../dist/lib/codex-runner.js";
-import { buildPlanDiagramTabsModel, buildTechnicalSolutionDiagramModel } from "../dist/lib/plan-diagram.js";
-import { lintAndRepairMermaid } from "../dist/lib/mermaid-safety.js";
-import { readRunlogSignal } from "../dist/lib/runlog.js";
+} = await import(pathToFileURL(path.join(packageDir, "dist/lib/codex-runner.js")).href);
+const { buildPlanDiagramTabsModel, buildTechnicalSolutionDiagramModel } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/plan-diagram.js")).href
+);
+const { lintAndRepairMermaid } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/mermaid-safety.js")).href
+);
+const { readRunlogSignal } = await import(pathToFileURL(path.join(packageDir, "dist/lib/runlog.js")).href);
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const __dirname = path.join(packageDir, "test");
 
 let failed = 0;
 const cliArgs = new Set(process.argv.slice(2));

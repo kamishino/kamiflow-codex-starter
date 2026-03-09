@@ -8,9 +8,11 @@
   "scripts": {
     "predev": "npm run -w @kamishino/kfc-plan-web build",
     "build": "tsc -p tsconfig.json",
+    "build:tools": "tsc -p tsconfig.tools.json --noCheck",
     "dev": "npm run build && electron dist/main.js",
     "start": "npm run dev",
-    "test": "npm run build && node test/run.mjs"
+    "test": "npm run build && npm run build:tools && node dist-tools/test/run.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tools.json --noEmit"
   },
   "dependencies": {
     "@kamishino/kfc-plan-web": "file:../kfc-plan-web"

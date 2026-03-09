@@ -3,7 +3,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { mkdtemp } from "node:fs/promises";
-import {
+import { pathToFileURL } from "node:url";
+const packageDir = process.cwd();
+const {
   DESKTOP_STATE_DEFAULTS,
   deriveRootFromPlansDir,
   extractHashFromUrl,
@@ -15,7 +17,7 @@ import {
   sanitizeThemePreference,
   withRecentTarget,
   writeDesktopState
-} from "../dist/state-store.js";
+} = await import(pathToFileURL(path.join(packageDir, "dist/state-store.js")).href);
 
 function logPass(name) {
   console.log(`[desktop-test] PASS ${name}`);

@@ -63,6 +63,20 @@ const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
 
+type FrontmatterRecord = Record<string, string>;
+type MarkdownSections = Record<string, string>;
+type ClientBootstrapRuntime = {
+  suppressSuccessHints?: boolean;
+  printPass?: boolean;
+};
+
+function getErrorCode(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    return String((err as { code?: unknown }).code || "");
+  }
+  return "";
+}
+
 function usage() {
   info("Usage: kfc client [options]");
   info("Usage: kfc client <bootstrap|doctor|done|update|upgrade|lessons> [options]");
@@ -304,14 +318,14 @@ function checkCommandInPath(commandCandidates, args, label) {
           encoding: "utf8"
         })
       : spawnSync(candidate, args, { encoding: "utf8" });
-    if (result.error && result.error.code === "EPERM") {
+    if (result.error && getErrorCode(result.error) === "EPERM") {
       warn(`${label} check skipped: command spawn is restricted in this environment.`);
       return true;
     }
     if (result.status === 0) {
       return true;
     }
-    if (result.error && result.error.code === "ENOENT") {
+    if (result.error && getErrorCode(result.error) === "ENOENT") {
       continue;
     }
   }
@@ -356,7 +370,7 @@ async function assertProjectPreflight(projectDir) {
   }
 
   const npmCheck = runNodeNpm(["--version"], projectDir);
-  if (npmCheck.error && npmCheck.error.code === "EPERM") {
+  if (npmCheck.error && getErrorCode(npmCheck.error) === "EPERM") {
     warn("npm check skipped: command spawn is restricted in this environment.");
   } else if (!npmCheck.ok) {
     error("npm is not available.");
@@ -674,7 +688,7 @@ function serializeSimpleFrontmatter(frontmatter) {
   return lines.join("\n");
 }
 
-function splitFrontmatter(markdown) {
+function splitFrontmatter(markdown: string): { frontmatter: FrontmatterRecord; body: string } {
   const source = String(markdown || "");
   if (!source.startsWith("---")) {
     return { frontmatter: {}, body: source };
@@ -697,8 +711,8 @@ function splitFrontmatter(markdown) {
   };
 }
 
-function parseMarkdownSections(markdown) {
-  const sections = {};
+function parseMarkdownSections(markdown: string): MarkdownSections {
+  const sections: MarkdownSections = {};
   const source = String(markdown || "").trim();
   if (!source) {
     return sections;
@@ -1031,7 +1045,7 @@ async function runClientLessons(options) {
   throw new Error(`Unknown lessons action: ${options.action}`);
 }
 
-function parseSimpleFrontmatter(markdown) {
+function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
   if (!String(markdown).startsWith("---")) {
     return {};
   }
@@ -1046,7 +1060,7 @@ function parseSimpleFrontmatter(markdown) {
   if (endIdx === -1) {
     return {};
   }
-  const frontmatter = {};
+  const frontmatter: FrontmatterRecord = {};
   for (const line of lines.slice(1, endIdx)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
@@ -1760,7 +1774,7 @@ async function runServeHealthCheck(projectDir, port) {
   }
 }
 
-async function runBootstrapOnce(options, runtime = {}) {
+async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}) {
   const preflightOk = await assertProjectPreflight(options.project);
   if (!preflightOk) {
     throw createClientOnboardingError(
@@ -1889,7 +1903,7 @@ async function runBootstrapOnce(options, runtime = {}) {
   }
 }
 
-async function runBootstrapWithSmartRecovery(options, runtime = {}) {
+async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRuntime = {}) {
   const shouldPrintPass = runtime.printPass !== false;
   await emitClientOnboardingEvent(
     options.project,

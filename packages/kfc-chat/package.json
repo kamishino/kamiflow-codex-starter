@@ -10,11 +10,13 @@
     "node": ">=20"
   },
   "scripts": {
+    "build:tools": "tsc -p tsconfig.tools.json --noCheck",
     "build:server": "npm --prefix ../.. run build:server && npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
-    "build:client": "npm run -w @kamishino/kfc-web-runtime build && node scripts/build-client.mjs",
+    "build:client": "npm run build:tools && npm run -w @kamishino/kfc-web-runtime build && node dist-tools/scripts/build-client.js",
     "build": "npm run build:server && npm run build:client",
     "serve": "npm run build && node bin/kfc-chat.js serve",
-    "test": "npm run build && node test/run.mjs"
+    "test": "npm run build && npm run build:tools && node dist-tools/test/run.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tools.json --noEmit"
   },
   "dependencies": {
     "@kamishino/kfc-web-ui": "file:../kfc-web-ui",

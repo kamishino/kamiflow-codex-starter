@@ -13,6 +13,17 @@ const TRUST_FILE_NAME = "trusted-recipients.json";
 const DEFAULT_SESSION_KEY_DIR = path.join(os.homedir(), ".kfc", "session");
 const DEFAULT_SESSION_KEY_PATH = path.join(DEFAULT_SESSION_KEY_DIR, "age.key");
 
+type ProcessCaptureOptions = {
+  cwd?: string;
+  input?: string | Buffer;
+};
+
+type ProcessCaptureResult = {
+  code: number;
+  stdout: string;
+  stderr: string;
+};
+
 function usage() {
   info("Usage: kfc session <where|find|copy|push|pull|key|trust> [options]");
   info("Examples:");
@@ -370,8 +381,8 @@ function assertAgeRecipient(value, label = "recipient") {
   return recipient;
 }
 
-async function runProcessCapture(command, args, options = {}) {
-  return await new Promise((resolve, reject) => {
+async function runProcessCapture(command: string, args: string[], options: ProcessCaptureOptions = {}): Promise<ProcessCaptureResult> {
+  return await new Promise<ProcessCaptureResult>((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: ["pipe", "pipe", "pipe"],
       cwd: options.cwd || process.cwd()

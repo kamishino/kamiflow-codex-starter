@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { WebSocket } from "ws";
 
+const packageDir = process.cwd();
 const {
   bindCodexSession,
   buildTranscriptDisplayBlocks,
@@ -11,11 +13,56 @@ const {
   readTranscript,
   resolveBoundSession,
   unbindCodexSession
-} = await import("../dist/lib/chat-state.js");
-const { runCli } = await import("../dist/cli.js");
-const { createKfcChatServer } = await import("../dist/server/create-server.js");
+} = await import(pathToFileURL(path.join(packageDir, "dist/lib/chat-state.js")).href);
+const { runCli } = await import(pathToFileURL(path.join(packageDir, "dist/cli.js")).href);
+const { createKfcChatServer } = await import(
+  pathToFileURL(path.join(packageDir, "dist/server/create-server.js")).href
+);
 
 let failed = 0;
+
+type TranscriptDisplayBlock = {
+  type: string;
+  label?: string;
+  role?: string;
+  text?: string;
+  items?: Array<{ text: string }>;
+};
+
+type BootstrapMessage = {
+  type: "bootstrap";
+  payload: {
+    transcript: TranscriptDisplayBlock[];
+  };
+};
+
+type TranscriptUpdatedMessage = {
+  type: "transcript_updated";
+  payload: {
+    items: TranscriptDisplayBlock[];
+  };
+};
+
+type PromptCompletedMessage = {
+  type: "prompt_completed";
+  payload: {
+    result: {
+      text: string;
+    };
+  };
+};
+
+type SessionUpdatedMessage = {
+  type: "session_updated";
+  payload: {
+    busy?: boolean;
+    queue_depth?: number;
+    status?: string;
+    last_result?: {
+      text?: string;
+    };
+  };
+};
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -76,8 +123,17 @@ async function writeSessionFile(sessionsRoot, sessionId, items) {
   return targetPath;
 }
 
-function waitForMessage(ws, predicate, timeoutMs = 5000) {
-  return new Promise((resolve, reject) => {
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function hasHandledPromptResult(payload: Record<string, unknown>): boolean {
+  const lastResult = payload.last_result;
+  return isObject(lastResult) && typeof lastResult.text === "string" && lastResult.text.includes("Handled prompt");
+}
+
+function waitForMessage<T>(ws: WebSocket, predicate: (payload: unknown) => payload is T, timeoutMs = 5000): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error("Timed out waiting for WebSocket message."));
     }, timeoutMs);
@@ -419,25 +475,51 @@ await runCase("server exposes health/session/transcript and streams prompt updat
     assert.equal(revealed.target, "folder");
 
     const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=chat-token`);
-    const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
+    const bootstrap = await waitForMessage<BootstrapMessage>(
+      ws,
+      (message): message is BootstrapMessage =>
+        isObject(message) &&
+        message.type === "bootstrap" &&
+        isObject(message.payload) &&
+        Array.isArray(message.payload.transcript)
+    );
     assert.equal(Array.isArray(bootstrap.payload.transcript), true);
     assert.equal(bootstrap.payload.transcript[0].type, "message_group");
 
     ws.send(JSON.stringify({ type: "submit_prompt", prompt: "Continue the investigation" }));
 
-    const transcriptUpdated = await waitForMessage(ws, (message) => message.type === "transcript_updated");
+    const transcriptUpdated = await waitForMessage<TranscriptUpdatedMessage>(
+      ws,
+      (message): message is TranscriptUpdatedMessage =>
+        isObject(message) &&
+        message.type === "transcript_updated" &&
+        isObject(message.payload) &&
+        Array.isArray(message.payload.items)
+    );
     assert.ok(Array.isArray(transcriptUpdated.payload.items));
     assert.ok(transcriptUpdated.payload.items.some((item) => item.type === "message_group"));
 
-    const completed = await waitForMessage(ws, (message) => message.type === "prompt_completed");
+    const completed = await waitForMessage<PromptCompletedMessage>(
+      ws,
+      (message): message is PromptCompletedMessage =>
+        isObject(message) &&
+        message.type === "prompt_completed" &&
+        isObject(message.payload) &&
+        isObject(message.payload.result) &&
+        typeof message.payload.result.text === "string"
+    );
     assert.match(completed.payload.result.text, /Handled prompt/);
 
-    const settled = await waitForMessage(ws, (message) =>
-      message.type === "session_updated" &&
-      message.payload?.busy === false &&
-      Number(message.payload?.queue_depth || 0) === 0 &&
-      message.payload?.status === "done" &&
-      String(message.payload?.last_result?.text || "").includes("Handled prompt")
+    const settled = await waitForMessage<SessionUpdatedMessage>(
+      ws,
+      (message): message is SessionUpdatedMessage =>
+        isObject(message) &&
+        message.type === "session_updated" &&
+        isObject(message.payload) &&
+        message.payload.busy === false &&
+        Number(message.payload.queue_depth || 0) === 0 &&
+        message.payload.status === "done" &&
+        hasHandledPromptResult(message.payload)
     );
     assert.equal(settled.payload.busy, false);
 

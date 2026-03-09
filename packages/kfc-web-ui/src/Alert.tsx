@@ -1,5 +1,5 @@
 import type { ComponentChildren, JSX } from "preact";
-import { cn } from "./cn";
+import { cn } from "./cn.js";
 
 type AlertTone = "default" | "warning" | "danger";
 

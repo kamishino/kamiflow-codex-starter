@@ -3,6 +3,25 @@ import os from "node:os";
 import path from "node:path";
 import { createServer } from "../../dist/server/create-server.js";
 
+type SeedPlan = {
+  planId: string;
+  fileStem: string;
+  title: string;
+  updatedAt: string;
+  status?: string;
+  decision?: string;
+  selectedMode?: string;
+  nextMode?: string;
+  nextCommand?: string;
+  lifecyclePhase?: string;
+  wipStatus?: string;
+  wipNext?: string;
+};
+
+type FixtureOptions = {
+  plans?: SeedPlan[];
+};
+
 function planMarkdown(definition) {
   return `---
 plan_id: ${definition.planId}
@@ -86,7 +105,7 @@ flowchart LR
 `;
 }
 
-async function createProjectFixture(options = {}) {
+async function createProjectFixture(options: FixtureOptions = {}) {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), "kfc-plan-browser-"));
   const plansDir = path.join(tempDir, ".local", "plans");
   await fs.mkdir(plansDir, { recursive: true });

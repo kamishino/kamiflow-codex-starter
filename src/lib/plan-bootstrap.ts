@@ -85,6 +85,15 @@ flowchart LR
 - Next step: Plan first concrete task slice
 `;
 
+type PlanBootstrapOptions = {
+  route?: string;
+  topic?: string;
+  slug?: string;
+  title?: string;
+  forceNew?: boolean;
+  log?: (message: string) => void;
+};
+
 export function resolvePlansDir(projectDir) {
   return path.join(projectDir, ".local", "plans");
 }
@@ -100,7 +109,7 @@ function slugifySegment(value, fallback = "") {
   return slug;
 }
 
-function buildSlugBase(options = {}) {
+function buildSlugBase(options: PlanBootstrapOptions = {}) {
   const route = slugifySegment(options.route || "plan", "plan");
   const topic = slugifySegment(options.topic || options.slug || "", "");
   const combined = topic ? `${route}-${topic}` : route;
@@ -128,7 +137,7 @@ function humanizeSlug(slug, fallback = "Plan") {
   return value || fallback;
 }
 
-function parsePlanFileIdentity(filePath, options = {}) {
+function parsePlanFileIdentity(filePath: string, options: PlanBootstrapOptions = {}) {
   const fallbackDate = toLocalDateStamp();
   const baseName = path.basename(filePath, ".md");
   const match = baseName.match(/^(?<date>\d{4}-\d{2}-\d{2})(?:-(?<seq>\d{3}))?(?:-(?<slug>.+))?$/i);
@@ -262,7 +271,7 @@ async function readPlanTemplate() {
   }
 }
 
-export async function createLocalPlanTemplate(projectDir, options = {}) {
+export async function createLocalPlanTemplate(projectDir: string, options: PlanBootstrapOptions = {}) {
   const forceNew = Boolean(options.forceNew);
   const log = typeof options.log === "function" ? options.log : null;
   const naming = {
@@ -305,7 +314,7 @@ export async function createLocalPlanTemplate(projectDir, options = {}) {
   return targetPath;
 }
 
-export async function ensurePlanFileTechnicalSolutionDiagram(filePath, options = {}) {
+export async function ensurePlanFileTechnicalSolutionDiagram(filePath: string, options: Pick<PlanBootstrapOptions, "title"> = {}) {
   const raw = await fs.readFile(filePath, "utf8");
   const normalized = ensureTechnicalSolutionDiagramSection(raw, { title: options.title || "" });
   if (!normalized.changed) {

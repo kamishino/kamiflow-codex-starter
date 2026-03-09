@@ -36,6 +36,30 @@ function waitForMessage(ws, predicate, timeoutMs = 5000) {
   });
 }
 
+function isBootstrapMessage(message: unknown): message is {
+  type: "bootstrap";
+  payload: {
+    session: { bound_session: { session_id: string } };
+    transcript: Array<{ type: string; role?: string }>;
+  };
+} {
+  if (!message || typeof message !== "object") {
+    return false;
+  }
+  const candidate = message as {
+    type?: unknown;
+    payload?: {
+      session?: { bound_session?: { session_id?: unknown } };
+      transcript?: unknown;
+    };
+  };
+  return (
+    candidate.type === "bootstrap" &&
+    typeof candidate.payload?.session?.bound_session?.session_id === "string" &&
+    Array.isArray(candidate.payload?.transcript)
+  );
+}
+
 await withTempDir(async (tempDir) => {
   const projectDir = path.join(tempDir, "project");
   const sessionsRoot = path.join(tempDir, "sessions");
@@ -128,6 +152,7 @@ await withTempDir(async (tempDir) => {
 
   const ws = new WebSocket(`ws://127.0.0.1:${listener.port}/ws?token=smoke-token`);
   const bootstrap = await waitForMessage(ws, (message) => message.type === "bootstrap");
+  assert.ok(isBootstrapMessage(bootstrap));
   assert.equal(bootstrap.payload.session.bound_session.session_id, sessionId);
   assert.equal(bootstrap.payload.transcript[0].type, "event_row");
   assert.ok(bootstrap.payload.transcript.some((item) => item.type === "message_group" && item.role === "assistant"));

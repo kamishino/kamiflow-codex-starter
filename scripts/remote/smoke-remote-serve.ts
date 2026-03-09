@@ -45,7 +45,10 @@ async function ensureFixture() {
 }
 
 function createAuthedFetch(baseUrl) {
-  return async function authed(pathname, options = {}) {
+  return async function authed(
+    pathname,
+    options: RequestInit & { headers?: Record<string, string> } = {}
+  ) {
     const headers = {
       ...(options.headers || {}),
       Authorization: `Bearer ${TOKEN}`

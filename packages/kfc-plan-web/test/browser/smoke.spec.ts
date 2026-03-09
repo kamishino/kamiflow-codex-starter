@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { seededPlans, withKfpServer } from "./fixtures.mjs";
+import { seededPlans, withKfpServer } from "./fixtures.js";
 
 function capturePageErrors(page) {
   const pageErrors = [];

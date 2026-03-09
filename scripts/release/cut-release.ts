@@ -53,7 +53,14 @@ function parseArgs(argv) {
   return out;
 }
 
-function run(command, args, options = {}) {
+function getErrorCode(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    return String((err as { code?: unknown }).code || "");
+  }
+  return "";
+}
+
+function run(command, args, options: { inherit?: boolean } = {}) {
   const result = spawnSync(command, args, {
     cwd: ROOT_DIR,
     encoding: "utf8",
@@ -62,7 +69,7 @@ function run(command, args, options = {}) {
   });
 
   if (result.error) {
-    if (result.error.code === "EPERM") {
+    if (getErrorCode(result.error) === "EPERM") {
       throw new Error(
         `Cannot spawn ${command} in this restricted environment (EPERM). Run release commands in a normal local terminal.`
       );

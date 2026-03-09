@@ -10,14 +10,23 @@ function hasProjectArg(args) {
   return args.some((arg) => String(arg || "").trim() === "--project");
 }
 
+function isHelpToken(value: unknown): boolean {
+  return value === "--help" || value === "-h";
+}
+
+function isServeLike(value: unknown): value is "serve" | "dev" {
+  return value === "serve" || value === "dev";
+}
+
 const rawArgs = process.argv.slice(2);
 const forwarded = rawArgs[0] === "serve" || rawArgs[0] === "dev" ? rawArgs.slice(1) : rawArgs;
 const nextArgs = hasProjectArg(forwarded) ? forwarded : [...forwarded, "--project", resolveRepoRoot()];
 const npmExe = process.platform === "win32" ? "npm.cmd" : "npm";
-const isHelpRequest = rawArgs.includes("--help") || rawArgs.includes("-h") || rawArgs[0] === "help";
+const firstArg = typeof rawArgs[0] === "string" ? rawArgs[0] : "";
+const isHelpRequest = rawArgs.some(isHelpToken) || firstArg === "help";
 
-function runCommand(args) {
-  return new Promise((resolve, reject) => {
+function runCommand(args: string[]): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
     const child = spawn(npmExe, args, {
       cwd: resolveRepoRoot(),
       stdio: "inherit",
@@ -35,8 +44,8 @@ function runCommand(args) {
   });
 }
 
-function runNode(args) {
-  return new Promise((resolve, reject) => {
+function runNode(args: string[]): Promise<number> {
+  return new Promise<number>((resolve, reject) => {
     const child = spawn(process.execPath, args, {
       cwd: resolveRepoRoot(),
       stdio: "inherit",
@@ -53,7 +62,7 @@ function runNode(args) {
   });
 }
 
-const command = rawArgs[0] || "serve";
+const command = isServeLike(firstArg) ? firstArg : firstArg || "serve";
 
 try {
   if (isHelpRequest) {
@@ -62,7 +71,7 @@ try {
     process.exit(exitCode);
   }
 
-  if (command === "serve" || command === "dev") {
+  if (isServeLike(command)) {
     const planBuild = await runCommand(["run", "-w", "@kamishino/kfc-plan-web", "build:server"]);
     if (planBuild !== 0) process.exit(planBuild);
     const chatBuild = await runCommand(["run", "-w", "@kamishino/kfc-chat", "build:server"]);

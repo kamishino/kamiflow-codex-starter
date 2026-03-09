@@ -48,6 +48,13 @@ function parseArgs(argv) {
   return out;
 }
 
+function getErrorCode(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    return String((err as { code?: unknown }).code || "");
+  }
+  return "";
+}
+
 function runGit(args, allowFailure = false) {
   const result = spawnSync("git", args, {
     cwd: ROOT_DIR,
@@ -56,7 +63,7 @@ function runGit(args, allowFailure = false) {
   });
 
   if (result.error) {
-    if (result.error.code === "EPERM") {
+    if (getErrorCode(result.error) === "EPERM") {
       throw new Error(
         "Cannot spawn git in this restricted environment (EPERM). Run release commands in a normal local terminal."
       );
@@ -202,7 +209,7 @@ function printTextSummary(summary) {
   console.log(`[release] Suggested bump: ${summary.suggestedBump}`);
   console.log(`[release] Suggested next version: ${summary.suggestedNextVersion}`);
 
-  const typeRows = Object.entries(summary.countsByType).sort((a, b) => b[1] - a[1]);
+  const typeRows = Object.entries(summary.countsByType).sort((a, b) => Number(b[1]) - Number(a[1]));
   if (typeRows.length > 0) {
     console.log("[release] Commit counts:");
     for (const [type, count] of typeRows) {

@@ -15,6 +15,16 @@ const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "researc
 const DEFAULT_MAX_STEPS = 6;
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
+type FrontmatterRecord = Record<string, string>;
+type RunArgs = {
+  project: string;
+  skipReady: boolean;
+  route: string;
+  maxSteps: number;
+  timeoutMs: number;
+  help?: boolean;
+};
+
 function usage() {
   info("Usage: kfc run [--project <path>] [--skip-ready] [--route <route>] [--max-steps <n>] [--timeout-ms <n>]");
   info("Examples:");
@@ -24,8 +34,8 @@ function usage() {
   info("  kfc run --project . --route build --max-steps 4");
 }
 
-function parseArgs(baseCwd, args) {
-  const parsed = {
+function parseArgs(baseCwd: string, args: string[]): RunArgs {
+  const parsed: RunArgs = {
     project: baseCwd,
     skipReady: false,
     route: "",
@@ -95,7 +105,7 @@ function resolveRunsDir(projectDir) {
   return path.join(projectDir, ".local", "runs");
 }
 
-function parseSimpleFrontmatter(markdown) {
+function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
   const text = String(markdown || "");
   if (!text.startsWith("---")) {
     return {};
@@ -111,7 +121,7 @@ function parseSimpleFrontmatter(markdown) {
   if (endIdx === -1) {
     return {};
   }
-  const frontmatter = {};
+  const frontmatter: FrontmatterRecord = {};
   for (const line of lines.slice(1, endIdx)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
@@ -136,7 +146,7 @@ function toTimestamp(value, fallback = 0) {
   return Number.isNaN(parsed) ? fallback : parsed;
 }
 
-async function readPlanRecord(filePath) {
+async function readPlanRecord(filePath: string) {
   const raw = await fs.readFile(filePath, "utf8");
   const stat = await fs.stat(filePath);
   const frontmatter = parseSimpleFrontmatter(raw);

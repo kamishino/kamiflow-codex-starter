@@ -1,10 +1,10 @@
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { runBrowserBuild } from "../../kfc-web-runtime/dist/build-client.js";
+import { pathToFileURL } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const packageDir = path.resolve(__dirname, "..");
+const packageDir = process.cwd();
+const { runBrowserBuild } = await import(
+  pathToFileURL(path.resolve(packageDir, "../kfc-web-runtime/dist/build-client.js")).href
+);
 
 await runBrowserBuild({
   packageDir,

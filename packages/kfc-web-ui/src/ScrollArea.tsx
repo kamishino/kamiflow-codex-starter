@@ -1,5 +1,5 @@
 import type { ComponentChildren, JSX } from "preact";
-import { cn } from "./cn";
+import { cn } from "./cn.js";
 
 interface ScrollAreaProps extends JSX.HTMLAttributes<HTMLDivElement> {
   children: ComponentChildren;

@@ -58,6 +58,13 @@ function compactText(value, max = 3000) {
   return text.length > max ? `${text.slice(0, max - 3)}...` : text;
 }
 
+function readPromptFromBody(body: unknown): string {
+  if (!body || typeof body !== "object") {
+    return "";
+  }
+  return compactText((body as { prompt?: unknown }).prompt || "", 4000);
+}
+
 async function defaultExecutePrompt({ projectDir, prompt, planId, timeoutMs }) {
   return await runCodexAction({
     plan_id: planId,
@@ -316,7 +323,7 @@ export async function createRemoteServer(options) {
         error_code: "REMOTE_SESSION_NOT_BOUND"
       };
     }
-    const prompt = compactText(request.body?.prompt || "", 4000);
+    const prompt = readPromptFromBody(request.body);
     if (!prompt) {
       reply.code(400);
       return { error: "Missing prompt.", error_code: "REMOTE_PROMPT_REQUIRED" };

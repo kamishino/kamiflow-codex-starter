@@ -206,6 +206,10 @@ function parseSimpleFrontmatter(markdown) {
   return frontmatter;
 }
 
+function readLessonId(frontmatter: Record<string, string>): string {
+  return String(frontmatter.lesson_id || "").trim();
+}
+
 function findLatestRawLesson(projectDir) {
   const baseDir = path.join(projectDir, ".local", "kfc-lessons");
   const candidates = [];
@@ -568,7 +572,7 @@ async function main() {
         );
         if (steps.at(-1).ok) {
           const lessonFrontmatter = parseSimpleFrontmatter(fs.readFileSync(rawLessonPath, "utf8"));
-          const lessonId = String(lessonFrontmatter.lesson_id || "").trim();
+          const lessonId = readLessonId(lessonFrontmatter);
           if (!lessonId) {
             steps.push({
               title: "resolve captured lesson id",

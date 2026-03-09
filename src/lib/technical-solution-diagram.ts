@@ -5,6 +5,10 @@ const SECTION_CANDIDATES = [
   "Implementation Flow"
 ];
 
+type TechnicalDiagramOptions = {
+  title?: string;
+};
+
 function resolveDiagramMode(markdown) {
   const text = String(markdown || "");
   if (!text.startsWith("---")) {
@@ -130,7 +134,7 @@ function buildMermaid(title, markdown) {
   return lines.join("\n");
 }
 
-function buildDiagramSection(title, markdown) {
+function buildDiagramSection(title: string, markdown: string) {
   const mermaid = buildMermaid(title, markdown);
   return [
     "## Technical Solution Diagram",
@@ -155,7 +159,7 @@ function resolveInsertPoint(markdown) {
   return -1;
 }
 
-export function ensureTechnicalSolutionDiagramSection(markdown, options = {}) {
+export function ensureTechnicalSolutionDiagramSection(markdown: string, options: TechnicalDiagramOptions = {}) {
   const raw = String(markdown || "");
   if (!raw.trim()) {
     return { markdown: raw, changed: false };

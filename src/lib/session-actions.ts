@@ -1,6 +1,26 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 
+type SpawnCommandOptions = {
+  stdinText?: string;
+};
+
+type SpawnCommand = (command: string, args: string[], options?: SpawnCommandOptions) => Promise<{
+  command: string;
+  args: string[];
+}>;
+
+type ClipboardOptions = {
+  platform?: string;
+  runCommand?: SpawnCommand;
+};
+
+type RevealOptions = {
+  platform?: string;
+  target?: string;
+  runCommand?: SpawnCommand;
+};
+
 export function buildInteractiveResumeCommand(sessionId) {
   const normalized = String(sessionId || "").trim();
   if (!normalized) {
@@ -46,8 +66,8 @@ export function resolveRevealTargetPath(binding, target = "file") {
   throw new Error(`Unsupported reveal target: ${target}`);
 }
 
-function spawnAndWait(command, args, options = {}) {
-  return new Promise((resolve, reject) => {
+function spawnAndWait(command: string, args: string[], options: SpawnCommandOptions = {}) {
+  return new Promise<{ command: string; args: string[] }>((resolve, reject) => {
     const child = spawn(command, args, {
       stdio: options.stdinText == null ? "ignore" : ["pipe", "ignore", "pipe"],
       windowsHide: true
@@ -76,7 +96,7 @@ function spawnAndWait(command, args, options = {}) {
   });
 }
 
-export async function copyTextToClipboard(text, options = {}) {
+export async function copyTextToClipboard(text: string, options: ClipboardOptions = {}) {
   const platform = String(options.platform || process.platform);
   const run = options.runCommand || ((command, args, commandOptions) => spawnAndWait(command, args, commandOptions));
   const value = String(text || "");
@@ -101,7 +121,7 @@ export async function copyTextToClipboard(text, options = {}) {
   throw new Error("Clipboard copy is not supported on this platform without wl-copy, xclip, or xsel.");
 }
 
-export async function revealPath(targetPath, options = {}) {
+export async function revealPath(targetPath: string, options: RevealOptions = {}) {
   const platform = String(options.platform || process.platform);
   const target = String(options.target || "file").trim().toLowerCase();
   const run = options.runCommand || ((command, args, commandOptions) => spawnAndWait(command, args, commandOptions));

@@ -1,6 +1,7 @@
 artifacts/
 node_modules/
 dist/
+dist-tools/
 *.log
 *.tgz
 .npm-cache/

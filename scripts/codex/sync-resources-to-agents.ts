@@ -210,6 +210,13 @@ function parseDecision(outputText) {
   return match ? match[1] : "";
 }
 
+function getErrorCode(err: unknown): string {
+  if (err && typeof err === "object" && "code" in err) {
+    return String((err as { code?: unknown }).code || "");
+  }
+  return "";
+}
+
 function runPolicyCheck(tempRulesPath, commandTokens, expectedDecision) {
   const result = spawnSync("codex", ["execpolicy", "check", "--rules", tempRulesPath, ...commandTokens], {
     shell: process.platform === "win32",
@@ -217,12 +224,12 @@ function runPolicyCheck(tempRulesPath, commandTokens, expectedDecision) {
   });
 
   if (result.error) {
-    if (result.error.code === "ENOENT") {
+    if (getErrorCode(result.error) === "ENOENT") {
       throw new Error(
         "Cannot run `codex execpolicy check` for rules validation. Ensure Codex CLI is installed and in PATH."
       );
     }
-    if (result.error.code === "EPERM") {
+    if (getErrorCode(result.error) === "EPERM") {
       throw new Error(
         "Permission denied running `codex execpolicy check` for rules validation. Run this command in an elevated terminal."
       );

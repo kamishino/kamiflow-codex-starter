@@ -31,7 +31,7 @@ function parseChecklistItems(sectionMarkdown) {
 }
 
 function parseKeyValueLines(sectionMarkdown) {
-  const out = {};
+  const out: Record<string, string> = {};
   for (const line of String(sectionMarkdown || "").split(/\r?\n/)) {
     const match = line.trim().match(/^- (?<key>[^:]+):\s*(?<value>.*)$/);
     if (!match) {
@@ -230,7 +230,7 @@ export function evaluateArchiveGate(markdown) {
   };
 }
 
-export function buildPhaseDigest(planRecord) {
+export function buildPhaseDigest(planRecord: { frontmatter?: Record<string, string>; raw?: string } | null | undefined) {
   const fm = planRecord?.frontmatter || {};
   const wip = parseKeyValueLines(extractSection(planRecord?.raw || "", "WIP Log"));
   return {
@@ -272,8 +272,8 @@ export function applyLifecycleMutation(markdown, mutation) {
   return next;
 }
 
-export function evaluateBuildReadiness(planRecord) {
-  const findings = [];
+export function evaluateBuildReadiness(planRecord: { frontmatter?: Record<string, string>; raw?: string }) {
+  const findings: string[] = [];
   const fm = planRecord.frontmatter || {};
   const markdown = planRecord.raw || "";
 

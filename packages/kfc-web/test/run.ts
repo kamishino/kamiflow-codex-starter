@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createKfcWebServer } from "../dist/server.js";
+import { pathToFileURL } from "node:url";
+
+const packageDir = process.cwd();
+const { createKfcWebServer } = await import(pathToFileURL(path.join(packageDir, "dist/server.js")).href);
 
 function stubFeatureImplementations() {
   return {
@@ -37,7 +39,6 @@ function manifestOverride() {
 
 async function withStubbedShell(fn) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "kfc-web-"));
-  const packageDir = fileURLToPath(new URL("..", import.meta.url));
   const server = await createKfcWebServer({
     mode: "serve",
     host: "127.0.0.1",
@@ -71,7 +72,7 @@ async function runCase(name, fn) {
 }
 
 await runCase("package exposes the shell package manifest", async () => {
-  const raw = await fs.readFile(new URL("../package.json", import.meta.url), "utf8");
+  const raw = await fs.readFile(path.join(packageDir, "package.json"), "utf8");
   const pkg = JSON.parse(raw);
   assert.equal(pkg.name, "@kamishino/kfc-web");
   assert.equal(pkg.bin["kfc-web"], "bin/kfc-web.js");
@@ -112,7 +113,6 @@ await runCase("shell mounts plan, session, and chat APIs in-process", async () =
 });
 
 await runCase("shell dev mode injects Vite client assets without requiring a built manifest", async () => {
-  const packageDir = fileURLToPath(new URL("..", import.meta.url));
   const server = await createKfcWebServer({
     mode: "dev",
     host: "127.0.0.1",
@@ -135,7 +135,6 @@ await runCase("shell dev mode injects Vite client assets without requiring a bui
 });
 
 await runCase("shell honors focus redirects for compatibility wrappers", async () => {
-  const packageDir = fileURLToPath(new URL("..", import.meta.url));
   const server = await createKfcWebServer({
     mode: "serve",
     host: "127.0.0.1",

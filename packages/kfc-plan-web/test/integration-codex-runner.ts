@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { runCodexAction } from "../dist/lib/codex-runner.js";
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
+const packageDir = process.cwd();
+const { runCodexAction } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/codex-runner.js")).href
+);
 
 let failed = 0;
 

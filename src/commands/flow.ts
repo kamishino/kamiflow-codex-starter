@@ -21,6 +21,37 @@ const REPO_ROOT = path.resolve(__dirname, "../..");
 const KFC_BIN = path.join(REPO_ROOT, "bin", "kamiflow.js");
 const DEFAULT_BASE_URL = "http://127.0.0.1:4310";
 
+type FrontmatterRecord = Record<string, string>;
+type PlanRecord = {
+  filePath: string;
+  fileName: string;
+  frontmatter: FrontmatterRecord;
+  planId: string;
+  status: string;
+  updatedAt: string;
+  updatedAtMs: number;
+  mtimeMs: number;
+  raw: string;
+};
+
+type RunNodeResult = {
+  code: number;
+  stdout: string;
+  stderr: string;
+};
+
+type CreatePlanOptions = {
+  route?: string;
+  topic?: string;
+};
+
+type JsonResponse<T = any> = {
+  ok: boolean;
+  status: number;
+  json: T | null;
+  text: string;
+};
+
 function usage() {
   info("Usage: kfc flow <ensure-plan|ready|apply|next> [options]");
   info("Examples:");
@@ -68,7 +99,7 @@ function resolvePlansDir(projectDir) {
   return path.join(projectDir, ".local", "plans");
 }
 
-function parseSimpleFrontmatter(markdown) {
+function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
   if (!markdown.startsWith("---")) {
     return {};
   }
@@ -84,7 +115,7 @@ function parseSimpleFrontmatter(markdown) {
     return {};
   }
 
-  const out = {};
+  const out: FrontmatterRecord = {};
   const blockLines = lines.slice(1, endIdx);
   for (const line of blockLines) {
     const trimmed = line.trim();
@@ -254,8 +285,8 @@ async function archiveDonePlansInRoot(projectDir, plans) {
   return moved;
 }
 
-function runNode(commandArgs, cwd) {
-  return new Promise((resolve, reject) => {
+function runNode(commandArgs: string[], cwd: string): Promise<RunNodeResult> {
+  return new Promise<RunNodeResult>((resolve, reject) => {
     const child = spawn(process.execPath, commandArgs, {
       cwd,
       stdio: ["ignore", "pipe", "pipe"]
@@ -275,7 +306,7 @@ function runNode(commandArgs, cwd) {
   });
 }
 
-async function createPlanViaInit(projectDir, cwd, options = {}) {
+async function createPlanViaInit(projectDir: string, cwd: string, options: CreatePlanOptions = {}) {
   const initArgs = [KFC_BIN, "plan", "init", "--project", projectDir, "--new"];
   if (options.route) {
     initArgs.push("--route", String(options.route));
@@ -399,7 +430,7 @@ async function persistReadinessReady(planRecord) {
   return true;
 }
 
-async function requestJson(method, url, body) {
+async function requestJson(method: string, url: string, body?: unknown): Promise<JsonResponse> {
   const res = await fetch(url, {
     method,
     headers: {
@@ -439,7 +470,7 @@ function apiRoute(projectId, planId, suffix = "") {
   return `/api/plans/${encodeURIComponent(planId)}${suffix}`;
 }
 
-function createApplyPayload(route, result, planRecord, extraPayload) {
+function createApplyPayload(route: string, result: string, planRecord: PlanRecord, extraPayload: any) {
   if ((route === "build" || route === "fix") && result !== "progress") {
     throw new Error("build/fix route requires --result progress.");
   }
@@ -796,7 +827,19 @@ async function runApply(options, args) {
   }
 
   const summary = res.json?.summary || {};
-  const output = {
+  const output: {
+    ok: boolean;
+    plan_id: string;
+    route: string;
+    result: string;
+    applied: any[];
+    next_action_human: string;
+    next_command: string;
+    next_mode: string;
+    status: string;
+    phase_digest?: ReturnType<typeof buildPhaseDigest>;
+    archive_gate?: ReturnType<typeof evaluateArchiveGate>;
+  } = {
     ok: true,
     plan_id: planId,
     route,
