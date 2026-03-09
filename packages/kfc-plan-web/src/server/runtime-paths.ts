@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const DIST_SERVER_DIR = __dirname;
+const SOURCE_SERVER_DIR = path.resolve(__dirname, "../../src/server");
 
 function firstExisting(paths: string[]): string {
   for (const p of paths) {
@@ -16,19 +18,15 @@ function firstExisting(paths: string[]): string {
 
 export function resolveViewsDir(): string {
   return firstExisting([
-    path.join(__dirname, "views"),
-    path.join(__dirname, "../../src/server/views"),
-    path.join(process.cwd(), "packages/kfc-plan-web/src/server/views"),
-    path.join(process.cwd(), "src/server/views")
+    path.join(DIST_SERVER_DIR, "views"),
+    path.join(SOURCE_SERVER_DIR, "views")
   ]);
 }
 
 export function resolvePublicDir(): string {
   return firstExisting([
-    path.join(__dirname, "public"),
-    path.join(__dirname, "../../src/server/public"),
-    path.join(process.cwd(), "packages/kfc-plan-web/src/server/public"),
-    path.join(process.cwd(), "src/server/public")
+    path.join(DIST_SERVER_DIR, "public"),
+    path.join(SOURCE_SERVER_DIR, "public")
   ]);
 }
 
