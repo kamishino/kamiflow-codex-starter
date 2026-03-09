@@ -1,8 +1,8 @@
 import path from "node:path";
 import { createTemplateRenderer } from "./template-render.js";
-import {
-  buildBrowserPageModel
-} from "../../../kfc-web-runtime/src/browser-entry.js";
+import { buildPlanPageModel } from "../../../kfc-plan-web/src/server/page-config.js";
+import { buildChatPageModel } from "../../../kfc-chat/src/server/page-config.js";
+import { buildSessionPageModel } from "../../../kfc-session/src/server/page-config.js";
 
 function projectNameFromDir(projectDir) {
   return path.basename(projectDir) || "Project";
@@ -16,23 +16,7 @@ export function createFeatureDefinitions(context) {
       navLabel: "Plan",
       entryName: "plan",
       render: context.renderPlan,
-      buildViewModel: ({ assets }) =>
-        buildBrowserPageModel({
-          title: "KamiFlow Plan Review",
-          apiBase: "/api",
-          assets,
-          fallbackStyleHref: "/assets/styles.css",
-          fallbackScriptHref: "/assets/app.js",
-          importMapOptions: {
-            preact: true,
-            preactHooks: true,
-            jsxRuntime: true,
-            signals: true,
-            webUi: true,
-            lucide: true
-          },
-          extra: { uiMode: "observer" }
-        }),
+      buildViewModel: ({ assets }) => buildPlanPageModel({ assets, uiMode: "observer", title: "KamiFlow Plan Review" }),
       mount: (implementations, fastify) =>
         implementations.plan(fastify, {
           projectDir: context.projectDir,
@@ -47,15 +31,7 @@ export function createFeatureDefinitions(context) {
       navLabel: "Session",
       entryName: "session",
       render: context.renderSession,
-      buildViewModel: ({ assets }) =>
-        buildBrowserPageModel({
-          title: "KFC Session",
-          apiBase: "/api/sessions",
-          assets,
-          fallbackStyleHref: "/assets/kfc-session.css",
-          fallbackScriptHref: "/assets/kfc-session.js",
-          extra: { sessionsRootLabel: "~/.codex/sessions" }
-        }),
+      buildViewModel: ({ assets }) => buildSessionPageModel({ assets, sessionsRootLabel: "~/.codex/sessions" }),
       mount: (implementations, fastify) =>
         implementations.session(fastify, {
           mountUi: false,
@@ -70,23 +46,10 @@ export function createFeatureDefinitions(context) {
       entryName: "chat",
       render: context.renderChat,
       buildViewModel: ({ assets }) =>
-        buildBrowserPageModel({
-          title: "KFC Chat",
-          apiBase: "/api/chat",
+        buildChatPageModel({
           assets,
-          fallbackStyleHref: "/assets/kfc-chat.css",
-          fallbackScriptHref: "/assets/kfc-chat.js",
-          importMapOptions: {
-            preact: true,
-            jsxRuntime: true,
-            signals: true,
-            webUi: true
-          },
-          extra: {
-            projectName: projectNameFromDir(context.projectDir),
-            projectDir: context.projectDir,
-            wsPath: "/ws"
-          }
+          projectName: projectNameFromDir(context.projectDir),
+          projectDir: context.projectDir
         }),
       mount: (implementations, fastify) =>
         implementations.chat(fastify, {
