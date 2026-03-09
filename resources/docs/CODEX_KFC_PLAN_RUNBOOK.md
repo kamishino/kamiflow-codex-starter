@@ -25,21 +25,23 @@ For route execution discipline, also follow `resources/docs/CODEX_FLOW_SMOOTH_GU
 npm run codex:sync -- --profile dogfood --force
 ```
 
-2. Start the unified maintainer web shell with HMR:
+2. Start the hosted KFC web root with HMR:
 
 ```bash
-npm run kfc-web:dev -- --project .
+kfc web dev --project .
 ```
 
 Production-style validation path:
 
 ```bash
-npm run kfc-web:serve -- --project .
+kfc web serve --project .
 ```
 
-Focused plan wrapper still exists as a compatibility shim:
+Repo wrapper equivalents still exist as compatibility shims:
 
 ```bash
+npm run kfc-web:dev -- --project .
+npm run kfc-web:serve -- --project .
 npm run kfc-plan:serve -- --project .
 ```
 

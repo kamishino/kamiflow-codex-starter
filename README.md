@@ -36,6 +36,7 @@ This repository is the KFC CLI source plus dogfooding workspace.
 - `kfc client bootstrap|doctor [--fix]` (advanced/manual)
 - `kfc session where|find|copy` (find/copy Codex session files and folders between locations)
 - `kfc remote serve|stop|token` (mobile-first remote server for mirrored session + queued prompts)
+- `kfc web serve|dev` (hosted KFC web root for `/plan`, `/session`, and `/chat`)
 - `kfc-session` (separate web-first Codex session manager utility)
 - `kfc-chat` (separate web-first bound Codex session chat utility)
 - `kfc run` (guardrails + deterministic route loop with Codex execution and runlog evidence)
@@ -89,21 +90,23 @@ If you want the desktop shell for KFC Plan UI (single window with restore):
 npm run kfc-plan:desktop
 ```
 
-For the unified maintainer web shell with HMR during development:
+Canonical hosted KFC shell during development:
+
+```bash
+kfc web dev --project .
+```
+
+Production-style hosted KFC shell:
+
+```bash
+kfc web serve --project .
+```
+
+Repo maintainer wrappers still exist as compatibility shims:
 
 ```bash
 npm run kfc-web:dev -- --project .
-```
-
-For a production-style shell run from the repo:
-
-```bash
 npm run kfc-web:serve -- --project .
-```
-
-Focused wrappers still exist as compatibility shims when you want one surface first:
-
-```bash
 npm run kfc-plan:serve -- --project .
 npm run kfc-session:serve -- --project .
 npm run kfc-chat:serve -- --project .

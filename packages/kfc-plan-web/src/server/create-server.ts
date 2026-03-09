@@ -109,14 +109,18 @@ function checklistAllChecked(section: string | undefined): boolean {
 }
 
 export async function createServer(options) {
+  const fastify = Fastify({ logger: false });
+  await registerKfcPlanFeature(fastify, options);
+  return fastify;
+}
+
+export async function registerKfcPlanFeature(fastify, options) {
   const { withWatcher = true, runCodexAction = runCodexActionDefault, workspaceName } = options;
   const uiMode = options.uiMode === "operator" ? "operator" : "observer";
   const writeEnabled = uiMode === "operator";
   const projectContexts = normalizeProjects(options);
   const defaultProjectId = projectContexts[0].project_id;
   const projectMap = new Map(projectContexts.map((item) => [item.project_id, item]));
-
-  const fastify = Fastify({ logger: false });
   const stream = new SSEStream(500);
 
   function getProject(projectId: string): ProjectContext | null {
@@ -247,7 +251,9 @@ export async function createServer(options) {
     applyWipMutation
   });
 
-  registerUiRoutes(fastify, { uiMode });
+  if (options.mountUi !== false) {
+    registerUiRoutes(fastify, { uiMode });
+  }
 
   const watchers: Array<{ close: () => Promise<void> }> = [];
   const pending = new Map<string, { timer: NodeJS.Timeout }>();
@@ -359,5 +365,7 @@ export async function createServer(options) {
     }
   });
 
-  return fastify;
+  return {
+    stream
+  };
 }

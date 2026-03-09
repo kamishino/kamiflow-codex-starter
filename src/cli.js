@@ -7,6 +7,7 @@ import { runFlow } from "./commands/flow.js";
 import { runClient } from "./commands/client.js";
 import { runSession } from "./commands/session.js";
 import { runRemote } from "./commands/remote.js";
+import { runWeb } from "./commands/web.js";
 import { error } from "./lib/logger.js";
 
 function printUsage() {
@@ -23,6 +24,7 @@ Commands:
   client     Client-project one-command setup, diagnostics, and cleanup
   session    Codex session transfer helpers (where|find|copy|push|pull|key|trust)
   remote     Mobile-first remote server for mirrored session + queued prompts
+  web        Hosted KFC web shell for /plan, /session, and /chat
   run        Execute Kami Flow with plan guardrails
   help       Show this usage
 
@@ -68,6 +70,10 @@ remote options:
   kfc remote serve [--project <path>] [--host <host>] [--port <n>] [--token <text>] [--detach] [--detach-file <path>]
   kfc remote stop [--project <path>] [--detach-file <path>] [--pid <n>]
   kfc remote token <gen|show|revoke> [--project <path>] [--token <text>] [--overwrite]
+
+web options:
+  kfc web serve [--project <path>] [--host <host>] [--port <n>] [--focus <plan|session|chat>]
+  kfc web dev [--project <path>] [--host <host>] [--port <n>] [--vite-port <n>] [--focus <plan|session|chat>]
 `);
 }
 
@@ -132,6 +138,10 @@ export async function runCli(argv) {
 
     if (command === "remote") {
       return await runRemote({ cwd: global.cwd, args: commandArgs });
+    }
+
+    if (command === "web") {
+      return await runWeb({ cwd: global.cwd, args: commandArgs });
     }
 
     error(`Unknown command: ${command}`);

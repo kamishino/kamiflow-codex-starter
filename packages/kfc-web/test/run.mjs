@@ -1,29 +1,30 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
-import http from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { createKfcWebServer } from "../src/server.js";
 
-function startStubServer(port, routes) {
-  const server = http.createServer((req, res) => {
-    const url = req.url || "/";
-    const route = routes[url] || routes[(url.split("?")[0] || "/")];
-    if (!route) {
-      res.statusCode = 404;
-      res.end("missing");
-      return;
+function stubFeatureImplementations() {
+  return {
+    plan: async (fastify) => {
+      fastify.get("/api/projects", async () => ({ plans: [{ id: "plan-1" }] }));
+      fastify.get("/api/projects/demo/events", async (_request, reply) => {
+        reply.type("text/event-stream");
+        return "event stream";
+      });
+      return { kind: "plan" };
+    },
+    session: async (fastify) => {
+      fastify.get("/api/sessions", async () => ({ sessions: [{ id: "session-1" }] }));
+      return { kind: "session" };
+    },
+    chat: async (fastify) => {
+      fastify.get("/api/chat/health", async () => ({ ok: true }));
+      fastify.get("/api/chat/session", async () => ({ state: "unbound" }));
+      return { kind: "chat", token: "test-token" };
     }
-    res.setHeader("content-type", route.type || "application/json");
-    res.end(route.body);
-  });
-  return new Promise((resolve) => {
-    server.listen(port, "127.0.0.1", () => {
-      const address = server.address();
-      resolve({ server, port: typeof address === "object" && address ? address.port : port });
-    });
-  });
+  };
 }
 
 function manifestOverride() {
@@ -37,32 +38,14 @@ function manifestOverride() {
 async function withStubbedShell(fn) {
   const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), "kfc-web-"));
   const packageDir = fileURLToPath(new URL("..", import.meta.url));
-  const planUpstream = await startStubServer(0, {
-    "/api/projects": { body: JSON.stringify({ plans: [{ id: "plan-1" }] }) },
-    "/api/projects/demo/events": { body: "event stream", type: "text/event-stream" }
-  });
-  const sessionUpstream = await startStubServer(0, {
-    "/api/health": { body: JSON.stringify({ ok: true }) },
-    "/api/sessions": { body: JSON.stringify({ sessions: [{ id: "session-1" }] }) }
-  });
-  const chatUpstream = await startStubServer(0, {
-    "/api/chat/health": { body: JSON.stringify({ ok: true }) },
-    "/api/chat/session": { body: JSON.stringify({ state: "unbound" }) }
-  });
-
   const server = await createKfcWebServer({
     mode: "serve",
     host: "127.0.0.1",
     port: 0,
     projectDir: tmpDir,
     packageDir,
-    skipChildren: true,
     manifestOverride: manifestOverride(),
-    featureTargets: {
-      plan: `http://127.0.0.1:${planUpstream.port}`,
-      session: `http://127.0.0.1:${sessionUpstream.port}`,
-      chat: `http://127.0.0.1:${chatUpstream.port}`
-    }
+    featureImplementations: stubFeatureImplementations()
   });
 
   try {
@@ -71,11 +54,6 @@ async function withStubbedShell(fn) {
     await fn({ tmpDir, server, listening });
   } finally {
     await server.close();
-    await Promise.all([
-      new Promise((resolve) => planUpstream.server.close(resolve)),
-      new Promise((resolve) => sessionUpstream.server.close(resolve)),
-      new Promise((resolve) => chatUpstream.server.close(resolve))
-    ]);
     await fs.rm(tmpDir, { recursive: true, force: true });
   }
 }
@@ -121,7 +99,7 @@ await runCase("shell serves routed plan, session, and chat pages with shell-owne
   });
 });
 
-await runCase("shell proxies plan, session, and chat APIs to their feature targets", async () => {
+await runCase("shell mounts plan, session, and chat APIs in-process", async () => {
   await withStubbedShell(async ({ listening }) => {
     const projectPayload = await fetch(`${listening.url}/api/projects`).then((response) => response.json());
     const sessionPayload = await fetch(`${listening.url}/api/sessions`).then((response) => response.json());
@@ -142,13 +120,8 @@ await runCase("shell dev mode injects Vite client assets without requiring a bui
     vitePort: 5199,
     projectDir: process.cwd(),
     packageDir,
-    skipChildren: true,
     skipVite: true,
-    featureTargets: {
-      plan: "http://127.0.0.1:1",
-      session: "http://127.0.0.1:1",
-      chat: "http://127.0.0.1:1"
-    }
+    featureImplementations: stubFeatureImplementations()
   });
   try {
     await server.ready();
@@ -169,13 +142,8 @@ await runCase("shell honors focus redirects for compatibility wrappers", async (
     port: 0,
     projectDir: process.cwd(),
     packageDir,
-    skipChildren: true,
     manifestOverride: manifestOverride(),
-    featureTargets: {
-      plan: "http://127.0.0.1:1",
-      session: "http://127.0.0.1:1",
-      chat: "http://127.0.0.1:1"
-    },
+    featureImplementations: stubFeatureImplementations(),
     focus: "chat"
   });
   try {

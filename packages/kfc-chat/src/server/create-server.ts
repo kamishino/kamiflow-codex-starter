@@ -54,13 +54,36 @@ async function defaultExecutePrompt({ projectDir, prompt, planId, sessionId, tim
 }
 
 export async function createKfcChatServer(options: Record<string, any> = {}) {
+  const fastify = Fastify({ logger: false });
+  const feature = await registerKfcChatFeature(fastify, options);
+
+  return {
+    fastify,
+    ...feature,
+    async ready() {
+      await fastify.ready();
+    },
+    async listen() {
+      await fastify.listen({ host: feature.host, port: feature.port });
+      const address = fastify.server.address() as any;
+      const actualPort = address && typeof address === "object" && "port" in address ? Number(address.port) : feature.port;
+      const persisted = { ...((await loadChatSession(feature.projectDir)) || {}), port: actualPort, host: feature.host, updated_at: nowIso(), connection_count: feature.wsClients.size } as any;
+      await saveChatSession(feature.projectDir, persisted);
+      return { port: actualPort, url: `http://${feature.host}:${actualPort}`, token: persisted.token };
+    },
+    async close() {
+      await fastify.close();
+    }
+  };
+}
+
+export async function registerKfcChatFeature(fastify: any, options: Record<string, any> = {}) {
   const projectDir = options.projectDir;
   const host = String(options.host || "127.0.0.1");
   const port = Number.isInteger(options.port) && options.port >= 0 ? Number(options.port) : 4322;
   const timeoutMs = Number.isInteger(options.timeoutMs) && options.timeoutMs > 0 ? options.timeoutMs : 5 * 60 * 1000;
   const projectName = String(options.projectName || projectDir.split(/[\\/]/).filter(Boolean).pop() || "KFC Chat");
   const sessionsRoot = options.sessionsRoot;
-  const fastify = Fastify({ logger: false });
   const promptQueue: Array<{ id: string; prompt: string; created_at: string }> = [];
   const transcriptCache = await readTranscript(projectDir, 300);
   let chatSession = await ensureChatRuntimeSession(projectDir, { host, port, token: options.token || "" });
@@ -200,7 +223,9 @@ export async function createKfcChatServer(options: Record<string, any> = {}) {
     return null;
   }
 
-  registerUiRoutes(fastify, { projectName, projectDir });
+  if (options.mountUi !== false) {
+    registerUiRoutes(fastify, { projectName, projectDir });
+  }
   registerApiRoutes(fastify, {
     health: async () => ({ ok: true, websocket: true, bound_session: boundSession.bound }),
     verifyToken: async (request: any, reply: any) => {
@@ -260,7 +285,7 @@ export async function createKfcChatServer(options: Record<string, any> = {}) {
     }
   });
 
-  fastify.server.on("upgrade", (request, socket, head) => {
+  const handleUpgrade = (request: any, socket: any, head: any) => {
     try {
       const url = new URL(request.url || "/", `http://${request.headers.host || host}`);
       if (url.pathname !== "/ws") {
@@ -278,7 +303,11 @@ export async function createKfcChatServer(options: Record<string, any> = {}) {
     } catch {
       socket.destroy();
     }
-  });
+  };
+
+  if (options.attachUpgrade !== false) {
+    fastify.server.on("upgrade", handleUpgrade);
+  }
 
   wss.on("connection", async (ws) => {
     wsClients.add(ws);
@@ -331,31 +360,25 @@ export async function createKfcChatServer(options: Record<string, any> = {}) {
     });
   });
 
-  return {
-    fastify,
-    wss,
-    projectDir,
-    async ready() {
-      await fastify.ready();
-    },
-    async listen() {
-      await fastify.listen({ host, port });
-      const address = fastify.server.address() as any;
-      const actualPort = address && typeof address === "object" && "port" in address ? Number(address.port) : port;
-      chatSession = { ...((await loadChatSession(projectDir)) || {}), port: actualPort, host, updated_at: nowIso(), connection_count: wsClients.size } as any;
-      await saveChatSession(projectDir, chatSession);
-      return { port: actualPort, url: `http://${host}:${actualPort}`, token: chatSession.token };
-    },
-    async close() {
-      shuttingDown = true;
-      for (let attempt = 0; attempt < 100 && processing; attempt += 1) {
-        await sleep(10);
-      }
-      for (const client of wsClients) {
-        try { client.close(); } catch {}
-      }
-      wss.close();
-      await fastify.close();
+  fastify.addHook("onClose", async () => {
+    shuttingDown = true;
+    for (let attempt = 0; attempt < 100 && processing; attempt += 1) {
+      await sleep(10);
     }
+    for (const client of wsClients) {
+      try { client.close(); } catch {}
+    }
+    wss.close();
+  });
+
+  return {
+    projectDir,
+    host,
+    port,
+    wss,
+    wsClients,
+    handleUpgrade,
+    token: chatSession.token,
+    buildSessionPayload
   };
 }

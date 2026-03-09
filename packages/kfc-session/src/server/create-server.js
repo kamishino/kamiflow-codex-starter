@@ -11,18 +11,21 @@ import {
 } from "../session-store.js";
 import { registerUiRoutes } from "./routes/ui-routes.js";
 
-export async function createKfcSessionServer(options = {}) {
+export async function registerKfcSessionFeature(fastify, options = {}) {
   const sessionsRoot = await ensureSessionsRoot(options.sessionsRoot || defaultSessionsRoot());
-  const fastify = Fastify({ logger: false });
 
-  registerUiRoutes(fastify, { sessionsRoot });
+  if (options.mountUi !== false) {
+    registerUiRoutes(fastify, { sessionsRoot });
+  }
 
-  fastify.get("/api/health", async () => {
-    return {
-      ok: true,
-      sessions_root: sessionsRoot
-    };
-  });
+  if (options.mountHealth !== false) {
+    fastify.get("/api/health", async () => {
+      return {
+        ok: true,
+        sessions_root: sessionsRoot
+      };
+    });
+  }
 
   fastify.get("/api/sessions", async (request) => {
     const query = request.query || {};
@@ -94,6 +97,15 @@ export async function createKfcSessionServer(options = {}) {
       return reply.code(400).send({ error: err instanceof Error ? err.message : String(err) });
     }
   });
+
+  return {
+    sessionsRoot
+  };
+}
+
+export async function createKfcSessionServer(options = {}) {
+  const fastify = Fastify({ logger: false });
+  const { sessionsRoot } = await registerKfcSessionFeature(fastify, options);
 
   return {
     fastify,
