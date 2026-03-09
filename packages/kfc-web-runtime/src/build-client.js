@@ -105,3 +105,81 @@ export async function assertFileExists(filePath, label = "build output") {
     throw new Error(`[kfc-web-runtime] Missing expected ${label}: ${filePath}`);
   }
 }
+
+function resolvePath(baseDir, relativePath) {
+  return path.join(baseDir, ...relativePath.split("/"));
+}
+
+export async function runBrowserBuild(config) {
+  const {
+    packageDir,
+    packageLabel,
+    repoRoot = null,
+    cleanPublicDir = true,
+    removePaths = [],
+    transpileDirs = [],
+    vendorFiles = [],
+    vendorTrees = [],
+    writeEntries = [],
+    copyFiles = [],
+    syncViewsFrom = null,
+    assertions = [],
+    logs = []
+  } = config;
+
+  const distPublicDir = path.join(packageDir, "dist", "server", "public");
+  const distViewsDir = path.join(packageDir, "dist", "server", "views");
+
+  if (cleanPublicDir) {
+    await removePathRobust(distPublicDir);
+  }
+  await ensureDir(distPublicDir);
+  await ensureDir(distViewsDir);
+
+  for (const relativePath of removePaths) {
+    await removePathRobust(path.join(distPublicDir, relativePath));
+  }
+
+  for (const item of transpileDirs) {
+    await transpileTree(resolvePath(packageDir, item.from), path.join(distPublicDir, item.to));
+  }
+
+  if (repoRoot) {
+    for (const item of vendorFiles) {
+      await copyVendorFile(repoRoot, path.join(distPublicDir, item.toDir ?? "vendor"), item.from, item.toFileName);
+    }
+
+    for (const item of vendorTrees) {
+      await copyVendorTree(repoRoot, path.join(distPublicDir, item.toDir ?? "vendor"), item.from, item.toRelativeDir);
+    }
+  }
+
+  for (const item of writeEntries) {
+    const targetPath = path.join(distPublicDir, item.to);
+    await ensureDir(path.dirname(targetPath));
+    await fs.writeFile(targetPath, item.contents, "utf8");
+  }
+
+  for (const item of copyFiles) {
+    const sourcePath = item.fromRoot === "repo" ? resolvePath(repoRoot, item.from) : resolvePath(packageDir, item.from);
+    const targetPath = path.join(distPublicDir, item.to);
+    await ensureDir(path.dirname(targetPath));
+    await fs.copyFile(sourcePath, targetPath);
+  }
+
+  if (syncViewsFrom) {
+    await syncViews(resolvePath(packageDir, syncViewsFrom), distViewsDir);
+  }
+
+  for (const item of assertions) {
+    await assertFileExists(path.join(distPublicDir, item.path), item.label);
+  }
+
+  for (const item of logs) {
+    console.log(`[${packageLabel}] ${item.label}: ${path.join(distPublicDir, item.path)}`);
+  }
+
+  if (syncViewsFrom) {
+    console.log(`[${packageLabel}] Synced views: ${distViewsDir}`);
+  }
+}
