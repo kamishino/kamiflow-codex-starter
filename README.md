@@ -86,7 +86,7 @@ npm run test:full
 If you want the desktop shell for KFC Plan UI (single window with restore):
 
 ```bash
-npm run ui:desktop
+npm run kfc-plan:desktop
 ```
 
 For the unified maintainer web shell with HMR during development:
