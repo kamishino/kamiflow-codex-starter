@@ -106,7 +106,7 @@ function printHelp() {
   console.log("Validate a commit message subject.");
   console.log("");
   console.log("Usage:");
-  console.log("  node scripts/git-hooks/commit-msg.mjs <commit-message-file>");
-  console.log("  node scripts/git-hooks/commit-msg.mjs --stdin");
-  console.log("  node scripts/git-hooks/commit-msg.mjs --message \"feat(scope): summary\"");
+  console.log("  node dist/scripts/git-hooks/commit-msg.js <commit-message-file>");
+  console.log("  node dist/scripts/git-hooks/commit-msg.js --stdin");
+  console.log("  node dist/scripts/git-hooks/commit-msg.js --message \"feat(scope): summary\"");
 }

@@ -5,14 +5,14 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../..");
+const ROOT_DIR = path.resolve(__dirname, "../../..");
 const PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json");
 const CONVENTIONAL_SUBJECT_RE = /^(?<type>[a-z]+)(\([^)]+\))?(?<breaking>!)?: /;
 
 function usage() {
   console.log(
     [
-      "Usage: node scripts/release/semver-from-commits.mjs [--json] [--from-tag <tag>]",
+      "Usage: node dist/scripts/release/semver-from-commits.js [--json] [--from-tag <tag>]",
       "",
       "Outputs semver bump suggestion inferred from commit history:",
       "  breaking change => major",

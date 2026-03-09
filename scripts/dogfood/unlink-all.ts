@@ -1,4 +1,4 @@
-import { FIXTURES, ROOT_DIR, fixturePath, readPackageName, run } from "./utils.mjs";
+import { FIXTURES, ROOT_DIR, fixturePath, readPackageName, run } from "./utils.js";
 
 const packageName = readPackageName();
 

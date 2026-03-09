@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../..");
+const ROOT_DIR = path.resolve(__dirname, "../../..");
 const PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json");
 const PACKAGE_NAME = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8")).name;
 

@@ -196,7 +196,7 @@ function buildManagedRulesContent(sourceText) {
   return buildManagedRulesFileContent({
     profileName: rulesProfile,
     sourceRulesText: sourceText,
-    generatedBy: "scripts/codex/sync-resources-to-agents.mjs",
+    generatedBy: "scripts/codex/sync-resources-to-agents.ts",
     rootDir: ROOT_DIR
   });
 }

@@ -1,9 +1,9 @@
-import { analyzeSemver } from "./semver-from-commits.mjs";
+import { analyzeSemver } from "./semver-from-commits.js";
 
 function usage() {
   console.log(
     [
-      "Usage: node scripts/release/plan-release.mjs [--from-tag <tag>] [--json]",
+      "Usage: node dist/scripts/release/plan-release.js [--from-tag <tag>] [--json]",
       "",
       "Shows release planning summary and recommended bump from commit history."
     ].join("\n")

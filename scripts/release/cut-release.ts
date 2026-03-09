@@ -2,11 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { analyzeSemver, bumpVersion } from "./semver-from-commits.mjs";
+import { analyzeSemver, bumpVersion } from "./semver-from-commits.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../..");
+const ROOT_DIR = path.resolve(__dirname, "../../..");
 const ROOT_LOCKFILE_PATH = path.join(ROOT_DIR, "package-lock.json");
 const VERSIONED_PACKAGE_JSON_PATHS = [
   path.join(ROOT_DIR, "package.json"),
@@ -17,7 +17,7 @@ const VALID_BUMPS = new Set(["major", "minor", "patch"]);
 function usage() {
   console.log(
     [
-      "Usage: node scripts/release/cut-release.mjs --bump <major|minor|patch> [--dry-run]",
+      "Usage: node dist/scripts/release/cut-release.js --bump <major|minor|patch> [--dry-run]",
       "",
       "Cuts a release commit and semver tag without publishing to npm."
     ].join("\n")

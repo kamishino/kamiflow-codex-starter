@@ -1,4 +1,4 @@
-import { FIXTURES, fixturePath, run } from "./utils.mjs";
+import { FIXTURES, fixturePath, run } from "./utils.js";
 
 for (const fixture of FIXTURES) {
   const cwd = fixturePath(fixture);

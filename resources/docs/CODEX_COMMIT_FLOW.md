@@ -19,7 +19,7 @@ npm run commit:codex -- --message "type(scope): summary"
 
 ## Wrapper Behavior
 
-1. Run `scripts/git-hooks/commit-msg.mjs` with `--message`.
+1. Run `dist/scripts/git-hooks/commit-msg.js` with `--message`.
 2. If validation passes, run `git commit -m "<message>"`.
 3. If commit fails with known Git hook runtime errors in some Windows sandboxed environments:
    - `couldn't create signal pipe, Win32 error 5`

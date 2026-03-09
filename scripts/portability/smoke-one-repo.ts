@@ -5,7 +5,7 @@ import { spawn, spawnSync } from "node:child_process";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../..");
+const ROOT_DIR = path.resolve(__dirname, "../../..");
 const PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json");
 const PACKAGE_JSON = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
 const PACKAGE_NAME = PACKAGE_JSON.name;

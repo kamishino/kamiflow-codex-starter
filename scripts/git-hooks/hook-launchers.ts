@@ -2,8 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 export const REQUIRED_HOOKS = [
-  { name: "commit-msg", modulePath: "scripts/git-hooks/commit-msg.mjs" },
-  { name: "post-merge", modulePath: "scripts/git-hooks/post-merge-auto.mjs" }
+  { name: "commit-msg", modulePath: "dist/scripts/git-hooks/commit-msg.js" },
+  { name: "post-merge", modulePath: "dist/scripts/git-hooks/post-merge-auto.js" }
 ];
 
 export function getHookNodeShebang() {

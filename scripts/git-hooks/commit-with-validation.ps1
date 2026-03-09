@@ -100,7 +100,12 @@ $parsed = Parse-Args -RawArgs @($args)
 $message = [string] $parsed.Message
 $passthrough = [string[]] $parsed.Passthrough
 
-& node "scripts/git-hooks/commit-msg.mjs" --message $message
+& npm run build:scripts
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
+
+& node "dist/scripts/git-hooks/commit-msg.js" --message $message
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }

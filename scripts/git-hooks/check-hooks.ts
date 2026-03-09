@@ -1,11 +1,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { REQUIRED_HOOKS } from "./hook-launchers.mjs";
+import { REQUIRED_HOOKS } from "./hook-launchers.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../..");
+const ROOT_DIR = path.resolve(__dirname, "../../..");
 const EXPECTED_HOOKS_PATH = ".githooks";
 const REQUIRED_HOOK_NAMES = REQUIRED_HOOKS.map((hook) => hook.name);
 const gitConfigPath = resolveGitConfigPath(ROOT_DIR);

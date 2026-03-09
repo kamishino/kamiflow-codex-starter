@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ROOT_DIR = path.resolve(__dirname, "../..");
+const ROOT_DIR = path.resolve(__dirname, "../../..");
 const CODEX_DIR = path.join(ROOT_DIR, ".codex");
 const EXAMPLE_CONFIG = path.join(CODEX_DIR, "config.example.toml");
 const LOCAL_CONFIG = path.join(CODEX_DIR, "config.toml");
