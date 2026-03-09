@@ -11,7 +11,15 @@ import {
 } from "../session-store.js";
 import { registerUiRoutes } from "./routes/ui-routes.js";
 
-export async function registerKfcSessionFeature(fastify, options = {}) {
+type SessionFeatureOptions = {
+  sessionsRoot?: string;
+  mountUi?: boolean;
+  mountHealth?: boolean;
+  host?: string;
+  port?: number;
+};
+
+export async function registerKfcSessionFeature(fastify: any, options: SessionFeatureOptions = {}) {
   const sessionsRoot = await ensureSessionsRoot(options.sessionsRoot || defaultSessionsRoot());
 
   if (options.mountUi !== false) {
@@ -27,8 +35,8 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
     });
   }
 
-  fastify.get("/api/sessions", async (request) => {
-    const query = request.query || {};
+  fastify.get("/api/sessions", async (request: any) => {
+    const query = (request.query || {}) as { query?: string; date?: string };
     const items = await listSessions(sessionsRoot, {
       query: query.query || "",
       date: String(query.date || "").trim().replaceAll("-", "/")
@@ -40,7 +48,7 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
     };
   });
 
-  fastify.get("/api/sessions/:id", async (request, reply) => {
+  fastify.get("/api/sessions/:id", async (request: any, reply: any) => {
     try {
       const item = await getSessionDetail(sessionsRoot, request.params.id);
       return { item };
@@ -49,8 +57,8 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
     }
   });
 
-  fastify.post("/api/sessions/export", async (request, reply) => {
-    const payload = request.body || {};
+  fastify.post("/api/sessions/export", async (request: any, reply: any) => {
+    const payload = (request.body || {}) as { id?: string; to?: string };
     if (!payload.id || !payload.to) {
       return reply.code(400).send({ error: "Missing `id` or `to` for export." });
     }
@@ -65,8 +73,8 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
     }
   });
 
-  fastify.post("/api/sessions/import", async (request, reply) => {
-    const payload = request.body || {};
+  fastify.post("/api/sessions/import", async (request: any, reply: any) => {
+    const payload = (request.body || {}) as { from?: string };
     if (!payload.from) {
       return reply.code(400).send({ error: "Missing `from` path for import." });
     }
@@ -81,8 +89,8 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
     }
   });
 
-  fastify.post("/api/sessions/restore", async (request, reply) => {
-    const payload = request.body || {};
+  fastify.post("/api/sessions/restore", async (request: any, reply: any) => {
+    const payload = (request.body || {}) as { id?: string };
     if (!payload.id) {
       return reply.code(400).send({ error: "Missing `id` for restore." });
     }
@@ -103,7 +111,7 @@ export async function registerKfcSessionFeature(fastify, options = {}) {
   };
 }
 
-export async function createKfcSessionServer(options = {}) {
+export async function createKfcSessionServer(options: SessionFeatureOptions = {}) {
   return await createFeatureServer({
     host: options.host || "127.0.0.1",
     port: Number(options.port || 0),

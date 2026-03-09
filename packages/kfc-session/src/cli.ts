@@ -10,6 +10,16 @@ import {
 } from "./session-store.js";
 import { createKfcSessionServer } from "./server.js";
 
+type ParsedArgs = {
+  command: string;
+  sessionsRoot: string;
+  host: string;
+  port: number;
+  id: string;
+  to: string;
+  from: string;
+};
+
 function usage() {
   console.log(`KFC Session
 
@@ -37,8 +47,8 @@ Options:
 `);
 }
 
-function parseArgs(baseCwd, args) {
-  const parsed = {
+function parseArgs(baseCwd: string, args: string[]): ParsedArgs {
+  const parsed: ParsedArgs = {
     command: "",
     sessionsRoot: defaultSessionsRoot(),
     host: "127.0.0.1",
@@ -116,7 +126,7 @@ async function runIndex(parsed) {
   console.log(`Latest session: ${summary.latest_session_id || "<none>"}`);
 }
 
-function runWhere(parsed) {
+function runWhere(parsed: ParsedArgs) {
   console.log(parsed.sessionsRoot);
 }
 
@@ -163,8 +173,8 @@ async function runRestore(parsed) {
   console.log(result.message);
 }
 
-export async function runCli(argv) {
-  let parsed;
+export async function runCli(argv: string[]) {
+  let parsed: ParsedArgs;
   try {
     parsed = parseArgs(process.cwd(), argv);
   } catch (err) {

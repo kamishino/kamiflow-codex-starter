@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { runCli } from "../src/cli.js";
-import { createKfcSessionServer } from "../src/server.js";
-import { listSessions, writeFixtureSession } from "../src/session-store.js";
+import { runCli } from "../dist/cli.js";
+import { createKfcSessionServer } from "../dist/server.js";
+import { listSessions, writeFixtureSession } from "../dist/session-store.js";
 
 let failed = 0;
 
@@ -126,9 +126,13 @@ await runCase("server exposes health, list, detail, export, import, and restore"
 
     const script = await server.fastify.inject({ method: "GET", url: "/assets/kfc-session.js" });
     assert.equal(script.statusCode, 200);
-    assert.ok(script.payload.includes("copy-id-button"));
-    assert.ok(script.payload.includes("apiBaseRaw"));
-    assert.ok(script.payload.includes("KFC Session Manager"));
+    assert.ok(script.payload.includes('import "./client/main.js";'));
+
+    const clientScript = await server.fastify.inject({ method: "GET", url: "/assets/client/main.js" });
+    assert.equal(clientScript.statusCode, 200);
+    assert.ok(clientScript.payload.includes("copy-id-button"));
+    assert.ok(clientScript.payload.includes("apiBaseRaw"));
+    assert.ok(clientScript.payload.includes("KFC Session Manager"));
 
     const styles = await server.fastify.inject({ method: "GET", url: "/assets/kfc-session.css" });
     assert.equal(styles.statusCode, 200);

@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Web-first Codex session manager utility.",
   "type": "module",
+  "main": "dist/server.js",
   "bin": {
     "kfc-session": "bin/kfc-session.js"
   },
@@ -11,13 +12,18 @@
   },
   "scripts": {
     "build:client": "node scripts/build-client.mjs",
-    "build": "npm run build:client",
+    "build:server": "tsc -p tsconfig.json && node scripts/sync-server-js.mjs",
+    "build": "npm run build:server && npm run build:client",
     "serve": "npm run build && node bin/kfc-session.js serve",
     "test": "npm run build && node test/run.mjs"
   },
   "dependencies": {
     "eta": "3.5.0",
     "fastify": "5.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "typescript": "5.8.2"
   },
   "license": "UNLICENSED"
 }

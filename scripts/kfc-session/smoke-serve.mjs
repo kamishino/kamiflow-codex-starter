@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { createKfcSessionServer } from "../../packages/kfc-session/src/server.js";
-import { writeFixtureSession } from "../../packages/kfc-session/src/session-store.js";
+import { createKfcSessionServer } from "../../packages/kfc-session/dist/server.js";
+import { writeFixtureSession } from "../../packages/kfc-session/dist/session-store.js";
 
 const TEMP_DIR = await fs.mkdtemp(path.join(os.tmpdir(), "kfc-session-smoke-"));
 

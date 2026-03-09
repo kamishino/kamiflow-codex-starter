@@ -6,6 +6,11 @@ import { buildInteractiveResumeCommand } from "../../../src/lib/session-actions.
 
 let fixtureWriteTick = 0;
 
+type ListSessionsOptions = {
+  query?: string;
+  date?: string;
+};
+
 export function defaultSessionsRoot() {
   return path.join(os.homedir(), ".codex", "sessions");
 }
@@ -221,7 +226,7 @@ async function buildSessionRecord(sessionsRoot, filePath, detail = false) {
   };
 }
 
-export async function listSessions(sessionsRoot, options = {}) {
+export async function listSessions(sessionsRoot, options: ListSessionsOptions = {}) {
   await assertDirectoryExists(sessionsRoot, "Codex sessions root");
   const files = await walkFiles(sessionsRoot);
   const query = String(options.query || "").trim().toLowerCase();

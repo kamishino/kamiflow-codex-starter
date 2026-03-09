@@ -9,13 +9,13 @@ const packageDir = path.resolve(__dirname, "..");
 await runBrowserBuild({
   packageDir,
   packageLabel: "kfc-session",
-  copyFiles: [
-    { from: "src/client/main.js", to: "kfc-session.js" },
-    { from: "src/server/public/styles.css", to: "kfc-session.css" }
-  ],
+  transpileDirs: [{ from: "src/client", to: "client" }],
+  writeEntries: [{ to: "kfc-session.js", contents: 'import "./client/main.js";\n' }],
+  copyFiles: [{ from: "src/server/public/styles.css", to: "kfc-session.css" }],
   syncViewsFrom: "src/server/views",
   logs: [
-    { label: "Copied browser script", path: "kfc-session.js" },
+    { label: "Built browser modules", path: "client" },
+    { label: "Wrote entry module", path: "kfc-session.js" },
     { label: "Copied stylesheet", path: "kfc-session.css" }
   ]
 });
