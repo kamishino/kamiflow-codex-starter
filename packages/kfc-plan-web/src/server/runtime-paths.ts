@@ -1,32 +1,17 @@
-import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createPackageRuntimePathResolver } from "../../../kfc-web-runtime/src/runtime-paths.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DIST_SERVER_DIR = __dirname;
-const SOURCE_SERVER_DIR = path.resolve(__dirname, "../../src/server");
-
-function firstExisting(paths: string[]): string {
-  for (const p of paths) {
-    if (fs.existsSync(p)) {
-      return p;
-    }
-  }
-  return paths[0];
-}
+const PACKAGE_DIR = path.resolve(__dirname, "..", "..");
+const resolver = createPackageRuntimePathResolver(PACKAGE_DIR);
 
 export function resolveViewsDir(): string {
-  return firstExisting([
-    path.join(DIST_SERVER_DIR, "views"),
-    path.join(SOURCE_SERVER_DIR, "views")
-  ]);
+  return resolver.resolveViewsDir();
 }
 
 export function resolvePublicDir(): string {
-  return firstExisting([
-    path.join(DIST_SERVER_DIR, "public"),
-    path.join(SOURCE_SERVER_DIR, "public")
-  ]);
+  return resolver.resolvePublicDir();
 }
 

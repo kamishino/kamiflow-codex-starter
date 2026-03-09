@@ -1,0 +1,7 @@
+{
+  "name": "@kamishino/kfc-web-runtime",
+  "version": "0.1.0",
+  "description": "Shared runtime helpers for KFC web surfaces.",
+  "type": "module",
+  "license": "UNLICENSED"
+}
