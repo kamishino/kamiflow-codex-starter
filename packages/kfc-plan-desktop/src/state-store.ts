@@ -1,6 +1,32 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+export type DesktopTarget =
+  | {
+      mode: "root";
+      rootDir: string;
+    }
+  | {
+      mode: "plans_dir";
+      rootDir: string;
+      plansDir: string;
+    };
+
+export type WindowBounds = {
+  width?: number;
+  height?: number;
+  x?: number;
+  y?: number;
+};
+
+export type DesktopState = {
+  lastHash: string;
+  windowBounds: WindowBounds;
+  activeTarget: DesktopTarget | null;
+  recentTargets: DesktopTarget[];
+  themePreference: string;
+};
+
 const DEFAULT_HASH = "#/";
 const MIN_WIDTH = 900;
 const MIN_HEIGHT = 600;
@@ -64,7 +90,7 @@ export function targetKey(target) {
   return "";
 }
 
-export function sanitizeDesktopTarget(input) {
+export function sanitizeDesktopTarget(input: any): DesktopTarget | null {
   if (!input || typeof input !== "object") {
     return null;
   }
@@ -95,7 +121,7 @@ export function sanitizeDesktopTarget(input) {
   };
 }
 
-function sanitizeRecentTargets(input) {
+function sanitizeRecentTargets(input: any): DesktopTarget[] {
   const list = Array.isArray(input) ? input : [];
   const seen = new Set();
   const out = [];
@@ -117,7 +143,7 @@ function sanitizeRecentTargets(input) {
   return out;
 }
 
-export function withRecentTarget(state, target) {
+export function withRecentTarget(state: any, target: any): DesktopState {
   const normalizedTarget = sanitizeDesktopTarget(target);
   if (!normalizedTarget) {
     return sanitizeDesktopState(state);
@@ -132,9 +158,9 @@ export function withRecentTarget(state, target) {
   return next;
 }
 
-export function normalizeWindowBounds(input) {
-  const source = input && typeof input === "object" ? input : {};
-  const out = {};
+export function normalizeWindowBounds(input: any): WindowBounds {
+  const source: Record<string, unknown> = input && typeof input === "object" ? input : {};
+  const out: WindowBounds = {};
   const width = Number(source.width);
   const height = Number(source.height);
   const x = Number(source.x);
@@ -155,8 +181,8 @@ export function normalizeWindowBounds(input) {
   return out;
 }
 
-export function sanitizeDesktopState(input) {
-  const source = input && typeof input === "object" ? input : {};
+export function sanitizeDesktopState(input: any): DesktopState {
+  const source: Record<string, any> = input && typeof input === "object" ? input : {};
   return {
     lastHash: sanitizeHashRoute(source.lastHash),
     windowBounds: normalizeWindowBounds(source.windowBounds),
@@ -166,7 +192,7 @@ export function sanitizeDesktopState(input) {
   };
 }
 
-export async function readDesktopState(filePath) {
+export async function readDesktopState(filePath: string): Promise<DesktopState> {
   try {
     const raw = await fs.readFile(filePath, "utf8");
     return sanitizeDesktopState(JSON.parse(raw));
@@ -175,14 +201,14 @@ export async function readDesktopState(filePath) {
   }
 }
 
-export async function writeDesktopState(filePath, state) {
+export async function writeDesktopState(filePath: string, state: any): Promise<DesktopState> {
   const sanitized = sanitizeDesktopState(state);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(sanitized, null, 2), "utf8");
   return sanitized;
 }
 
-export function extractHashFromUrl(urlText) {
+export function extractHashFromUrl(urlText: string): string {
   const url = String(urlText || "");
   const idx = url.indexOf("#");
   if (idx === -1) {

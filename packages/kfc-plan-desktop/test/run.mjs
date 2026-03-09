@@ -15,7 +15,7 @@ import {
   sanitizeThemePreference,
   withRecentTarget,
   writeDesktopState
-} from "../src/state-store.js";
+} from "../dist/state-store.js";
 
 function logPass(name) {
   console.log(`[desktop-test] PASS ${name}`);

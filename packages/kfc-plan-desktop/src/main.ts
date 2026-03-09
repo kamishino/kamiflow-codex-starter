@@ -2,8 +2,12 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { app, BrowserWindow, Menu, dialog, ipcMain, nativeTheme } from "electron";
+import type { MenuItemConstructorOptions } from "electron";
 import {
   DESKTOP_STATE_DEFAULTS,
+  type DesktopState,
+  type DesktopTarget,
+  type WindowBounds,
   deriveRootFromPlansDir,
   extractHashFromUrl,
   readDesktopState,
@@ -41,8 +45,8 @@ const WINDOW_DEFAULTS = {
 let mainWindow = null;
 let kfcPlanServer = null;
 let appUrl = "";
-let persistedState = sanitizeDesktopState({});
-let activeTarget = null;
+let persistedState: DesktopState = sanitizeDesktopState({});
+let activeTarget: DesktopTarget | null = null;
 let isQuitting = false;
 const externalNoticeSeen = new Set();
 
@@ -156,7 +160,7 @@ function describeTarget(target) {
   if (!target) {
     return "(none)";
   }
-  if (target.mode === TARGET_MODE_PLANS_DIR) {
+  if (target.mode === TARGET_MODE_PLANS_DIR && "plansDir" in target) {
     return `plans: ${target.plansDir}`;
   }
   return `root: ${target.rootDir}`;
@@ -169,11 +173,12 @@ async function validateTarget(target) {
   }
 
   if (normalized.mode === TARGET_MODE_PLANS_DIR) {
-    const ok = await isDirectory(normalized.plansDir);
+    const plansDir = "plansDir" in normalized ? normalized.plansDir : "";
+    const ok = await isDirectory(plansDir);
     if (!ok) {
       return {
         ok: false,
-        message: `The selected plans directory does not exist:\n${normalized.plansDir}`
+        message: `The selected plans directory does not exist:\n${plansDir}`
       };
     }
     return { ok: true, message: "" };
@@ -301,7 +306,7 @@ function buildWindowUrl(hash) {
 }
 
 function restoredWindowOptions() {
-  const bounds = persistedState.windowBounds || {};
+  const bounds: WindowBounds = persistedState.windowBounds || {};
   const resolvedTheme = currentThemeState().resolvedTheme;
   return {
     ...WINDOW_DEFAULTS,
@@ -403,13 +408,16 @@ async function resolveInitialTarget() {
   );
 }
 
-function buildRecentMenuItems() {
+function buildRecentMenuItems(): MenuItemConstructorOptions[] {
   const recents = Array.isArray(persistedState.recentTargets) ? persistedState.recentTargets : [];
   if (recents.length === 0) {
     return [{ label: "No recent locations", enabled: false }];
   }
   return recents.map((target, index) => {
-    const label = target.mode === TARGET_MODE_PLANS_DIR ? `Plans: ${target.plansDir}` : `Root: ${target.rootDir}`;
+    const label =
+      target.mode === TARGET_MODE_PLANS_DIR && "plansDir" in target
+        ? `Plans: ${target.plansDir}`
+        : `Root: ${target.rootDir}`;
     return {
       label: `${index + 1}. ${label}`,
       click: () => {
@@ -421,7 +429,7 @@ function buildRecentMenuItems() {
 
 function refreshMenu() {
   const themePreference = currentThemePreference();
-  const template = [
+  const template: MenuItemConstructorOptions[] = [
     {
       label: "File",
       submenu: [
@@ -479,7 +487,7 @@ function refreshMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
-async function chooseAndApplyTarget(mode) {
+async function chooseAndApplyTarget(mode: string) {
   const target = await requestValidTarget(mode);
   if (!target) {
     return;
@@ -487,7 +495,7 @@ async function chooseAndApplyTarget(mode) {
   await safeApplyTarget(target);
 }
 
-async function safeApplyTarget(target) {
+async function safeApplyTarget(target: DesktopTarget) {
   try {
     await applyTarget(target, { showExternalNotice: true });
   } catch (err) {
@@ -501,7 +509,7 @@ async function safeApplyTarget(target) {
   }
 }
 
-async function applyTarget(target, options = {}) {
+async function applyTarget(target: DesktopTarget, options: { showExternalNotice?: boolean } = {}) {
   const showExternalNotice = options.showExternalNotice !== false;
   const normalized = sanitizeDesktopTarget(target);
   if (!normalized) {

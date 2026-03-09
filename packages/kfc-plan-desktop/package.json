@@ -4,18 +4,21 @@
   "private": true,
   "description": "Desktop shell for KFC Plan.",
   "type": "module",
-  "main": "src/main.js",
+  "main": "dist/main.js",
   "scripts": {
     "predev": "npm run -w @kamishino/kfc-plan-web build",
-    "dev": "electron src/main.js",
+    "build": "tsc -p tsconfig.json",
+    "dev": "npm run build && electron dist/main.js",
     "start": "npm run dev",
-    "test": "node test/run.mjs"
+    "test": "npm run build && node test/run.mjs"
   },
   "dependencies": {
     "@kamishino/kfc-plan-web": "file:../kfc-plan-web"
   },
   "devDependencies": {
-    "electron": "35.0.0"
+    "@types/node": "22.13.10",
+    "electron": "35.0.0",
+    "typescript": "5.8.2"
   },
   "license": "UNLICENSED"
 }
