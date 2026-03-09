@@ -6,11 +6,25 @@ import { loadBuiltInFeatureImplementations } from "./server/feature-implementati
 import { createFeatureContext, createFeatureDefinitions, registerFeaturePages } from "./server/features.js";
 import { shellHtml, shellNav } from "./server/shell-view.js";
 
-function resolveRepoRoot(packageDir) {
+type KfcWebServerOptions = {
+  mode?: string;
+  host?: string;
+  port?: number;
+  vitePort?: number;
+  projectDir?: string;
+  focus?: string;
+  packageDir: string;
+  manifestOverride?: unknown;
+  sessionsRoot?: string;
+  skipVite?: boolean;
+  featureImplementations?: unknown;
+};
+
+function resolveRepoRoot(packageDir: string) {
   return path.resolve(packageDir, "..", "..");
 }
 
-export async function createKfcWebServer(options = {}) {
+export async function createKfcWebServer(options: KfcWebServerOptions) {
   const mode = options.mode === "dev" ? "dev" : "serve";
   const host = String(options.host || "127.0.0.1");
   const port = Number(options.port || 4300);
@@ -49,11 +63,11 @@ export async function createKfcWebServer(options = {}) {
     }
   }
 
-  function featureAssets(name) {
+  function featureAssets(name: string) {
     return mode === "dev" ? devAssetSet(vitePort, name) : assetSetFromManifest(manifest, name);
   }
 
-  async function startFeatures(fastify) {
+  async function startFeatures(fastify: any) {
     const implementations = options.featureImplementations || await loadBuiltInFeatureImplementations(repoRoot);
     featureHandles = Object.fromEntries(
       await Promise.all(
@@ -66,7 +80,7 @@ export async function createKfcWebServer(options = {}) {
     host,
     port,
     setup: async (fastify) => {
-      fastify.get("/", async (_request, reply) => {
+      fastify.get("/", async (_request: any, reply: any) => {
         if (featureBySlug.has(focus)) {
           return reply.redirect(`/${focus}`);
         }
@@ -78,7 +92,7 @@ export async function createKfcWebServer(options = {}) {
       registerFeaturePages(fastify, features, featureAssets);
 
       if (mode === "serve") {
-        fastify.get("/assets/*", async (request, reply) => {
+        fastify.get("/assets/*", async (request: any, reply: any) => {
           const rel = String(request.params["*"] || "");
           return await sendBuiltAsset(reply, packageDir, rel);
         });

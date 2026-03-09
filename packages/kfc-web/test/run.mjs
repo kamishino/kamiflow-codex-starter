@@ -3,7 +3,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createKfcWebServer } from "../src/server.js";
+import { createKfcWebServer } from "../dist/server.js";
 
 function stubFeatureImplementations() {
   return {

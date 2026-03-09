@@ -6,6 +6,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const packageDir = path.resolve(__dirname, "..");
 
+type ParsedArgs = {
+  command: string;
+  project: string;
+  host: string;
+  port: number;
+  focus: string;
+  vitePort: number;
+};
+
 function usage() {
   console.log(`KFC Web
 
@@ -21,8 +30,8 @@ Options:
 `);
 }
 
-function parseArgs(argv) {
-  const parsed = {
+function parseArgs(argv: string[]): ParsedArgs {
+  const parsed: ParsedArgs = {
     command: argv[0] || "",
     project: process.cwd(),
     host: "127.0.0.1",
@@ -72,8 +81,8 @@ function parseArgs(argv) {
   return parsed;
 }
 
-export async function runCli(argv) {
-  let parsed;
+export async function runCli(argv: string[]) {
+  let parsed: ParsedArgs;
   try {
     parsed = parseArgs(argv);
   } catch (err) {
