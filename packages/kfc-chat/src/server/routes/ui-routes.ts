@@ -1,6 +1,6 @@
 import { resolvePublicDir } from "../runtime-paths.js";
 import { renderView } from "../view-render.js";
-import { registerPublicAssetRoutes } from "../../../../kfc-web-runtime/src/ui-routes.js";
+import { registerPublicAssetRoutes } from "../../../../kfc-web-runtime/dist/ui-routes.js";
 import { buildChatPageModel } from "../page-config.js";
 
 const PUBLIC_DIR = resolvePublicDir();
@@ -13,3 +13,4 @@ export function registerUiRoutes(fastify: any, options: { projectName: string; p
     return await renderView("index", buildChatPageModel(options));
   });
 }
+

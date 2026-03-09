@@ -1,7 +1,7 @@
 import { WebSocketServer } from "ws";
 import { runCodexResumeAction } from "../../../../src/lib/codex-runner.js";
 import { resolveRevealTargetPath, revealPath as sharedRevealPath } from "../../../../src/lib/session-actions.js";
-import { createFeatureServer } from "../../../kfc-web-runtime/src/feature-server.js";
+import { createFeatureServer } from "../../../kfc-web-runtime/dist/feature-server.js";
 import {
   appendTranscriptEntry,
   bindCodexSession,
@@ -377,3 +377,4 @@ export async function registerKfcChatFeature(fastify: any, options: Record<strin
     buildSessionPayload
   };
 }
+

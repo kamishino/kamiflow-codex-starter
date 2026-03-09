@@ -11,12 +11,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "build:server": "tsc -p tsconfig.json",
+    "build:server": "npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
     "build:client": "vite build",
     "build": "npm run build:server && npm run build:client",
     "serve": "npm run build && node bin/kfc-web.js serve",
-    "dev": "node bin/kfc-web.js dev",
-    "test": "node test/run.mjs"
+    "dev": "npm run build:server && node bin/kfc-web.js dev",
+    "test": "npm run build:server && node test/run.mjs"
   },
   "dependencies": {
     "eta": "3.5.0",

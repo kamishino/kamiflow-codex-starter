@@ -1,6 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { createPackageRuntimePathResolver } from "../../../kfc-web-runtime/src/runtime-paths.js";
+import { createPackageRuntimePathResolver } from "../../../kfc-web-runtime/dist/runtime-paths.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -14,4 +14,5 @@ export function resolveViewsDir(): string {
 export function resolvePublicDir(): string {
   return resolver.resolvePublicDir();
 }
+
 

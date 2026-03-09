@@ -1,4 +1,4 @@
-import { buildBrowserPageModel } from "../../../kfc-web-runtime/src/browser-entry.js";
+import { buildBrowserPageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
 
 export function buildSessionPageModel(options = {}) {
   const { assets, sessionsRootLabel = "", title = "KFC Session" } = options;
@@ -11,3 +11,4 @@ export function buildSessionPageModel(options = {}) {
     extra: { sessionsRootLabel }
   });
 }
+

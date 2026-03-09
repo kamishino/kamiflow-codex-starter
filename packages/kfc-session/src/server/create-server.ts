@@ -1,4 +1,4 @@
-import { createFeatureServer } from "../../../kfc-web-runtime/src/feature-server.js";
+import { createFeatureServer } from "../../../kfc-web-runtime/dist/feature-server.js";
 import {
   defaultSessionsRoot,
   ensureSessionsRoot,
@@ -118,3 +118,4 @@ export async function createKfcSessionServer(options: SessionFeatureOptions = {}
     setup: async (fastify) => await registerKfcSessionFeature(fastify, options)
   });
 }
+

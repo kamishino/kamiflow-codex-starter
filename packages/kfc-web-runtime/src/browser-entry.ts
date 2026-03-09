@@ -7,6 +7,33 @@ const COMMON_FONT_LINKS = [
   }
 ];
 
+type BrowserAssetHtmlOptions = {
+  fontLinks?: Array<{ rel: string; href: string; crossorigin?: string }>;
+  styleHrefsNormalized?: string[];
+  scriptHrefsNormalized?: string[];
+  importMapJson?: string;
+};
+
+type ImportMapOptions = {
+  preact?: boolean;
+  preactHooks?: boolean;
+  jsxRuntime?: boolean;
+  signals?: boolean;
+  webUi?: boolean;
+  lucide?: boolean;
+};
+
+type BrowserPageModelOptions = {
+  title?: string;
+  apiBase?: string;
+  assets?: { styles?: string[]; scripts?: string[] } | null;
+  fallbackStyleHref?: string;
+  fallbackScriptHref?: string;
+  importMapOptions?: ImportMapOptions | null;
+  includeFonts?: boolean;
+  extra?: Record<string, unknown>;
+};
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -36,7 +63,7 @@ function renderModuleScriptsHtml(scriptHrefs) {
   return scriptHrefs.map((href) => `<script src="${escapeHtml(href)}" type="module"></script>`).join("\n");
 }
 
-export function buildBrowserAssetHtml(options = {}) {
+export function buildBrowserAssetHtml(options: BrowserAssetHtmlOptions = {}) {
   const { fontLinks = [], styleHrefsNormalized = [], scriptHrefsNormalized = [], importMapJson = "" } = options;
   const headParts = [
     fontLinks.length > 0 ? renderFontLinksHtml(fontLinks) : "",
@@ -64,8 +91,8 @@ export function normalizeScriptHrefs(scriptHrefs, fallbackHref) {
   return items.filter(Boolean);
 }
 
-export function buildImportMap(options = {}) {
-  const imports = {};
+export function buildImportMap(options: ImportMapOptions = {}) {
+  const imports: Record<string, string> = {};
   if (options.preact) {
     imports.preact = "/assets/vendor/preact.mjs";
   }
@@ -92,7 +119,7 @@ export function stringifyImportMap(importMap) {
   return importMap ? JSON.stringify(importMap, null, 2) : "";
 }
 
-export function buildBrowserPageModel(options = {}) {
+export function buildBrowserPageModel(options: BrowserPageModelOptions = {}) {
   const {
     title,
     apiBase,

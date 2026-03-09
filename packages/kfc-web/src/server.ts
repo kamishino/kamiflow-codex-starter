@@ -1,6 +1,6 @@
 import path from "node:path";
 import { createServer as createViteServer } from "vite";
-import { createFeatureServer } from "../../kfc-web-runtime/src/feature-server.js";
+import { createFeatureServer } from "../../kfc-web-runtime/dist/feature-server.js";
 import { assetSetFromManifest, devAssetSet, loadManifest, sendBuiltAsset } from "./server/assets.js";
 import { loadBuiltInFeatureImplementations } from "./server/feature-implementations.js";
 import { createFeatureContext, createFeatureDefinitions, registerFeaturePages } from "./server/features.js";
@@ -119,3 +119,4 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
     }
   });
 }
+

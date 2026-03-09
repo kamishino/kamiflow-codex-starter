@@ -3,9 +3,17 @@
   "version": "0.1.0",
   "description": "Shared runtime helpers for KFC web surfaces.",
   "type": "module",
+  "main": "dist/browser-entry.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
   "dependencies": {
     "eta": "3.5.0",
     "fastify": "5.6.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "typescript": "5.8.2"
   },
   "license": "UNLICENSED"
 }

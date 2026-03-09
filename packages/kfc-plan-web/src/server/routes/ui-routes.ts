@@ -1,6 +1,6 @@
 import { renderView } from "../view-render.js";
 import { resolvePublicDir } from "../runtime-paths.js";
-import { registerPublicAssetRoutes } from "../../../../kfc-web-runtime/src/ui-routes.js";
+import { registerPublicAssetRoutes } from "../../../../kfc-web-runtime/dist/ui-routes.js";
 import { buildPlanPageModel } from "../page-config.js";
 
 const PUBLIC_DIR = resolvePublicDir();
@@ -14,3 +14,4 @@ export function registerUiRoutes(fastify: any, options: { uiMode?: "observer" | 
     return await renderView("index", buildPlanPageModel({ uiMode }));
   });
 }
+

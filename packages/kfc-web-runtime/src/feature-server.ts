@@ -1,10 +1,19 @@
 import Fastify from "fastify";
 
-function resolvePort(address, fallbackPort) {
+type FeatureServerOptions = {
+  host?: string;
+  port?: number;
+  setup?: (fastify: any) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
+  onBeforeReady?: (context: { fastify: any; feature: Record<string, unknown>; host: string; port: number }) => Promise<void> | void;
+  onAfterListen?: (context: { fastify: any; feature: Record<string, unknown>; host: string; port: number }) => Promise<Record<string, unknown> | void> | Record<string, unknown> | void;
+  onAfterClose?: (context: { fastify: any; feature: Record<string, unknown>; host: string; port: number }) => Promise<void> | void;
+};
+
+function resolvePort(address: unknown, fallbackPort: number) {
   return address && typeof address === "object" && "port" in address ? Number(address.port) : Number(fallbackPort);
 }
 
-export async function createFeatureServer(options = {}) {
+export async function createFeatureServer(options: FeatureServerOptions = {}) {
   const host = String(options.host || "127.0.0.1");
   const port = Number(options.port || 0);
   const fastify = Fastify({ logger: false });
