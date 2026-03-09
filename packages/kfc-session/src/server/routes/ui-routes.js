@@ -2,9 +2,7 @@ import { resolvePublicDir } from "../runtime-paths.js";
 import { renderView } from "../view-render.js";
 import { registerPublicAssetRoutes } from "../../../../kfc-web-runtime/src/ui-routes.js";
 import {
-  buildFontLinks,
-  normalizeScriptHrefs,
-  normalizeStyleHrefs
+  buildBrowserPageModel
 } from "../../../../kfc-web-runtime/src/browser-entry.js";
 
 const PUBLIC_DIR = resolvePublicDir();
@@ -14,14 +12,18 @@ export function registerUiRoutes(fastify, options = {}) {
 
   fastify.get("/", async (_request, reply) => {
     return reply.type("text/html; charset=utf-8").send(
-      await renderView("index", {
-        title: "KFC Session",
-        apiBase: "/api/sessions",
-        sessionsRootLabel: options.sessionsRoot || "",
-        fontLinks: buildFontLinks(true),
-        scriptHrefsNormalized: normalizeScriptHrefs(undefined, "/assets/kfc-session.js"),
-        styleHrefsNormalized: normalizeStyleHrefs(undefined, "/assets/kfc-session.css")
-      })
+      await renderView(
+        "index",
+        buildBrowserPageModel({
+          title: "KFC Session",
+          apiBase: "/api/sessions",
+          fallbackStyleHref: "/assets/kfc-session.css",
+          fallbackScriptHref: "/assets/kfc-session.js",
+          extra: {
+            sessionsRootLabel: options.sessionsRoot || ""
+          }
+        })
+      )
     );
   });
 }

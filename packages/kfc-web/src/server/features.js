@@ -1,11 +1,7 @@
 import path from "node:path";
 import { createTemplateRenderer } from "./template-render.js";
 import {
-  buildFontLinks,
-  buildImportMap,
-  normalizeScriptHrefs,
-  normalizeStyleHrefs,
-  stringifyImportMap
+  buildBrowserPageModel
 } from "../../../kfc-web-runtime/src/browser-entry.js";
 
 function projectNameFromDir(projectDir) {
@@ -20,24 +16,23 @@ export function createFeatureDefinitions(context) {
       navLabel: "Plan",
       entryName: "plan",
       render: context.renderPlan,
-      buildViewModel: ({ assets }) => ({
-        title: "KamiFlow Plan Review",
-        uiMode: "observer",
-        apiBase: "/api",
-        fontLinks: buildFontLinks(true),
-        scriptHrefsNormalized: normalizeScriptHrefs(assets.scripts, "/assets/app.js"),
-        styleHrefsNormalized: normalizeStyleHrefs(assets.styles, "/assets/styles.css"),
-        importMapJson: stringifyImportMap(
-          buildImportMap({
+      buildViewModel: ({ assets }) =>
+        buildBrowserPageModel({
+          title: "KamiFlow Plan Review",
+          apiBase: "/api",
+          assets,
+          fallbackStyleHref: "/assets/styles.css",
+          fallbackScriptHref: "/assets/app.js",
+          importMapOptions: {
             preact: true,
             preactHooks: true,
             jsxRuntime: true,
             signals: true,
             webUi: true,
             lucide: true
-          })
-        )
-      }),
+          },
+          extra: { uiMode: "observer" }
+        }),
       mount: (implementations, fastify) =>
         implementations.plan(fastify, {
           projectDir: context.projectDir,
@@ -52,14 +47,15 @@ export function createFeatureDefinitions(context) {
       navLabel: "Session",
       entryName: "session",
       render: context.renderSession,
-      buildViewModel: ({ assets }) => ({
-        title: "KFC Session",
-        sessionsRootLabel: "~/.codex/sessions",
-        fontLinks: buildFontLinks(true),
-        scriptHrefsNormalized: normalizeScriptHrefs(assets.scripts, "/assets/kfc-session.js"),
-        styleHrefsNormalized: normalizeStyleHrefs(assets.styles, "/assets/kfc-session.css"),
-        apiBase: "/api/sessions"
-      }),
+      buildViewModel: ({ assets }) =>
+        buildBrowserPageModel({
+          title: "KFC Session",
+          apiBase: "/api/sessions",
+          assets,
+          fallbackStyleHref: "/assets/kfc-session.css",
+          fallbackScriptHref: "/assets/kfc-session.js",
+          extra: { sessionsRootLabel: "~/.codex/sessions" }
+        }),
       mount: (implementations, fastify) =>
         implementations.session(fastify, {
           mountUi: false,
@@ -73,24 +69,25 @@ export function createFeatureDefinitions(context) {
       navLabel: "Chat",
       entryName: "chat",
       render: context.renderChat,
-      buildViewModel: ({ assets }) => ({
-        title: "KFC Chat",
-        projectName: projectNameFromDir(context.projectDir),
-        projectDir: context.projectDir,
-        apiBase: "/api/chat",
-        wsPath: "/ws",
-        fontLinks: buildFontLinks(true),
-        scriptHrefsNormalized: normalizeScriptHrefs(assets.scripts, "/assets/kfc-chat.js"),
-        styleHrefsNormalized: normalizeStyleHrefs(assets.styles, "/assets/kfc-chat.css"),
-        importMapJson: stringifyImportMap(
-          buildImportMap({
+      buildViewModel: ({ assets }) =>
+        buildBrowserPageModel({
+          title: "KFC Chat",
+          apiBase: "/api/chat",
+          assets,
+          fallbackStyleHref: "/assets/kfc-chat.css",
+          fallbackScriptHref: "/assets/kfc-chat.js",
+          importMapOptions: {
             preact: true,
             jsxRuntime: true,
             signals: true,
             webUi: true
-          })
-        )
-      }),
+          },
+          extra: {
+            projectName: projectNameFromDir(context.projectDir),
+            projectDir: context.projectDir,
+            wsPath: "/ws"
+          }
+        }),
       mount: (implementations, fastify) =>
         implementations.chat(fastify, {
           projectDir: context.projectDir,

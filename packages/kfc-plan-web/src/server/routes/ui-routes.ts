@@ -2,11 +2,7 @@ import { renderView } from "../view-render.js";
 import { resolvePublicDir } from "../runtime-paths.js";
 import { registerPublicAssetRoutes } from "../../../../kfc-web-runtime/src/ui-routes.js";
 import {
-  buildFontLinks,
-  buildImportMap,
-  normalizeScriptHrefs,
-  normalizeStyleHrefs,
-  stringifyImportMap
+  buildBrowserPageModel
 } from "../../../../kfc-web-runtime/src/browser-entry.js";
 
 const PUBLIC_DIR = resolvePublicDir();
@@ -17,24 +13,23 @@ export function registerUiRoutes(fastify: any, options: { uiMode?: "observer" | 
 
   fastify.get("/", async (_request, reply) => {
     reply.type("text/html");
-    return await renderView("index", {
-      title: "KamiFlow Plan UI",
-      uiMode,
-      apiBase: "/api"
-      ,
-      fontLinks: buildFontLinks(true),
-      styleHrefsNormalized: normalizeStyleHrefs(undefined, "/assets/styles.css"),
-      scriptHrefsNormalized: normalizeScriptHrefs(undefined, "/assets/app.js"),
-      importMapJson: stringifyImportMap(
-        buildImportMap({
+    return await renderView(
+      "index",
+      buildBrowserPageModel({
+        title: "KamiFlow Plan UI",
+        apiBase: "/api",
+        fallbackStyleHref: "/assets/styles.css",
+        fallbackScriptHref: "/assets/app.js",
+        importMapOptions: {
           preact: true,
           preactHooks: true,
           jsxRuntime: true,
           signals: true,
           webUi: true,
           lucide: true
-        })
-      )
-    });
+        },
+        extra: { uiMode }
+      })
+    );
   });
 }

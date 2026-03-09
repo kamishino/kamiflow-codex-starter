@@ -4,23 +4,10 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= it.title || 'KFC Session' %></title>
-  <% if (it.fontLinks && it.fontLinks.length) { %>
-    <% it.fontLinks.forEach(function (link) { %>
-      <link rel="<%= link.rel %>" href="<%= link.href %>"<% if (link.crossorigin) { %> crossorigin<% } %> />
-    <% }) %>
-  <% } %>
-  <% if (it.styleHrefsNormalized && it.styleHrefsNormalized.length) { %>
-    <% it.styleHrefsNormalized.forEach(function (href) { %>
-      <link rel="stylesheet" href="<%= href %>" />
-    <% }) %>
-  <% } %>
+  <%~ it.headAssetHtml || "" %>
 </head>
 <body data-api-base="<%= it.apiBase || '/api/sessions' %>">
   <div id="app-root" data-sessions-root-label="<%= it.sessionsRootLabel || '~/.codex/sessions' %>"></div>
-  <% if (it.scriptHrefsNormalized && it.scriptHrefsNormalized.length) { %>
-    <% it.scriptHrefsNormalized.forEach(function (href) { %>
-      <script src="<%= href %>" type="module"></script>
-    <% }) %>
-  <% } %>
+  <%~ it.moduleScriptHtml || "" %>
 </body>
 </html>

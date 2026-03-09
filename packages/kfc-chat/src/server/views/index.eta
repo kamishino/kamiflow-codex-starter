@@ -4,19 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title><%= it.title %></title>
-  <% if (it.fontLinks && it.fontLinks.length) { %>
-    <% it.fontLinks.forEach(function (link) { %>
-      <link rel="<%= link.rel %>" href="<%= link.href %>"<% if (link.crossorigin) { %> crossorigin<% } %> />
-    <% }) %>
-  <% } %>
-  <% if (it.styleHrefsNormalized && it.styleHrefsNormalized.length) { %>
-    <% it.styleHrefsNormalized.forEach(function (href) { %>
-      <link rel="stylesheet" href="<%= href %>" />
-    <% }) %>
-  <% } %>
-  <% if (it.importMapJson) { %>
-  <script type="importmap"><%~ it.importMapJson %></script>
-  <% } %>
+  <%~ it.headAssetHtml || "" %>
 </head>
 <body>
   <div id="app-root"
@@ -24,10 +12,6 @@
     data-project-dir="<%= it.projectDir %>"
     data-api-base="<%= it.apiBase || '/api/chat' %>"
     data-ws-path="<%= it.wsPath || '/ws' %>"></div>
-  <% if (it.scriptHrefsNormalized && it.scriptHrefsNormalized.length) { %>
-    <% it.scriptHrefsNormalized.forEach(function (href) { %>
-      <script src="<%= href %>" type="module"></script>
-    <% }) %>
-  <% } %>
+  <%~ it.moduleScriptHtml || "" %>
 </body>
 </html>

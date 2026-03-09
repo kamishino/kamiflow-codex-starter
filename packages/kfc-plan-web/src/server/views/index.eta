@@ -30,19 +30,7 @@
       document.documentElement.style.colorScheme = resolved;
     })();
   </script>
-  <% if (it.fontLinks && it.fontLinks.length) { %>
-    <% it.fontLinks.forEach(function (link) { %>
-      <link rel="<%= link.rel %>" href="<%= link.href %>"<% if (link.crossorigin) { %> crossorigin<% } %> />
-    <% }) %>
-  <% } %>
-  <% if (it.styleHrefsNormalized && it.styleHrefsNormalized.length) { %>
-    <% it.styleHrefsNormalized.forEach(function (href) { %>
-      <link rel="stylesheet" href="<%= href %>" />
-    <% }) %>
-  <% } %>
-  <% if (it.importMapJson) { %>
-  <script type="importmap"><%~ it.importMapJson %></script>
-  <% } %>
+  <%~ it.headAssetHtml || "" %>
 </head>
 <body data-ui-mode="<%= it.uiMode || 'observer' %>">
   <div class="app-shell">
@@ -137,10 +125,6 @@
       </aside>
     </div>
   </div>
-  <% if (it.scriptHrefsNormalized && it.scriptHrefsNormalized.length) { %>
-    <% it.scriptHrefsNormalized.forEach(function (href) { %>
-      <script src="<%= href %>" type="module"></script>
-    <% }) %>
-  <% } %>
+  <%~ it.moduleScriptHtml || "" %>
 </body>
 </html>

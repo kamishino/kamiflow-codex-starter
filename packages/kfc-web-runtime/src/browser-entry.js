@@ -7,6 +7,49 @@ const COMMON_FONT_LINKS = [
   }
 ];
 
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;");
+}
+
+function renderFontLinksHtml(fontLinks) {
+  return fontLinks
+    .map((link) => {
+      const crossorigin = link.crossorigin ? " crossorigin" : "";
+      return `<link rel="${escapeHtml(link.rel)}" href="${escapeHtml(link.href)}"${crossorigin} />`;
+    })
+    .join("\n");
+}
+
+function renderStylesheetLinksHtml(styleHrefs) {
+  return styleHrefs.map((href) => `<link rel="stylesheet" href="${escapeHtml(href)}" />`).join("\n");
+}
+
+function renderImportMapHtml(importMapJson) {
+  return importMapJson ? `<script type="importmap">${importMapJson}</script>` : "";
+}
+
+function renderModuleScriptsHtml(scriptHrefs) {
+  return scriptHrefs.map((href) => `<script src="${escapeHtml(href)}" type="module"></script>`).join("\n");
+}
+
+export function buildBrowserAssetHtml(options = {}) {
+  const { fontLinks = [], styleHrefsNormalized = [], scriptHrefsNormalized = [], importMapJson = "" } = options;
+  const headParts = [
+    fontLinks.length > 0 ? renderFontLinksHtml(fontLinks) : "",
+    styleHrefsNormalized.length > 0 ? renderStylesheetLinksHtml(styleHrefsNormalized) : "",
+    renderImportMapHtml(importMapJson)
+  ].filter(Boolean);
+
+  return {
+    headAssetHtml: headParts.join("\n"),
+    moduleScriptHtml: scriptHrefsNormalized.length > 0 ? renderModuleScriptsHtml(scriptHrefsNormalized) : ""
+  };
+}
+
 export function buildFontLinks(enabled = true) {
   return enabled ? COMMON_FONT_LINKS.map((item) => ({ ...item })) : [];
 }
@@ -47,4 +90,39 @@ export function buildImportMap(options = {}) {
 
 export function stringifyImportMap(importMap) {
   return importMap ? JSON.stringify(importMap, null, 2) : "";
+}
+
+export function buildBrowserPageModel(options = {}) {
+  const {
+    title,
+    apiBase,
+    assets = null,
+    fallbackStyleHref,
+    fallbackScriptHref,
+    importMapOptions = null,
+    includeFonts = true,
+    extra = {}
+  } = options;
+
+  const fontLinks = buildFontLinks(includeFonts);
+  const styleHrefsNormalized = normalizeStyleHrefs(assets?.styles, fallbackStyleHref);
+  const scriptHrefsNormalized = normalizeScriptHrefs(assets?.scripts, fallbackScriptHref);
+  const importMapJson = stringifyImportMap(buildImportMap(importMapOptions || {}));
+  const assetHtml = buildBrowserAssetHtml({
+    fontLinks,
+    styleHrefsNormalized,
+    scriptHrefsNormalized,
+    importMapJson
+  });
+
+  return {
+    title,
+    apiBase,
+    fontLinks,
+    styleHrefsNormalized,
+    scriptHrefsNormalized,
+    importMapJson,
+    ...assetHtml,
+    ...extra
+  };
 }
