@@ -1,21 +1,14 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { writeRequiredHookLaunchers } from "./hook-launchers.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../..");
 const HOOKS_PATH_VALUE = ".githooks";
-const REQUIRED_HOOK_FILES = ["commit-msg", "post-merge"].map((name) =>
-  path.join(ROOT_DIR, ".githooks", name)
-);
+const REQUIRED_HOOK_FILES = writeRequiredHookLaunchers(ROOT_DIR);
 const gitConfigPath = resolveGitConfigPath(ROOT_DIR);
-
-for (const hookFile of REQUIRED_HOOK_FILES) {
-  if (!fs.existsSync(hookFile)) {
-    throw new Error(`Missing hook file: ${hookFile}`);
-  }
-}
 
 const existingConfig = fs.readFileSync(gitConfigPath, "utf8");
 const updatedConfig = setHooksPath(existingConfig, HOOKS_PATH_VALUE);
