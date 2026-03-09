@@ -9,6 +9,10 @@ function shellHtml({ title, body }) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>${title}</title><style>body{margin:0;font-family:"Work Sans",system-ui,sans-serif;background:#f7f4ef;color:#1f1a14}.shell{padding:24px;display:grid;gap:24px}.nav{display:flex;gap:12px;flex-wrap:wrap}.nav a{padding:10px 14px;border:1px solid #d8cfc1;border-radius:999px;text-decoration:none;color:#1f1a14;background:#fff}.nav a:hover{border-color:#8d7156}.lede{color:#655646;margin:0}</style></head><body>${body}</body></html>`;
 }
 
+function shellNav(features) {
+  return features.map((feature) => `<a href="/${feature.slug}">${feature.navLabel}</a>`).join("");
+}
+
 function resolveRepoRoot(packageDir) {
   return path.resolve(packageDir, "..", "..");
 }
@@ -67,6 +71,86 @@ async function loadBuiltInFeatureImplementations(repoRoot) {
   };
 }
 
+function createFeatureDefinitions(context) {
+  return [
+    {
+      key: "plan",
+      slug: "plan",
+      navLabel: "Plan",
+      entryName: "plan",
+      render: context.renderPlan,
+      buildViewModel: ({ assets }) => ({
+        title: "KamiFlow Plan Review",
+        uiMode: "observer",
+        apiBase: "/api",
+        scriptHrefs: assets.scripts,
+        styleHrefs: assets.styles
+      }),
+      mount: (implementations, fastify) =>
+        implementations.plan(fastify, {
+          projectDir: context.projectDir,
+          uiMode: "observer",
+          mountUi: false,
+          workspaceName: "KFC Web"
+        })
+    },
+    {
+      key: "session",
+      slug: "session",
+      navLabel: "Session",
+      entryName: "session",
+      render: context.renderSession,
+      buildViewModel: ({ assets }) => ({
+        title: "KFC Session",
+        sessionsRootLabel: "~/.codex/sessions",
+        scriptHrefs: assets.scripts,
+        styleHrefs: assets.styles,
+        apiBase: "/api/sessions"
+      }),
+      mount: (implementations, fastify) =>
+        implementations.session(fastify, {
+          mountUi: false,
+          mountHealth: false,
+          sessionsRoot: context.sessionsRoot
+        })
+    },
+    {
+      key: "chat",
+      slug: "chat",
+      navLabel: "Chat",
+      entryName: "chat",
+      render: context.renderChat,
+      buildViewModel: ({ assets }) => ({
+        title: "KFC Chat",
+        projectName: projectNameFromDir(context.projectDir),
+        projectDir: context.projectDir,
+        apiBase: "/api/chat",
+        wsPath: "/ws",
+        scriptHrefs: assets.scripts,
+        styleHrefs: assets.styles
+      }),
+      mount: (implementations, fastify) =>
+        implementations.chat(fastify, {
+          projectDir: context.projectDir,
+          projectName: projectNameFromDir(context.projectDir),
+          host: context.host,
+          port: context.port,
+          mountUi: false
+        })
+    }
+  ];
+}
+
+function registerFeaturePages(fastify, features, featureAssets) {
+  for (const feature of features) {
+    fastify.get(`/${feature.slug}`, async (_request, reply) => {
+      const assets = featureAssets(feature.entryName);
+      reply.type("text/html; charset=utf-8");
+      return await feature.render(feature.buildViewModel({ assets }));
+    });
+  }
+}
+
 export async function createKfcWebServer(options = {}) {
   const mode = options.mode === "dev" ? "dev" : "serve";
   const host = String(options.host || "127.0.0.1");
@@ -83,6 +167,16 @@ export async function createKfcWebServer(options = {}) {
   const renderPlan = createTemplateRenderer(path.resolve(repoRoot, "packages", "kfc-plan-web", "src", "server", "views", "index.eta"));
   const renderChat = createTemplateRenderer(path.resolve(repoRoot, "packages", "kfc-chat", "src", "server", "views", "index.eta"));
   const renderSession = createTemplateRenderer(path.resolve(repoRoot, "packages", "kfc-session", "src", "server", "views", "index.eta"));
+  const features = createFeatureDefinitions({
+    renderPlan,
+    renderChat,
+    renderSession,
+    projectDir,
+    sessionsRoot: options.sessionsRoot,
+    host,
+    port
+  });
+  const featureBySlug = new Map(features.map((feature) => [feature.slug, feature]));
 
   async function startAssets() {
     if (mode === "dev") {
@@ -107,26 +201,11 @@ export async function createKfcWebServer(options = {}) {
 
   async function startFeatures(fastify) {
     const implementations = options.featureImplementations || await loadBuiltInFeatureImplementations(repoRoot);
-    featureHandles = {
-      plan: await implementations.plan(fastify, {
-        projectDir,
-        uiMode: "observer",
-        mountUi: false,
-        workspaceName: "KFC Web"
-      }),
-      session: await implementations.session(fastify, {
-        mountUi: false,
-        mountHealth: false,
-        sessionsRoot: options.sessionsRoot
-      }),
-      chat: await implementations.chat(fastify, {
-        projectDir,
-        projectName: projectNameFromDir(projectDir),
-        host,
-        port,
-        mountUi: false
-      })
-    };
+    featureHandles = Object.fromEntries(
+      await Promise.all(
+        features.map(async (feature) => [feature.key, await feature.mount(implementations, fastify)])
+      )
+    );
   }
 
   return await createFeatureServer({
@@ -134,52 +213,15 @@ export async function createKfcWebServer(options = {}) {
     port,
     setup: async (fastify) => {
       fastify.get("/", async (_request, reply) => {
-        if (focus === "plan" || focus === "session" || focus === "chat") {
+        if (featureBySlug.has(focus)) {
           return reply.redirect(`/${focus}`);
         }
         return reply.type("text/html; charset=utf-8").send(shellHtml({
           title: "KFC Web",
-          body: `<div class="shell"><div><h1>KFC Web</h1><p class="lede">Unified KFC web shell for plan, session, and chat.</p></div><nav class="nav"><a href="/plan">Plan</a><a href="/session">Session</a><a href="/chat">Chat</a></nav></div>`
+          body: `<div class="shell"><div><h1>KFC Web</h1><p class="lede">Unified KFC web shell for plan, session, and chat.</p></div><nav class="nav">${shellNav(features)}</nav></div>`
         }));
       });
-
-      fastify.get("/plan", async (_request, reply) => {
-        const assets = featureAssets("plan");
-        reply.type("text/html; charset=utf-8");
-        return await renderPlan({
-          title: "KamiFlow Plan Review",
-          uiMode: "observer",
-          apiBase: "/api",
-          scriptHrefs: assets.scripts,
-          styleHrefs: assets.styles
-        });
-      });
-
-      fastify.get("/chat", async (_request, reply) => {
-        const assets = featureAssets("chat");
-        reply.type("text/html; charset=utf-8");
-        return await renderChat({
-          title: "KFC Chat",
-          projectName: projectNameFromDir(projectDir),
-          projectDir,
-          apiBase: "/api/chat",
-          wsPath: "/ws",
-          scriptHrefs: assets.scripts,
-          styleHrefs: assets.styles
-        });
-      });
-
-      fastify.get("/session", async (_request, reply) => {
-        const assets = featureAssets("session");
-        reply.type("text/html; charset=utf-8");
-        return await renderSession({
-          title: "KFC Session",
-          sessionsRootLabel: "~/.codex/sessions",
-          scriptHrefs: assets.scripts,
-          styleHrefs: assets.styles,
-          apiBase: "/api/sessions"
-        });
-      });
+      registerFeaturePages(fastify, features, featureAssets);
 
       if (mode === "serve") {
         fastify.get("/assets/*", async (request, reply) => {
