@@ -1,6 +1,6 @@
 import { WebSocketServer } from "ws";
-import { runCodexResumeAction } from "../../../../src/lib/codex-runner.js";
-import { resolveRevealTargetPath, revealPath as sharedRevealPath } from "../../../../src/lib/session-actions.js";
+import { runCodexResumeAction } from "../../../../dist/lib/codex-runner.js";
+import { resolveRevealTargetPath, revealPath as sharedRevealPath } from "../../../../dist/lib/session-actions.js";
 import { createFeatureServer } from "../../../kfc-web-runtime/dist/feature-server.js";
 import {
   appendTranscriptEntry,

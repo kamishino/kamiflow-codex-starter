@@ -1,7 +1,7 @@
 import {
   revealPath as sharedRevealPath,
   resolveRevealTargetPath
-} from "../../../../src/lib/session-actions.js";
+} from "../../../../dist/lib/session-actions.js";
 import { resolveBoundSession } from "../lib/chat-state.js";
 
 export async function runReveal(parsed: any, deps: Record<string, any> = {}) {

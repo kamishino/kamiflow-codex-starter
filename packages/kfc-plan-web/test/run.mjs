@@ -588,7 +588,7 @@ await runCase("detectProjectRoot prefers git root then package then cwd", async 
 
 await runCase("project skill sync writes kamiflow-core runtime artifact", async () => {
   const repoRoot = path.resolve(__dirname, "../../..");
-  const syncModule = await import(pathToFileURL(path.join(repoRoot, "src/lib/skill-sync.js")).href);
+  const syncModule = await import(pathToFileURL(path.join(repoRoot, "dist/lib/skill-sync.js")).href);
 
   await withTempDir(async (tempDir) => {
     const targetDir = path.join(tempDir, ".agents", "skills");

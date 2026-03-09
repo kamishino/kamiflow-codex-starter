@@ -8,6 +8,11 @@ const ROOT_DIR = path.resolve(__dirname, "../..");
 
 const TS_FIRST_RULES = [
   {
+    area: "src",
+    root: "src",
+    allow: new Set()
+  },
+  {
     area: "packages/kfc-plan-web/src",
     root: "packages/kfc-plan-web/src",
     allow: new Set(["server/page-config.js"])

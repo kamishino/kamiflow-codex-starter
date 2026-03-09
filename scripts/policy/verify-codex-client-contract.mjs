@@ -30,7 +30,7 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "plan touch cadence", regex: /Touch active plan markdown at route start and before final response/i },
     { label: "smart recovery guidance", regex: /smart-recovery cycle/i }
   ],
-  "src/commands/client.js": [
+  "src/commands/client.ts": [
     { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
     { label: "structured onboarding error code output", regex: /Error Code:/ },
     { label: "smart recovery execution", regex: /smart recovery cycle/i },
@@ -45,7 +45,7 @@ const TARGET_FILES = [
   "resources/docs/QUICKSTART.md",
   "resources/docs/CLIENT_KICKOFF_PROMPT.md",
   "resources/docs/CLIENT_A2Z_PLAYBOOK.md",
-  "src/commands/client.js"
+  "src/commands/client.ts"
 ];
 
 function verifyFile(relPath) {

@@ -2,7 +2,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { buildInteractiveResumeCommand } from "../../../src/lib/session-actions.js";
+import { buildInteractiveResumeCommand } from "../../../dist/lib/session-actions.js";
 
 let fixtureWriteTick = 0;
 

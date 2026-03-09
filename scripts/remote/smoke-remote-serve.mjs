@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
-import { createRemoteServer } from "../../src/lib/remote-server.js";
+import { createRemoteServer } from "../../dist/lib/remote-server.js";
 
 const PROJECT_DIR = path.resolve("temp/remote-smoke");
 const PLAN_ID = "PLAN-REMOTE-SMOKE-001";
