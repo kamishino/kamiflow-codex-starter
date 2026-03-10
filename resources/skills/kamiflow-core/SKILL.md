@@ -30,7 +30,7 @@ Pick mode before executing route logic:
 7. Load only the matched route reference file.
 8. Produce output in that route's required shape.
 9. Provide concise next-step guidance when helpful; persist command/mode handoff in plan metadata.
-10. Persist route continuity before route transitions:
+10. Evaluate transition via shared policy (`evaluateRouteTransition`) and persist continuity before route transitions:
    - `route_confidence` (`1`-`5`)
    - `flow_guardrail` (`route_alignment`, `mode_guard`, `readiness_gate`, `readiness_pass`, `transition_guard`, `execution`, `loop_guard`)
    - `WIP Log` (`Status`, `Blockers`, `Next step`)

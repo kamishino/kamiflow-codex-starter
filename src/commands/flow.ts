@@ -10,10 +10,9 @@ import {
   buildPhaseDigest,
   evaluateArchiveGate,
   evaluateBuildReadiness as evaluateBuildReadinessFromLifecycle,
-  toNextAction as toNextActionFromLifecycle,
-  normalizeBlockers as normalizeBlockersFromLifecycle,
-  toIsoTimestamp as toIsoTimestampFromLifecycle,
+  toNextAction as toNextActionFromLifecycle
 } from "../lib/plan-lifecycle.js";
+import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../lib/flow-policy.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -379,23 +378,15 @@ async function persistReadinessBlock(planRecord, reason, findings = []) {
   if (!raw) {
     return false;
   }
+  const payload = buildReadinessBlockPayload(reason, findings);
 
   const next = applyLifecycleMutation(raw, {
+    ...payload,
     frontmatter: {
+      ...payload.frontmatter,
+      updated_at: new Date().toISOString(),
       decision: "NO_GO",
-      status: "in_progress",
-      lifecycle_phase: "build",
-      selected_mode: "Build",
-      next_command: "plan",
-      next_mode: "Plan",
-      route_confidence: "2",
-      flow_guardrail: "readiness_gate",
-      updated_at: toIsoTimestampFromLifecycle()
-    },
-    wip: {
-      status: "Blocked at build-readiness gate",
-      blockers: normalizeBlockersFromLifecycle(reason, findings),
-      next_step: "Run $kamiflow-core plan to resolve blockers, then rerun $kamiflow-core build."
+      status: "in_progress"
     }
   });
 
@@ -412,19 +403,13 @@ async function persistReadinessReady(planRecord) {
   if (!raw) {
     return false;
   }
+  const payload = buildReadinessReadyPayload();
 
   const next = applyLifecycleMutation(raw, {
+    ...payload,
     frontmatter: {
-      lifecycle_phase: "build",
-      selected_mode: "Build",
-      route_confidence: "5",
-      flow_guardrail: "readiness_pass",
-      updated_at: toIsoTimestampFromLifecycle()
-    },
-    wip: {
-      status: "Build-readiness gate passed",
-      blockers: "None",
-      next_step: "Run $kamiflow-core build and execute one concrete task slice."
+      ...payload.frontmatter,
+      updated_at: new Date().toISOString()
     }
   });
 

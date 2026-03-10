@@ -10,10 +10,10 @@ import { runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 import { error, info } from "../lib/logger.js";
 import {
   applyLifecycleMutation,
-  evaluateRoutePreflight,
   normalizeBlockers,
   toIsoTimestamp
 } from "../lib/plan-lifecycle.js";
+import { buildPreflightFailureContinuity, evaluateRouteTransition } from "../lib/flow-policy.js";
 import { runFlow } from "./flow.js";
 
 const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "research"]);
@@ -438,20 +438,24 @@ export async function runWorkflow(options) {
       return 0;
     }
 
-    const preflight = evaluateRoutePreflight(activePlan, currentRoute);
+    const preflight = evaluateRouteTransition(activePlan, currentRoute);
     if (!preflight.ok) {
-      await persistPlanRunContinuity(activePlan, {
-        route: currentRoute,
-        route_confidence: preflight.route_confidence,
-        flow_guardrail: preflight.guardrail || "transition_guard",
-        wip_status: preflight.route_confidence < 4 ? "Reroute needed" : "Blocked by guardrail",
-        wip_blockers: normalizeBlockers("Flow guardrail blocked", [
-          preflight.reason || "",
-          preflight.recovery || ""
-        ]),
-        next_step: preflight.fallback_route
+      const failureContinuity = buildPreflightFailureContinuity(currentRoute, preflight, {
+        nextStep: preflight.fallback_route
           ? `Expected route: ${preflight.fallback_route}`
           : "Align plan handoff in plan frontmatter then rerun."
+      });
+      await persistPlanRunContinuity(activePlan, {
+        route: currentRoute,
+        route_confidence: Number(failureContinuity.frontmatter.route_confidence),
+        flow_guardrail: failureContinuity.frontmatter.flow_guardrail,
+        selected_mode: failureContinuity.frontmatter.selected_mode,
+        lifecycle_phase: failureContinuity.frontmatter.lifecycle_phase,
+        next_mode: failureContinuity.frontmatter.next_mode,
+        next_command: failureContinuity.frontmatter.next_command,
+        wip_status: failureContinuity.wip.status,
+        wip_blockers: failureContinuity.wip.blockers,
+        next_step: failureContinuity.wip.next_step
       });
 
       if (preflight.route_confidence < 4 && preflight.fallback_route && preflight.fallback_route !== currentRoute) {

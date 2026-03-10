@@ -26,6 +26,7 @@ When rerouting, return:
 
 - `route_confidence` is the route certainty score written before execution (`1` to `5`).
 - `flow_guardrail` is the guardrail reason used when rerouting or blocking (for example: `route_alignment`, `mode_guard`, `readiness_gate`, `readiness_pass`, `transition_guard`, `execution`, `loop_guard`).
+- The policy calculation is centralized in `src/lib/flow-policy.ts` and surfaced by `evaluateRoutePreflight`.
 - If a reroute is triggered due low confidence, persist `check` or `plan` metadata in the plan file before changing route.
 
 Select exactly one route:
