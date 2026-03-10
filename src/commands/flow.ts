@@ -10,9 +10,9 @@ import {
   buildPhaseDigest,
   evaluateArchiveGate,
   evaluateBuildReadiness as evaluateBuildReadinessFromLifecycle,
+  toNextAction as toNextActionFromLifecycle,
   normalizeBlockers as normalizeBlockersFromLifecycle,
   toIsoTimestamp as toIsoTimestampFromLifecycle,
-  toNextAction as toNextActionFromLifecycle
 } from "../lib/plan-lifecycle.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -384,9 +384,12 @@ async function persistReadinessBlock(planRecord, reason, findings = []) {
     frontmatter: {
       decision: "NO_GO",
       status: "in_progress",
+      lifecycle_phase: "build",
       selected_mode: "Build",
       next_command: "plan",
       next_mode: "Plan",
+      route_confidence: "2",
+      flow_guardrail: "readiness_gate",
       updated_at: toIsoTimestampFromLifecycle()
     },
     wip: {
@@ -412,7 +415,10 @@ async function persistReadinessReady(planRecord) {
 
   const next = applyLifecycleMutation(raw, {
     frontmatter: {
+      lifecycle_phase: "build",
       selected_mode: "Build",
+      route_confidence: "5",
+      flow_guardrail: "readiness_pass",
       updated_at: toIsoTimestampFromLifecycle()
     },
     wip: {
@@ -900,4 +906,5 @@ async function runNext(options, args) {
   console.log(`Next Mode: ${payload.next_mode}`);
   return 0;
 }
+
 

@@ -30,6 +30,10 @@ Pick mode before executing route logic:
 7. Load only the matched route reference file.
 8. Produce output in that route's required shape.
 9. Provide concise next-step guidance when helpful; persist command/mode handoff in plan metadata.
+10. Persist route continuity before route transitions:
+   - `route_confidence` (`1`-`5`)
+   - `flow_guardrail` (`route_alignment`, `mode_guard`, `readiness_gate`, `readiness_pass`, `transition_guard`, `execution`, `loop_guard`)
+   - `WIP Log` (`Status`, `Blockers`, `Next step`)
 
 ## Route Confidence Gate
 
@@ -205,4 +209,3 @@ When current mode is incompatible, output:
 - Verbose response footers are optional.
 - Route handoff state is authoritative in plan markdown (`selected_mode`, `next_command`, `next_mode`, `lifecycle_phase`, `updated_at`).
 - Prefer one concise next-step sentence in user-facing output when it improves clarity.
-

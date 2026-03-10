@@ -63,7 +63,7 @@ This route should leave no major ambiguity for the build phase.
    - `next_command: build`
    - `next_mode: Build`
 18. Persist plan phase/handoff update by direct markdown mutation:
-   - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`
+   - frontmatter: `lifecycle_phase: plan`, `selected_mode: Plan`, `decision`, `next_command`, `next_mode`, `updated_at`, `route_confidence`, `flow_guardrail`
    - sections: keep Technical Solution Diagram aligned when `diagram_mode: required` (or when the section already exists)
    - `WIP Log`: `Status`, `Blockers`, `Next step`
 19. Resolve next-step narrative from mutated frontmatter and checklist state.
@@ -103,4 +103,3 @@ When ready, ensure handoff fields are persisted in plan frontmatter (`decision: 
 - Ready output includes `decision: GO`, `next_command: build`, and `next_mode: Build`.
 - Plan file is mutated directly before response is returned.
 - Handoff metadata is persisted in plan frontmatter.
-

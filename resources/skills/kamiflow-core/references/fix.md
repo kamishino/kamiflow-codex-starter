@@ -35,7 +35,7 @@ Use this route for focused issue resolution with minimal scope.
 8. Validate fix with targeted checks.
 9. Note regression risk.
 10. Persist fix/build progress via direct markdown mutation:
-   - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
+   - frontmatter: `lifecycle_phase: fix`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`, `route_confidence`, `flow_guardrail`
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - during multi-step fixes, after each completed task/subtask update checklist + timestamped WIP evidence before the next subtask
 11. If evidence is missing for any claim, mark the claim as `Unknown` and do not assert resolution.

@@ -19,7 +19,7 @@ Use this route for quality verification and release-readiness decisions.
 4. Map each validation command to its outcome.
 5. Decide pass or block.
 6. Persist check decision by direct markdown mutation:
-   - set frontmatter: `lifecycle_phase: check`, `selected_mode`, `decision`, `status`, `next_command`, `next_mode`, `updated_at`
+   - set frontmatter: `lifecycle_phase: check`, `selected_mode`, `decision`, `status`, `next_command`, `next_mode`, `updated_at`, `route_confidence`, `flow_guardrail`
    - update `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 7. Apply archive gate:
    - if result is `PASS` and completion is 100% (Implementation Tasks + Acceptance Criteria fully checked):

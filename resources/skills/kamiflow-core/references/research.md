@@ -24,7 +24,7 @@ Use this route when missing facts or high risk would make execution unsafe.
    - emit `IDEATION_CONTEXT` ... `END_IDEATION_CONTEXT` block for downstream `start`/`plan`.
    - default depth is Balanced unless user explicitly asks for quick/deep.
 7. Persist handoff phase by direct markdown mutation:
-   - set frontmatter: `lifecycle_phase: research`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`
+   - set frontmatter: `lifecycle_phase: research`, `selected_mode: Plan`, `next_command`, `next_mode`, `updated_at`, `route_confidence`, `flow_guardrail`
    - update `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 8. Resolve next-step narrative from mutated state.
 9. End with concise next-step guidance; do not require verbose response footer fields.

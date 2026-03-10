@@ -111,4 +111,3 @@ Use `../templates/start-report.md` shape.
 - One clear handoff route selected.
 - Active plan file is resolved (or created only when required) before response completes.
 - Handoff metadata is persisted in plan frontmatter.
-

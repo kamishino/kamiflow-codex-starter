@@ -92,6 +92,17 @@ function normalizeRoute(value) {
   return "";
 }
 
+function routeToMode(route) {
+  const targetRoute = normalizeRoute(route);
+  if (targetRoute === "build" || targetRoute === "fix") {
+    return "build";
+  }
+  if (targetRoute === "done") {
+    return "done";
+  }
+  return "plan";
+}
+
 function fallbackRouteFromNext(nextCommand) {
   if (!nextCommand || nextCommand === "done") {
     return "plan";
@@ -244,6 +255,8 @@ export function buildPhaseDigest(planRecord: { frontmatter?: Record<string, stri
     wip_status: wip.status || "",
     blockers: wip.blockers || "",
     next_step: wip["next step"] || "",
+    route_confidence: fm.route_confidence || "",
+    flow_guardrail: fm.flow_guardrail || "",
     next_action_human: toNextAction({ next_command: fm.next_command || "plan" })
   };
 }
@@ -398,7 +411,7 @@ export function evaluateRoutePreflight(planRecord, route) {
     };
   }
 
-  const routeMode = targetRoute === "build" || targetRoute === "fix" ? "build" : "plan";
+  const routeMode = routeToMode(targetRoute);
   if (selectedMode && routeMode && selectedMode !== routeMode && selectedMode !== "done") {
     return {
       ok: false,

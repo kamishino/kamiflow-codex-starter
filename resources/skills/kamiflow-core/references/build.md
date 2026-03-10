@@ -48,7 +48,7 @@ Use this route to execute an approved plan in small, verifiable slices.
 10. Run targeted checks relevant to changed areas.
 11. Summarize what changed and why.
 12. Persist build phase/progress via direct markdown mutation:
-   - frontmatter: `lifecycle_phase: build`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`
+   - frontmatter: `lifecycle_phase: build`, `selected_mode: Build`, `next_command: check`, `next_mode: Plan`, `updated_at`, `route_confidence`, `flow_guardrail`
    - sections: keep `Technical Solution Diagram` synchronized when `diagram_mode: required` (or when present)
    - `WIP Log`: `Status`, `Blockers`, `Next step`
    - evidence: map validation outcomes to task entries and/or WIP evidence line
