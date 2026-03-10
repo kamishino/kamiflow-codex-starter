@@ -852,6 +852,29 @@ await runCase("codex runner preserves full-auto mode in failure command metadata
   }
 });
 
+await runCase("codex runner emits deterministic clean command metadata", async () => {
+  const previousExecutables = process.env.KFC_PLAN_CODEX_EXECUTABLES;
+  try {
+    process.env.KFC_PLAN_CODEX_EXECUTABLES = "codex";
+    const result = await runCodexAction({
+      plan_id: "PLAN-TEST-007",
+      action_type: "build",
+      prompt: "Run next implementation step and update notes.",
+      full_auto: false
+    });
+
+    assert.equal(result.command.includes("<stdin>"), false, `Unexpected <stdin> in command: ${result.command}`);
+    assert.equal(result.command.includes("codex exec -"), true, `Unexpected command format: ${result.command}`);
+    assert.ok(!result.command.toLowerCase().includes(".cmd"), `Unexpected .cmd in command: ${result.command}`);
+  } finally {
+    if (previousExecutables === undefined) {
+      delete process.env.KFC_PLAN_CODEX_EXECUTABLES;
+    } else {
+      process.env.KFC_PLAN_CODEX_EXECUTABLES = previousExecutables;
+    }
+  }
+});
+
 await runCase("runlog parser extracts runtime signal from latest jsonl entry", async () => {
   await withTempDir(async (tempDir) => {
     const runsDir = path.join(tempDir, ".local", "runs");

@@ -223,7 +223,7 @@ Pick mode before executing route logic:
   - Recovery: continue from the ready brief and active plan; rerun `kfc client` only when setup evidence is missing or broken.
 - Codex invocation/quoting failure:
   - Symptom: `spawn codex ENOENT` or `unexpected argument` from `codex exec`.
-  - Recovery: persist plan state directly in markdown first; if manual fallback is required use a single quoted prompt: `codex exec "<prompt>"`.
+  - Recovery: persist plan state directly in markdown first; if manual fallback is required use the exact printed fallback command in plain `codex exec ...` format (not `codex.cmd`) and re-run it.
 - Plan bootstrap failure:
   - Symptom: plan file missing or `kfc plan init ... --new` fails in flow.
   - Recovery: create plan markdown directly from template; fallback: `kfc flow ensure-plan --project .` or `kfc plan init --project . --new`.

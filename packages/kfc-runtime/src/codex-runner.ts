@@ -32,6 +32,18 @@ function firstMeaningfulLine(text) {
   return line ? (line.length > 180 ? `${line.slice(0, 177)}...` : line) : "";
 }
 
+function buildReplayArg(arg) {
+  const value = String(arg);
+  return /^[A-Za-z0-9._/-]+$/.test(value) ? value : JSON.stringify(value);
+}
+
+function buildReplayCommand(executable, args) {
+  const exe = String(executable || "codex")
+    .replace(/\.cmd$/i, "")
+    .replace(/\.exe$/i, "");
+  return `${exe} ${args.map((item) => buildReplayArg(item)).join(" ")}`;
+}
+
 function quoteForCmd(arg) {
   if (!/[ \t"&<>|^]/.test(arg)) {
     return arg;
@@ -183,7 +195,7 @@ function withFailureMetadata(result) {
 }
 
 async function runWithExecutable(executable, args, prompt, runId, timeoutMs, cwd = process.cwd(), promptMode = "stdin") {
-  const command = `${executable} ${args.map((item) => JSON.stringify(item)).join(" ")}${promptMode === "stdin" ? " <stdin>" : ""}`;
+  const command = buildReplayCommand(executable, args);
   const useCmdWrapper = process.platform === "win32" && executable.toLowerCase().endsWith(".cmd");
 
   return await new Promise((resolve) => {

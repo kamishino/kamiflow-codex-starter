@@ -48,6 +48,18 @@ function tail(text: string, maxChars = 4000): string {
   return text.slice(text.length - maxChars);
 }
 
+function buildReplayArg(arg: string): string {
+  const value = String(arg);
+  return /^[A-Za-z0-9._/-]+$/.test(value) ? value : JSON.stringify(value);
+}
+
+function buildReplayCommand(exe: string, args: string[]): string {
+  const executable = String(exe || "codex")
+    .replace(/\.cmd$/i, "")
+    .replace(/\.exe$/i, "");
+  return `${executable} ${args.map((item) => buildReplayArg(item)).join(" ")}`;
+}
+
 function parsePositiveInteger(raw: string | undefined): number | null {
   if (!raw || raw.trim().length === 0) {
     return null;
@@ -243,7 +255,7 @@ async function runWithExecutable(
   run_id: string,
   cwd: string
 ): Promise<CodexActionResult> {
-  const command = `${exe} ${args.map((item) => JSON.stringify(item)).join(" ")} <stdin>`;
+  const command = buildReplayCommand(exe, args);
   const useCmdWrapper = process.platform === "win32" && exe.toLowerCase().endsWith(".cmd");
 
   return await new Promise<CodexActionResult>((resolve) => {

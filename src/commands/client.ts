@@ -611,7 +611,7 @@ async function assertProjectPreflight(projectDir, options: { requirePackageJson?
   }
 
   const hasCodex = process.platform === "win32"
-    ? checkCommandInPath(["codex.cmd", "codex.exe", "codex"], ["--version"], "Codex CLI")
+    ? checkCommandInPath(["codex", "codex.exe", "codex.cmd"], ["--version"], "Codex CLI")
     : checkCommandInPath(["codex"], ["--version"], "Codex CLI");
   ok = ok && hasCodex;
 
@@ -1801,7 +1801,13 @@ async function runClientCodexLaunch({ projectDir, planId, skipGitRepoCheck = fal
 }
 
 function isTrustDirectoryFailure(result) {
-  const text = String(result?.failure_signature || result?.stderr_tail || result?.recovery_hint || "").toLowerCase();
+  const text = String(
+    result?.failure_signature ||
+    result?.stderr_tail ||
+    result?.stdout_tail ||
+    result?.recovery_hint ||
+    ""
+  ).toLowerCase();
   return text.includes("not inside a trusted directory") || text.includes("skip-git-repo-check");
 }
 
