@@ -56,12 +56,32 @@ function codexExecutableCandidates() {
   return ["codex", "codex.exe", "codex.cmd"];
 }
 
-function buildArgVariants(modeHint, fullAuto = false) {
-  const defaultVariant = ["exec", ...(fullAuto ? ["--full-auto"] : []), "-"];
-  if (String(modeHint || "") !== "Plan") {
-    return [defaultVariant];
+function withTrustBypassArgs(args, skipGitRepoCheck) {
+  if (!skipGitRepoCheck) {
+    return [args];
+  }
+  if (args.includes("--skip-git-repo-check")) {
+    return [args];
+  }
+  const placeholderIndex = args.indexOf("-");
+  if (placeholderIndex < 0) {
+    return [
+      [...args, "--skip-git-repo-check"],
+      args
+    ];
   }
   return [
+    [...args.slice(0, placeholderIndex), "--skip-git-repo-check", ...args.slice(placeholderIndex)],
+    args
+  ];
+}
+
+function buildArgVariants(modeHint, fullAuto = false, skipGitRepoCheck = false) {
+  const defaultVariant = ["exec", ...(fullAuto ? ["--full-auto"] : []), "-"];
+  if (String(modeHint || "") !== "Plan") {
+    return withTrustBypassArgs(defaultVariant, skipGitRepoCheck);
+  }
+  const planVariants = [
     [
       "exec",
       ...(fullAuto ? ["--full-auto"] : []),
@@ -85,6 +105,7 @@ function buildArgVariants(modeHint, fullAuto = false) {
     ["exec", ...(fullAuto ? ["--full-auto"] : []), "--profile", "plan", "-"],
     defaultVariant
   ];
+  return planVariants.flatMap((variant) => withTrustBypassArgs(variant, skipGitRepoCheck));
 }
 
 function shouldTryNextExecutable(result) {
@@ -270,7 +291,11 @@ export function buildCodexExecManualCommand(input) {
   if (!prompt) {
     throw new Error("buildCodexExecManualCommand requires prompt.");
   }
-  return buildPositionalPromptCommand(prompt, Boolean(input?.full_auto));
+  const fullAuto = Boolean(input?.full_auto);
+  const skipGitRepoCheck = Boolean(input?.skip_gitrepo_check);
+  const prefix = fullAuto ? "codex exec --full-auto" : "codex exec";
+  const withSkip = skipGitRepoCheck ? " --skip-git-repo-check" : "";
+  return `${prefix}${withSkip} ${JSON.stringify(String(prompt || ""))}`;
 }
 
 export function buildCodexResumeManualCommand(input) {
@@ -306,8 +331,9 @@ export async function runCodexAction(input) {
   const runId = String(input?.run_id || `run_${Date.now()}`);
   const modeHint = String(input?.mode_hint || "");
   const fullAuto = Boolean(input?.full_auto);
+  const skipGitRepoCheck = Boolean(input?.skip_gitrepo_check);
   const cwd = String(input?.cwd || "").trim() || process.cwd();
-  const argVariants = buildArgVariants(modeHint, fullAuto);
+  const argVariants = buildArgVariants(modeHint, fullAuto, skipGitRepoCheck);
   const executables = codexExecutableCandidates();
   let lastResult = null;
 

@@ -24,6 +24,7 @@ KFC now inspects the target repo first. If the target folder is truly empty, KFC
 Client bootstrap includes one smart-recovery cycle and prints `Inspection Status`, `Repo Shape`, `Apply Mode`, `Planned Changes`, plus `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 If auto-launch is disabled or fails, use the exact manual fallback command printed by KFC.
 Treat the root `AGENTS.md` managed block as KFC's project-specific `/init` contract. KFC refreshes that block during `kfc client` and `kfc client update` while preserving notes outside it.
+That managed block should also be the first place Codex learns the client-project workflow command map: `kfc client`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`.
 
 ## Workflow Contract
 
@@ -33,6 +34,7 @@ Treat the root `AGENTS.md` managed block as KFC's project-specific `/init` contr
 
 2. Environment and Plan Readiness
 - Read `AGENTS.md` first as the stable client-repo operating contract and KFC-owned `/init` equivalent.
+- Use the workflow command map in `AGENTS.md` before inventing alternate recovery or plan commands.
 - Use `.kfc/CODEX_READY.md` as mission + plan contract when it is present.
 - Use `.kfc/LESSONS.md` as curated private project memory when present.
 - Use `.agents/skills/kamiflow-core/SKILL.md` as the visible project-local runtime skill artifact.

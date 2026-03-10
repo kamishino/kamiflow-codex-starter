@@ -61,6 +61,7 @@ const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CLIENT_LESSONS_FILE = path.join(".kfc", "LESSONS.md");
 const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
+const CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION = "--skip-git-repo-check";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
@@ -705,10 +706,11 @@ function buildClientCodexLaunchPrompt() {
   return CLIENT_CODEX_LAUNCH_PROMPT;
 }
 
-function buildClientCodexManualCommand() {
+function buildClientCodexManualCommand({ skipGitRepoCheck } = {}) {
   return buildCodexExecManualCommand({
     prompt: buildClientCodexLaunchPrompt(),
-    full_auto: true
+    full_auto: true,
+    skip_gitrepo_check: Boolean(skipGitRepoCheck)
   });
 }
 
@@ -890,6 +892,15 @@ export function buildClientAgentsManagedBlock() {
     "## Command Boundary",
     "- Use only `kfc ...` commands in this client project.",
     "- Do not use maintainer-only `npm run ...` commands from the KFC source repo here.",
+    "- These workflow commands are available here because KFC is installed in this client repository.",
+    "",
+    "## Workflow Commands",
+    "- `kfc client`: reusable setup, handoff refresh, and normal startup entrypoint.",
+    "- `kfc plan validate --project .`: validate the active plan file when plan state looks suspicious.",
+    "- `kfc flow ensure-plan --project .`: recover a missing or inconsistent active plan scaffold.",
+    "- `kfc flow ready --project .`: verify readiness only after the active plan is already build-ready.",
+    "- `kfc client doctor --project . --fix`: recover onboarding or flow drift when the normal route breaks.",
+    "- `kfc client done`: manual cleanup fallback after the mission is complete.",
     "",
     "## Runtime Artifacts",
     "- `.kfc/CODEX_READY.md`: current mission and onboarding handoff.",
@@ -1608,9 +1619,10 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     "",
     "## Session Bootstrap (Every Session)",
     "1. Read `AGENTS.md` first. If this file still exists, re-read it before implementation.",
-    "2. Read `.kfc/LESSONS.md` when present; it is the curated durable memory for this client project.",
-    "3. Resolve one active non-done plan in `.local/plans/` before route output.",
-    "4. Touch the active plan at route start and again before final response (`updated_at` + timestamped `WIP Log` line).",
+    "2. Use `AGENTS.md` for the stable workflow command map; this file stays mission- and plan-specific.",
+    "3. Read `.kfc/LESSONS.md` when present; it is the curated durable memory for this client project.",
+    "4. Resolve one active non-done plan in `.local/plans/` before route output.",
+    "5. Touch the active plan at route start and again before final response (`updated_at` + timestamped `WIP Log` line).",
     "",
     "## Autonomous Execution Contract",
     "1. Use only `kfc ...` commands in this client project.",
@@ -1757,14 +1769,20 @@ export async function createClientReadyArtifacts({ projectDir, force, goal, prof
   };
 }
 
-async function runClientCodexLaunch({ projectDir, planId }) {
+async function runClientCodexLaunch({ projectDir, planId, skipGitRepoCheck = false }) {
   return await runCodexAction({
     plan_id: planId,
     action_type: "start",
     prompt: buildClientCodexLaunchPrompt(),
     full_auto: true,
-    cwd: projectDir
+    cwd: projectDir,
+    skip_gitrepo_check: skipGitRepoCheck
   });
+}
+
+function isTrustDirectoryFailure(result) {
+  const text = String(result?.failure_signature || result?.stderr_tail || result?.recovery_hint || "").toLowerCase();
+  return text.includes("not inside a trusted directory") || text.includes("skip-git-repo-check");
 }
 
 function printClientCodexLaunchOutcome(result, manualCommand) {
@@ -2755,7 +2773,7 @@ async function runClientReadyHandoff(options, bootstrap) {
     return 1;
   }
 
-  const manualCommand = buildClientCodexManualCommand();
+  let manualCommand = buildClientCodexManualCommand();
   let launchResult = null;
   let completion = null;
   if (!options.noLaunchCodex) {
@@ -2773,6 +2791,19 @@ async function runClientReadyHandoff(options, bootstrap) {
       projectDir: options.project,
       planId: ready.planId
     });
+
+    if (!launchResult?.status || launchResult.status !== "completed") {
+      if (isTrustDirectoryFailure(launchResult)) {
+        info(`Trust check blocked launch. Retrying with ${CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION}.`);
+        manualCommand = buildClientCodexManualCommand({ skipGitRepoCheck: true });
+        launchResult = await runClientCodexLaunch({
+          projectDir: options.project,
+          planId: ready.planId,
+          skipGitRepoCheck: true
+        });
+      }
+    }
+
     if (launchResult?.status === "completed") {
       completion = await evaluateClientSetupCompletion(options.project, ready.planId);
     }

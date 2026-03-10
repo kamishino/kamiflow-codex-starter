@@ -162,6 +162,7 @@ kfc client
 Then tell Codex:
 
 - Read `AGENTS.md` first; KFC owns its managed block as the project-specific `/init` contract in this client repo.
+- Use the workflow command map in `AGENTS.md` for normal client-project commands: `kfc client`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`.
 - Read `.kfc/CODEX_READY.md` when present and execute the mission.
 - Read `.kfc/LESSONS.md` when present for durable project-specific lessons.
 - Use the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`.
