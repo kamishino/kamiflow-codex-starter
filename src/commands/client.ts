@@ -55,14 +55,17 @@ const DEFAULT_HEALTH_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_POLL_MS = 500;
 const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
 const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOFF_PROMPT.md");
+const CLIENT_AGENTS_FILE = "AGENTS.md";
 const CLIENT_READY_FILE = path.join(".kfc", "CODEX_READY.md");
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CLIENT_LESSONS_FILE = path.join(".kfc", "LESSONS.md");
 const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
-const CLIENT_CODEX_LAUNCH_PROMPT = "Read .kfc/CODEX_READY.md and execute the mission.";
+const CLIENT_CODEX_LAUNCH_PROMPT = "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
+const CLIENT_AGENTS_MANAGED_BEGIN = "<!-- KFC:BEGIN MANAGED -->";
+const CLIENT_AGENTS_MANAGED_END = "<!-- KFC:END MANAGED -->";
 
 type FrontmatterRecord = Record<string, string>;
 type MarkdownSections = Record<string, string>;
@@ -438,6 +441,9 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
   const configPath = getConfigPath(projectDir);
   const rulesPath = path.join(projectDir, ".codex", "rules", RULES_FILE_NAME);
   const skillPath = resolveClientSkillArtifactPath(projectDir);
+  const agentsPath = resolveClientAgentsPath(projectDir);
+  const agentsText = fs.existsSync(agentsPath) ? await fsp.readFile(agentsPath, "utf8") : "";
+  const hasManagedAgentsBlock = hasClientAgentsManagedBlock(agentsText);
   const lessonsPath = resolveClientLessonsPath(projectDir);
   const rawLessons = resolveClientRawLessonPaths(projectDir);
   const readyPath = resolveClientReadyPath(projectDir);
@@ -446,6 +452,7 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
     const plannedChanges = [
       "create minimal package.json",
       "create or refresh kamiflow.config.json",
+      "create root AGENTS.md",
       "sync .codex/rules/kamiflow.rules",
       "sync .agents/skills/kamiflow-core/SKILL.md",
       "scaffold .kfc/LESSONS.md and .local/kfc-lessons/",
@@ -485,6 +492,9 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
   if (!fs.existsSync(configPath)) {
     missingSafeArtifacts.push("create kamiflow.config.json");
   }
+  if (!fs.existsSync(agentsPath) || !hasManagedAgentsBlock) {
+    missingSafeArtifacts.push("sync root AGENTS.md");
+  }
   if (!fs.existsSync(rulesPath)) {
     missingSafeArtifacts.push("sync .codex/rules/kamiflow.rules");
   }
@@ -501,6 +511,9 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
     missingSafeArtifacts.push("create .kfc/CODEX_READY.md");
   } else if (options.force) {
     refreshManagedChanges.push("refresh .kfc/CODEX_READY.md");
+  }
+  if (fs.existsSync(agentsPath) && hasManagedAgentsBlock && options.force) {
+    refreshManagedChanges.push("refresh root AGENTS.md");
   }
 
   if (missingSafeArtifacts.length > 0) {
@@ -797,6 +810,10 @@ function resolveClientReadyPath(projectDir) {
   return path.join(projectDir, CLIENT_READY_FILE);
 }
 
+function resolveClientAgentsPath(projectDir) {
+  return path.join(projectDir, CLIENT_AGENTS_FILE);
+}
+
 function resolveClientSessionPath(projectDir) {
   return path.join(projectDir, CLIENT_SESSION_FILE);
 }
@@ -846,6 +863,91 @@ function buildClientLessonsTemplate() {
     "- None yet.",
     ""
   ].join("\n");
+}
+
+function hasClientAgentsManagedBlock(content) {
+  return String(content || "").includes(CLIENT_AGENTS_MANAGED_BEGIN) && String(content || "").includes(CLIENT_AGENTS_MANAGED_END);
+}
+
+function buildClientAgentsManagedBlock() {
+  return [
+    CLIENT_AGENTS_MANAGED_BEGIN,
+    "# KFC Client Contract",
+    "",
+    "Read this file first in every session. It is the stable KFC operating contract for this client repository.",
+    "KFC owns and refreshes the managed block below as this project's `/init`-equivalent contract.",
+    "",
+    "## Startup Order",
+    "1. Read `AGENTS.md`.",
+    "2. Read `.kfc/CODEX_READY.md` for the current mission and active-plan handoff.",
+    "3. Read `.kfc/LESSONS.md` when present for curated durable project memory.",
+    "",
+    "## Ownership",
+    "- KFC refreshes this managed block during `kfc client` and `kfc client update`.",
+    "- Keep custom project notes outside this managed block so KFC can preserve them.",
+    "",
+    "## Command Boundary",
+    "- Use only `kfc ...` commands in this client project.",
+    "- Do not use maintainer-only `npm run ...` commands from the KFC source repo here.",
+    "",
+    "## Runtime Artifacts",
+    "- `.kfc/CODEX_READY.md`: current mission and onboarding handoff.",
+    "- `.kfc/LESSONS.md`: curated durable project memory.",
+    "- `.local/plans/*.md`: live execution state and next-action source of truth.",
+    "- `.agents/skills/kamiflow-core/SKILL.md`: project-local runtime skill artifact.",
+    "",
+    "## Workflow Contract",
+    "- Resolve one active non-done plan before implementation-bearing work.",
+    "- Touch the active plan at route start and before final response (`updated_at` + `WIP Log`).",
+    "- Only start `build`/`fix` when the active plan is build-ready.",
+    "- After implementation work, run checks and report `Check: PASS|BLOCK` with evidence.",
+    "- If blocked, return exact `Status: BLOCK`, `Reason: ...`, and `Recovery: <command>`.",
+    "",
+    "## Cleanup",
+    "- After completion, run `kfc client done`.",
+    "- `kfc client done` removes `.kfc/CODEX_READY.md` but keeps `.kfc/LESSONS.md` for future sessions.",
+    CLIENT_AGENTS_MANAGED_END
+  ].join("\n");
+}
+
+function mergeClientAgentsContent(existingContent, managedBlock) {
+  const existing = String(existingContent || "").replace(/\r\n/g, "\n");
+  const block = String(managedBlock || "").trim();
+  if (!block) {
+    return existing;
+  }
+
+  const escapedBegin = CLIENT_AGENTS_MANAGED_BEGIN.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const escapedEnd = CLIENT_AGENTS_MANAGED_END.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const managedPattern = new RegExp(`${escapedBegin}[\\s\\S]*?${escapedEnd}`, "m");
+  if (managedPattern.test(existing)) {
+    return `${existing.replace(managedPattern, block).replace(/\n{3,}/g, "\n\n").trimEnd()}\n`;
+  }
+  if (!existing.trim()) {
+    return `${block}\n`;
+  }
+  return `${block}\n\n${existing.replace(/^\n+/, "")}`.replace(/\n{3,}/g, "\n\n");
+}
+
+async function ensureClientAgentsContract(projectDir) {
+  const agentsPath = resolveClientAgentsPath(projectDir);
+  const existing = fs.existsSync(agentsPath) ? await fsp.readFile(agentsPath, "utf8") : "";
+  const hadManagedBlock = hasClientAgentsManagedBlock(existing);
+  const next = mergeClientAgentsContent(existing, buildClientAgentsManagedBlock());
+  if (next === existing) {
+    info(`Client AGENTS.md already current: ${agentsPath}`);
+    return { changed: false, agentsPath, hadManagedBlock };
+  }
+
+  await fsp.writeFile(agentsPath, next, "utf8");
+  if (!existing) {
+    info(`Client AGENTS.md scaffolded: ${agentsPath}`);
+  } else if (hadManagedBlock) {
+    info(`Client AGENTS.md managed block refreshed: ${agentsPath}`);
+  } else {
+    info(`Client AGENTS.md managed block inserted: ${agentsPath}`);
+  }
+  return { changed: true, agentsPath, hadManagedBlock };
 }
 
 async function ensureClientGitignoreEntries(projectDir) {
@@ -1496,7 +1598,7 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     `- planned_changes: ${inspection.plannedChangesSummary}`,
     "",
     "## First-Run Sequence",
-    "1. Read this file and `AGENTS.md` before implementation.",
+    "1. Read `AGENTS.md` first, then read this file before implementation.",
     "2. If `.kfc/LESSONS.md` exists, read it as curated project memory before implementation.",
     stateRouteLine,
     stateFollowupLine,
@@ -2196,6 +2298,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
 
   try {
     await ensureClientGitignoreEntries(options.project);
+    await ensureClientAgentsContract(options.project);
     await ensureClientLessonsScaffold(options.project);
   } catch (err) {
     throw createClientOnboardingError(
@@ -2487,6 +2590,20 @@ async function runClientDoctorChecks(options) {
     info(`Project-local KFC skill OK: ${skillPath}`);
   }
 
+  const agentsPath = resolveClientAgentsPath(options.project);
+  if (!fs.existsSync(agentsPath)) {
+    error(`Missing client AGENTS.md: ${agentsPath}`);
+    ok = false;
+  } else {
+    const agentsText = await fsp.readFile(agentsPath, "utf8");
+    if (!hasClientAgentsManagedBlock(agentsText)) {
+      error(`Missing managed KFC block in client AGENTS.md: ${agentsPath}`);
+      ok = false;
+    } else {
+      info(`Client AGENTS.md OK: ${agentsPath}`);
+    }
+  }
+
   const lessonsPath = resolveClientLessonsPath(options.project);
   if (!fs.existsSync(lessonsPath)) {
     error(`Missing client lessons file: ${lessonsPath}`);
@@ -2605,6 +2722,7 @@ async function runClientReadyHandoff(options, bootstrap) {
   };
   await emitClientOnboardingEvent(options.project, readyPayload);
   printClientOnboardingPass(readyPayload);
+  info(`Stable contract: ${path.join(options.project, CLIENT_AGENTS_FILE)}`);
   info(`Ready file: ${ready.readyPath}`);
   if (options.noLaunchCodex) {
     info("Codex auto-launch skipped (--no-launch-codex).");

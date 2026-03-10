@@ -10,3 +10,5 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 - Improved client onboarding so truly empty folders auto-initialize a minimal `package.json`, non-Node folders block with direct recovery, and `.kfc/CODEX_READY.md` now hands Codex off according to the active plan state instead of always pushing `kfc flow ready` first.
 - Added an inline client inspection contract before bootstrap mutation so `kfc client` now classifies repo shape, shows planned touches, and blocks risky mixed repos before changing files.
 - Added a repo-shape portability matrix runner plus route/runbook updates so client proof, inspection-aware handoff, and hosted product hierarchy are documented as one coherent workflow.
+- Added client-root `AGENTS.md` generation with a managed KFC contract block so fresh client repos now have a visible stable brain alongside `.kfc/CODEX_READY.md`.
+- Clarified that KFC owns and refreshes the client-root `AGENTS.md` managed block as the project-specific `/init` contract, while `.kfc/CODEX_READY.md` remains the per-session brief.

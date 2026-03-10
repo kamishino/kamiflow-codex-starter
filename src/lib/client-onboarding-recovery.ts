@@ -122,7 +122,7 @@ function nextForStage(stage) {
     return "kfc flow ensure-plan --project .";
   }
   if (stage === CLIENT_ONBOARDING_STAGES.READY_BRIEF) {
-    return "Read .kfc/CODEX_READY.md and execute the mission.";
+    return "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
   }
   if (stage === CLIENT_ONBOARDING_STAGES.EXECUTION_READY) {
     return DEFAULT_PASS_NEXT_STEPS[0];

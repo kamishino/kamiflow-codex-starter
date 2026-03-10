@@ -110,7 +110,12 @@ const CASES: CaseSpec[] = [
       assertContains(output, "Repo Shape: empty_new_repo", "repo shape", errors);
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
       assertPathExists(path.join(projectDir, "package.json"), "package.json", errors);
+      assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
+      const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))
+        ? fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8")
+        : "";
+      assertContains(agents, "<!-- KFC:BEGIN MANAGED -->", "managed AGENTS block", errors);
       const ready = fs.existsSync(path.join(projectDir, ".kfc", "CODEX_READY.md"))
         ? fs.readFileSync(path.join(projectDir, ".kfc", "CODEX_READY.md"), "utf8")
         : "";
@@ -139,6 +144,7 @@ const CASES: CaseSpec[] = [
       assertContains(output, "Inspection Status: PASS", "inspection status", errors);
       assertContains(output, "Repo Shape: needs_minor_fixes", "repo shape", errors);
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
+      assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
       return errors;
     }
@@ -165,6 +171,7 @@ const CASES: CaseSpec[] = [
         }
       });
       writeText(path.join(projectDir, ".gitignore"), ".kfc/\n.local/\n");
+      writeText(path.join(projectDir, "AGENTS.md"), "# Team Notes\n\n- Preserve this note.\n");
       writeText(path.join(projectDir, ".kfc", "LESSONS.md"), "# Client Lessons\n");
     },
     expect(projectDir, stdout, stderr, code) {
@@ -176,7 +183,13 @@ const CASES: CaseSpec[] = [
       assertContains(output, "Inspection Status: PASS", "inspection status", errors);
       assertContains(output, "Repo Shape: needs_minor_fixes", "repo shape", errors);
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
+      assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".agents", "skills", "kamiflow-core", "SKILL.md"), "project-local skill", errors);
+      const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))
+        ? fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8")
+        : "";
+      assertContains(agents, "<!-- KFC:BEGIN MANAGED -->", "managed AGENTS block", errors);
+      assertContains(agents, "Preserve this note.", "preserved custom AGENTS content", errors);
       return errors;
     }
   },

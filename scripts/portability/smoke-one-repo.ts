@@ -527,6 +527,22 @@ async function main() {
       }
       steps.push(
         verifyPathExistsStep(
+          "verify client root AGENTS.md",
+          path.join(projectDir, "AGENTS.md"),
+          projectDir,
+          "file"
+        )
+      );
+      steps.push(
+        verifyFileContainsStep(
+          "verify client AGENTS managed block",
+          path.join(projectDir, "AGENTS.md"),
+          ["<!-- KFC:BEGIN MANAGED -->", "<!-- KFC:END MANAGED -->", ".kfc/CODEX_READY.md"],
+          projectDir
+        )
+      );
+      steps.push(
+        verifyPathExistsStep(
           "verify project-local kamiflow-core skill",
           path.join(projectDir, ".agents", "skills", "kamiflow-core", "SKILL.md"),
           projectDir,

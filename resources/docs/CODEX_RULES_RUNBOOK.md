@@ -82,7 +82,7 @@ kfc client --force
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-`kfc client --force` creates or validates config, ensures plan UI availability (project-local install or linked fallback), syncs project rules, syncs the project-local runtime skill to `.agents/skills/kamiflow-core/SKILL.md`, scaffolds `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, and creates `.kfc/CODEX_READY.md`.
+`kfc client --force` creates or validates config, ensures plan UI availability (project-local install or linked fallback), creates a root `AGENTS.md` managed contract, syncs project rules, syncs the project-local runtime skill to `.agents/skills/kamiflow-core/SKILL.md`, scaffolds `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, and creates `.kfc/CODEX_READY.md`.
 
 ## Verification
 

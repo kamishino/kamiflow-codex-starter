@@ -20,10 +20,10 @@ kfc client --force
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-Bootstrap now includes one smart-recovery cycle, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches:
+Bootstrap now includes one smart-recovery cycle, creates a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches:
 
 ```bash
-codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
+codex exec --full-auto "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission."
 ```
 
 If auto-launch is disabled (`--no-launch-codex`) or fails, use the exact manual fallback command printed by KFC.
@@ -39,7 +39,7 @@ Goal:
 
 Rules:
 1) Use only `kfc ...` commands in this client project.
-2) Start from `.kfc/CODEX_READY.md` mission and plan context, then read `.kfc/LESSONS.md` when present, with `kamiflow-core` available from `.agents/skills/kamiflow-core/SKILL.md`.
+2) Read `AGENTS.md` first. Treat its managed block as the KFC-owned project `/init` contract, then start from `.kfc/CODEX_READY.md` mission and plan context, then read `.kfc/LESSONS.md` when present, with `kamiflow-core` available from `.agents/skills/kamiflow-core/SKILL.md`.
 3) Run routine flow commands autonomously; do not ask the user to run normal `kfc` commands.
 4) Treat onboarding PASS as environment-ready only. If the active plan is still draft, finish Brainstorm/Plan first.
 5) Before any implementation route (`build`/`fix`), run `kfc flow ready --project .` only after the active plan is actually build-ready.

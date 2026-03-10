@@ -10,6 +10,7 @@ Prove external-repo portability baseline first, then compare a small repo-shape 
 - run one-command client setup and verify readiness
 - confirm plan bootstrap, validation, and health checks work outside this repo
 - compare onboarding behavior across blank, existing, partial, and risky repo shapes
+- confirm root `AGENTS.md` is present as the stable client contract
 
 ## Preconditions
 
@@ -57,6 +58,7 @@ What one-command client setup verifies:
 - inline inspection summary (`Inspection Status`, `Repo Shape`, `Apply Mode`, `Planned Changes`)
 - valid config (creates if missing)
 - plan UI dependency available
+- root `AGENTS.md` exists with the KFC managed contract block
 - project rules synced to `.codex/rules/kamiflow.rules`
 - project-local runtime skill synced to `.agents/skills/kamiflow-core/SKILL.md`
 - curated lesson file scaffolded at `.kfc/LESSONS.md`
@@ -134,10 +136,11 @@ Validation is complete when all are true:
 1. `kfc` works in external repo context.
 2. `kfc client --force` completes PASS in external repo.
 3. inspection output correctly describes the repo shape before bootstrap mutates anything.
-4. project-local `kamiflow-core` exists in `.agents/skills/kamiflow-core/SKILL.md`.
-5. client lesson scaffold exists in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
-6. plan file is created and validated in external repo.
-7. smoke log is captured and reviewable.
+4. root `AGENTS.md` exists with the KFC managed block.
+5. project-local `kamiflow-core` exists in `.agents/skills/kamiflow-core/SKILL.md`.
+6. client lesson scaffold exists in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
+7. plan file is created and validated in external repo.
+8. smoke log is captured and reviewable.
 
 Matrix proof is complete when all are true:
 

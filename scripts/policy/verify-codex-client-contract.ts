@@ -8,6 +8,7 @@ const ROOT_DIR = path.resolve(__dirname, "../../..");
 
 const REQUIRED_PATTERNS = [
   { label: "start command", regex: /\bkfc client\b/ },
+  { label: "root agents file", regex: /\bAGENTS\.md\b/ },
   { label: "ready file", regex: /\.kfc\/CODEX_READY\.md/ },
   { label: "lessons file", regex: /\.kfc\/LESSONS\.md/ },
   { label: "project-local skill", regex: /\.agents\/skills\/kamiflow-core\/SKILL\.md/ },
@@ -18,20 +19,29 @@ const REQUIRED_PATTERNS = [
 
 const FILE_SPECIFIC_PATTERNS = {
   "resources/docs/QUICKSTART.md": [
+    { label: "root agents guidance", regex: /root `AGENTS\.md`|AGENTS\.md first/i },
+    { label: "agents init contract guidance", regex: /\/init` contract|\/init equivalent/i },
     { label: "no reminder loop guidance", regex: /no user reminder loop/i },
     { label: "smart recovery guidance", regex: /smart-recovery cycle/i },
     { label: "onboarding status guidance", regex: /Onboarding Status:\s*PASS\|BLOCK/i },
     { label: "inspection status guidance", regex: /Inspection Status:\s*PASS\|BLOCK/i }
   ],
   "resources/docs/CLIENT_KICKOFF_PROMPT.md": [
+    { label: "agents first guidance", regex: /Read `AGENTS\.md` first/i },
+    { label: "agents init contract guidance", regex: /project `\/init` contract|project-specific `\/init` contract/i },
     { label: "plan touch cadence", regex: /Touch active plan markdown twice per request/i },
     { label: "onboarding error code guidance", regex: /Error Code:\s*CLIENT_/i }
   ],
   "resources/docs/CLIENT_A2Z_PLAYBOOK.md": [
+    { label: "stable agents guidance", regex: /stable client-repo operating contract|Read `AGENTS\.md` first/i },
+    { label: "agents init contract guidance", regex: /project-specific `\/init` contract|KFC-owned `\/init` equivalent/i },
     { label: "plan touch cadence", regex: /Touch active plan markdown at route start and before final response/i },
     { label: "smart recovery guidance", regex: /smart-recovery cycle/i }
   ],
   "src/commands/client.ts": [
+    { label: "client agents generation", regex: /Client AGENTS\.md scaffolded:|Client AGENTS\.md managed block refreshed:|Client AGENTS\.md managed block inserted:/ },
+    { label: "managed agents block", regex: /KFC:BEGIN MANAGED/ },
+    { label: "agents init contract wording", regex: /\/init`-equivalent contract/ },
     { label: "inspection output", regex: /Inspection Status:\s*\$\{summary\.inspectionStatus\}/ },
     { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
     { label: "structured onboarding error code output", regex: /Error Code:/ },
