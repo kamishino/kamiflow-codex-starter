@@ -12,13 +12,13 @@ import {
   getRepoRootDir,
   readRulesProfileFromProjectConfig,
   validateRulesProfile
-} from "../../dist/lib/rules.js";
+} from "../../lib/rules.js";
 import {
   getProjectSkillsTargetDir,
   getRepoSkillsTargetDir,
   getSkillsSourceDir,
   syncSkillsArtifacts
-} from "../../dist/lib/skill-sync.js";
+} from "../../lib/skill-sync.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
