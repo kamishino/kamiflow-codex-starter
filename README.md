@@ -267,6 +267,7 @@ Runbook: `resources/docs/REMOTE_RUNBOOK.md`
 ### Run in KFC Repo
 
 - SemVer release bump workflow: `resources/docs/VERSIONING_RUNBOOK.md`
+- `commit:codex` now prints advisory semantic version impact before each commit
 - Useful commands:
 
 ```bash

@@ -93,6 +93,23 @@ function Invoke-GitCommit([string] $Message, [string[]] $Passthrough, [bool] $No
   }
 }
 
+function Show-SemverImpact([string] $Message) {
+  $json = & node "dist/scripts/release/semver-impact-from-message.js" --message $Message --json 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    foreach ($line in @($json)) {
+      Write-Host $line
+    }
+    Fail "Unable to compute semantic version impact for this commit."
+  }
+
+  $summary = (@($json) -join "`n") | ConvertFrom-Json
+  Write-Host "[semver] Current version: $($summary.currentVersion)"
+  Write-Host "[semver] Commit impact: $($summary.bump)"
+  Write-Host "[semver] Suggested next release: $($summary.suggestedNextVersion)"
+  $reasonSuffix = if ($summary.breaking) { "!" } else { "" }
+  Write-Host "[semver] Reason: $($summary.type)$reasonSuffix"
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
 Set-Location $repoRoot
 
@@ -109,6 +126,8 @@ if ($LASTEXITCODE -ne 0) {
 if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
+
+Show-SemverImpact -Message $message
 
 & npm run docs:sync
 if ($LASTEXITCODE -ne 0) {

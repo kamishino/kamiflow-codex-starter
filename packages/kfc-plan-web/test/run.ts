@@ -35,6 +35,9 @@ const {
   createClientReadyArtifacts,
   evaluateClientSetupCompletion
 } = await import(pathToFileURL(path.join(packageDir, "..", "..", "dist/commands/client.js")).href);
+const { analyzeCommitMessageSemver } = await import(
+  pathToFileURL(path.join(packageDir, "..", "..", "dist/scripts/release/semver-from-commits.js")).href
+);
 
 const __dirname = path.join(packageDir, "test");
 
@@ -987,6 +990,24 @@ archived_at: 2026-03-10T00:05:00.000Z
     assert.equal(completion.complete, true);
     assert.ok(String(completion.reason).includes("archived successfully"));
   });
+});
+
+await runCase("single commit semver analyzer distinguishes none patch minor and major", async () => {
+  assert.equal(
+    analyzeCommitMessageSemver("docs(readme): clarify usage", "0.1.0").bump,
+    "none"
+  );
+  assert.equal(
+    analyzeCommitMessageSemver("fix(client): handle rerun", "0.1.0").bump,
+    "patch"
+  );
+  assert.equal(
+    analyzeCommitMessageSemver("feat(client): add handoff reuse", "0.1.0").bump,
+    "minor"
+  );
+  const major = analyzeCommitMessageSemver("feat(client)!: replace bootstrap flow", "0.1.0");
+  assert.equal(major.bump, "major");
+  assert.equal(major.suggestedNextVersion, "1.0.0");
 });
 
 await runCase("technical solution diagram model reads mermaid from solution section", async () => {

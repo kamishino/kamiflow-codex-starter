@@ -8,6 +8,8 @@ const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../..");
 const PACKAGE_JSON_PATH = path.join(ROOT_DIR, "package.json");
 const CONVENTIONAL_SUBJECT_RE = /^(?<type>[a-z]+)(\([^)]+\))?(?<breaking>!)?: /;
+const PATCH_TYPES = new Set(["fix", "perf"]);
+const NONE_TYPES = new Set(["docs", "test", "style", "chore", "ci", "build", "refactor"]);
 
 function usage() {
   console.log(
@@ -17,7 +19,8 @@ function usage() {
       "Outputs semver bump suggestion inferred from commit history:",
       "  breaking change => major",
       "  feat           => minor",
-      "  otherwise      => patch"
+      "  fix/perf       => patch",
+      "  docs/test/chore/etc. => none"
     ].join("\n")
   );
 }
@@ -124,7 +127,19 @@ function classifyCommit(commit) {
   const breakingBySubject = Boolean(match?.groups?.breaking);
   const breakingByBody = /BREAKING CHANGE:/i.test(commit.body);
   const breaking = breakingBySubject || breakingByBody;
-  return { type, breaking };
+  let bump: "none" | "patch" | "minor" | "major" = "none";
+  if (breaking) {
+    bump = "major";
+  } else if (type === "feat") {
+    bump = "minor";
+  } else if (PATCH_TYPES.has(type)) {
+    bump = "patch";
+  } else if (NONE_TYPES.has(type)) {
+    bump = "none";
+  } else {
+    bump = "patch";
+  }
+  return { type, breaking, bump };
 }
 
 function nextBump(current, candidate) {
@@ -167,16 +182,7 @@ export function analyzeSemver({ fromTag = "" } = {}) {
   for (const commit of commits) {
     const classified = classifyCommit(commit);
     byType[classified.type] = (byType[classified.type] || 0) + 1;
-
-    if (classified.breaking) {
-      suggestedBump = nextBump(suggestedBump, "major");
-      continue;
-    }
-    if (classified.type === "feat") {
-      suggestedBump = nextBump(suggestedBump, "minor");
-      continue;
-    }
-    suggestedBump = nextBump(suggestedBump, "patch");
+    suggestedBump = nextBump(suggestedBump, classified.bump);
   }
 
   const suggestedNextVersion =
@@ -196,9 +202,31 @@ export function analyzeSemver({ fromTag = "" } = {}) {
         shortHash: commit.shortHash,
         subject: commit.subject,
         type: classified.type,
-        breaking: classified.breaking
+        breaking: classified.breaking,
+        bump: classified.bump
       };
     })
+  };
+}
+
+export function analyzeCommitMessageSemver(message: string, currentVersion: string) {
+  const subject = String(message || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find((line) => line.length > 0 && !line.startsWith("#")) || "";
+  const classified = classifyCommit({
+    subject,
+    body: String(message || "")
+  });
+  const suggestedNextVersion =
+    classified.bump === "none" ? currentVersion : bumpVersion(currentVersion, classified.bump);
+  return {
+    subject,
+    currentVersion,
+    bump: classified.bump,
+    suggestedNextVersion,
+    type: classified.type,
+    breaking: classified.breaking
   };
 }
 

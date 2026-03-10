@@ -11,9 +11,20 @@ Support semantic versioning without npm publish:
 
 - `BREAKING CHANGE` or `type(scope)!:` => `major`
 - `feat(...)` => `minor`
-- all other commits (`fix`, `docs`, `chore`, etc.) => `patch`
+- `fix(...)` and `perf(...)` => `patch`
+- maintenance-only commits (`docs`, `test`, `style`, most `chore`, `ci`, `build`, `refactor`) => `none`
 
 `release:plan` and `version:next` suggest the bump, but final release bump is chosen manually.
+
+## Before Each Commit
+
+`npm run commit:codex -- --message "type(scope): summary"` now prints an advisory semantic version summary before commit:
+
+- current workspace version
+- commit impact: `none|patch|minor|major`
+- suggested next release version
+
+This does not mutate `package.json`. Actual `x.y.z` bumps still happen only through `release:cut`.
 
 ## Commands
 
@@ -67,6 +78,7 @@ Example:
 ## Notes
 
 - No per-commit `package.json` version churn.
+- `none` is a valid commit impact and means the commit does not require a release bump by itself.
 - Workspace packages share one release version (`@kamishino/kamiflow-codex` and `@kamishino/kfc-plan-web`).
 - In restricted/sandboxed shells that block child-process spawn, run release commands in a normal local terminal.
 
