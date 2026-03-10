@@ -64,6 +64,7 @@
     "dogfood:pack-smoke": "npm run build:scripts && node dist/scripts/dogfood/pack-install-smoke.js",
     "client:link-bootstrap": "npm run build:scripts && node dist/scripts/client/link-bootstrap.js",
     "portability:smoke": "npm run build:scripts && node dist/scripts/portability/smoke-one-repo.js",
+    "portability:matrix": "npm run build:scripts && node dist/scripts/portability/smoke-matrix.js",
     "remote:smoke": "npm run build:server && npm run build:scripts && node dist/scripts/remote/smoke-remote-serve.js",
     "release:plan": "npm run build:scripts && node dist/scripts/release/plan-release.js",
     "release:cut": "npm run build:scripts && node dist/scripts/release/cut-release.js",

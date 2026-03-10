@@ -46,6 +46,20 @@ This repository is the KFC CLI source plus dogfooding workspace.
 
 Global option: `--cwd <path>`
 
+## Product Hierarchy
+
+- `kfc`: core shell for workflow/bootstrap/plan discipline and the default entrypoint in client projects
+- `kfc web`: hosted KFC shell that mounts focused browser surfaces like `/plan`, `/session`, and `/chat`
+- `kfc-plan-desktop`: desktop shell for the plan observer experience
+- `kfc-session`: focused Codex session manager utility
+- `kfc-chat`: focused bound-session chat utility
+
+Default rule:
+
+- use `kfc` for workflow and client onboarding
+- use `kfc web` when you want the hosted multi-surface shell
+- use `kfc-session` or `kfc-chat` directly only when you need that utility in isolation
+
 ## Command Boundary
 
 ### Run in KFC Repo
@@ -285,6 +299,7 @@ npm run commit:codex -- --message "type(scope): summary"
 
 ```bash
 npm run portability:smoke -- --project <path-to-external-repo> --link
+npm run portability:matrix
 ```
 
 See `resources/docs/PORTABILITY_RUNBOOK.md`.

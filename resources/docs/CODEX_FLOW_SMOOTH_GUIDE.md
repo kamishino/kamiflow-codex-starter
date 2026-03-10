@@ -78,7 +78,7 @@ When route execution fails or context is incomplete, use this exact order:
 
 1. Resolve active plan from `.local/plans/*.md` and continue on that file.
 2. If no active plan exists, recover with `kfc flow ensure-plan --project .`.
-3. Re-read `AGENTS.md`, `.kfc/CODEX_READY.md`, and `.kfc/LESSONS.md` (when present) before rerouting.
+3. Re-read `AGENTS.md`, `.kfc/CODEX_READY.md`, and `.kfc/LESSONS.md` (when present) before rerouting, and treat any onboarding inspection summary in `CODEX_READY.md` as the current repo-shape handoff.
 4. If shell/profile startup crashes, rerun in no-profile/non-login shell.
 5. If route remains blocked, return `Status: BLOCK` with one concrete recovery step.
 
@@ -107,6 +107,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `🧭` Chat is the control plane: Codex executes normal flow commands directly.
 - `🤝` Do not push routine CLI steps back to the user when the agent can run them.
 - `🧱` If execution is blocked by environment boundaries, report the blocker and request the smallest possible user action.
+- `🧾` In client projects, trust the inspection-aware handoff in `.kfc/CODEX_READY.md`; do not rerun bootstrap or re-ask environment basics unless evidence shows drift or breakage.
 - `👀` KFC Plan stays observer-first: direct UI/API Codex execution is disabled; Activity Stream relies on plan + run-log (`.local/runs/*.jsonl`) events.
 - `🧠` Diagram policy: Mermaid/flow visuals are derived from canonical plan markdown; never treat diagrams as writable execution state.
 - `🗺️` Place solution-logic Mermaid in a dedicated `Technical Solution Diagram` section; keep PlanSnapshot focused on progress/checklist status.
@@ -130,6 +131,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `AGENTS.md` for operating contract changes
 - `resources/docs/ROADMAP.md` for repo direction/context changes
 - `resources/docs/CHANGELOG.md` for durable decisions
+- focused runbooks (`KFC_CHAT_RUNBOOK`, `KFC_SESSION_RUNBOOK`, `PORTABILITY_RUNBOOK`) when client or hosted entrypoint behavior changes
 - root generated mirrors via `npm run docs:sync`
 - Private memory lane:
 - `.kfc/LESSONS.md` and `.local/kfc-lessons/`

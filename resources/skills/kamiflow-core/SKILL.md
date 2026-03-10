@@ -148,6 +148,7 @@ Pick mode before executing route logic:
 - If mode does not satisfy route requirements, do not continue.
 - Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
 - In client projects, if `.kfc/LESSONS.md` exists, read it as curated durable project memory before implementation.
+- In client projects, if `.kfc/CODEX_READY.md` exists, treat its repo-shape inspection summary and onboarding handoff as authoritative until evidence shows drift.
 - Every top-level implementation or workflow request must resolve one active non-done plan in `.local/plans` before route output.
 - Low-risk operational requests may use the no-plan fast path when they do not need acceptance criteria, phase/archive tracking, or multi-step workflow state.
 - Allowed no-plan fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow maintenance chores with low workflow risk.
@@ -217,6 +218,9 @@ Pick mode before executing route logic:
 - Command boundary mismatch:
   - Symptom: repo-only `npm run ...` shown or used in client project.
   - Recovery: switch to `kfc client` (or `kfc client bootstrap --project . --profile client`) and continue with `kfc ...`.
+- Duplicate client bootstrap:
+  - Symptom: `.kfc/CODEX_READY.md` already exists but bootstrap is suggested again without a concrete environment failure.
+  - Recovery: continue from the ready brief and active plan; rerun `kfc client` only when setup evidence is missing or broken.
 - Codex invocation/quoting failure:
   - Symptom: `spawn codex ENOENT` or `unexpected argument` from `codex exec`.
   - Recovery: persist plan state directly in markdown first; if manual fallback is required use a single quoted prompt: `codex exec "<prompt>"`.

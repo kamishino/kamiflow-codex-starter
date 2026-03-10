@@ -1,14 +1,15 @@
-# Portability Validation Runbook (One External Repo)
+# Portability Validation Runbook
 
 Use this runbook to validate that `kfc` + `kamiflow-core` work outside this dogfood repository.
 
 ## Goal
 
-Prove external-repo portability baseline in an external repository:
+Prove external-repo portability baseline first, then compare a small repo-shape matrix:
 
 - install/link CLI
 - run one-command client setup and verify readiness
 - confirm plan bootstrap, validation, and health checks work outside this repo
+- compare onboarding behavior across blank, existing, partial, and risky repo shapes
 
 ## Preconditions
 
@@ -96,17 +97,23 @@ Minimum evidence:
 - PASS/BLOCK
 - blocking reason + recovery (if any)
 
-## Optional Automation Script
+## Automation Scripts
 
 ### Run in KFC Repo
 
-This repo includes an executable smoke helper:
+One external repo:
 
 ```bash
 npm run portability:smoke -- --project <path-to-external-repo> --link
 ```
 
-Legacy granular checks are still available:
+Matrix baseline:
+
+```bash
+npm run portability:matrix
+```
+
+Legacy granular checks are still available for the one-repo helper:
 
 ```bash
 npm run portability:smoke -- --project <path-to-external-repo> --link --legacy-steps
@@ -115,6 +122,7 @@ npm run portability:smoke -- --project <path-to-external-repo> --link --legacy-s
 Outputs markdown log to:
 
 - `artifacts/portability/<timestamp>-<project>.md`
+- matrix helper writes `artifacts/portability/matrix-<timestamp>.md`
 
 If executed in a restricted sandbox/CI shell, child-process spawn may be blocked.
 In that case, run the same command in a normal local terminal session.
@@ -131,6 +139,14 @@ Validation is complete when all are true:
 6. plan file is created and validated in external repo.
 7. smoke log is captured and reviewable.
 
+Matrix proof is complete when all are true:
+
+1. blank/new repo case passes as `empty_new_repo`.
+2. existing Node repo case passes as `needs_minor_fixes`.
+3. partial KFC repo case passes without risky mutation behavior.
+4. risky repo case blocks before mutation with direct recovery.
+5. matrix evidence log is captured and reviewable.
+
 Optional extended criteria:
 
 1. route loop reaches `done`.
@@ -138,7 +154,7 @@ Optional extended criteria:
 
 ## Known Limits
 
-- One external repo only (baseline portability proof).
-- No automation orchestration beyond smoke helper script.
-- Multi-repo matrix is a future phase.
+- Matrix is local temp-workspace proof, not a substitute for real external client repos.
+- No automation orchestration beyond smoke helpers.
+- Multi-language and multi-package client matrix remains a future phase.
 

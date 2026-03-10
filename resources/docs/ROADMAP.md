@@ -23,8 +23,8 @@ Policy:
 
 Next phase:
 
-1. run one external-repo portability smoke and store evidence log
-2. tune route prompts and gate wording from user feedback
-3. add optional helper automation only after portability baseline is stable
-4. extend to multi-repo matrix (JS/TS + non-JS)
+1. run one external-repo portability smoke and compare it with the local repo-shape matrix evidence
+2. tune route prompts and gate wording from onboarding/portability feedback
+3. clarify hosted product hierarchy (`kfc`, `kfc web`, `kfc-session`, `kfc-chat`, desktop shell)
+4. extend portability proof to a wider multi-repo matrix (JS/TS + non-JS)
 

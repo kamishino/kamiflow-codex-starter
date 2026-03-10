@@ -20,7 +20,7 @@ Fallback order for all routes:
 
 1. Reuse active plan.
 2. Recover missing plan via `kfc flow ensure-plan --project .`.
-3. Re-read contracts (`AGENTS.md`, `.kfc/CODEX_READY.md` when present).
+3. Re-read contracts (`AGENTS.md`, `.kfc/CODEX_READY.md` when present) and treat any client inspection summary there as the current repo-shape truth.
 4. Return `Status: BLOCK` with one concrete recovery action when still blocked.
 
 ## Route Confidence Gate
@@ -49,6 +49,7 @@ Expected:
 - concrete scope
 - profile: `plan`
 - route confidence `>=4` for selected route (otherwise reroute)
+- in client projects, consume the onboarding repo-shape and handoff state from `.kfc/CODEX_READY.md` before asking for more environment/bootstrap information
 - if `START_CONTEXT` is provided, consume it directly and do not re-ask baseline clarification
 - if `START_CONTEXT` is absent and request is vague (missing 2+ core fields), reroute to `start` first
 - resolve target plan file in this order:
@@ -97,6 +98,7 @@ Expected:
 
 - profile: `plan`
 - route confidence `>=4` for selected route (otherwise reroute)
+- in client projects, trust the onboarding inspection state from `.kfc/CODEX_READY.md`; do not restart bootstrap or ask duplicate environment questions unless evidence says the repo drifted
 - if `IDEATION_CONTEXT` exists, consume it first and skip duplicate baseline questions
 - otherwise first turn asks 3-5 questions only
 - each question has 3 options + `Other`
@@ -135,6 +137,7 @@ Expected:
 
 - profile: `executor`
 - route confidence `>=4` for selected route (otherwise reroute)
+- in client projects, treat `.kfc/CODEX_READY.md` as the bootstrap handoff; do not rerun `kfc client` unless the environment is actually broken
 - no execution outside selected task scope
 - build/fix updates `Implementation Tasks` only
 - validation command outcomes
@@ -161,6 +164,7 @@ Expected:
 - acceptance criteria status
 - check phase validates/tests Acceptance Criteria
 - check closeout also reviews tracked docs impact and keeps private lessons on the `.kfc/.local` lane
+- if client onboarding state or hosted entrypoint guidance changed, update the relevant runbooks before claiming commit-safe completion
 - PASS/BLOCK decision
 - explicit next command (`fix` or `done`)
 - if completion is below 100%, amend tasks/criteria and continue `build/fix -> check`

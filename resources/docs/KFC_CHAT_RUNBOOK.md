@@ -5,6 +5,7 @@ KFC Chat is a separate utility for one bound Codex session per project.
 Boundary:
 
 - `kfc`: Kami Flow workflow, bootstrap, plan discipline, client automation
+- `kfc web`: hosted shell that exposes the chat surface at `/chat`
 - `kfc-chat`: guarded browser prompting into one existing Codex session
 
 ## Start
@@ -34,6 +35,9 @@ Direct package binary:
 ```bash
 kfc-chat serve --project .
 ```
+
+Use `kfc web` when you want the full hosted KFC shell with navigation across plan/session/chat surfaces.
+Use `kfc-chat` directly when the chat utility is the only surface you need.
 
 Bind a Codex session first:
 

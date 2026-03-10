@@ -5,6 +5,7 @@ KFC Session is a separate utility for Codex session management.
 Boundary:
 
 - `kfc`: Kami Flow workflow, bootstrap, plan discipline, client automation
+- `kfc web`: hosted shell that exposes the session surface at `/session`
 - `kfc-session`: Codex session browser, import/export, restore helper
 
 ## Start
@@ -34,6 +35,9 @@ Direct package binary:
 ```bash
 kfc-session serve
 ```
+
+Use `kfc web` when you want the full hosted KFC shell with navigation across plan/session/chat surfaces.
+Use `kfc-session` directly when session management is the only surface you need.
 
 By default, KFC Session uses:
 
