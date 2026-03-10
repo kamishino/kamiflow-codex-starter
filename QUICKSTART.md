@@ -37,6 +37,8 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
+`kfc client` prints doc and quick-start hints from the active install location (project-level `resourcesDir` or package resources fallback), so the exact doc paths can vary by environment.
+
 `kfc client` is the reusable client-project entrypoint. It starts with an inline inspection pass, auto-initializes a minimal `package.json` when the target folder is truly empty, creates or refreshes the root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, runs one smart-recovery cycle only for recoverable bootstrap issues, and auto-launches:
 
 ```bash
@@ -139,17 +141,17 @@ kfc session key show
 # add trusted destination device(s) on source machine
 kfc session trust add --name <peer-device> --pubkey <age1...>
 
-# source machine: push active session (auto-id: --id > CODEX_THREAD_ID > latest session file)
-kfc session push --to E:/transfer/codex-sessions
+# source machine: push latest active session from the local session folder
+kfc session push --to <TRANSFER_DIR>/codex-sessions
 
 # source machine: push exact session id
-kfc session push --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
+kfc session push --id <SESSION_ID> --to <TRANSFER_DIR>/codex-sessions
 
 # destination machine: pull latest indexed session into ~/.codex/sessions
-kfc session pull --from E:/transfer/codex-sessions
+kfc session pull --from <TRANSFER_DIR>/codex-sessions
 
 # destination machine: pull exact session id
-kfc session pull --from E:/transfer/codex-sessions --id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc session pull --from <TRANSFER_DIR>/codex-sessions --id <SESSION_ID>
 ```
 
 Transfer folder stores encrypted `.kfc-session.json` artifacts plus minimal metadata index (`kfc-session-index.json`) using age recipient encryption.
@@ -175,7 +177,7 @@ Recommended network model: private reachability such as Tailscale. See `resource
 Optional advanced utility:
 
 ```bash
-kfc-chat bind --project . --session-id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-chat bind --project . --session-id <SESSION_ID>
 kfc-chat serve --project .
 ```
 

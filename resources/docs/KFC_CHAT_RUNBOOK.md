@@ -42,7 +42,7 @@ Use `kfc-chat` directly when the chat utility is the only surface you need.
 Bind a Codex session first:
 
 ```bash
-kfc-chat bind --project . --session-id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-chat bind --project . --session-id <SESSION_ID>
 ```
 
 Show or clear the binding:

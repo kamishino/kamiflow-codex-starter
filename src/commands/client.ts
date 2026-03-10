@@ -130,8 +130,10 @@ function usage() {
   info("Usage: kfc client [options]");
   info("Usage: kfc client <bootstrap|doctor|done|update|upgrade|lessons> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
-  info("Client docs are packaged at: ./node_modules/@kamishino/kamiflow-codex/resources/docs/QUICKSTART.md");
-  info("Client kickoff prompt: ./node_modules/@kamishino/kamiflow-codex/resources/docs/CLIENT_KICKOFF_PROMPT.md");
+  const docsHint = resolveClientResourcesHint(process.cwd());
+  const docsRoot = path.join(docsHint, "docs");
+  info(`Client docs are packaged at: ${path.join(docsRoot, "QUICKSTART.md")}`);
+  info(`Client kickoff prompt: ${path.join(docsRoot, "CLIENT_KICKOFF_PROMPT.md")}`);
   info("Project-local runtime skill path: .agents/skills/kamiflow-core/SKILL.md");
   info("Examples:");
   info("  kfc client");
@@ -625,9 +627,9 @@ function loadPackageName() {
   return pkg.name;
 }
 
-function packagedClientResourcesDir() {
+function packagedClientResourcesDir(projectDir) {
   const packageName = loadPackageName();
-  return `./node_modules/${packageName}/resources`;
+  return path.join(projectDir, "node_modules", packageName, "resources");
 }
 
 function bundledResourcesDirAbsolute() {
@@ -635,24 +637,42 @@ function bundledResourcesDirAbsolute() {
 }
 
 function resolveClientResourcesHint(projectDir) {
-  const packageName = loadPackageName();
-  const packagedPath = path.join(projectDir, "node_modules", packageName, "resources");
+  const configPath = getConfigPath(projectDir);
+  const configRaw = fs.existsSync(configPath)
+    ? fs.readFileSync(configPath, "utf8")
+    : "";
+  if (configRaw.length > 0) {
+    try {
+      const config = JSON.parse(configRaw);
+      const resourcesHint = config?.paths?.resourcesDir;
+      if (typeof resourcesHint === "string" && resourcesHint.trim().length > 0) {
+        const resolved = path.resolve(projectDir, resourcesHint);
+        if (fs.existsSync(resolved)) {
+          return resolved;
+        }
+      }
+    } catch (err) {
+      // config not parseable yet; fallback to probing package and package-root resources.
+    }
+  }
+
+  const packagedPath = packagedClientResourcesDir(projectDir);
   if (fs.existsSync(packagedPath)) {
-    return packagedClientResourcesDir();
+    return packagedPath;
   }
   const bundledPath = bundledResourcesDirAbsolute();
   if (fs.existsSync(bundledPath)) {
     return bundledPath;
   }
-  return packagedClientResourcesDir();
+  return packagedPath;
 }
 
 function resolveClientQuickstartPath(projectDir) {
-  return path.join(projectDir, "node_modules", loadPackageName(), QUICKSTART_FILE);
+  return path.join(resolveClientResourcesHint(projectDir), QUICKSTART_FILE);
 }
 
 function resolveClientKickoffPromptPath(projectDir) {
-  return path.join(projectDir, "node_modules", loadPackageName(), CLIENT_KICKOFF_PROMPT_FILE);
+  return path.join(resolveClientResourcesHint(projectDir), CLIENT_KICKOFF_PROMPT_FILE);
 }
 
 function printClientDocsHints(projectDir) {

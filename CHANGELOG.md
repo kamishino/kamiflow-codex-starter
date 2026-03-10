@@ -18,3 +18,4 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 - Reworked `kfc client` toward a reusable one-command entrypoint so reruns refresh/reuse the handoff, wait for Codex completion, and auto-clean `.kfc/CODEX_READY.md` only after archived-done proof.
 - Added advisory semantic-version impact reporting to `commit:codex`, with `none|patch|minor|major` derived from the conventional commit message while keeping actual workspace version bumps release-only.
 - Expanded the generated client-root `AGENTS.md` contract so fresh client sessions now see a short workflow command map for plan validation, readiness recovery, doctor recovery, and cleanup without relying on repo-only scripts.
+- Refined client-bootstrap script/docs resolution so doc/help paths for `kfc client` are derived from active `resourcesDir` or install fallback, making reuse in new project locations cleaner and less brittle.

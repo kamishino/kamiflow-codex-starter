@@ -48,7 +48,7 @@ By default, KFC Session uses:
 Override the sessions root when needed:
 
 ```bash
-kfc-session serve --sessions-root D:/transfer/codex-sessions
+kfc-session serve --sessions-root <TRANSFER_DIR>/codex-sessions
 ```
 
 ## Core Commands
@@ -56,10 +56,10 @@ kfc-session serve --sessions-root D:/transfer/codex-sessions
 ```bash
 kfc-session index
 kfc-session where
-kfc-session find --id 019caccc-f25d-7151-ad1d-6eab893d714d
-kfc-session export --id 019caccc-f25d-7151-ad1d-6eab893d714d --to E:/transfer/codex-sessions
-kfc-session import --from E:/transfer/codex-sessions
-kfc-session restore --id 019caccc-f25d-7151-ad1d-6eab893d714d
+kfc-session find --id <SESSION_ID>
+kfc-session export --id <SESSION_ID> --to <TRANSFER_DIR>/codex-sessions
+kfc-session import --from <TRANSFER_DIR>/codex-sessions
+kfc-session restore --id <SESSION_ID>
 ```
 
 ## Web UI Scope
