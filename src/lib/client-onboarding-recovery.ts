@@ -1,5 +1,6 @@
 export const CLIENT_ONBOARDING_CODES = Object.freeze({
   PREFLIGHT_FAILED: "CLIENT_PREFLIGHT_FAILED",
+  PACKAGE_JSON_MISSING: "CLIENT_PACKAGE_JSON_MISSING",
   CONFIG_INVALID: "CLIENT_CONFIG_INVALID",
   PLAN_UI_MISSING: "CLIENT_PLAN_UI_MISSING",
   RULES_SYNC_FAILED: "CLIENT_RULES_SYNC_FAILED",
@@ -33,6 +34,8 @@ type ClientOnboardingStage = (typeof CLIENT_ONBOARDING_STAGES)[keyof typeof CLIE
 type ClientOnboardingError = Error & {
   code?: string;
   recovery?: string;
+  next?: string;
+  stage?: string;
 };
 
 type ClientOnboardingFailureInput = {
@@ -43,7 +46,16 @@ type ClientOnboardingFailureInput = {
   next?: unknown;
 };
 
-const PASS_NEXT_STEPS = Object.freeze([
+type ClientOnboardingPassOptions = {
+  recoveryUsed?: boolean;
+  stage?: ClientOnboardingStage;
+  reason?: string;
+  recovery?: string;
+  next?: string;
+  next_steps?: string[];
+};
+
+const DEFAULT_PASS_NEXT_STEPS = Object.freeze([
   "kfc flow ensure-plan --project .",
   "kfc flow ready --project .",
   "kfc flow next --project . --plan <plan-id> --style narrative"
@@ -61,11 +73,22 @@ function normalizeStage(value: unknown): ClientOnboardingStage {
   return CLIENT_ONBOARDING_STAGES.BOOTSTRAP;
 }
 
-export function createClientOnboardingError(code: ClientOnboardingCode, reason: unknown, recovery?: string): ClientOnboardingError {
+export function createClientOnboardingError(
+  code: ClientOnboardingCode,
+  reason: unknown,
+  recovery?: string,
+  options: { next?: string; stage?: ClientOnboardingStage } = {}
+): ClientOnboardingError {
   const err = new Error(normalizeMessage(reason) || "Client onboarding failed.") as ClientOnboardingError;
   err.code = code;
   if (recovery) {
     err.recovery = String(recovery);
+  }
+  if (options.next) {
+    err.next = String(options.next);
+  }
+  if (options.stage) {
+    err.stage = String(options.stage);
   }
   return err;
 }
@@ -73,6 +96,7 @@ export function createClientOnboardingError(code: ClientOnboardingCode, reason: 
 function stageForCode(code: string): ClientOnboardingStage {
   if (
     code === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
+    code === CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING ||
     code === CLIENT_ONBOARDING_CODES.CONFIG_INVALID ||
     code === CLIENT_ONBOARDING_CODES.PLAN_UI_MISSING ||
     code === CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED ||
@@ -100,7 +124,7 @@ function nextForStage(stage) {
     return "Read .kfc/CODEX_READY.md and execute the mission.";
   }
   if (stage === CLIENT_ONBOARDING_STAGES.EXECUTION_READY) {
-    return PASS_NEXT_STEPS[0];
+    return DEFAULT_PASS_NEXT_STEPS[0];
   }
   if (stage === CLIENT_ONBOARDING_STAGES.DONE) {
     return "kfc client done";
@@ -109,6 +133,9 @@ function nextForStage(stage) {
 }
 
 function recoveryForCode(code: string): string {
+  if (code === CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING) {
+    return "npm init -y";
+  }
   if (code === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS) {
     return "kfc client done --project .";
   }
@@ -135,6 +162,7 @@ function codeFromMessage(message) {
   if (!text) {
     return CLIENT_ONBOARDING_CODES.BOOTSTRAP_FAILED;
   }
+  if (text.includes("missing package.json")) return CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING;
   if (text.includes("preflight")) return CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED;
   if (text.includes("config validation failed") || text.includes("config check failed")) {
     return CLIENT_ONBOARDING_CODES.CONFIG_INVALID;
@@ -169,17 +197,26 @@ export function classifyClientOnboardingFailure(input: ClientOnboardingFailureIn
   };
 }
 
-export function buildClientOnboardingPassPayload(recoveryUsed = false) {
+export function buildClientOnboardingPassPayload(options: boolean | ClientOnboardingPassOptions = false) {
+  const normalized = typeof options === "boolean" ? { recoveryUsed: options } : options;
+  const recoveryUsed = normalized.recoveryUsed === true;
+  const stage = normalizeStage(normalized.stage || CLIENT_ONBOARDING_STAGES.EXECUTION_READY);
+  const nextSteps = Array.isArray(normalized.next_steps) && normalized.next_steps.length > 0
+    ? normalized.next_steps.map((step) => normalizeMessage(step)).filter(Boolean)
+    : [...DEFAULT_PASS_NEXT_STEPS];
+  const next = normalizeMessage(normalized.next || nextSteps[0]) || nextForStage(stage);
   return {
     status: "PASS",
-    stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY,
+    stage,
     error_code: recoveryUsed ? CLIENT_ONBOARDING_CODES.PASS_RECOVERED : CLIENT_ONBOARDING_CODES.PASS,
-    reason: recoveryUsed
-      ? "Client onboarding completed after one smart-recovery cycle."
-      : "Client onboarding completed without remediation.",
-    recovery: "None",
-    next: nextForStage(CLIENT_ONBOARDING_STAGES.EXECUTION_READY),
-    next_steps: [...PASS_NEXT_STEPS]
+    reason: normalizeMessage(normalized.reason) || (
+      recoveryUsed
+        ? "Client onboarding completed after one smart-recovery cycle."
+        : "Client onboarding completed without remediation."
+    ),
+    recovery: normalizeMessage(normalized.recovery || "None") || "None",
+    next,
+    next_steps: nextSteps
   };
 }
 

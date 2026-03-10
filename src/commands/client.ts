@@ -37,6 +37,7 @@ import {
   syncSkillsArtifacts
 } from "../lib/skill-sync.js";
 import { error, info, warn } from "../lib/logger.js";
+import { evaluateBuildReadiness } from "../lib/plan-lifecycle.js";
 import { buildCodexExecManualCommand, runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 import { runDoctor } from "./doctor.js";
 import { runFlow } from "./flow.js";
@@ -69,6 +70,35 @@ type ClientBootstrapRuntime = {
   suppressSuccessHints?: boolean;
   printPass?: boolean;
 };
+type ClientPlanStateKind = "draft_plan" | "build_ready" | "blocked_plan";
+type ClientPlanStateSummary = {
+  kind: ClientPlanStateKind;
+  planId: string;
+  planPath: string;
+  status: string;
+  decision: string;
+  nextCommand: string;
+  nextMode: string;
+  buildReady: boolean;
+  readinessFindings: string[];
+  summary: string;
+  next: string;
+  nextSteps: string[];
+};
+type ClientBootstrapOutcome = {
+  autoInitializedPackageJson: boolean;
+  planState: ClientPlanStateSummary;
+};
+
+const BENIGN_EMPTY_PROJECT_ENTRIES = new Set([
+  ".git",
+  ".gitignore",
+  ".gitattributes",
+  ".editorconfig",
+  ".DS_Store",
+  "Thumbs.db",
+  "desktop.ini"
+]);
 
 function getErrorCode(err: unknown): string {
   if (err && typeof err === "object" && "code" in err) {
@@ -333,7 +363,57 @@ function checkCommandInPath(commandCandidates, args, label) {
   return false;
 }
 
-async function assertProjectPreflight(projectDir) {
+function slugifyProjectPackageName(projectDir) {
+  const basename = path.basename(path.resolve(projectDir)) || "kfc-client-project";
+  const slug = basename
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .replace(/^[._-]+/, "")
+    .replace(/[._-]+$/, "");
+  return slug || "kfc-client-project";
+}
+
+function isBenignEmptyProjectEntry(entry) {
+  return BENIGN_EMPTY_PROJECT_ENTRIES.has(String(entry?.name || ""));
+}
+
+function buildAutoInitPackageJson(projectDir) {
+  return {
+    name: slugifyProjectPackageName(projectDir),
+    version: "1.0.0",
+    private: true
+  };
+}
+
+async function ensureProjectPackageJsonForBootstrap(projectDir) {
+  const manifestPath = projectJsonPath(projectDir);
+  if (fs.existsSync(manifestPath)) {
+    info(`package.json found: ${manifestPath}`);
+    return { created: false, packageJsonPath: manifestPath };
+  }
+
+  const entries = await fsp.readdir(projectDir, { withFileTypes: true });
+  const meaningfulEntries = entries.filter((entry) => !isBenignEmptyProjectEntry(entry));
+  if (meaningfulEntries.length > 0) {
+    throw createClientOnboardingError(
+      CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING,
+      `Missing package.json in project: ${manifestPath}. This folder is not a Node project yet.`,
+      "npm init -y",
+      {
+        next: "kfc client --force",
+        stage: CLIENT_ONBOARDING_STAGES.BOOTSTRAP
+      }
+    );
+  }
+
+  await fsp.writeFile(manifestPath, JSON.stringify(buildAutoInitPackageJson(projectDir), null, 2) + "\n", "utf8");
+  info(`Auto-initialized minimal package.json: ${manifestPath}`);
+  return { created: true, packageJsonPath: manifestPath };
+}
+
+async function assertProjectPreflight(projectDir, options: { requirePackageJson?: boolean } = {}) {
+  const requirePackageJson = options.requirePackageJson !== false;
   let ok = true;
   const nodeMajor = parseMajorVersion(process.versions.node);
   if (nodeMajor < 20) {
@@ -361,12 +441,14 @@ async function assertProjectPreflight(projectDir) {
     ok = false;
   }
 
-  const packageJsonPath = path.join(projectDir, "package.json");
-  if (!fs.existsSync(packageJsonPath)) {
-    error(`Missing package.json in project: ${projectJsonPath(projectDir)}`);
-    ok = false;
-  } else {
-    info(`package.json found: ${packageJsonPath}`);
+  if (requirePackageJson) {
+    const manifestPath = projectJsonPath(projectDir);
+    if (!fs.existsSync(manifestPath)) {
+      error(`Missing package.json in project: ${manifestPath}`);
+      ok = false;
+    } else {
+      info(`package.json found: ${manifestPath}`);
+    }
   }
 
   const npmCheck = runNodeNpm(["--version"], projectDir);
@@ -449,10 +531,11 @@ function printClientDocsHints(projectDir) {
   }
 }
 
-function printClientNextCommandHints() {
-  info("Next: kfc flow ensure-plan --project .");
-  info("Then: kfc flow ready --project .");
-  info("Then: kfc flow next --project . --plan <plan-id> --style narrative");
+function printClientNextCommandHints(planState: ClientPlanStateSummary) {
+  info(`Next: ${planState.next}`);
+  for (const step of planState.nextSteps.slice(1)) {
+    info(`Then: ${step}`);
+  }
 }
 
 function buildClientCodexLaunchPrompt() {
@@ -1128,10 +1211,105 @@ async function resolveActivePlan(projectDir) {
   return source[0];
 }
 
-function buildReadyFileContent({ goal, planId, planPath }) {
+async function describeClientPlanState(projectDir): Promise<ClientPlanStateSummary> {
+  const plan = await resolveActivePlan(projectDir);
+  if (!plan) {
+    throw new Error("Cannot find an active plan in .local/plans.");
+  }
+
+  const raw = await fsp.readFile(plan.filePath, "utf8");
+  const frontmatter = parseSimpleFrontmatter(raw);
+  const readiness = evaluateBuildReadiness({ frontmatter, raw });
+  const status = String(frontmatter.status || "draft").trim() || "draft";
+  const decision = String(frontmatter.decision || "Unknown").trim() || "Unknown";
+  const nextCommand = String(frontmatter.next_command || "plan").trim() || "plan";
+  const nextMode = String(frontmatter.next_mode || "Plan").trim() || "Plan";
+  const blocked =
+    String(status).toLowerCase() === "blocked" ||
+    String(nextCommand).toLowerCase() === "fix" ||
+    String(nextMode).toLowerCase() === "fix";
+
+  if (readiness.ready) {
+    return {
+      kind: "build_ready",
+      planId: plan.planId,
+      planPath: plan.filePath,
+      status,
+      decision,
+      nextCommand,
+      nextMode,
+      buildReady: true,
+      readinessFindings: [],
+      summary: "Active plan is build-ready. Codex can verify readiness and start the next build slice.",
+      next: "kfc flow ready --project .",
+      nextSteps: [
+        "kfc flow ready --project .",
+        "kfc flow next --project . --plan <plan-id> --style narrative"
+      ]
+    };
+  }
+
+  const readinessHints = readiness.findings.slice(0, 2);
+  if (blocked) {
+    return {
+      kind: "blocked_plan",
+      planId: plan.planId,
+      planPath: plan.filePath,
+      status,
+      decision,
+      nextCommand,
+      nextMode,
+      buildReady: false,
+      readinessFindings: readiness.findings,
+      summary: readinessHints.length > 0
+        ? `Active plan is blocked. ${readinessHints.join(" ")}`
+        : "Active plan is blocked and needs planning/fix before build.",
+      next: "Resolve the active plan blocker before any build route.",
+      nextSteps: [
+        "Resolve the active plan blocker before any build route.",
+        "kfc client doctor --project . --fix"
+      ]
+    };
+  }
+
+  return {
+    kind: "draft_plan",
+    planId: plan.planId,
+    planPath: plan.filePath,
+    status,
+    decision,
+    nextCommand,
+    nextMode,
+    buildReady: false,
+    readinessFindings: readiness.findings,
+    summary: readinessHints.length > 0
+      ? `Active plan is still a draft. ${readinessHints.join(" ")}`
+      : "Active plan is still a draft. Complete Brainstorm/Plan before build.",
+    next: "Complete Brainstorm/Plan in the active plan before any build route.",
+    nextSteps: [
+      "Complete Brainstorm/Plan in the active plan before any build route.",
+      "After the plan is GO + build-ready, run `kfc flow ready --project .`."
+    ]
+  };
+}
+
+function buildReadyFileContent({ goal, planState }) {
   const mission = goal && goal.trim().length > 0
     ? goal.trim()
     : "Define the mission for this client project before implementation.";
+  const stateRouteLine = planState.kind === "build_ready"
+    ? "3. Verify the active plan is ready with `kfc flow ready --project .`, then begin the next build slice."
+    : planState.kind === "blocked_plan"
+      ? "3. Resolve the active plan blocker first. Do not start build work until the blocker is cleared."
+      : "3. The active plan is still a draft. Finish Brainstorm/Plan work first; do not start build work yet.";
+  const stateFollowupLine = planState.kind === "build_ready"
+    ? "4. Execute exactly one route and mutate the active plan markdown (`updated_at` + `WIP Log`)."
+    : planState.kind === "blocked_plan"
+      ? "4. Use planning/fix work to clear the blocker, then re-check readiness before build."
+      : "4. Update the active plan until `decision=GO`, `next_command=build`, `next_mode=Build`, and Open Decisions are resolved.";
+  const readinessPolicyLine = planState.kind === "build_ready"
+    ? "5. After each build/fix slice, run checks and report `Check: PASS|BLOCK` with evidence."
+    : "5. Only run `kfc flow ready --project .` after the plan is actually build-ready.";
 
   return [
     "# CODEX READY",
@@ -1140,15 +1318,24 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     `- ${mission}`,
     "",
     "## Active Plan",
-    `- plan_id: ${planId}`,
-    `- plan_path: ${planPath}`,
+    `- plan_id: ${planState.planId}`,
+    `- plan_path: ${planState.planPath}`,
+    "",
+    "## Active Plan State",
+    `- state: ${planState.kind}`,
+    `- status: ${planState.status}`,
+    `- decision: ${planState.decision}`,
+    `- next_command: ${planState.nextCommand}`,
+    `- next_mode: ${planState.nextMode}`,
+    `- build_ready: ${planState.buildReady ? "yes" : "no"}`,
+    `- note: ${planState.summary}`,
     "",
     "## First-Run Sequence",
     "1. Read this file and `AGENTS.md` before implementation.",
     "2. If `.kfc/LESSONS.md` exists, read it as curated project memory before implementation.",
-    "3. Ensure plan + readiness: `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
-    "4. Execute exactly one route and mutate the active plan markdown (`updated_at` + `WIP Log`).",
-    "5. After build/fix work, run checks and report `Check: PASS|BLOCK` with evidence.",
+    stateRouteLine,
+    stateFollowupLine,
+    readinessPolicyLine,
     "6. If blocked, return exact `Recovery: <command>` and stop until recovered.",
     "",
     "## Session Bootstrap (Every Session)",
@@ -1162,7 +1349,7 @@ function buildReadyFileContent({ goal, planId, planPath }) {
     "2. Keep changes scoped to mission and acceptance criteria.",
     "3. Execute routine flow commands yourself; do not ask the user to run normal `kfc` commands.",
     "4. Ask the user only when execution is impossible from agent context (permissions/auth/out-of-workspace).",
-    "5. Before `build`/`fix`, run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.",
+    "5. Before `build`/`fix`, ensure the active plan is truly build-ready. Fresh draft plans stay in Brainstorm/Plan first.",
     "6. If readiness or flow behavior fails, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.",
     "7. After completing implementation in a turn, run check validations and report `Check: PASS|BLOCK` before final response.",
     "",
@@ -1181,10 +1368,7 @@ function buildReadyFileContent({ goal, planId, planPath }) {
 }
 
 async function createClientReadyArtifacts({ projectDir, force, goal, profileName }) {
-  const plan = await resolveActivePlan(projectDir);
-  if (!plan) {
-    throw new Error("Cannot find an active plan in .local/plans. Run `kfc flow ensure-plan --project .` first.");
-  }
+  const planState = await describeClientPlanState(projectDir);
 
   const readyPath = resolveClientReadyPath(projectDir);
   if (fs.existsSync(readyPath) && !force) {
@@ -1198,8 +1382,7 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
     readyPath,
     buildReadyFileContent({
       goal,
-      planId: plan.planId,
-      planPath: plan.filePath
+      planState
     }),
     "utf8"
   );
@@ -1211,8 +1394,10 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
       {
         generatedAt: new Date().toISOString(),
         profile: profileName,
-        planId: plan.planId,
-        planPath: plan.filePath
+        planId: planState.planId,
+        planPath: planState.planPath,
+        planState: planState.kind,
+        buildReady: planState.buildReady
       },
       null,
       2
@@ -1220,7 +1405,7 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
     "utf8"
   );
 
-  return { readyPath, sessionPath, planId: plan.planId };
+  return { readyPath, sessionPath, planId: planState.planId, planState };
 }
 
 async function runClientCodexLaunch({ projectDir, planId }) {
@@ -1775,13 +1960,18 @@ async function runServeHealthCheck(projectDir, port) {
 }
 
 async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}) {
-  const preflightOk = await assertProjectPreflight(options.project);
+  const preflightOk = await assertProjectPreflight(options.project, { requirePackageJson: false });
   if (!preflightOk) {
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED,
       "Client preflight checks failed.",
       "kfc client doctor --project . --fix"
     );
+  }
+
+  const packageJsonResult = await ensureProjectPackageJsonForBootstrap(options.project);
+  if (packageJsonResult.created) {
+    info("Client project was auto-initialized from an empty folder.");
   }
 
   let configResult;
@@ -1894,13 +2084,20 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}) {
     info(`Health check OK: http://127.0.0.1:${options.port}/api/health`);
   }
 
+  const planState = await describeClientPlanState(options.project);
+
   info("Client bootstrap completed successfully.");
   if (!runtime.suppressSuccessHints) {
     printClientDocsHints(options.project);
-    printClientNextCommandHints();
+    printClientNextCommandHints(planState);
     info("Cleanup command after completion: kfc client done");
     info("Next steps in this client repo should use `kfc ...` commands.");
   }
+
+  return {
+    autoInitializedPackageJson: packageJsonResult.created,
+    planState
+  } satisfies ClientBootstrapOutcome;
 }
 
 async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRuntime = {}) {
@@ -1914,16 +2111,28 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     )
   );
   try {
-    await runBootstrapOnce(options, runtime);
-    const payload = buildClientOnboardingPassPayload(false);
+    const bootstrapResult = await runBootstrapOnce(options, runtime);
+    const payload = buildClientOnboardingPassPayload({
+      recoveryUsed: false,
+      reason: bootstrapResult.planState.summary,
+      next: bootstrapResult.planState.next,
+      next_steps: bootstrapResult.planState.nextSteps
+    });
     await emitClientOnboardingEvent(options.project, payload);
     if (shouldPrintPass) {
       printClientOnboardingPass(payload);
     }
-    return { code: 0, recoveryUsed: false };
+    return { code: 0, recoveryUsed: false, planState: bootstrapResult.planState };
   } catch (initialErr) {
     const first = classifyClientOnboardingFailure(initialErr);
     await emitClientOnboardingEvent(options.project, first);
+    if (
+      first.error_code === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
+      first.error_code === CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING
+    ) {
+      printClientOnboardingPayload(first, true);
+      return { code: 1, recoveryUsed: false };
+    }
     warn(
       `Onboarding bootstrap blocked (${first.error_code}). Running one smart recovery cycle via \`kfc client doctor --project . --fix\`.`
     );
@@ -1954,13 +2163,18 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     }
 
     try {
-      await runBootstrapOnce({ ...options, force: true }, runtime);
-      const payload = buildClientOnboardingPassPayload(true);
+      const bootstrapResult = await runBootstrapOnce({ ...options, force: true }, runtime);
+      const payload = buildClientOnboardingPassPayload({
+        recoveryUsed: true,
+        reason: bootstrapResult.planState.summary,
+        next: bootstrapResult.planState.next,
+        next_steps: bootstrapResult.planState.nextSteps
+      });
       await emitClientOnboardingEvent(options.project, payload);
       if (shouldPrintPass) {
         printClientOnboardingPass(payload);
       }
-      return { code: 0, recoveryUsed: true };
+      return { code: 0, recoveryUsed: true, planState: bootstrapResult.planState };
     } catch (retryErr) {
       const blockPayload = classifyClientOnboardingFailure(retryErr);
       await emitClientOnboardingEvent(options.project, blockPayload);
@@ -2092,8 +2306,9 @@ async function runClientDoctorChecks(options) {
   }
 
   if (ok) {
+    const planState = await describeClientPlanState(options.project);
     printClientDocsHints(options.project);
-    printClientNextCommandHints();
+    printClientNextCommandHints(planState);
     info("Cleanup command after completion: kfc client done");
     info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
@@ -2154,24 +2369,26 @@ async function runClientReadyHandoff(options, bootstrap) {
   }
 
   const launchSucceeded = launchResult?.status === "completed";
+  const planStateSteps = ready.planState.nextSteps;
+  const handoffNext = options.noLaunchCodex
+    ? manualCommand
+    : launchSucceeded
+      ? "Follow the plan-state handoff in .kfc/CODEX_READY.md."
+      : manualCommand;
   const readyPayload = {
-    ...buildClientOnboardingPassPayload(bootstrap.recoveryUsed),
+    ...buildClientOnboardingPassPayload({
+      recoveryUsed: bootstrap.recoveryUsed,
+      reason: ready.planState.summary,
+      next: handoffNext,
+      next_steps: options.noLaunchCodex || !launchSucceeded
+        ? [manualCommand, ...planStateSteps]
+        : ["Follow the plan-state handoff in .kfc/CODEX_READY.md.", ...planStateSteps]
+    }),
     stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
     reason: launchSucceeded
-      ? "Client onboarding handoff artifacts are ready and Codex auto-launch started."
-      : "Client onboarding handoff artifacts are ready.",
-    next: options.noLaunchCodex
-      ? manualCommand
-      : launchSucceeded
-        ? "Let Codex continue from .kfc/CODEX_READY.md."
-        : manualCommand,
-    next_steps: [
-      options.noLaunchCodex
-        ? manualCommand
-        : launchSucceeded
-          ? "Let Codex continue from .kfc/CODEX_READY.md."
-          : manualCommand
-    ]
+      ? `Client onboarding handoff artifacts are ready and Codex auto-launch started. ${ready.planState.summary}`
+      : `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
+    next: handoffNext
   };
   await emitClientOnboardingEvent(options.project, readyPayload);
   printClientOnboardingPass(readyPayload);

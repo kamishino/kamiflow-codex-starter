@@ -20,7 +20,7 @@ kfc client --force
 ```
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
-This installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex by default.
+If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. This installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex by default.
 Client bootstrap includes one smart-recovery cycle and prints `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 If auto-launch is disabled or fails, use the exact manual fallback command printed by KFC.
 
@@ -38,7 +38,8 @@ If auto-launch is disabled or fails, use the exact manual fallback command print
 - Use `kfc client lessons capture|pending|show|promote|list` to maintain the private-history -> curated-memory lesson flow.
 - Codex should execute routine flow commands autonomously without user reminders.
 - Auto-launch is the preferred handoff path; use the printed fallback command only if launch was skipped or failed.
-- Before any implementation route (`build`/`fix`), Codex should run `kfc flow ensure-plan --project .` and `kfc flow ready --project .`.
+- Treat onboarding PASS as environment-ready only. If the active plan is still draft, Codex should complete Brainstorm/Plan first.
+- Before any implementation route (`build`/`fix`), Codex should confirm the active plan is build-ready, then run `kfc flow ready --project .`.
 - Touch active plan markdown at route start and before final response.
 - If route behavior looks inconsistent, run `kfc client doctor --project . --fix`.
 - If needed, rerun `kfc client --force`.

@@ -27,6 +27,7 @@ codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
 ```
 
 If auto-launch is disabled (`--no-launch-codex`) or fails, use the exact manual fallback command printed by KFC.
+If the target folder is truly empty, KFC may auto-create a minimal `package.json` before continuing bootstrap.
 
 Use the prompt below only when you intentionally skip auto-launch or need manual recovery:
 
@@ -40,26 +41,27 @@ Rules:
 1) Use only `kfc ...` commands in this client project.
 2) Start from `.kfc/CODEX_READY.md` mission and plan context, then read `.kfc/LESSONS.md` when present, with `kamiflow-core` available from `.agents/skills/kamiflow-core/SKILL.md`.
 3) Run routine flow commands autonomously; do not ask the user to run normal `kfc` commands.
-4) Before any implementation route (`build`/`fix`), always run `kfc flow ensure-plan --project .` then `kfc flow ready --project .`.
-5) Touch active plan markdown twice per request: at route start and before final response.
-6) If plan resolution fails or route behavior is inconsistent, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.
-7) Keep phase tracking updated after each meaningful step:
+4) Treat onboarding PASS as environment-ready only. If the active plan is still draft, finish Brainstorm/Plan first.
+5) Before any implementation route (`build`/`fix`), run `kfc flow ready --project .` only after the active plan is actually build-ready.
+6) Touch active plan markdown twice per request: at route start and before final response.
+7) If plan resolution fails or route behavior is inconsistent, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.
+8) Keep phase tracking updated after each meaningful step:
    - Build progress: `kfc flow apply --project . --plan <plan-id> --route build --result progress`
    - Check pass/block: `kfc flow apply --project . --plan <plan-id> --route check --result pass|block`
-8) After finishing implementation in a turn, run check validations and report `Check: PASS|BLOCK`.
-9) After each response, always provide:
+9) After finishing implementation in a turn, run check validations and report `Check: PASS|BLOCK`.
+10) After each response, always provide:
    - current phase,
    - what was completed,
    - the next 1-3 concrete actions (commands or file edits).
-10) If blocked, stop and output:
+11) If blocked, stop and output:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
    - `Recovery: <exact command>`
-11) Before declaring completion, always run cleanup:
+12) Before declaring completion, always run cleanup:
    - `kfc client done`
    - confirm `.kfc/CODEX_READY.md` is removed.
    - keep `.kfc/LESSONS.md` as private project memory.
-12) For onboarding/bootstrap failures, report:
+13) For onboarding/bootstrap failures, report:
    - `Onboarding Status: BLOCK`
    - `Stage: <lifecycle stage>`
    - `Error Code: CLIENT_*`
