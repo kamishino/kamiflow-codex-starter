@@ -1,4 +1,5 @@
 import { evaluateRouteTransition } from "./flow-policy.js";
+import { serializePlanFrontmatter, splitPlanFrontmatter } from "./plan-frontmatter.js";
 
 function markdownEscapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -132,41 +133,37 @@ function hasMermaidBlock(sectionText) {
 
 function updateFrontmatterField(markdown, key, value) {
   const text = String(markdown || "");
-  if (!text.startsWith("---")) {
-    return text;
+  const parsed = splitPlanFrontmatter(text);
+  const frontmatter = { ...parsed.frontmatter };
+  frontmatter[key] = String(value);
+  const renderedFrontmatter = serializePlanFrontmatter(frontmatter, parsed.style === "fenced" ? "fenced" : "legacy", parsed.style === "legacy" && parsed.hasLegacySeparator);
+  if (!parsed.hasFrontmatter) {
+    return `${renderedFrontmatter}\n\n${text.replace(/^\s+/, "")}`.trimEnd();
   }
-  const lines = text.split(/\r?\n/);
-  let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i].trim() === "---") {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) {
-    return text;
-  }
-
-  const targetPrefix = `${key}:`;
-  let found = false;
-  for (let i = 1; i < endIdx; i += 1) {
-    if (lines[i].trim().startsWith(targetPrefix)) {
-      lines[i] = `${key}: ${value}`;
-      found = true;
-      break;
-    }
-  }
-  if (!found) {
-    lines.splice(endIdx, 0, `${key}: ${value}`);
-  }
-  return lines.join("\n");
+  return `${renderedFrontmatter}\n\n${parsed.body}`.replace(/\n{3,}/g, "\n\n").trimEnd();
 }
 
 function updateWipField(markdown, key, value) {
   const sectionName = "WIP Log";
   const current = extractSection(markdown, sectionName);
+  const updateLines = (sourceText, lines, existing = true) => {
+    const escaped = markdownEscapeRegExp(sectionName);
+    const re = new RegExp(
+      `(^|\\r?\\n)##\\s+${escaped}\\s*\\r?\\n([\\s\\S]*?)(?=\\r?\\n##\\s+|$)`,
+      "i"
+    );
+    if (existing) {
+      return String(sourceText).replace(
+        re,
+        (full, lead) => `${lead}## ${sectionName}\n${lines.join("\n").trimEnd()}\n`
+      );
+    }
+    const trimmed = String(sourceText).replace(/\s+$/g, "");
+    const separator = trimmed.endsWith("\n\n") ? "" : trimmed.endsWith("\n") ? "\n" : "\n\n";
+    return `${trimmed}${separator}## ${sectionName}\n${lines.join("\n").trimEnd()}\n`;
+  };
   if (!current) {
-    return markdown;
+    return updateLines(markdown, [`- ${key}: ${value}`], false);
   }
   const lines = current.split(/\r?\n/);
   const prefix = `- ${key}:`;
@@ -181,9 +178,7 @@ function updateWipField(markdown, key, value) {
   if (!found) {
     lines.push(`${prefix} ${value}`);
   }
-  const escaped = markdownEscapeRegExp(sectionName);
-  const re = new RegExp(`(^|\\r?\\n)##\\s+${escaped}\\s*\\r?\\n([\\s\\S]*?)(?=\\r?\\n##\\s+|$)`, "i");
-  return String(markdown).replace(re, (full, lead) => `${lead}## ${sectionName}\n${lines.join("\n").trimEnd()}\n`);
+  return updateLines(markdown, lines, true);
 }
 
 export function toIsoTimestamp() {

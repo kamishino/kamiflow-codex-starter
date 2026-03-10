@@ -38,6 +38,8 @@ import {
 } from "../lib/skill-sync.js";
 import { error, info, warn } from "../lib/logger.js";
 import { evaluateBuildReadiness } from "../lib/plan-lifecycle.js";
+import type { FrontmatterRecord } from "../lib/plan-frontmatter.js";
+import { parsePlanFrontmatter, serializePlanFrontmatter, splitPlanFrontmatter } from "../lib/plan-frontmatter.js";
 import { buildCodexExecManualCommand, runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 import { runDoctor } from "./doctor.js";
 import { runFlow } from "./flow.js";
@@ -77,7 +79,6 @@ const CLIENT_CODEX_FULL_AUTO_OPTION_PATTERNS = [
   "unknown option: --skip-git-repo-check"
 ];
 
-type FrontmatterRecord = Record<string, string>;
 type MarkdownSections = Record<string, string>;
 type ClientBootstrapRuntime = {
   suppressSuccessHints?: boolean;
@@ -111,6 +112,17 @@ type ClientPlanStateSummary = {
   summary: string;
   next: string;
   nextSteps: string[];
+};
+type ClientSetupCompletionKind = "ready_for_work" | "ready_for_cleanup" | "incomplete";
+type ClientSetupCompletionResult = {
+  complete: boolean;
+  completion: ClientSetupCompletionKind;
+  reason: string;
+  recovery: string;
+  planPath: string;
+  planState?: ClientPlanStateSummary;
+  nextAction?: string;
+  nextSteps?: string[];
 };
 type ClientBootstrapOutcome = {
   autoInitializedPackageJson: boolean;
@@ -148,6 +160,7 @@ function usage() {
   info("  kfc client");
   info("  kfc client --goal \"Implement X with tests\"");
   info("  kfc client --no-launch-codex");
+  info("  kfc client --skip-git-repo-check");
   info("  kfc client done");
   info("  kfc client bootstrap --project .");
   info("  kfc client bootstrap --project . --profile client --port 4310 --no-launch-codex");
@@ -194,6 +207,7 @@ function parseArgs(baseCwd, args) {
     fix: false,
     skipServeCheck: false,
     noLaunchCodex: false,
+    skipGitRepoCheck: false,
     goal: "",
     apply: false,
     from: "",
@@ -248,6 +262,10 @@ function parseArgs(baseCwd, args) {
     }
     if (token === "--no-launch-codex") {
       parsed.noLaunchCodex = true;
+      continue;
+    }
+    if (token === "--skip-git-repo-check") {
+      parsed.skipGitRepoCheck = true;
       continue;
     }
     if (token === "--goal") {
@@ -1106,42 +1124,6 @@ function formatLessonSequence(value) {
   return String(value).padStart(3, "0");
 }
 
-function normalizeFrontmatterValue(value) {
-  return String(value ?? "").replace(/\r?\n/g, " ").trim();
-}
-
-function serializeSimpleFrontmatter(frontmatter) {
-  const lines = ["---"];
-  for (const [key, rawValue] of Object.entries(frontmatter)) {
-    lines.push(`${key}: ${JSON.stringify(normalizeFrontmatterValue(rawValue))}`);
-  }
-  lines.push("---", "");
-  return lines.join("\n");
-}
-
-function splitFrontmatter(markdown: string): { frontmatter: FrontmatterRecord; body: string } {
-  const source = String(markdown || "");
-  if (!source.startsWith("---")) {
-    return { frontmatter: {}, body: source };
-  }
-  const lines = source.split(/\r?\n/);
-  let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i].trim() === "---") {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) {
-    return { frontmatter: {}, body: source };
-  }
-  const body = lines.slice(endIdx + 1).join("\n").replace(/^\s+/, "");
-  return {
-    frontmatter: parseSimpleFrontmatter(source),
-    body
-  };
-}
-
 function parseMarkdownSections(markdown: string): MarkdownSections {
   const sections: MarkdownSections = {};
   const source = String(markdown || "").trim();
@@ -1157,14 +1139,14 @@ function parseMarkdownSections(markdown: string): MarkdownSections {
 }
 
 function buildRawLessonMarkdown(entry) {
-  const frontmatter = serializeSimpleFrontmatter({
+  const frontmatter = `${serializePlanFrontmatter({
     lesson_id: entry.lessonId,
     type: entry.type,
     status: entry.status,
     title: entry.title,
     created_at: entry.createdAt,
     promoted_at: entry.promotedAt || ""
-  });
+  }, "fenced")}\n`;
   return [
     frontmatter,
     "## Context",
@@ -1244,7 +1226,7 @@ async function listClientRawLessons(projectDir) {
       }
       const filePath = path.join(dirPath, entry.name);
       const rawMarkdown = await fsp.readFile(filePath, "utf8");
-      const { frontmatter, body } = splitFrontmatter(rawMarkdown);
+      const { frontmatter, body } = splitPlanFrontmatter(rawMarkdown);
       const sections = parseMarkdownSections(body);
       records.push({
         lessonId: String(frontmatter.lesson_id || "").trim(),
@@ -1476,38 +1458,6 @@ async function runClientLessons(options) {
   throw new Error(`Unknown lessons action: ${options.action}`);
 }
 
-function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
-  if (!String(markdown).startsWith("---")) {
-    return {};
-  }
-  const lines = String(markdown).split(/\r?\n/);
-  let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i].trim() === "---") {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) {
-    return {};
-  }
-  const frontmatter: FrontmatterRecord = {};
-  for (const line of lines.slice(1, endIdx)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const sep = trimmed.indexOf(":");
-    if (sep <= 0) {
-      continue;
-    }
-    const key = trimmed.slice(0, sep).trim();
-    const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
-    frontmatter[key] = value;
-  }
-  return frontmatter;
-}
-
 function toTimestamp(value, fallback) {
   if (!value) {
     return fallback;
@@ -1537,7 +1487,7 @@ async function resolveActivePlan(projectDir) {
     try {
       const raw = await fsp.readFile(filePath, "utf8");
       const stat = await fsp.stat(filePath);
-      const fm = parseSimpleFrontmatter(raw);
+      const fm = parsePlanFrontmatter(raw);
       planCandidates.push({
         filePath,
         planId: fm.plan_id || path.basename(entry.name, ".md"),
@@ -1566,7 +1516,7 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
   }
 
   const raw = await fsp.readFile(plan.filePath, "utf8");
-  const frontmatter = parseSimpleFrontmatter(raw);
+  const frontmatter = parsePlanFrontmatter(raw);
   const readiness = evaluateBuildReadiness({ frontmatter, raw });
   const status = String(frontmatter.status || "draft").trim() || "draft";
   const decision = String(frontmatter.decision || "Unknown").trim() || "Unknown";
@@ -1746,7 +1696,7 @@ async function findDonePlanById(projectDir, planId) {
     }
     const filePath = path.join(doneDir, entry.name);
     const raw = await fsp.readFile(filePath, "utf8");
-    const frontmatter = parseSimpleFrontmatter(raw);
+    const frontmatter = parsePlanFrontmatter(raw);
     if (String(frontmatter.plan_id || "").trim() !== String(planId || "").trim()) {
       continue;
     }
@@ -1759,7 +1709,7 @@ async function findDonePlanById(projectDir, planId) {
   return null;
 }
 
-export async function evaluateClientSetupCompletion(projectDir, planId) {
+export async function evaluateClientSetupCompletion(projectDir, planId): Promise<ClientSetupCompletionResult> {
   const donePlan = await findDonePlanById(projectDir, planId);
   if (donePlan) {
     const status = String(donePlan.frontmatter.status || "").trim().toLowerCase();
@@ -1767,9 +1717,11 @@ export async function evaluateClientSetupCompletion(projectDir, planId) {
     if (status === "done" && decision === "PASS") {
       return {
         complete: true,
+        completion: "ready_for_cleanup",
         reason: `Active onboarding plan archived successfully: ${donePlan.filePath}`,
         recovery: "None",
-        planPath: donePlan.filePath
+        planPath: donePlan.filePath,
+        nextAction: "kfc client done --project ."
       };
     }
   }
@@ -1777,8 +1729,22 @@ export async function evaluateClientSetupCompletion(projectDir, planId) {
   const activePlan = await resolveActivePlan(projectDir);
   if (activePlan && String(activePlan.planId || "").trim() === String(planId || "").trim()) {
     const planState = await describeClientPlanState(projectDir);
+    if (planState.kind === "build_ready") {
+      return {
+        complete: true,
+        completion: "ready_for_work",
+        reason: `Setup handoff is ready for execution. ${planState.summary}`,
+        recovery: "None",
+        planPath: activePlan.filePath,
+        planState,
+        nextAction: planState.next,
+        nextSteps: planState.nextSteps
+      };
+    }
+
     return {
       complete: false,
+      completion: "incomplete",
       reason: `Setup completion is still incomplete. ${planState.summary}`,
       recovery: "kfc client",
       planPath: activePlan.filePath,
@@ -1788,6 +1754,7 @@ export async function evaluateClientSetupCompletion(projectDir, planId) {
 
   return {
     complete: false,
+    completion: "incomplete",
     reason: "Setup completion is still incomplete. KFC could not confirm that the onboarding plan reached archived done state.",
     recovery: "kfc client",
     planPath: ""
@@ -2885,7 +2852,9 @@ async function runClientReadyHandoff(options, bootstrap) {
     return 1;
   }
 
-  let manualCommand = buildClientCodexManualCommand();
+  let manualCommand = buildClientCodexManualCommand({
+    skipGitRepoCheck: options.skipGitRepoCheck
+  });
   let launchResult = null;
   let completion = null;
   if (!options.noLaunchCodex) {
@@ -2901,7 +2870,8 @@ async function runClientReadyHandoff(options, bootstrap) {
     );
     const launchAttempt = await runClientCodexLaunch({
       projectDir: options.project,
-      planId: ready.planId
+      planId: ready.planId,
+      skipGitRepoCheck: options.skipGitRepoCheck
     });
     launchResult = launchAttempt.result;
     manualCommand = launchAttempt.manualCommand;
@@ -3014,6 +2984,28 @@ async function runClientReadyHandoff(options, bootstrap) {
     printClientOnboardingPayload(blockPayload, true);
     info("Ready handoff preserved for recovery.");
     return 1;
+  }
+
+  if (completion.completion === "ready_for_work") {
+    const workPayload = buildClientOnboardingPassPayload({
+      recoveryUsed: bootstrap.recoveryUsed,
+      stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY,
+      reason: completion.reason,
+      next: completion.nextAction || planStateSteps[0] || "kfc flow ready --project .",
+      next_steps: Array.isArray(completion.nextSteps) && completion.nextSteps.length > 0
+        ? completion.nextSteps
+        : planStateSteps
+    });
+    await emitClientOnboardingEvent(options.project, {
+      ...workPayload,
+      inspection_status: ready.inspection.inspectionStatus,
+      repo_shape: ready.inspection.repoShape,
+      planned_changes: ready.inspection.plannedChangesSummary,
+      apply_mode: ready.inspection.applyMode
+    });
+    printClientOnboardingPass(workPayload);
+    info("Ready handoff preserved for recovery.");
+    return 0;
   }
 
   try {

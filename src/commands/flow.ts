@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
 import { runPlan } from "./plan.js";
 import { createLocalPlanTemplate, ensurePlanFileTechnicalSolutionDiagram } from "../lib/plan-bootstrap.js";
+import type { FrontmatterRecord } from "../lib/plan-frontmatter.js";
 import {
   applyLifecycleMutation,
   buildPhaseDigest,
@@ -13,6 +14,7 @@ import {
   toNextAction as toNextActionFromLifecycle
 } from "../lib/plan-lifecycle.js";
 import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../lib/flow-policy.js";
+import { parsePlanFrontmatter } from "../lib/plan-frontmatter.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +22,6 @@ const REPO_ROOT = path.resolve(__dirname, "../..");
 const KFC_BIN = path.join(REPO_ROOT, "bin", "kamiflow.js");
 const DEFAULT_BASE_URL = "http://127.0.0.1:4310";
 
-type FrontmatterRecord = Record<string, string>;
 type PlanRecord = {
   filePath: string;
   fileName: string;
@@ -98,74 +99,6 @@ function resolvePlansDir(projectDir) {
   return path.join(projectDir, ".local", "plans");
 }
 
-function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
-  const content = String(markdown || "");
-  if (content.startsWith("---")) {
-    const lines = content.split(/\r?\n/);
-    let endIdx = -1;
-    for (let i = 1; i < lines.length; i += 1) {
-      if (lines[i].trim() === "---") {
-        endIdx = i;
-        break;
-      }
-    }
-    if (endIdx === -1) {
-      return {};
-    }
-
-    const out: FrontmatterRecord = {};
-    const blockLines = lines.slice(1, endIdx);
-    for (const line of blockLines) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) {
-        continue;
-      }
-      const sep = trimmed.indexOf(":");
-      if (sep <= 0) {
-        continue;
-      }
-      const key = trimmed.slice(0, sep).trim();
-      const rawValue = trimmed.slice(sep + 1).trim();
-      out[key] = rawValue.replace(/^['"]|['"]$/g, "");
-    }
-    return out;
-  }
-
-  const lines = content.split(/\r?\n/);
-  let endIdx = -1;
-  for (let i = 0; i < lines.length; i += 1) {
-    const trimmed = lines[i].trim();
-    if (trimmed === "---" || /^##\s+/.test(trimmed)) {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) {
-    return {};
-  }
-
-  const out: FrontmatterRecord = {};
-  const blockLines = lines.slice(0, endIdx);
-  for (const line of blockLines) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const sep = trimmed.indexOf(":");
-    if (sep <= 0) {
-      continue;
-    }
-    const key = trimmed.slice(0, sep).trim();
-    const rawValue = trimmed.slice(sep + 1).trim();
-    out[key] = rawValue.replace(/^['"]|['"]$/g, "");
-  }
-
-  if (!out.plan_id && !out.title && !out.status && !out.next_command) {
-    return {};
-  }
-  return out;
-}
-
 function toTimestamp(value, fallback) {
   if (!value) {
     return fallback;
@@ -180,7 +113,7 @@ function toTimestamp(value, fallback) {
 async function readPlanRecord(filePath) {
   const raw = await fs.readFile(filePath, "utf8");
   const stat = await fs.stat(filePath);
-  const fm = parseSimpleFrontmatter(raw);
+  const fm = parsePlanFrontmatter(raw);
   return {
     filePath,
     fileName: path.basename(filePath),

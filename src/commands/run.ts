@@ -15,12 +15,13 @@ import {
 } from "../lib/plan-lifecycle.js";
 import { buildPreflightFailureContinuity, evaluateRouteTransition } from "../lib/flow-policy.js";
 import { runFlow } from "./flow.js";
+import type { FrontmatterRecord } from "../lib/plan-frontmatter.js";
+import { parsePlanFrontmatter } from "../lib/plan-frontmatter.js";
 
 const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "research"]);
 const DEFAULT_MAX_STEPS = 6;
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 
-type FrontmatterRecord = Record<string, string>;
 type RunArgs = {
   project: string;
   skipReady: boolean;
@@ -145,70 +146,6 @@ function lifecyclePhaseForRoute(route) {
   return "plan";
 }
 
-function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
-  const text = String(markdown || "");
-  if (text.startsWith("---")) {
-    const lines = text.split(/\r?\n/);
-    let endIdx = -1;
-    for (let i = 1; i < lines.length; i += 1) {
-      if (lines[i].trim() === "---") {
-        endIdx = i;
-        break;
-      }
-    }
-    if (endIdx === -1) {
-      return {};
-    }
-    const frontmatter: FrontmatterRecord = {};
-    for (const line of lines.slice(1, endIdx)) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith("#")) {
-        continue;
-      }
-      const sep = trimmed.indexOf(":");
-      if (sep <= 0) {
-        continue;
-      }
-      const key = trimmed.slice(0, sep).trim();
-      const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
-      frontmatter[key] = value;
-    }
-    return frontmatter;
-  }
-
-  const lines = text.split(/\r?\n/);
-  let endIdx = -1;
-  for (let i = 0; i < lines.length; i += 1) {
-    const trimmed = lines[i].trim();
-    if (trimmed === "---" || /^##\s+/.test(trimmed)) {
-      endIdx = i;
-      break;
-    }
-  }
-  if (endIdx === -1) {
-    return {};
-  }
-
-  const frontmatter: FrontmatterRecord = {};
-  for (const line of lines.slice(0, endIdx)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) {
-      continue;
-    }
-    const sep = trimmed.indexOf(":");
-    if (sep <= 0) {
-      continue;
-    }
-    const key = trimmed.slice(0, sep).trim();
-    const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
-    frontmatter[key] = value;
-  }
-  if (!frontmatter.plan_id && !frontmatter.title && !frontmatter.status && !frontmatter.next_command) {
-    return {};
-  }
-  return frontmatter;
-}
-
 function toTimestamp(value, fallback = 0) {
   if (!value) {
     return fallback;
@@ -220,7 +157,7 @@ function toTimestamp(value, fallback = 0) {
 async function readPlanRecord(filePath: string) {
   const raw = await fs.readFile(filePath, "utf8");
   const stat = await fs.stat(filePath);
-  const frontmatter = parseSimpleFrontmatter(raw);
+  const frontmatter = parsePlanFrontmatter(raw);
   return {
     filePath,
     raw,
