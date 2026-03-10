@@ -8,6 +8,10 @@
     "./session-actions": {
       "types": "./src/session-actions.ts",
       "default": "./dist/session-actions.js"
+    },
+    "./codex-runner": {
+      "types": "./src/codex-runner.ts",
+      "default": "./dist/codex-runner.js"
     }
   },
   "scripts": {

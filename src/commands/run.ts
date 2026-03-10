@@ -6,7 +6,7 @@ import {
   resolveResourcesDir,
   validateConfig
 } from "../lib/config.js";
-import { runCodexAction } from "../lib/codex-runner.js";
+import { runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 import { error, info } from "../lib/logger.js";
 import { evaluateRoutePreflight, normalizeBlockers } from "../lib/plan-lifecycle.js";
 import { runFlow } from "./flow.js";

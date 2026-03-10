@@ -12,7 +12,7 @@ import {
   summarizeRemoteResult
 } from "./remote-state.js";
 import { buildRemoteHtml, REMOTE_UI_CSS, REMOTE_UI_JS } from "./remote-ui.js";
-import { runCodexAction } from "./codex-runner.js";
+import { runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 
 function nowIso() {
   return new Date().toISOString();

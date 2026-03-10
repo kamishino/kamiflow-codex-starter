@@ -37,7 +37,7 @@ import {
   syncSkillsArtifacts
 } from "../lib/skill-sync.js";
 import { error, info, warn } from "../lib/logger.js";
-import { buildCodexExecManualCommand, runCodexAction } from "../lib/codex-runner.js";
+import { buildCodexExecManualCommand, runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 import { runDoctor } from "./doctor.js";
 import { runFlow } from "./flow.js";
 import { runPlan } from "./plan.js";

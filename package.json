@@ -16,7 +16,7 @@
   "scripts": {
     "start": "npm run dev:cli",
     "dev": "npm run dev:cli",
-    "build:server": "tsc -p tsconfig.json --noCheck",
+    "build:server": "npm run -w @kamishino/kfc-runtime build && tsc -p tsconfig.json --noCheck",
     "build:scripts": "tsc -p tsconfig.scripts.json --noCheck",
     "build:policy": "npm run build:scripts",
     "build:docs": "npm run build:scripts",
@@ -114,6 +114,7 @@
   "license": "UNLICENSED"
   ,
   "dependencies": {
+    "@kamishino/kfc-runtime": "file:packages/kfc-runtime",
     "fastify": "5.6.1"
   }
 }
