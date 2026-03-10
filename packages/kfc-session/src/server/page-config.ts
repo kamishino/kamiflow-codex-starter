@@ -1,4 +1,11 @@
-import { buildBrowserPageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
+import { buildFeaturePageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
+
+const SESSION_PAGE_DEFINITION = {
+  defaultTitle: "KFC Session",
+  apiBase: "/api/sessions",
+  fallbackStyleHref: "/assets/kfc-session.css",
+  fallbackScriptHref: "/assets/kfc-session.js"
+} as const;
 
 export function buildSessionPageModel(options: {
   assets?: unknown;
@@ -6,12 +13,9 @@ export function buildSessionPageModel(options: {
   title?: string;
 } = {}) {
   const { assets, sessionsRootLabel = "", title = "KFC Session" } = options;
-  return buildBrowserPageModel({
+  return buildFeaturePageModel(SESSION_PAGE_DEFINITION, {
     title,
-    apiBase: "/api/sessions",
     assets,
-    fallbackStyleHref: "/assets/kfc-session.css",
-    fallbackScriptHref: "/assets/kfc-session.js",
     extra: { sessionsRootLabel }
   });
 }

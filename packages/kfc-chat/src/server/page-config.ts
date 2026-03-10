@@ -1,4 +1,17 @@
-import { buildBrowserPageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
+import { buildFeaturePageModel } from "../../../kfc-web-runtime/dist/browser-entry.js";
+
+const CHAT_PAGE_DEFINITION = {
+  defaultTitle: "KFC Chat",
+  apiBase: "/api/chat",
+  fallbackStyleHref: "/assets/kfc-chat.css",
+  fallbackScriptHref: "/assets/kfc-chat.js",
+  importMapOptions: {
+    preact: true,
+    jsxRuntime: true,
+    signals: true,
+    webUi: true
+  }
+} as const;
 
 export function buildChatPageModel(options: {
   assets?: unknown;
@@ -7,18 +20,9 @@ export function buildChatPageModel(options: {
   title?: string;
 }) {
   const { assets, projectName, projectDir, title = "KFC Chat" } = options;
-  return buildBrowserPageModel({
+  return buildFeaturePageModel(CHAT_PAGE_DEFINITION, {
     title,
-    apiBase: "/api/chat",
     assets,
-    fallbackStyleHref: "/assets/kfc-chat.css",
-    fallbackScriptHref: "/assets/kfc-chat.js",
-    importMapOptions: {
-      preact: true,
-      jsxRuntime: true,
-      signals: true,
-      webUi: true
-    },
     extra: {
       projectName,
       projectDir,

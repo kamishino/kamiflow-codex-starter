@@ -34,6 +34,20 @@ type BrowserPageModelOptions = {
   extra?: Record<string, unknown>;
 };
 
+type FeaturePageDefinition = {
+  apiBase: string;
+  fallbackStyleHref: string;
+  fallbackScriptHref: string;
+  importMapOptions?: ImportMapOptions | null;
+  defaultTitle: string;
+};
+
+type FeaturePageOptions = {
+  title?: string;
+  assets?: { styles?: string[]; scripts?: string[] } | null;
+  extra?: Record<string, unknown>;
+};
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -152,4 +166,20 @@ export function buildBrowserPageModel(options: BrowserPageModelOptions = {}) {
     ...assetHtml,
     ...extra
   };
+}
+
+export function buildFeaturePageModel(
+  definition: FeaturePageDefinition,
+  options: FeaturePageOptions = {}
+) {
+  const { title, assets, extra = {} } = options;
+  return buildBrowserPageModel({
+    title: title || definition.defaultTitle,
+    apiBase: definition.apiBase,
+    assets,
+    fallbackStyleHref: definition.fallbackStyleHref,
+    fallbackScriptHref: definition.fallbackScriptHref,
+    importMapOptions: definition.importMapOptions || null,
+    extra
+  });
 }
