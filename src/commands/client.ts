@@ -869,7 +869,7 @@ function hasClientAgentsManagedBlock(content) {
   return String(content || "").includes(CLIENT_AGENTS_MANAGED_BEGIN) && String(content || "").includes(CLIENT_AGENTS_MANAGED_END);
 }
 
-function buildClientAgentsManagedBlock() {
+export function buildClientAgentsManagedBlock() {
   return [
     CLIENT_AGENTS_MANAGED_BEGIN,
     "# KFC Client Contract",
@@ -879,8 +879,9 @@ function buildClientAgentsManagedBlock() {
     "",
     "## Startup Order",
     "1. Read `AGENTS.md`.",
-    "2. Read `.kfc/CODEX_READY.md` for the current mission and active-plan handoff.",
+    "2. If `.kfc/CODEX_READY.md` exists, read it for the current mission and active-plan handoff.",
     "3. Read `.kfc/LESSONS.md` when present for curated durable project memory.",
+    "4. If `.kfc/CODEX_READY.md` is absent, resolve the active non-done plan in `.local/plans/` and continue from plan plus lessons.",
     "",
     "## Ownership",
     "- KFC refreshes this managed block during `kfc client` and `kfc client update`.",
@@ -904,8 +905,8 @@ function buildClientAgentsManagedBlock() {
     "- If blocked, return exact `Status: BLOCK`, `Reason: ...`, and `Recovery: <command>`.",
     "",
     "## Cleanup",
-    "- After completion, run `kfc client done`.",
-    "- `kfc client done` removes `.kfc/CODEX_READY.md` but keeps `.kfc/LESSONS.md` for future sessions.",
+    "- `kfc client` auto-removes `.kfc/CODEX_READY.md` only after the active onboarding plan reaches archived done state.",
+    "- `kfc client done` remains the manual cleanup fallback; it removes `.kfc/CODEX_READY.md` but keeps `.kfc/LESSONS.md` for future sessions.",
     CLIENT_AGENTS_MANAGED_END
   ].join("\n");
 }
@@ -1606,7 +1607,7 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     "6. If blocked, return exact `Recovery: <command>` and stop until recovered.",
     "",
     "## Session Bootstrap (Every Session)",
-    "1. Read `AGENTS.md` first, then re-read this file before implementation.",
+    "1. Read `AGENTS.md` first. If this file still exists, re-read it before implementation.",
     "2. Read `.kfc/LESSONS.md` when present; it is the curated durable memory for this client project.",
     "3. Resolve one active non-done plan in `.local/plans/` before route output.",
     "4. Touch the active plan at route start and again before final response (`updated_at` + timestamped `WIP Log` line).",
@@ -1627,28 +1628,99 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     "  - `Recovery: <exact command>`",
     "",
     "## Finish Checklist (Required)",
-    "1. Run: `kfc client done`",
-    "2. Confirm `.kfc/CODEX_READY.md` is removed.",
-    "3. Do not mark task complete until cleanup command succeeds.",
+    "1. `kfc client` will auto-clean this file only after the active onboarding plan is archived done.",
+    "2. If manual recovery is needed, run `kfc client done`.",
+    "3. Do not mark task complete until `.kfc/CODEX_READY.md` is removed.",
     ""
   ].join("\n");
 }
 
-async function createClientReadyArtifacts({ projectDir, force, goal, profileName, inspection }) {
+function extractExistingReadyMission(readyMarkdown) {
+  const match = String(readyMarkdown || "").match(/## Mission\s*\r?\n-\s*(.+?)(?:\r?\n|$)/i);
+  return match ? String(match[1] || "").trim() : "";
+}
+
+async function findDonePlanById(projectDir, planId) {
+  const doneDir = path.join(projectDir, ".local", "plans", "done");
+  let entries = [];
+  try {
+    entries = await fsp.readdir(doneDir, { withFileTypes: true });
+  } catch (err) {
+    if (err && typeof err === "object" && err.code === "ENOENT") {
+      return null;
+    }
+    throw err;
+  }
+
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
+      continue;
+    }
+    const filePath = path.join(doneDir, entry.name);
+    const raw = await fsp.readFile(filePath, "utf8");
+    const frontmatter = parseSimpleFrontmatter(raw);
+    if (String(frontmatter.plan_id || "").trim() !== String(planId || "").trim()) {
+      continue;
+    }
+    return {
+      filePath,
+      raw,
+      frontmatter
+    };
+  }
+  return null;
+}
+
+export async function evaluateClientSetupCompletion(projectDir, planId) {
+  const donePlan = await findDonePlanById(projectDir, planId);
+  if (donePlan) {
+    const status = String(donePlan.frontmatter.status || "").trim().toLowerCase();
+    const decision = String(donePlan.frontmatter.decision || "").trim().toUpperCase();
+    if (status === "done" && decision === "PASS") {
+      return {
+        complete: true,
+        reason: `Active onboarding plan archived successfully: ${donePlan.filePath}`,
+        recovery: "None",
+        planPath: donePlan.filePath
+      };
+    }
+  }
+
+  const activePlan = await resolveActivePlan(projectDir);
+  if (activePlan && String(activePlan.planId || "").trim() === String(planId || "").trim()) {
+    const planState = await describeClientPlanState(projectDir);
+    return {
+      complete: false,
+      reason: `Setup completion is still incomplete. ${planState.summary}`,
+      recovery: "kfc client",
+      planPath: activePlan.filePath,
+      planState
+    };
+  }
+
+  return {
+    complete: false,
+    reason: "Setup completion is still incomplete. KFC could not confirm that the onboarding plan reached archived done state.",
+    recovery: "kfc client",
+    planPath: ""
+  };
+}
+
+export async function createClientReadyArtifacts({ projectDir, force, goal, profileName, inspection }) {
   const planState = await describeClientPlanState(projectDir);
 
   const readyPath = resolveClientReadyPath(projectDir);
-  if (fs.existsSync(readyPath) && !force) {
-    throw new Error(
-      `Ready file already exists: ${readyPath}. Use --force to regenerate or run \`kfc client done --project .\` first.`
-    );
-  }
+  const readyExists = fs.existsSync(readyPath);
+  const existingReady = readyExists ? await fsp.readFile(readyPath, "utf8") : "";
+  const effectiveGoal = goal && goal.trim().length > 0
+    ? goal
+    : extractExistingReadyMission(existingReady);
 
   await fsp.mkdir(path.dirname(readyPath), { recursive: true });
   await fsp.writeFile(
     readyPath,
     buildReadyFileContent({
-      goal,
+      goal: effectiveGoal,
       planState,
       inspection
     }),
@@ -1675,7 +1747,14 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
     "utf8"
   );
 
-  return { readyPath, sessionPath, planId: planState.planId, planState, inspection };
+  return {
+    readyPath,
+    sessionPath,
+    planId: planState.planId,
+    planState,
+    inspection,
+    reusedExisting: readyExists && !force
+  };
 }
 
 async function runClientCodexLaunch({ projectDir, planId }) {
@@ -1690,7 +1769,7 @@ async function runClientCodexLaunch({ projectDir, planId }) {
 
 function printClientCodexLaunchOutcome(result, manualCommand) {
   if (result?.status === "completed") {
-    info("Codex auto-launch started successfully.");
+    info("Codex auto-run finished.");
     return;
   }
   const reason =
@@ -2362,7 +2441,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
   if (!runtime.suppressSuccessHints) {
     printClientDocsHints(options.project);
     printClientNextCommandHints(planState);
-    info("Cleanup command after completion: kfc client done");
+    info("Manual cleanup fallback: kfc client done");
     info("Next steps in this client repo should use `kfc ...` commands.");
   }
 
@@ -2634,7 +2713,7 @@ async function runClientDoctorChecks(options) {
     const planState = await describeClientPlanState(options.project);
     printClientDocsHints(options.project);
     printClientNextCommandHints(planState);
-    info("Cleanup command after completion: kfc client done");
+    info("Manual cleanup fallback: kfc client done");
     info("Client diagnostics completed. Continue using `kfc ...` commands in this project.");
   }
 
@@ -2642,15 +2721,6 @@ async function runClientDoctorChecks(options) {
 }
 
 async function runClientStart(options) {
-  const readyPath = resolveClientReadyPath(options.project);
-  if (fs.existsSync(readyPath) && !options.force) {
-    throw createClientOnboardingError(
-      CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS,
-      `Ready file already exists: ${readyPath}. Use --force to regenerate or run \`kfc client done --project .\` first.`,
-      "kfc client done --project ."
-    );
-  }
-
   const bootstrap = await runBootstrapWithSmartRecovery(options, {
     printPass: false,
     suppressSuccessHints: true
@@ -2687,11 +2757,25 @@ async function runClientReadyHandoff(options, bootstrap) {
 
   const manualCommand = buildClientCodexManualCommand();
   let launchResult = null;
+  let completion = null;
   if (!options.noLaunchCodex) {
+    await emitClientOnboardingEvent(
+      options.project,
+      buildClientOnboardingProgressPayload(
+        CLIENT_ONBOARDING_STAGES.EXECUTION_READY,
+        ready.reusedExisting
+          ? "Reusing existing KFC handoff and waiting for Codex completion."
+          : "Launching Codex and waiting for setup completion.",
+        "Wait for Codex completion."
+      )
+    );
     launchResult = await runClientCodexLaunch({
       projectDir: options.project,
       planId: ready.planId
     });
+    if (launchResult?.status === "completed") {
+      completion = await evaluateClientSetupCompletion(options.project, ready.planId);
+    }
   }
 
   const launchSucceeded = launchResult?.status === "completed";
@@ -2701,44 +2785,154 @@ async function runClientReadyHandoff(options, bootstrap) {
     : launchSucceeded
       ? "Follow the plan-state handoff in .kfc/CODEX_READY.md."
       : manualCommand;
-  const readyPayload = {
-    ...buildClientOnboardingPassPayload({
-      recoveryUsed: bootstrap.recoveryUsed,
-      reason: ready.planState.summary,
-      next: handoffNext,
-      next_steps: options.noLaunchCodex || !launchSucceeded
-        ? [manualCommand, ...planStateSteps]
-        : ["Follow the plan-state handoff in .kfc/CODEX_READY.md.", ...planStateSteps]
-    }),
-    stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
-    reason: launchSucceeded
-      ? `Client onboarding handoff artifacts are ready and Codex auto-launch started. ${ready.planState.summary}`
-      : `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
-    next: handoffNext,
+  const readyEvent = options.noLaunchCodex
+    ? {
+        ...buildClientOnboardingPassPayload({
+          recoveryUsed: bootstrap.recoveryUsed,
+          reason: ready.planState.summary,
+          next: handoffNext,
+          next_steps: [manualCommand, ...planStateSteps]
+        }),
+        stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
+        reason: `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
+        next: handoffNext,
+        inspection_status: ready.inspection.inspectionStatus,
+        repo_shape: ready.inspection.repoShape,
+        planned_changes: ready.inspection.plannedChangesSummary,
+        apply_mode: ready.inspection.applyMode
+      }
+    : {
+        ...buildClientOnboardingProgressPayload(
+          CLIENT_ONBOARDING_STAGES.READY_BRIEF,
+          ready.reusedExisting
+            ? `Client onboarding handoff artifacts were refreshed from an existing brief. ${ready.planState.summary}`
+            : `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
+          "Wait for Codex completion."
+        ),
+        inspection_status: ready.inspection.inspectionStatus,
+        repo_shape: ready.inspection.repoShape,
+        planned_changes: ready.inspection.plannedChangesSummary,
+        apply_mode: ready.inspection.applyMode
+      };
+  await emitClientOnboardingEvent(options.project, readyEvent);
+  if (options.noLaunchCodex) {
+    printClientOnboardingPass(readyEvent);
+  } else {
+    printClientOnboardingPayload(readyEvent, false);
+  }
+  info(`Stable contract: ${path.join(options.project, CLIENT_AGENTS_FILE)}`);
+  info(`Ready file: ${ready.readyPath}`);
+  info(ready.reusedExisting ? "Reusing existing KFC handoff." : "Prepared a fresh KFC handoff.");
+  if (options.noLaunchCodex) {
+    info("Codex auto-launch skipped (--no-launch-codex).");
+    info(`Manual start: ${manualCommand}`);
+    info("Manual cleanup fallback: kfc client done");
+    return 0;
+  }
+
+  printClientCodexLaunchOutcome(launchResult, manualCommand);
+  if (!launchSucceeded) {
+    const blockPayload = classifyClientOnboardingFailure(
+      createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED,
+        `Codex auto-run failed. ${launchResult?.failure_signature || launchResult?.stderr_tail || "No completion evidence."}`,
+        manualCommand,
+        {
+          next: manualCommand,
+          stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY
+        }
+      )
+    );
+    await emitClientOnboardingEvent(options.project, {
+      ...blockPayload,
+      inspection_status: ready.inspection.inspectionStatus,
+      repo_shape: ready.inspection.repoShape,
+      planned_changes: ready.inspection.plannedChangesSummary,
+      apply_mode: ready.inspection.applyMode
+    });
+    printClientOnboardingPayload(blockPayload, true);
+    info("Ready handoff preserved for recovery.");
+    return 1;
+  }
+
+  if (!completion?.complete) {
+    const blockPayload = classifyClientOnboardingFailure(
+      createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE,
+        completion?.reason || "Setup completion is still incomplete. KFC could not confirm archived done state.",
+        "kfc client",
+        {
+          next: "kfc client",
+          stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY
+        }
+      )
+    );
+    await emitClientOnboardingEvent(options.project, {
+      ...blockPayload,
+      inspection_status: ready.inspection.inspectionStatus,
+      repo_shape: ready.inspection.repoShape,
+      planned_changes: ready.inspection.plannedChangesSummary,
+      apply_mode: ready.inspection.applyMode
+    });
+    printClientOnboardingPayload(blockPayload, true);
+    info("Ready handoff preserved for recovery.");
+    return 1;
+  }
+
+  try {
+    await runClientDone(options);
+  } catch (err) {
+    const blockPayload = classifyClientOnboardingFailure(
+      createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED,
+        `Automatic cleanup failed after archived done proof. ${err instanceof Error ? err.message : String(err)}`,
+        "kfc client done --project .",
+        {
+          next: "kfc client done --project .",
+          stage: CLIENT_ONBOARDING_STAGES.DONE
+        }
+      )
+    );
+    await emitClientOnboardingEvent(options.project, {
+      ...blockPayload,
+      inspection_status: ready.inspection.inspectionStatus,
+      repo_shape: ready.inspection.repoShape,
+      planned_changes: ready.inspection.plannedChangesSummary,
+      apply_mode: ready.inspection.applyMode
+    });
+    printClientOnboardingPayload(blockPayload, true);
+    return 1;
+  }
+
+  const donePayload = buildClientOnboardingPassPayload({
+    recoveryUsed: bootstrap.recoveryUsed,
+    stage: CLIENT_ONBOARDING_STAGES.DONE,
+    reason: `Client setup completed and cleanup was applied automatically. ${completion.reason}`,
+    next: "kfc client",
+    next_steps: ["kfc client"]
+  });
+  await emitClientOnboardingEvent(options.project, {
+    ...donePayload,
     inspection_status: ready.inspection.inspectionStatus,
     repo_shape: ready.inspection.repoShape,
     planned_changes: ready.inspection.plannedChangesSummary,
     apply_mode: ready.inspection.applyMode
-  };
-  await emitClientOnboardingEvent(options.project, readyPayload);
-  printClientOnboardingPass(readyPayload);
-  info(`Stable contract: ${path.join(options.project, CLIENT_AGENTS_FILE)}`);
-  info(`Ready file: ${ready.readyPath}`);
-  if (options.noLaunchCodex) {
-    info("Codex auto-launch skipped (--no-launch-codex).");
-    info(`Manual start: ${manualCommand}`);
-  } else {
-    printClientCodexLaunchOutcome(launchResult, manualCommand);
-  }
-  info("Finish cleanup: kfc client done");
+  });
+  printClientOnboardingPass(donePayload);
+  info("Ready handoff cleaned automatically.");
   return 0;
 }
 
 async function runClientDone(options) {
   const readyPath = resolveClientReadyPath(options.project);
   const sessionPath = resolveClientSessionPath(options.project);
+  const agentsPath = resolveClientAgentsPath(options.project);
   const removedReady = await removeIfExists(readyPath);
   const removedSession = await removeIfExists(sessionPath);
+
+  if (fs.existsSync(agentsPath) && (removedReady || removedSession)) {
+    await ensureClientAgentsContract(options.project);
+  }
 
   if (!removedReady && !removedSession) {
     info("Client cleanup complete: nothing to clean.");

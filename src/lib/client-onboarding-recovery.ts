@@ -12,6 +12,9 @@ export const CLIENT_ONBOARDING_CODES = Object.freeze({
   HEALTHCHECK_FAILED: "CLIENT_HEALTHCHECK_FAILED",
   READY_FILE_EXISTS: "CLIENT_READY_FILE_EXISTS",
   READY_ARTIFACT_FAILED: "CLIENT_READY_ARTIFACT_FAILED",
+  CODEX_LAUNCH_FAILED: "CLIENT_CODEX_LAUNCH_FAILED",
+  SETUP_INCOMPLETE: "CLIENT_SETUP_INCOMPLETE",
+  AUTO_CLEANUP_FAILED: "CLIENT_AUTO_CLEANUP_FAILED",
   SMART_RECOVERY_FAILED: "CLIENT_SMART_RECOVERY_FAILED",
   BOOTSTRAP_FAILED: "CLIENT_BOOTSTRAP_FAILED",
   PASS: "CLIENT_ONBOARDING_PASS",
@@ -114,6 +117,13 @@ function stageForCode(code: string): ClientOnboardingStage {
   if (code === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS || code === CLIENT_ONBOARDING_CODES.READY_ARTIFACT_FAILED) {
     return CLIENT_ONBOARDING_STAGES.READY_BRIEF;
   }
+  if (
+    code === CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED ||
+    code === CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE ||
+    code === CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED
+  ) {
+    return CLIENT_ONBOARDING_STAGES.EXECUTION_READY;
+  }
   return CLIENT_ONBOARDING_STAGES.BLOCKED;
 }
 
@@ -138,6 +148,15 @@ function recoveryForCode(code: string): string {
     return "npm init -y";
   }
   if (code === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS) {
+    return "kfc client done --project .";
+  }
+  if (code === CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED) {
+    return "kfc client";
+  }
+  if (code === CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE) {
+    return "kfc client";
+  }
+  if (code === CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED) {
     return "kfc client done --project .";
   }
   if (code === CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED) {
@@ -177,6 +196,9 @@ function codeFromMessage(message) {
   if (text.includes("`kfc plan validate` failed")) return CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED;
   if (text.includes("health check failed")) return CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED;
   if (text.includes("ready file already exists")) return CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS;
+  if (text.includes("codex auto-run failed")) return CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED;
+  if (text.includes("setup completion is still incomplete")) return CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE;
+  if (text.includes("automatic cleanup failed")) return CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED;
   return CLIENT_ONBOARDING_CODES.BOOTSTRAP_FAILED;
 }
 

@@ -34,7 +34,7 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
-`kfc client --force` now starts with an inline inspection pass, auto-initializes a minimal `package.json` when the target folder is truly empty, creates a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, runs one smart-recovery cycle only for recoverable bootstrap issues, and auto-launches:
+`kfc client` is the reusable client-project entrypoint. It starts with an inline inspection pass, auto-initializes a minimal `package.json` when the target folder is truly empty, creates or refreshes the root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, runs one smart-recovery cycle only for recoverable bootstrap issues, and auto-launches:
 
 ```bash
 codex exec --full-auto "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission."
@@ -63,17 +63,19 @@ Low-level equivalent (only when you need manual bootstrap control):
 kfc client bootstrap --project . --profile client --force
 ```
 
-If auto-launch is disabled or fails, run the exact fallback command printed by KFC. Codex should then read `AGENTS.md` first, read `.kfc/CODEX_READY.md`, read `.kfc/LESSONS.md` when present, and continue autonomously.
+If auto-launch is disabled or fails, run the exact fallback command printed by KFC. Codex should then read `AGENTS.md` first, read `.kfc/CODEX_READY.md` when present, read `.kfc/LESSONS.md` when present, and continue autonomously.
 
 Important first-run behavior:
 - onboarding `PASS` means the client environment is ready, not that the active plan is already build-ready
+- rerunning plain `kfc client` should reuse or refresh the existing handoff instead of blocking on an old `.kfc/CODEX_READY.md`
 - risky mixed repos BLOCK before mutation instead of letting KFC guess
 - if bootstrap created a fresh draft plan, `.kfc/CODEX_READY.md` will direct Codex to finish Brainstorm/Plan before any build route
 - `kfc flow ready --project .` should only be the first action when the active plan is already build-ready
+- KFC auto-cleans `.kfc/CODEX_READY.md` only after the active onboarding plan is archived done; otherwise the handoff is preserved for recovery
 
 This flow is designed for no user reminder loop after bootstrap. Codex should continue from the generated brief and the project-local skill without waiting for routine chat reminders.
 The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
-Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract; `.kfc/CODEX_READY.md` remains the current mission brief.
+Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract. Read `.kfc/CODEX_READY.md` when present; otherwise continue from the active plan plus lessons.
 
 To manage private project lessons after bootstrap:
 
@@ -87,7 +89,7 @@ kfc client lessons list --project .
 
 Use `.local/kfc-lessons/` for raw private history and `.kfc/LESSONS.md` for the curated lessons Codex should read in future sessions.
 
-After work is complete, cleanup is required:
+Manual cleanup fallback:
 
 ```bash
 kfc client done

@@ -20,7 +20,7 @@ kfc client --force
 ```
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
-KFC now inspects the target repo first. If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. This creates a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex by default.
+KFC now inspects the target repo first. If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. This creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates or refreshes `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex by default.
 Client bootstrap includes one smart-recovery cycle and prints `Inspection Status`, `Repo Shape`, `Apply Mode`, `Planned Changes`, plus `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 If auto-launch is disabled or fails, use the exact manual fallback command printed by KFC.
 Treat the root `AGENTS.md` managed block as KFC's project-specific `/init` contract. KFC refreshes that block during `kfc client` and `kfc client update` while preserving notes outside it.
@@ -33,13 +33,14 @@ Treat the root `AGENTS.md` managed block as KFC's project-specific `/init` contr
 
 2. Environment and Plan Readiness
 - Read `AGENTS.md` first as the stable client-repo operating contract and KFC-owned `/init` equivalent.
-- Use `.kfc/CODEX_READY.md` as mission + plan contract.
+- Use `.kfc/CODEX_READY.md` as mission + plan contract when it is present.
 - Use `.kfc/LESSONS.md` as curated private project memory when present.
 - Use `.agents/skills/kamiflow-core/SKILL.md` as the visible project-local runtime skill artifact.
 - Keep raw lesson history private under `.local/kfc-lessons/`.
 - Use `kfc client lessons capture|pending|show|promote|list` to maintain the private-history -> curated-memory lesson flow.
 - Codex should execute routine flow commands autonomously without user reminders.
 - Auto-launch is the preferred handoff path; use the printed fallback command only if launch was skipped or failed.
+- Rerunning `kfc client` should reuse or refresh the handoff instead of blocking on an existing ready brief.
 - Respect the inspection contract: `risky` repos should BLOCK before mutation, while `ready` and `needs_minor_fixes` can continue automatically.
 - Treat onboarding PASS as environment-ready only. If the active plan is still draft, Codex should complete Brainstorm/Plan first.
 - Before any implementation route (`build`/`fix`), Codex should confirm the active plan is build-ready, then run `kfc flow ready --project .`.
@@ -72,8 +73,9 @@ Treat the root `AGENTS.md` managed block as KFC's project-specific `/init` contr
   - `Recovery: <exact command>`
 
 7. Finish Policy (Required)
-- Run `kfc client done`.
-- Confirm `.kfc/CODEX_READY.md` was removed.
+- `kfc client` should auto-clean `.kfc/CODEX_READY.md` only after archived-done proof.
+- Use `kfc client done` only as the manual cleanup fallback.
+- Confirm `.kfc/CODEX_READY.md` was removed before declaring completion.
 - Keep `.kfc/LESSONS.md` for future sessions.
 - Do not mark complete before cleanup succeeds.
 

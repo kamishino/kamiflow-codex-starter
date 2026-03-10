@@ -116,6 +116,7 @@ const CASES: CaseSpec[] = [
         ? fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8")
         : "";
       assertContains(agents, "<!-- KFC:BEGIN MANAGED -->", "managed AGENTS block", errors);
+      assertContains(agents, "If `.kfc/CODEX_READY.md` exists", "evergreen AGENTS startup order", errors);
       const ready = fs.existsSync(path.join(projectDir, ".kfc", "CODEX_READY.md"))
         ? fs.readFileSync(path.join(projectDir, ".kfc", "CODEX_READY.md"), "utf8")
         : "";
@@ -146,6 +147,10 @@ const CASES: CaseSpec[] = [
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
+      const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))
+        ? fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8")
+        : "";
+      assertContains(agents, "If `.kfc/CODEX_READY.md` exists", "evergreen AGENTS startup order", errors);
       return errors;
     }
   },
@@ -189,6 +194,7 @@ const CASES: CaseSpec[] = [
         ? fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8")
         : "";
       assertContains(agents, "<!-- KFC:BEGIN MANAGED -->", "managed AGENTS block", errors);
+      assertContains(agents, "If `.kfc/CODEX_READY.md` exists", "evergreen AGENTS startup order", errors);
       assertContains(agents, "Preserve this note.", "preserved custom AGENTS content", errors);
       return errors;
     }

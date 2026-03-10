@@ -23,7 +23,7 @@ kfc client --force
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-Bootstrap now includes one smart-recovery cycle, creates a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches:
+Bootstrap now includes one smart-recovery cycle, creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches:
 
 ```bash
 codex exec --full-auto "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission."
@@ -31,6 +31,7 @@ codex exec --full-auto "Read AGENTS.md first, then read .kfc/CODEX_READY.md and 
 
 If auto-launch is disabled (`--no-launch-codex`) or fails, use the exact manual fallback command printed by KFC.
 KFC now inspects the repo first. If the target folder is truly empty, KFC may auto-create a minimal `package.json` before continuing bootstrap, while risky mixed repos should BLOCK before mutation.
+Rerunning `kfc client` should reuse or refresh the existing handoff instead of blocking on `.kfc/CODEX_READY.md`.
 
 Use the prompt below only when you intentionally skip auto-launch or need manual recovery:
 
@@ -60,9 +61,10 @@ Rules:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
    - `Recovery: <exact command>`
-12) Before declaring completion, always run cleanup:
-   - `kfc client done`
-   - confirm `.kfc/CODEX_READY.md` is removed.
+12) Before declaring completion, ensure cleanup happened:
+   - prefer the automatic cleanup done by `kfc client` after archived-done proof
+   - if recovery/manual cleanup is needed, run `kfc client done`
+   - confirm `.kfc/CODEX_READY.md` is removed
    - keep `.kfc/LESSONS.md` as private project memory.
 13) For onboarding/bootstrap failures, report:
    - `Inspection Status: PASS|BLOCK`

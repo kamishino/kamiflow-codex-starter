@@ -537,10 +537,60 @@ async function main() {
         verifyFileContainsStep(
           "verify client AGENTS managed block",
           path.join(projectDir, "AGENTS.md"),
-          ["<!-- KFC:BEGIN MANAGED -->", "<!-- KFC:END MANAGED -->", ".kfc/CODEX_READY.md"],
+          ["<!-- KFC:BEGIN MANAGED -->", "<!-- KFC:END MANAGED -->", "If `.kfc/CODEX_READY.md` exists"],
           projectDir
         )
       );
+      steps.push(
+        runStep(
+          "kfc client rerun --no-launch-codex",
+          NODE,
+          [
+            NPM_CLI,
+            "exec",
+            "--no-install",
+            "--",
+            "kfc",
+            "client",
+            "--no-launch-codex",
+            "--project",
+            ".",
+            "--port",
+            String(args.port)
+          ],
+          projectDir
+        )
+      );
+      const rerunStep = steps.at(-1);
+      const rerunOutput = `${rerunStep?.stdout || ""}\n${rerunStep?.stderr || ""}`;
+      steps.push({
+        title: "verify rerun reuses handoff without blocking",
+        cwd: projectDir,
+        command: "assert rerun did not block on existing ready file",
+        ok:
+          rerunStep?.ok === true &&
+          !rerunOutput.includes("CLIENT_READY_FILE_EXISTS") &&
+          !rerunOutput.includes("Onboarding Status: BLOCK"),
+        statusCode:
+          rerunStep?.ok === true &&
+          !rerunOutput.includes("CLIENT_READY_FILE_EXISTS") &&
+          !rerunOutput.includes("Onboarding Status: BLOCK")
+            ? 0
+            : 1,
+        durationMs: 0,
+        stdout:
+          rerunStep?.ok === true &&
+          !rerunOutput.includes("CLIENT_READY_FILE_EXISTS") &&
+          !rerunOutput.includes("Onboarding Status: BLOCK")
+            ? "rerun reused the existing handoff"
+            : "",
+        stderr:
+          rerunStep?.ok === true &&
+          !rerunOutput.includes("CLIENT_READY_FILE_EXISTS") &&
+          !rerunOutput.includes("Onboarding Status: BLOCK")
+            ? ""
+            : "Rerun blocked or reported CLIENT_READY_FILE_EXISTS."
+      });
       steps.push(
         verifyPathExistsStep(
           "verify project-local kamiflow-core skill",

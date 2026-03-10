@@ -30,6 +30,11 @@ const { lintAndRepairMermaid } = await import(
   pathToFileURL(path.join(packageDir, "dist/lib/mermaid-safety.js")).href
 );
 const { readRunlogSignal } = await import(pathToFileURL(path.join(packageDir, "dist/lib/runlog.js")).href);
+const {
+  buildClientAgentsManagedBlock,
+  createClientReadyArtifacts,
+  evaluateClientSetupCompletion
+} = await import(pathToFileURL(path.join(packageDir, "..", "..", "dist/commands/client.js")).href);
 
 const __dirname = path.join(packageDir, "test");
 
@@ -117,6 +122,51 @@ function toLocalDateStamp(date = new Date()) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function buildClientPlan(planId = "PLAN-2026-03-10-001") {
+  return `---
+plan_id: ${planId}
+request_id: REQ-2026-03-10-001
+title: Test Client Plan
+status: draft
+decision: NO_GO
+selected_mode: Plan
+next_mode: Plan
+next_command: plan
+lifecycle_phase: plan
+updated_at: 2026-03-10T00:00:00.000Z
+archived_at:
+---
+
+## Start Summary
+- Required: no
+- Reason: Validate client onboarding behavior.
+
+## Goal
+- Exercise the client onboarding contract.
+
+## Open Decisions
+- [x] D1: Example decision resolved.
+- Remaining Count: 0
+
+## Implementation Tasks
+- [ ] Update \`src/example.ts\` with the onboarding flow.
+
+## Acceptance Criteria
+- [ ] Contract behavior is reflected in generated artifacts.
+
+## Validation Commands
+- npm run test
+
+## Go/No-Go Checklist
+- [x] Goal is explicit
+
+## WIP Log
+- Status: Draft plan ready for onboarding.
+- Blockers: None.
+- Next step: Continue planning.
+`;
 }
 
 await runCase("parse and validate template plan", async () => {
@@ -765,16 +815,16 @@ await runCase("codex runner supports full-auto execution variants and manual fal
   const variants = buildCodexExecArgVariants({
     plan_id: "PLAN-TEST-005",
     action_type: "start",
-    prompt: "Read .kfc/CODEX_READY.md and execute the mission.",
+    prompt: "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.",
     full_auto: true
   });
   assert.deepEqual(variants, [["exec", "--full-auto", "-"]]);
   assert.equal(
     buildCodexExecManualCommand({
-      prompt: "Read .kfc/CODEX_READY.md and execute the mission.",
+      prompt: "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.",
       full_auto: true
     }),
-    'codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."'
+    'codex exec --full-auto "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission."'
   );
 });
 
@@ -785,7 +835,7 @@ await runCase("codex runner preserves full-auto mode in failure command metadata
     const result = await runCodexAction({
       plan_id: "PLAN-TEST-006",
       action_type: "start",
-      prompt: "Read .kfc/CODEX_READY.md and execute the mission.",
+      prompt: "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.",
       full_auto: true
     });
     assert.equal(result.status, "failed");
@@ -855,7 +905,7 @@ await runCase("runlog parser includes onboarding metadata when present", async (
         onboarding_stage: "ready_brief",
         onboarding_error_code: "CLIENT_ONBOARDING_PASS",
         onboarding_recovery: "None",
-        onboarding_next: "Read .kfc/CODEX_READY.md and execute the mission."
+        onboarding_next: "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission."
       }) + "\n",
       "utf8"
     );
@@ -869,7 +919,73 @@ await runCase("runlog parser includes onboarding metadata when present", async (
     assert.equal(signal.onboarding_stage, "ready_brief");
     assert.equal(signal.onboarding_error_code, "CLIENT_ONBOARDING_PASS");
     assert.equal(signal.onboarding_recovery, "None");
-    assert.equal(signal.onboarding_next, "Read .kfc/CODEX_READY.md and execute the mission.");
+    assert.equal(signal.onboarding_next, "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.");
+  });
+});
+
+await runCase("client AGENTS contract stays evergreen when CODEX_READY is absent", async () => {
+  const managed = buildClientAgentsManagedBlock();
+  assert.ok(managed.includes("If `.kfc/CODEX_READY.md` exists"));
+  assert.ok(managed.includes("If `.kfc/CODEX_READY.md` is absent"));
+  assert.ok(managed.includes("manual cleanup fallback"));
+});
+
+await runCase("client ready artifacts reuse existing mission instead of blocking", async () => {
+  await withTempDir(async (tempDir) => {
+    const plansDir = path.join(tempDir, ".local", "plans");
+    await fs.mkdir(plansDir, { recursive: true });
+    await fs.writeFile(path.join(plansDir, "2026-03-10-001-plan.md"), buildClientPlan(), "utf8");
+    await fs.mkdir(path.join(tempDir, ".kfc"), { recursive: true });
+    await fs.writeFile(
+      path.join(tempDir, ".kfc", "CODEX_READY.md"),
+      "# CODEX READY\n\n## Mission\n- Preserve this mission\n",
+      "utf8"
+    );
+
+    const ready = await createClientReadyArtifacts({
+      projectDir: tempDir,
+      force: false,
+      goal: "",
+      profileName: "client",
+      inspection: {
+        inspectionStatus: "PASS",
+        repoShape: "ready",
+        applyMode: "auto",
+        reason: "Existing repo ready.",
+        recovery: "None",
+        next: "Continue automatically.",
+        plannedChanges: ["reuse existing managed onboarding artifacts"],
+        plannedChangesSummary: "reuse existing managed onboarding artifacts",
+        onboardingPath: "verify_existing_repo"
+      }
+    });
+
+    assert.equal(ready.reusedExisting, true);
+    const nextReady = await fs.readFile(path.join(tempDir, ".kfc", "CODEX_READY.md"), "utf8");
+    assert.ok(nextReady.includes("- Preserve this mission"));
+  });
+});
+
+await runCase("client setup completion detects archived done plan", async () => {
+  await withTempDir(async (tempDir) => {
+    const doneDir = path.join(tempDir, ".local", "plans", "done");
+    await fs.mkdir(doneDir, { recursive: true });
+    await fs.writeFile(
+      path.join(doneDir, "2026-03-10-001-plan.md"),
+      `---
+plan_id: PLAN-2026-03-10-001
+status: done
+decision: PASS
+updated_at: 2026-03-10T00:00:00.000Z
+archived_at: 2026-03-10T00:05:00.000Z
+---
+`,
+      "utf8"
+    );
+
+    const completion = await evaluateClientSetupCompletion(tempDir, "PLAN-2026-03-10-001");
+    assert.equal(completion.complete, true);
+    assert.ok(String(completion.reason).includes("archived successfully"));
   });
 });
 

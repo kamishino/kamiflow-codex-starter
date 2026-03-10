@@ -15,3 +15,4 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 - Added a repo-shape portability matrix runner plus route/runbook updates so client proof, inspection-aware handoff, and hosted product hierarchy are documented as one coherent workflow.
 - Added client-root `AGENTS.md` generation with a managed KFC contract block so fresh client repos now have a visible stable brain alongside `.kfc/CODEX_READY.md`.
 - Clarified that KFC owns and refreshes the client-root `AGENTS.md` managed block as the project-specific `/init` contract, while `.kfc/CODEX_READY.md` remains the per-session brief.
+- Reworked `kfc client` toward a reusable one-command entrypoint so reruns refresh/reuse the handoff, wait for Codex completion, and auto-clean `.kfc/CODEX_READY.md` only after archived-done proof.
