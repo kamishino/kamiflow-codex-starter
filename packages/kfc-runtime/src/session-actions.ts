@@ -21,7 +21,7 @@ type RevealOptions = {
   runCommand?: SpawnCommand;
 };
 
-export function buildInteractiveResumeCommand(sessionId) {
+export function buildInteractiveResumeCommand(sessionId: unknown) {
   const normalized = String(sessionId || "").trim();
   if (!normalized) {
     return "";
@@ -29,7 +29,7 @@ export function buildInteractiveResumeCommand(sessionId) {
   return `codex resume ${JSON.stringify(normalized)}`;
 }
 
-export function resolveSessionField(binding, field) {
+export function resolveSessionField(binding: any, field: unknown) {
   const normalized = String(field || "").trim().toLowerCase();
   if (!binding?.bound) {
     throw new Error(binding?.reason || "No Codex session bound.");
@@ -46,7 +46,7 @@ export function resolveSessionField(binding, field) {
   throw new Error(`Unsupported field: ${field}`);
 }
 
-export function resolveRevealTargetPath(binding, target = "file") {
+export function resolveRevealTargetPath(binding: any, target = "file") {
   if (!binding?.bound) {
     throw new Error(binding?.reason || "No Codex session bound.");
   }

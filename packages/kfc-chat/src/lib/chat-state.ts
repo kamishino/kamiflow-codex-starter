@@ -3,7 +3,7 @@ import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import crypto from "node:crypto";
-import { buildInteractiveResumeCommand } from "../../../../dist/lib/session-actions.js";
+import { buildInteractiveResumeCommand } from "@kamishino/kfc-runtime/session-actions";
 
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CHAT_SESSION_FILE = path.join(".kfc", "chat-session.json");

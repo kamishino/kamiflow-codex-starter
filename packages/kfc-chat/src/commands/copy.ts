@@ -1,7 +1,7 @@
 import {
   copyTextToClipboard as sharedCopyTextToClipboard,
   resolveSessionField
-} from "../../../../dist/lib/session-actions.js";
+} from "@kamishino/kfc-runtime/session-actions";
 import { resolveBoundSession } from "../lib/chat-state.js";
 
 export async function runCopy(parsed: any, deps: Record<string, any> = {}) {

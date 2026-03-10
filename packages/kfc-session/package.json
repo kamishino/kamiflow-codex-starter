@@ -13,13 +13,14 @@
   "scripts": {
     "build:tools": "tsc -p tsconfig.tools.json --noCheck",
     "build:client": "npm run build:tools && npm run -w @kamishino/kfc-web-runtime build && node dist-tools/scripts/build-client.js",
-    "build:server": "npm --prefix ../.. run build:server && npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
+    "build:server": "npm --prefix ../.. run build:server && npm run -w @kamishino/kfc-runtime build && npm run -w @kamishino/kfc-web-runtime build && tsc -p tsconfig.json",
     "build": "npm run build:server && npm run build:client",
     "serve": "npm run build && node bin/kfc-session.js serve",
     "test": "npm run build && npm run build:tools && node dist-tools/test/run.js",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tools.json --noEmit"
   },
   "dependencies": {
+    "@kamishino/kfc-runtime": "file:../kfc-runtime",
     "eta": "3.5.0",
     "fastify": "5.6.1"
   },

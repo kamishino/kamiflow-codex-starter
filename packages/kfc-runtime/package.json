@@ -1,0 +1,22 @@
+{
+  "name": "@kamishino/kfc-runtime",
+  "version": "0.1.0",
+  "description": "Shared runtime/domain helpers for KFC packages.",
+  "type": "module",
+  "main": "dist/session-actions.js",
+  "exports": {
+    "./session-actions": {
+      "types": "./src/session-actions.ts",
+      "default": "./dist/session-actions.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "22.13.10",
+    "typescript": "5.8.2"
+  },
+  "license": "UNLICENSED"
+}

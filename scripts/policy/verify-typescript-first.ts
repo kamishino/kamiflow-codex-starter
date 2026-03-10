@@ -31,6 +31,11 @@ const TS_FIRST_RULES = [
     area: "packages/kfc-session/src",
     root: "packages/kfc-session/src",
     allow: new Set()
+  },
+  {
+    area: "packages/kfc-runtime/src",
+    root: "packages/kfc-runtime/src",
+    allow: new Set()
   }
 ];
 
