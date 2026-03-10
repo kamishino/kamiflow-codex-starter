@@ -7,6 +7,9 @@ selected_mode: Plan
 next_mode: Plan
 next_command: plan
 diagram_mode: auto
+orchestrator_mode: optional
+agent_slices: []
+max_parallel_workers: 3
 route_confidence: 1
 flow_guardrail: route_selection
 updated_at: 2026-03-01

@@ -67,16 +67,28 @@ Pick mode before executing route logic:
 ## Sub-Agent Orchestration Contract
 
 - Use `spawn_agent` only when work can be split into independent ownership slices.
-- Do not spawn for tightly-coupled file regions or sequential dependencies.
+- Do not spawn for tightly-coupled file regions or strict sequence dependencies.
 - Before spawning, persist in plan notes:
+  - orchestration path (`full` or `fast`) and phase plan,
   - ownership map (`agent -> file scope`),
   - deliverables per agent,
-  - merge/review order.
+  - merge/review order,
+  - conflict fallback policy.
 - Require each sub-agent output to include:
   - concrete file list,
   - findings or patch intent,
   - risk/blocker summary,
   - check confidence.
+- Recommended optional frontmatter controls:
+  - `orchestrator_mode`: `none|optional|required`
+  - `agent_slices`: `[{ "role": "WorkerA", "files": [...], "deliverables": [...] }, ...]`
+  - `max_parallel_workers`: number of concurrent workers
+- Use a 5-phase gate for larger parallel sessions:
+  1. Assess -> split is valid and low-risk.
+  2. Split -> map ownership and assign agents.
+  3. Execute -> run workers only when boundaries are clean.
+  4. Merge -> reconcile conflicts deterministically.
+  5. Close -> validate acceptance evidence and decide PASS/BLOCK.
 - After each slice, immediately update plan WIP (`Status`, `Blockers`, `Next step`) before starting the next.
 - If conflicts appear, set impacted files to single-agent mode and continue with non-conflicting slices in parallel.
 - Keep one route per response; sub-agent work supports that route only.

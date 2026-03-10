@@ -2,6 +2,38 @@
 
 Use this guide when one request is too broad for a single linear execution slice.
 
+## Phase Model (Default)
+
+For broad work, use a 5-phase lifecycle. A 3-phase fast path is allowed only for low-risk, well-scoped tasks.
+
+### 5-Phase Lifecycle
+
+1. **Assess**
+   - Confirm scope, risk, dependencies, and whether the request is safe for parallelism.
+   - Output: `Scope`, `Constraints`, `Acceptance candidates`, `Plan needed`.
+2. **Split**
+   - Build explicit ownership map (`agent -> file set`), identify blockers, and define merge order.
+   - Output: `agent_slices`, `Parallelization Gate`, `Conflict fallback`.
+3. **Execute**
+   - Run independent workers/explorers in parallel.
+   - Output: scoped patches + evidence per worker.
+4. **Merge**
+   - Resolve conflicts and integrate results in the agreed sequence.
+   - Output: single coherent patch set + conflict log.
+5. **Close**
+   - Validate evidence and decide PASS/BLOCK.
+   - Output: acceptance evidence, WIP update, run-log continuity.
+
+### 3-Phase Fast Path
+
+If independent slices are hard to isolate, or if scope is narrow, use:
+
+- Assess
+- Execute (single-agent)
+- Close
+
+Always record the chosen path in WIP before spawn.
+
 ## Import Note
 
 External orchestrator repos (for example, `oh-my-opencode-slim`) are useful design references, but Kami Flow does not require installing new skills for generic sub-agent coordination.
@@ -93,16 +125,31 @@ Output contract per role:
 
 1. Lead resolves active plan and chooses one route.
 2. Lead validates `Parallelization Gate` and assigns ownership map.
-3. Lead spawns parallel explorers/workers for independent slices.
-4. Lead waits for results, integrates outputs, and resolves conflicts.
-5. Lead runs/collects check evidence and decides `PASS|BLOCK`.
-6. Lead mutates plan state and reports compact `State/Doing/Next`.
+3. Lead identifies the 5-phase path (`full` or `fast`) and records it in WIP.
+4. Lead spawns parallel explorers/workers for independent slices (Split/Execute phases).
+5. Lead waits for results, integrates outputs, and resolves conflicts (Merge phase).
+6. Lead runs/collects check evidence and decides `PASS|BLOCK` (Close phase).
+7. Lead mutates plan state and reports compact `State/Doing/Next`.
+
+Suggested default for this lifecycle:
+
+1. Assess: collect acceptance boundaries and route risk.
+2. Split: write `agent_slices` and max parallel count.
+3. Execute: collect all worker outputs.
+4. Merge: apply one deterministic conflict policy.
+5. Close: run checks, update plan, set next action.
 
 ## Safe Runtime Settings
 
 - `orchestrator_mode`: `none|optional|required` (persist in plan metadata as needed)
 - `agent_slices`: explicit mapping of role → file owners
 - `max_parallel_workers`: default `3` for UI + CLI changes, override only when each slice is low-risk
+
+Recommended defaults:
+
+- `orchestrator_mode`: `optional`
+- `agent_slices`: JSON-like map `[{role, files, deliverables}]`
+- `max_parallel_workers`: `2` for risky edits, `3` for low-risk UI/CLI changes, `4` only when merge risk is low.
 
 Fallback rule:
 

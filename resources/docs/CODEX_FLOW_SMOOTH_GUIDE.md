@@ -152,3 +152,21 @@ When route execution fails or context is incomplete, use this exact order:
 - Keep one route per response even when sub-agents run in parallel.
 - For detailed patterns and tool mapping, use `resources/docs/CODEX_MULTI_AGENT_ORCHESTRATION.md`.
 
+Recommended multi-agent phase sequence:
+
+1. **Assess**
+   - Decide if orchestration is required vs single-agent execution.
+2. **Split**
+   - Record `orchestrator_mode`, `agent_slices`, and merge policy in plan notes before spawn.
+3. **Execute**
+   - Run workers in bounded concurrency and track evidence by slice.
+4. **Merge**
+   - Resolve conflicts before any close/check transition.
+5. **Close**
+   - Run acceptance checks, update WIP, and set `next_command`/`next_mode`.
+
+Allowed fast path:
+
+- For small, narrow tasks, use `fast` path with only Assess → Execute → Close.
+- Record the chosen path explicitly in WIP before continuing.
+
