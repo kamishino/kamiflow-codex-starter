@@ -1,7 +1,7 @@
 import path from "node:path";
 import type { ParsedPlan } from "../types.js";
 
-function parseSimpleFrontmatter(yamlBlock) {
+function parseSimpleFrontmatter(yamlBlock: string) {
   const data = {};
   const lines = yamlBlock.split(/\r?\n/);
   for (const line of lines) {
@@ -21,9 +21,73 @@ function parseSimpleFrontmatter(yamlBlock) {
   return data;
 }
 
+type LegacyParseResult = {
+  frontmatter: Record<string, string>;
+  bodyStartLine: number;
+};
+
+function parseLegacyLeadingFrontmatter(markdown: string): LegacyParseResult | null {
+  const lines = markdown.split(/\r?\n/);
+  if (lines.length === 0) {
+    return null;
+  }
+
+  let endIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+    if (trimmed === "---" || /^##\s+/.test(trimmed)) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  const scanLimit = endIndex === -1 ? lines.length : endIndex;
+  const frontmatter: Record<string, string> = {};
+  let parsedAny = false;
+
+  for (let i = 0; i < scanLimit; i += 1) {
+    const trimmed = lines[i].trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const sep = trimmed.indexOf(":");
+    if (sep <= 0) {
+      continue;
+    }
+    const key = trimmed.slice(0, sep).trim();
+    const rawValue = trimmed.slice(sep + 1).trim();
+    frontmatter[key] = rawValue.replace(/^["']|["']$/g, "");
+    parsedAny = true;
+  }
+
+  if (!parsedAny) {
+    return null;
+  }
+
+  if (!frontmatter.plan_id && !frontmatter.title && !frontmatter.status && !frontmatter.next_command) {
+    return null;
+  }
+
+  const bodyStartLine = endIndex === -1 ? lines.length : endIndex;
+  return { frontmatter, bodyStartLine };
+}
+
 function extractFrontmatter(markdown) {
   if (!markdown.startsWith("---")) {
-    throw new Error("Plan file must start with YAML frontmatter block.");
+    const legacy = parseLegacyLeadingFrontmatter(markdown);
+    if (!legacy) {
+      throw new Error("Plan file must start with YAML frontmatter block.");
+    }
+
+    const body = markdown
+      .split(/\r?\n/)
+      .slice(legacy.bodyStartLine)
+      .join("\n")
+      .trimStart();
+    return {
+      frontmatter: legacy.frontmatter,
+      body
+    };
   }
 
   const lines = markdown.split(/\r?\n/);

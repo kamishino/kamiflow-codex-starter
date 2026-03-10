@@ -147,13 +147,40 @@ function lifecyclePhaseForRoute(route) {
 
 function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
   const text = String(markdown || "");
-  if (!text.startsWith("---")) {
-    return {};
+  if (text.startsWith("---")) {
+    const lines = text.split(/\r?\n/);
+    let endIdx = -1;
+    for (let i = 1; i < lines.length; i += 1) {
+      if (lines[i].trim() === "---") {
+        endIdx = i;
+        break;
+      }
+    }
+    if (endIdx === -1) {
+      return {};
+    }
+    const frontmatter: FrontmatterRecord = {};
+    for (const line of lines.slice(1, endIdx)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+      const sep = trimmed.indexOf(":");
+      if (sep <= 0) {
+        continue;
+      }
+      const key = trimmed.slice(0, sep).trim();
+      const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
+      frontmatter[key] = value;
+    }
+    return frontmatter;
   }
+
   const lines = text.split(/\r?\n/);
   let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i].trim() === "---") {
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+    if (trimmed === "---" || /^##\s+/.test(trimmed)) {
       endIdx = i;
       break;
     }
@@ -161,8 +188,9 @@ function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
   if (endIdx === -1) {
     return {};
   }
+
   const frontmatter: FrontmatterRecord = {};
-  for (const line of lines.slice(1, endIdx)) {
+  for (const line of lines.slice(0, endIdx)) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
       continue;
@@ -174,6 +202,9 @@ function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
     const key = trimmed.slice(0, sep).trim();
     const value = trimmed.slice(sep + 1).trim().replace(/^['"]|['"]$/g, "");
     frontmatter[key] = value;
+  }
+  if (!frontmatter.plan_id && !frontmatter.title && !frontmatter.status && !frontmatter.next_command) {
+    return {};
   }
   return frontmatter;
 }

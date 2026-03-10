@@ -184,6 +184,78 @@ await runCase("parse and validate template plan", async () => {
   assert.equal(errors.length, 0);
 });
 
+await runCase("parse legacy key-value plan header without leading delimiter", async () => {
+  const markdown = `plan_id: PLAN-2026-03-10-001
+title: Legacy Header Plan
+status: draft
+decision: GO
+selected_mode: Plan
+next_mode: Build
+next_command: build
+diagram_mode: auto
+updated_at: 2026-03-10T00:00:00.000Z
+---
+
+## Start Summary
+- Required: yes
+- Reason: Legacy format compatibility.
+- Selected Idea: Header-only parser support.
+- Alternatives Considered: None
+- Pre-mortem Risk: Parser regressions.
+- Handoff Confidence: 1
+
+## Goal
+- Confirm parser compatibility and continue safely.
+
+## Scope (In/Out)
+- In: Plan parsing compatibility.
+- Out: Runtime policy.
+
+## Constraints
+- Keep strict validation for malformed files.
+
+## Assumptions
+- A1: Existing files can pre-date delimiter format.
+
+## Open Decisions
+- [x] D1: Keep legacy support.
+- Remaining Count: 0
+
+## Technical Solution Diagram
+- Legacy path has no mandatory diagram requirements in auto mode.
+
+## Implementation Tasks
+- [ ] Update parser.
+
+## Acceptance Criteria
+- [ ] Plan parses in client and KFC plan validate.
+
+## Validation Commands
+- npm run test
+
+## Risks & Rollback
+- Risk: Legacy parser over-accepts malformed files.
+- Mitigation: Keep required metadata guard.
+- Rollback: Revert parser logic.
+
+## Go/No-Go Checklist
+- [x] Goal is explicit
+- [x] Scope in/out is explicit
+- [x] No unresolved high-impact decisions
+- [x] Tasks and validation commands are implementation-ready
+
+## WIP Log
+- Status: Ready
+- Blockers: None
+- Next step: Keep plan parser and client compatibility aligned.
+`;
+  const parsed = parsePlanFileContent(markdown, "<memory>");
+  const errors = validateParsedPlan(parsed);
+  assert.equal(parsed.frontmatter.plan_id, "PLAN-2026-03-10-001");
+  assert.ok(parsed.sections["Start Summary"]);
+  assert.equal(errors.length, 0);
+});
+
 await runCase("validate fails when Start Summary required fields are placeholder", async () => {
   const markdown = `---
 plan_id: PLAN-2026-03-02-001

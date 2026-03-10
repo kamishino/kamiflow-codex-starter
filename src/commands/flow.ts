@@ -99,13 +99,43 @@ function resolvePlansDir(projectDir) {
 }
 
 function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
-  if (!markdown.startsWith("---")) {
-    return {};
+  const content = String(markdown || "");
+  if (content.startsWith("---")) {
+    const lines = content.split(/\r?\n/);
+    let endIdx = -1;
+    for (let i = 1; i < lines.length; i += 1) {
+      if (lines[i].trim() === "---") {
+        endIdx = i;
+        break;
+      }
+    }
+    if (endIdx === -1) {
+      return {};
+    }
+
+    const out: FrontmatterRecord = {};
+    const blockLines = lines.slice(1, endIdx);
+    for (const line of blockLines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) {
+        continue;
+      }
+      const sep = trimmed.indexOf(":");
+      if (sep <= 0) {
+        continue;
+      }
+      const key = trimmed.slice(0, sep).trim();
+      const rawValue = trimmed.slice(sep + 1).trim();
+      out[key] = rawValue.replace(/^['"]|['"]$/g, "");
+    }
+    return out;
   }
-  const lines = markdown.split(/\r?\n/);
+
+  const lines = content.split(/\r?\n/);
   let endIdx = -1;
-  for (let i = 1; i < lines.length; i += 1) {
-    if (lines[i].trim() === "---") {
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+    if (trimmed === "---" || /^##\s+/.test(trimmed)) {
       endIdx = i;
       break;
     }
@@ -115,7 +145,7 @@ function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
   }
 
   const out: FrontmatterRecord = {};
-  const blockLines = lines.slice(1, endIdx);
+  const blockLines = lines.slice(0, endIdx);
   for (const line of blockLines) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) {
@@ -128,6 +158,10 @@ function parseSimpleFrontmatter(markdown: string): FrontmatterRecord {
     const key = trimmed.slice(0, sep).trim();
     const rawValue = trimmed.slice(sep + 1).trim();
     out[key] = rawValue.replace(/^['"]|['"]$/g, "");
+  }
+
+  if (!out.plan_id && !out.title && !out.status && !out.next_command) {
+    return {};
   }
   return out;
 }
