@@ -72,3 +72,6 @@ flowchart LR
 - Status: Not started
 - Blockers: None
 - Next step: Plan first concrete task slice
+
+## Conflict Log
+- 0000-00-00T00:00:00.000Z files: none | severity: low | decision: n/a | recovery: none

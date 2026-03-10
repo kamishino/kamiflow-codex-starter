@@ -115,6 +115,44 @@ Collisions are blocked by explicit file map:
 - Cross-file links are allowed only in review notes, not direct edits.
 - If two workers need the same file, merge at least one of them to reviewer scope and execute serially.
 
+## Reviewer Conflict Gate (Conflict-Heavy Sessions)
+
+Use this gate when any slice touches nearby logic, shared tests, shared docs, or shared data contracts.
+
+### Severity Classes
+
+1. **Low**
+   - Adjacent lines in different files, no shared state or API contract.
+   - Reviewer validates scope consistency only.
+2. **Medium**
+   - Same file different regions, or cross-file refactor with clear boundaries.
+   - Reviewer validates each patch and merge order.
+3. **High**
+   - Same function/section, deletion/rewrite conflicts, or contradictory behavior assumptions.
+   - Reviewer must resolve patch semantics before merge and record decision.
+
+### Mandatory Conflict Record
+
+When conflict exists, append one record with this shape in plan WIP notes:
+
+```text
+- conflict-log [HH:MM:SS] Severity: <Low|Medium|High>
+  files: [a.md, b.ts]
+  conflict: <short summary>
+  reviewer: <name/role>
+  decision: <rejected|kept|rewritten>
+  rationale: <one line reason>
+  recovery: <follow-up task if needed>
+```
+
+Reviewer duty:
+
+- compare both patch variants against task acceptance criteria,
+- choose final shape,
+- add a follow-up task if needed.
+
+If a High conflict is not deterministically resolvable in one pass, set `orchestrator_mode: required` and return to `single` for affected files.
+
 Output contract per role:
 
 - Explorer -> `[scope, risks, evidence, next_questions]`

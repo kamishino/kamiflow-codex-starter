@@ -152,6 +152,12 @@ When route execution fails or context is incomplete, use this exact order:
 - Keep one route per response even when sub-agents run in parallel.
 - For detailed patterns and tool mapping, use `resources/docs/CODEX_MULTI_AGENT_ORCHESTRATION.md`.
 
+If conflict appears during merge:
+
+- Run a reviewer-only conflict gate before merge commit.
+- Record a conflict entry in plan notes with: `files`, `severity`, `decision`, `recovery`.
+- For `High` conflicts, continue in single-agent mode for affected files only.
+
 Recommended multi-agent phase sequence:
 
 1. **Assess**

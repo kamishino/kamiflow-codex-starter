@@ -89,6 +89,10 @@ Pick mode before executing route logic:
   3. Execute -> run workers only when boundaries are clean.
   4. Merge -> reconcile conflicts deterministically.
   5. Close -> validate acceptance evidence and decide PASS/BLOCK.
+- For any detected conflict (especially High severity):
+  - require a reviewer gate before merge.
+  - capture a conflict record: `files`, `conflict`, `reviewer`, `decision`, `rationale`, `recovery`.
+  - route to serial resolution before next non-conflict slice.
 - After each slice, immediately update plan WIP (`Status`, `Blockers`, `Next step`) before starting the next.
 - If conflicts appear, set impacted files to single-agent mode and continue with non-conflicting slices in parallel.
 - Keep one route per response; sub-agent work supports that route only.
