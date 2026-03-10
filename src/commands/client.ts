@@ -70,6 +70,20 @@ type ClientBootstrapRuntime = {
   suppressSuccessHints?: boolean;
   printPass?: boolean;
 };
+type ClientInspectionStatus = "PASS" | "BLOCK";
+type ClientRepoShape = "empty_new_repo" | "ready" | "needs_minor_fixes" | "risky";
+type ClientApplyMode = "auto" | "blocked";
+type ClientInspectionSummary = {
+  inspectionStatus: ClientInspectionStatus;
+  repoShape: ClientRepoShape;
+  applyMode: ClientApplyMode;
+  reason: string;
+  recovery: string;
+  next: string;
+  plannedChanges: string[];
+  plannedChangesSummary: string;
+  onboardingPath: string;
+};
 type ClientPlanStateKind = "draft_plan" | "build_ready" | "blocked_plan";
 type ClientPlanStateSummary = {
   kind: ClientPlanStateKind;
@@ -87,6 +101,7 @@ type ClientPlanStateSummary = {
 };
 type ClientBootstrapOutcome = {
   autoInitializedPackageJson: boolean;
+  inspection: ClientInspectionSummary;
   planState: ClientPlanStateSummary;
 };
 
@@ -412,6 +427,124 @@ async function ensureProjectPackageJsonForBootstrap(projectDir) {
   return { created: true, packageJsonPath: manifestPath };
 }
 
+async function inspectClientProject(projectDir, options: { force?: boolean } = {}): Promise<ClientInspectionSummary> {
+  const manifestPath = projectJsonPath(projectDir);
+  const entries = await fsp.readdir(projectDir, { withFileTypes: true });
+  const meaningfulEntries = entries.filter((entry) => !isBenignEmptyProjectEntry(entry));
+  const hasPackageJson = fs.existsSync(manifestPath);
+  const gitignorePath = path.join(projectDir, ".gitignore");
+  const gitignoreText = fs.existsSync(gitignorePath) ? await fsp.readFile(gitignorePath, "utf8") : "";
+  const hasAllGitignoreEntries = CLIENT_GITIGNORE_ENTRIES.every((entry) => gitignoreText.includes(entry));
+  const configPath = getConfigPath(projectDir);
+  const rulesPath = path.join(projectDir, ".codex", "rules", RULES_FILE_NAME);
+  const skillPath = resolveClientSkillArtifactPath(projectDir);
+  const lessonsPath = resolveClientLessonsPath(projectDir);
+  const rawLessons = resolveClientRawLessonPaths(projectDir);
+  const readyPath = resolveClientReadyPath(projectDir);
+
+  if (!hasPackageJson && meaningfulEntries.length === 0) {
+    const plannedChanges = [
+      "create minimal package.json",
+      "create or refresh kamiflow.config.json",
+      "sync .codex/rules/kamiflow.rules",
+      "sync .agents/skills/kamiflow-core/SKILL.md",
+      "scaffold .kfc/LESSONS.md and .local/kfc-lessons/",
+      "prepend private .gitignore entries",
+      "create active plan plus .kfc/CODEX_READY.md"
+    ];
+    return {
+      inspectionStatus: "PASS",
+      repoShape: "empty_new_repo",
+      applyMode: "auto",
+      reason: "Empty writable folder detected. KFC can safely initialize and bootstrap this project.",
+      recovery: "None",
+      next: "Bootstrap will continue automatically.",
+      plannedChanges,
+      plannedChangesSummary: summarizeInspectionPlannedChanges(plannedChanges),
+      onboardingPath: "auto_init_bootstrap"
+    };
+  }
+
+  if (!hasPackageJson) {
+    const plannedChanges = ["No mutation until you initialize the project manifest."];
+    return {
+      inspectionStatus: "BLOCK",
+      repoShape: "risky",
+      applyMode: "blocked",
+      reason: "Non-empty folder without package.json detected. KFC will not guess how to bootstrap this repo.",
+      recovery: "npm init -y",
+      next: "kfc client --force",
+      plannedChanges,
+      plannedChangesSummary: summarizeInspectionPlannedChanges(plannedChanges),
+      onboardingPath: "blocked_missing_manifest"
+    };
+  }
+
+  const missingSafeArtifacts: string[] = [];
+  const refreshManagedChanges: string[] = [];
+  if (!fs.existsSync(configPath)) {
+    missingSafeArtifacts.push("create kamiflow.config.json");
+  }
+  if (!fs.existsSync(rulesPath)) {
+    missingSafeArtifacts.push("sync .codex/rules/kamiflow.rules");
+  }
+  if (!fs.existsSync(skillPath)) {
+    missingSafeArtifacts.push("sync .agents/skills/kamiflow-core/SKILL.md");
+  }
+  if (!fs.existsSync(lessonsPath) || !fs.existsSync(rawLessons.incidentsDir) || !fs.existsSync(rawLessons.decisionsDir)) {
+    missingSafeArtifacts.push("scaffold private lessons under .kfc/ and .local/kfc-lessons/");
+  }
+  if (!hasAllGitignoreEntries) {
+    missingSafeArtifacts.push("prepend private .gitignore entries");
+  }
+  if (!fs.existsSync(readyPath)) {
+    missingSafeArtifacts.push("create .kfc/CODEX_READY.md");
+  } else if (options.force) {
+    refreshManagedChanges.push("refresh .kfc/CODEX_READY.md");
+  }
+
+  if (missingSafeArtifacts.length > 0) {
+    const plannedChanges = [
+      ...missingSafeArtifacts,
+      "ensure active plan exists and validates"
+    ];
+    return {
+      inspectionStatus: "PASS",
+      repoShape: "needs_minor_fixes",
+      applyMode: "auto",
+      reason: "Existing Node repo detected. KFC can apply only deterministic bootstrap fixes.",
+      recovery: "None",
+      next: "Bootstrap will continue automatically.",
+      plannedChanges,
+      plannedChangesSummary: summarizeInspectionPlannedChanges(plannedChanges),
+      onboardingPath: "safe_bootstrap_fixes"
+    };
+  }
+
+  const plannedChanges = options.force
+    ? [
+        "refresh managed rules and runtime skill",
+        ...refreshManagedChanges,
+        "refresh session metadata",
+        "verify plan, health, and private scaffolding"
+      ]
+    : [
+        "verify plan, health, and private scaffolding",
+        "reuse existing managed onboarding artifacts"
+      ];
+  return {
+    inspectionStatus: "PASS",
+    repoShape: "ready",
+    applyMode: "auto",
+    reason: "Existing Node repo already looks compatible with KFC onboarding.",
+    recovery: "None",
+    next: "Bootstrap will continue automatically.",
+    plannedChanges,
+    plannedChangesSummary: summarizeInspectionPlannedChanges(plannedChanges),
+    onboardingPath: options.force ? "refresh_existing_repo" : "verify_existing_repo"
+  };
+}
+
 async function assertProjectPreflight(projectDir, options: { requirePackageJson?: boolean } = {}) {
   const requirePackageJson = options.requirePackageJson !== false;
   let ok = true;
@@ -538,6 +671,23 @@ function printClientNextCommandHints(planState: ClientPlanStateSummary) {
   }
 }
 
+function summarizeInspectionPlannedChanges(changes: string[]) {
+  const compact = changes.map((item) => String(item || "").trim()).filter(Boolean);
+  if (compact.length === 0) {
+    return "None.";
+  }
+  return compact.join(" | ");
+}
+
+function printClientInspectionSummary(summary: ClientInspectionSummary, asError = false) {
+  const writer = asError ? error : info;
+  writer(`Inspection Status: ${summary.inspectionStatus}`);
+  writer(`Repo Shape: ${summary.repoShape}`);
+  writer(`Apply Mode: ${summary.applyMode}`);
+  writer(`Planned Changes: ${summary.plannedChangesSummary}`);
+  writer(`Inspection Reason: ${summary.reason}`);
+}
+
 function buildClientCodexLaunchPrompt() {
   return CLIENT_CODEX_LAUNCH_PROMPT;
 }
@@ -586,6 +736,10 @@ async function emitClientOnboardingEvent(projectDir, payload) {
     const next = String(payload?.next || "");
     const reason = String(payload?.reason || "Client onboarding update.");
     const errorCode = String(payload?.error_code || "CLIENT_ONBOARDING_PROGRESS");
+    const inspectionStatus = String(payload?.inspection_status || "");
+    const repoShape = String(payload?.repo_shape || "");
+    const plannedChanges = String(payload?.planned_changes || "");
+    const applyMode = String(payload?.apply_mode || "");
     const entry = {
       event_type: "runlog_updated",
       source: "client_onboarding",
@@ -602,6 +756,10 @@ async function emitClientOnboardingEvent(projectDir, payload) {
       onboarding_error_code: errorCode,
       onboarding_recovery: recovery,
       onboarding_next: next,
+      inspection_status: inspectionStatus || undefined,
+      repo_shape: repoShape || undefined,
+      planned_changes: plannedChanges || undefined,
+      apply_mode: applyMode || undefined,
       recovery_step: recovery === "None" ? undefined : recovery,
       updated_at: new Date().toISOString()
     };
@@ -1293,7 +1451,7 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
   };
 }
 
-function buildReadyFileContent({ goal, planState }) {
+function buildReadyFileContent({ goal, planState, inspection }) {
   const mission = goal && goal.trim().length > 0
     ? goal.trim()
     : "Define the mission for this client project before implementation.";
@@ -1329,6 +1487,13 @@ function buildReadyFileContent({ goal, planState }) {
     `- next_mode: ${planState.nextMode}`,
     `- build_ready: ${planState.buildReady ? "yes" : "no"}`,
     `- note: ${planState.summary}`,
+    "",
+    "## Repo Context",
+    `- repo_shape: ${inspection.repoShape}`,
+    `- inspection_status: ${inspection.inspectionStatus}`,
+    `- apply_mode: ${inspection.applyMode}`,
+    `- onboarding_path: ${inspection.onboardingPath}`,
+    `- planned_changes: ${inspection.plannedChangesSummary}`,
     "",
     "## First-Run Sequence",
     "1. Read this file and `AGENTS.md` before implementation.",
@@ -1367,7 +1532,7 @@ function buildReadyFileContent({ goal, planState }) {
   ].join("\n");
 }
 
-async function createClientReadyArtifacts({ projectDir, force, goal, profileName }) {
+async function createClientReadyArtifacts({ projectDir, force, goal, profileName, inspection }) {
   const planState = await describeClientPlanState(projectDir);
 
   const readyPath = resolveClientReadyPath(projectDir);
@@ -1382,7 +1547,8 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
     readyPath,
     buildReadyFileContent({
       goal,
-      planState
+      planState,
+      inspection
     }),
     "utf8"
   );
@@ -1397,7 +1563,9 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
         planId: planState.planId,
         planPath: planState.planPath,
         planState: planState.kind,
-        buildReady: planState.buildReady
+        buildReady: planState.buildReady,
+        repoShape: inspection.repoShape,
+        onboardingPath: inspection.onboardingPath
       },
       null,
       2
@@ -1405,7 +1573,7 @@ async function createClientReadyArtifacts({ projectDir, force, goal, profileName
     "utf8"
   );
 
-  return { readyPath, sessionPath, planId: planState.planId, planState };
+  return { readyPath, sessionPath, planId: planState.planId, planState, inspection };
 }
 
 async function runClientCodexLaunch({ projectDir, planId }) {
@@ -1959,7 +2127,7 @@ async function runServeHealthCheck(projectDir, port) {
   }
 }
 
-async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}) {
+async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, inspection?: ClientInspectionSummary) {
   const preflightOk = await assertProjectPreflight(options.project, { requirePackageJson: false });
   if (!preflightOk) {
     throw createClientOnboardingError(
@@ -1969,6 +2137,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}) {
     );
   }
 
+  const inspectionSummary = inspection || await inspectClientProject(options.project, options);
   const packageJsonResult = await ensureProjectPackageJsonForBootstrap(options.project);
   if (packageJsonResult.created) {
     info("Client project was auto-initialized from an empty folder.");
@@ -2096,12 +2265,51 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}) {
 
   return {
     autoInitializedPackageJson: packageJsonResult.created,
+    inspection: inspectionSummary,
     planState
   } satisfies ClientBootstrapOutcome;
 }
 
 async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRuntime = {}) {
   const shouldPrintPass = runtime.printPass !== false;
+  const inspection = await inspectClientProject(options.project, options);
+  const inspectionPayload = {
+    status: inspection.inspectionStatus,
+    stage: CLIENT_ONBOARDING_STAGES.INSPECT,
+    error_code: inspection.inspectionStatus === "BLOCK" ? CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING : "CLIENT_ONBOARDING_INSPECTED",
+    reason: inspection.reason,
+    recovery: inspection.recovery,
+    next: inspection.next,
+    inspection_status: inspection.inspectionStatus,
+    repo_shape: inspection.repoShape,
+    planned_changes: inspection.plannedChangesSummary,
+    apply_mode: inspection.applyMode
+  };
+  await emitClientOnboardingEvent(options.project, inspectionPayload);
+  printClientInspectionSummary(inspection, inspection.inspectionStatus === "BLOCK");
+  if (inspection.inspectionStatus === "BLOCK") {
+    const blockPayload = classifyClientOnboardingFailure(
+      createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING,
+        inspection.reason,
+        inspection.recovery,
+        {
+          next: inspection.next,
+          stage: CLIENT_ONBOARDING_STAGES.INSPECT
+        }
+      )
+    );
+    await emitClientOnboardingEvent(options.project, {
+      ...blockPayload,
+      inspection_status: inspection.inspectionStatus,
+      repo_shape: inspection.repoShape,
+      planned_changes: inspection.plannedChangesSummary,
+      apply_mode: inspection.applyMode
+    });
+    printClientOnboardingPayload(blockPayload, true);
+    return { code: 1, recoveryUsed: false };
+  }
+
   await emitClientOnboardingEvent(
     options.project,
     buildClientOnboardingProgressPayload(
@@ -2111,7 +2319,7 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     )
   );
   try {
-    const bootstrapResult = await runBootstrapOnce(options, runtime);
+    const bootstrapResult = await runBootstrapOnce(options, runtime, inspection);
     const payload = buildClientOnboardingPassPayload({
       recoveryUsed: false,
       reason: bootstrapResult.planState.summary,
@@ -2122,7 +2330,7 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     if (shouldPrintPass) {
       printClientOnboardingPass(payload);
     }
-    return { code: 0, recoveryUsed: false, planState: bootstrapResult.planState };
+    return { code: 0, recoveryUsed: false, inspection: bootstrapResult.inspection, planState: bootstrapResult.planState };
   } catch (initialErr) {
     const first = classifyClientOnboardingFailure(initialErr);
     await emitClientOnboardingEvent(options.project, first);
@@ -2163,7 +2371,7 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     }
 
     try {
-      const bootstrapResult = await runBootstrapOnce({ ...options, force: true }, runtime);
+      const bootstrapResult = await runBootstrapOnce({ ...options, force: true }, runtime, inspection);
       const payload = buildClientOnboardingPassPayload({
         recoveryUsed: true,
         reason: bootstrapResult.planState.summary,
@@ -2174,7 +2382,7 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
       if (shouldPrintPass) {
         printClientOnboardingPass(payload);
       }
-      return { code: 0, recoveryUsed: true, planState: bootstrapResult.planState };
+      return { code: 0, recoveryUsed: true, inspection: bootstrapResult.inspection, planState: bootstrapResult.planState };
     } catch (retryErr) {
       const blockPayload = classifyClientOnboardingFailure(retryErr);
       await emitClientOnboardingEvent(options.project, blockPayload);
@@ -2344,7 +2552,8 @@ async function runClientReadyHandoff(options, bootstrap) {
       projectDir: options.project,
       force: options.force,
       goal: options.goal,
-      profileName: options.profile || "client"
+      profileName: options.profile || "client",
+      inspection: bootstrap.planState ? bootstrap.inspection : await inspectClientProject(options.project, options)
     });
   } catch (err) {
     const blockPayload = classifyClientOnboardingFailure(
@@ -2388,7 +2597,11 @@ async function runClientReadyHandoff(options, bootstrap) {
     reason: launchSucceeded
       ? `Client onboarding handoff artifacts are ready and Codex auto-launch started. ${ready.planState.summary}`
       : `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
-    next: handoffNext
+    next: handoffNext,
+    inspection_status: ready.inspection.inspectionStatus,
+    repo_shape: ready.inspection.repoShape,
+    planned_changes: ready.inspection.plannedChangesSummary,
+    apply_mode: ready.inspection.applyMode
   };
   await emitClientOnboardingEvent(options.project, readyPayload);
   printClientOnboardingPass(readyPayload);

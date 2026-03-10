@@ -20,6 +20,7 @@ export const CLIENT_ONBOARDING_CODES = Object.freeze({
 
 export const CLIENT_ONBOARDING_STAGES = Object.freeze({
   INIT: "init",
+  INSPECT: "inspect",
   BOOTSTRAP: "bootstrap",
   READY_BRIEF: "ready_brief",
   PLAN_READY: "plan_ready",

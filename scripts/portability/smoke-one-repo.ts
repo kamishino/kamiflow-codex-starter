@@ -466,6 +466,33 @@ async function main() {
       )
     );
     if (steps.at(-1).ok) {
+      const onboardingOutput = `${steps.at(-1)?.stdout || ""}\n${steps.at(-1)?.stderr || ""}`;
+      steps.push({
+        title: "verify onboarding inspection output",
+        cwd: projectDir,
+        command: "assert onboarding output contains inspection contract",
+        ok:
+          onboardingOutput.includes("Inspection Status: PASS") &&
+          onboardingOutput.includes("Repo Shape:") &&
+          onboardingOutput.includes("Apply Mode:") &&
+          onboardingOutput.includes("Planned Changes:"),
+        statusCode:
+          onboardingOutput.includes("Inspection Status: PASS") &&
+          onboardingOutput.includes("Repo Shape:") &&
+          onboardingOutput.includes("Apply Mode:") &&
+          onboardingOutput.includes("Planned Changes:")
+            ? 0
+            : 1,
+        durationMs: 0,
+        stdout: onboardingOutput.includes("Inspection Status: PASS") ? "inspection contract present" : "",
+        stderr:
+          onboardingOutput.includes("Inspection Status: PASS") &&
+          onboardingOutput.includes("Repo Shape:") &&
+          onboardingOutput.includes("Apply Mode:") &&
+          onboardingOutput.includes("Planned Changes:")
+            ? ""
+            : "Missing inspection contract fields in onboarding output."
+      });
       if (args.link) {
         steps.push(
           runStep(

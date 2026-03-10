@@ -27,7 +27,7 @@ codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
 ```
 
 If auto-launch is disabled (`--no-launch-codex`) or fails, use the exact manual fallback command printed by KFC.
-If the target folder is truly empty, KFC may auto-create a minimal `package.json` before continuing bootstrap.
+KFC now inspects the repo first. If the target folder is truly empty, KFC may auto-create a minimal `package.json` before continuing bootstrap, while risky mixed repos should BLOCK before mutation.
 
 Use the prompt below only when you intentionally skip auto-launch or need manual recovery:
 
@@ -62,6 +62,10 @@ Rules:
    - confirm `.kfc/CODEX_READY.md` is removed.
    - keep `.kfc/LESSONS.md` as private project memory.
 13) For onboarding/bootstrap failures, report:
+   - `Inspection Status: PASS|BLOCK`
+   - `Repo Shape: <classification>`
+   - `Apply Mode: auto|blocked`
+   - `Planned Changes: <summary>`
    - `Onboarding Status: BLOCK`
    - `Stage: <lifecycle stage>`
    - `Error Code: CLIENT_*`

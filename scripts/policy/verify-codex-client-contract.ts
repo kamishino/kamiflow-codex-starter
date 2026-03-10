@@ -20,7 +20,8 @@ const FILE_SPECIFIC_PATTERNS = {
   "resources/docs/QUICKSTART.md": [
     { label: "no reminder loop guidance", regex: /no user reminder loop/i },
     { label: "smart recovery guidance", regex: /smart-recovery cycle/i },
-    { label: "onboarding status guidance", regex: /Onboarding Status:\s*PASS\|BLOCK/i }
+    { label: "onboarding status guidance", regex: /Onboarding Status:\s*PASS\|BLOCK/i },
+    { label: "inspection status guidance", regex: /Inspection Status:\s*PASS\|BLOCK/i }
   ],
   "resources/docs/CLIENT_KICKOFF_PROMPT.md": [
     { label: "plan touch cadence", regex: /Touch active plan markdown twice per request/i },
@@ -31,6 +32,7 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "smart recovery guidance", regex: /smart-recovery cycle/i }
   ],
   "src/commands/client.ts": [
+    { label: "inspection output", regex: /Inspection Status:\s*\$\{summary\.inspectionStatus\}/ },
     { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
     { label: "structured onboarding error code output", regex: /Error Code:/ },
     { label: "smart recovery execution", regex: /smart recovery cycle/i },

@@ -53,6 +53,7 @@ npx --no-install kfc client --force --port 4310 --no-launch-codex
 
 What one-command client setup verifies:
 
+- inline inspection summary (`Inspection Status`, `Repo Shape`, `Apply Mode`, `Planned Changes`)
 - valid config (creates if missing)
 - plan UI dependency available
 - project rules synced to `.codex/rules/kamiflow.rules`
@@ -124,10 +125,11 @@ Validation is complete when all are true:
 
 1. `kfc` works in external repo context.
 2. `kfc client --force` completes PASS in external repo.
-3. project-local `kamiflow-core` exists in `.agents/skills/kamiflow-core/SKILL.md`.
-4. client lesson scaffold exists in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
-5. plan file is created and validated in external repo.
-6. smoke log is captured and reviewable.
+3. inspection output correctly describes the repo shape before bootstrap mutates anything.
+4. project-local `kamiflow-core` exists in `.agents/skills/kamiflow-core/SKILL.md`.
+5. client lesson scaffold exists in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
+6. plan file is created and validated in external repo.
+7. smoke log is captured and reviewable.
 
 Optional extended criteria:
 

@@ -37,15 +37,19 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
-`kfc client --force` now auto-initializes a minimal `package.json` when the target folder is truly empty, runs one smart-recovery cycle only for recoverable bootstrap issues, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, and auto-launches:
+`kfc client --force` now starts with an inline inspection pass, auto-initializes a minimal `package.json` when the target folder is truly empty, runs one smart-recovery cycle only for recoverable bootstrap issues, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, and auto-launches:
 
 ```bash
 codex exec --full-auto "Read .kfc/CODEX_READY.md and execute the mission."
 ```
 
 It still prints:
+- `Inspection Status: PASS|BLOCK`
+- `Repo Shape: empty_new_repo|ready|needs_minor_fixes|risky`
+- `Apply Mode: auto|blocked`
+- `Planned Changes: <summary>`
 - `Onboarding Status: PASS|BLOCK`
-- `Stage: init|bootstrap|ready_brief|plan_ready|execution_ready|blocked|done`
+- `Stage: init|inspect|bootstrap|ready_brief|plan_ready|execution_ready|blocked|done`
 - `Error Code: CLIENT_*`
 - `Recovery: <exact command>` when blocked
 - `Next: <single concrete next action>`
@@ -66,6 +70,7 @@ If auto-launch is disabled or fails, run the exact fallback command printed by K
 
 Important first-run behavior:
 - onboarding `PASS` means the client environment is ready, not that the active plan is already build-ready
+- risky mixed repos BLOCK before mutation instead of letting KFC guess
 - if bootstrap created a fresh draft plan, `.kfc/CODEX_READY.md` will direct Codex to finish Brainstorm/Plan before any build route
 - `kfc flow ready --project .` should only be the first action when the active plan is already build-ready
 
