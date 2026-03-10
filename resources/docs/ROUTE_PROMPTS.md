@@ -160,6 +160,7 @@ Expected:
 - findings-first output
 - acceptance criteria status
 - check phase validates/tests Acceptance Criteria
+- check closeout also reviews tracked docs impact and keeps private lessons on the `.kfc/.local` lane
 - PASS/BLOCK decision
 - explicit next command (`fix` or `done`)
 - if completion is below 100%, amend tasks/criteria and continue `build/fix -> check`

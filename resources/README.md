@@ -42,5 +42,6 @@ npm run codex:sync:rules -- --scope project --project <path-to-project> --profil
 - `docs/PLAN_CONTRACT_V1.md`: plan readiness and gate rules.
 - `docs/CODEX_KFC_PLAN_RUNBOOK.md`: canonical local dogfood flow.
 - `docs/ROUTE_PROMPTS.md`: copy/paste prompts for `kamiflow-core`.
+- `docs/CHANGELOG.md`: durable decision log mirrored to the repo root.
 - `docs/PORTABILITY_RUNBOOK.md`: one-external-repo portability validation flow.
 - `docs/CODEX_RULES_RUNBOOK.md`: rules SSOT, sync scopes, and verification flow.

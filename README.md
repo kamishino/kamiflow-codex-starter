@@ -6,8 +6,10 @@ This repository is the KFC CLI source plus dogfooding workspace.
 
 - [QUICKSTART.md](./QUICKSTART.md)
 - [CLIENT_KICKOFF_PROMPT.md](./CLIENT_KICKOFF_PROMPT.md)
+- [CHANGELOG.md](./CHANGELOG.md)
 - [resources/docs/QUICKSTART.md](./resources/docs/QUICKSTART.md) (SSOT)
 - [resources/docs/CLIENT_KICKOFF_PROMPT.md](./resources/docs/CLIENT_KICKOFF_PROMPT.md) (SSOT)
+- [resources/docs/CHANGELOG.md](./resources/docs/CHANGELOG.md) (SSOT)
 
 ## What Is In Scope
 
@@ -301,6 +303,7 @@ See `resources/docs/PORTABILITY_RUNBOOK.md`.
 - `resources/docs/ROUTE_PROMPTS.md`
 - `resources/docs/CONTRIBUTOR_BOOTSTRAP.md`
 - `resources/docs/CODEX_COMMIT_FLOW.md`
+- `resources/docs/CHANGELOG.md`
 - `resources/docs/VERSIONING_RUNBOOK.md`
 - `resources/docs/PORTABILITY_RUNBOOK.md`
 - `resources/docs/REMOTE_RUNBOOK.md`

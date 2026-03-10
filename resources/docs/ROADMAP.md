@@ -6,6 +6,7 @@ Current phase:
 - first implemented skill: `kamiflow-core`
 - mode-aware route policy added for Plan/Build
 - `resources/` is SSOT for skill definitions and templates
+- docs freshness protocol added for tracked governance docs and generated doc mirrors
 - `.agents/skills` is runtime working surface
 - Plan Contract v1 and Codex+KFC Plan runbook added
 - portability validation toolkit added:

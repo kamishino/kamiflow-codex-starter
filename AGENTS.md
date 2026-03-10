@@ -15,6 +15,7 @@ This repository has four active scopes:
 - `resources/rules/*`: enforceable command policy (`allow|prompt|forbidden`) by profile.
 - `resources/skills/*`: behavior contracts, route discipline, output contracts, recovery logic.
 - `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`: deterministic execution checklist for stable route flow.
+- `resources/docs/CHANGELOG.md`: tracked decision log for durable workflow and user-facing changes.
 - `.kfc/CODEX_READY.md`: runtime mission brief for client-project execution.
 - `.local/plans/*.md`: live execution state and next action source of truth.
 
@@ -166,6 +167,17 @@ This repository has four active scopes:
 - skill update in `resources/skills/*`, or
 - verification policy update in `scripts/policy/*`.
 - Every incident entry must include a verification command that proves the guardrail.
+
+## Documentation Freshness Contract
+
+- Treat documentation refresh as a closeout gate for non-trivial work, not optional cleanup.
+- At `check` closeout, review doc impact across:
+- `AGENTS.md` for operating contract changes
+- `resources/docs/ROADMAP.md` for repo direction/context changes
+- `resources/docs/CHANGELOG.md` for durable workflow or user-facing decisions
+- generated root mirrors (`QUICKSTART.md`, `CLIENT_KICKOFF_PROMPT.md`, `CHANGELOG.md`)
+- Keep private memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`; never move private lessons into tracked repo docs.
+- Before commit-safe completion, run `npm run docs:sync` and `npm run verify:governance` (the preferred commit helper does this automatically).
 
 ## Safety
 

@@ -12,7 +12,9 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 6. Execute one scoped slice.
 7. Mutate plan frontmatter + `WIP Log`.
 8. Run check validations for completed build/fix work.
-9. Respond with compact user guidance.
+9. Review docs impact, sync generated doc artifacts, and keep private memory on the `.kfc/.local` lane.
+10. review docs impact, sync generated doc artifacts before commit-safe completion when workflow or onboarding behavior changed.
+11. Respond with compact user guidance.
 
 ## No-Plan Fast Path
 
@@ -87,6 +89,8 @@ When route execution fails or context is incomplete, use this exact order:
 - `required`: keep `Technical Solution Diagram` synchronized with architecture changes.
 - `auto|hidden`: diagram is optional; keep Tasks/Subtasks accurate for UI fallback.
 - Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.
+- Check closeout also reviews documentation impact for workflow, onboarding, and durable user-facing changes.
+- Generated root mirrors should be refreshed through `npm run docs:sync`; private lessons stay in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
 - If check is `BLOCK`, amend tasks/criteria and loop `Build/Fix -> Check`.
 
 ## Plan Touch Cadence
@@ -117,7 +121,20 @@ When route execution fails or context is incomplete, use this exact order:
 
 - When a `build`/`fix` slice is completed in the current turn, run check validations before final response.
 - Report check outcome explicitly as `Check: PASS` or `Check: BLOCK`.
+- If the slice changed workflow/onboarding/user-facing behavior, review tracked docs before treating the work as commit-safe.
 - If check cannot be completed, return `Status: BLOCK` with one recovery command.
+
+## Docs Freshness Gate
+
+- Tracked docs lane:
+- `AGENTS.md` for operating contract changes
+- `resources/docs/ROADMAP.md` for repo direction/context changes
+- `resources/docs/CHANGELOG.md` for durable decisions
+- root generated mirrors via `npm run docs:sync`
+- Private memory lane:
+- `.kfc/LESSONS.md` and `.local/kfc-lessons/`
+- Never store private client lessons in tracked repo docs.
+- Preferred validation path: `npm run verify:governance`.
 
 ## Evidence Rule
 
@@ -138,6 +155,7 @@ When route execution fails or context is incomplete, use this exact order:
 - Build-readiness uncertainty: `kfc flow ready --project .`
 - Shell/profile crash: rerun with no-profile/non-login shell.
 - Runtime skill/rules drift: `npm run codex:sync -- --scope repo --force`
+- Stale generated docs or missing tracked closeout updates: `npm run docs:sync`
 
 ## Readability Style
 

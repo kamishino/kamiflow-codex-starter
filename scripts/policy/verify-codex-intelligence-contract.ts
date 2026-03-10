@@ -32,6 +32,7 @@ try {
     "## Markdown Readability Policy",
     "## Anti-Pattern Router",
     "## Learning Loop Contract",
+    "## Documentation Freshness Contract",
     "Every top-level implementation or workflow request must resolve one active non-done plan",
     "Low-risk operational requests may use a no-plan fast path",
     "Allowed no-plan fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow maintenance chores with low workflow risk.",
@@ -47,7 +48,9 @@ try {
     "Check route scope: verify/test `Acceptance Criteria` and decide PASS/BLOCK from evidence.",
     "If completion is below 100% (remaining checklist items), do not archive",
     "State`, `Doing`, and `Next`",
-    "$kamiflow-core plan"
+    "$kamiflow-core plan",
+    "resources/docs/CHANGELOG.md",
+    "Before commit-safe completion, run `npm run docs:sync` and `npm run verify:governance`"
   ]) {
     assertIncludes(agents, agentsFile, token, errors);
   }
@@ -71,7 +74,8 @@ try {
     "AP-013",
     "AP-014",
     "AP-015",
-    "AP-016"
+    "AP-016",
+    "AP-018"
   ]) {
     assertIncludes(antiPatterns, antiPatternsFile, token, errors);
   }
@@ -127,7 +131,9 @@ try {
     "kfc flow ensure-plan --project .",
     "Prefer direct plan-file mutation as primary lifecycle path",
     "$kamiflow-core plan",
-    "git commit --no-verify"
+    "git commit --no-verify",
+    "review docs impact for workflow, onboarding, and durable user-facing changes",
+    "Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`"
   ]) {
     assertIncludes(skill, skillFile, token, errors);
   }
@@ -186,6 +192,7 @@ try {
     "## Chat-Only Execution",
     "## Compact Response Shape",
     "## Auto Check Gate",
+    "## Docs Freshness Gate",
     "## Evidence Rule",
     "## Completion Safety",
     "## Recovery Shortcuts",
@@ -206,7 +213,8 @@ try {
     "Check: PASS",
     "Emoji is allowed for human-facing markdown cues",
     "Do not treat plan as done if archive fails.",
-    "Lead -> Explorer(s) -> Worker(s) -> Reviewer -> Lead"
+    "Lead -> Explorer(s) -> Worker(s) -> Reviewer -> Lead",
+    "review docs impact, sync generated doc artifacts"
   ]) {
     assertIncludes(smoothGuide, smoothGuideFile, token, errors);
   }
@@ -248,9 +256,20 @@ try {
     "Route Confidence: <1-5>",
     "Fallback Route: <start|plan|research>",
     "if `IDEATION_CONTEXT` exists, consume it first and skip duplicate baseline questions",
-    "run ideation preset:"
+    "run ideation preset:",
+    "check closeout also reviews tracked docs impact"
   ]) {
     assertIncludes(routePrompts, routePromptsFile, token, errors);
+  }
+
+  const checkRefFile = "resources/skills/kamiflow-core/references/check.md";
+  const checkRef = read(checkRefFile);
+  for (const token of [
+    "Review docs impact for workflow, onboarding, and durable user-facing changes.",
+    "generated root mirrors should be refreshed through the docs sync path",
+    "Docs impact is reviewed before commit-safe completion."
+  ]) {
+    assertIncludes(checkRef, checkRefFile, token, errors);
   }
 
   if (errors.length > 0) {

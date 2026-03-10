@@ -162,6 +162,8 @@ Pick mode before executing route logic:
 - Client-facing command guidance must use `kfc` (not direct `kfc-plan`), except package-internal docs.
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
+- At check/closeout, review docs impact for workflow, onboarding, and durable user-facing changes; refresh tracked docs and generated mirrors before claiming commit-safe completion.
+- Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`; do not move private lessons into tracked repo docs.
 
 ## Smooth Flow Checklist
 
@@ -177,9 +179,10 @@ Pick mode before executing route logic:
 10. Keep user response compact: `State`, `Doing`, `Next`.
 11. After finishing implementation in a `build`/`fix` slice, run check validations and report `Check: PASS|BLOCK` before final response.
 12. During `build`/`fix`, after each completed task/subtask, immediately mutate the active plan file (checklist + timestamped WIP evidence) before moving to the next subtask.
-13. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
-14. Treat completion as valid only after archive success.
-15. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
+13. During `check` closeout, review docs impact, update tracked docs as needed, and keep private memory updates on the `.kfc/.local` lane.
+14. If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.
+15. Treat completion as valid only after archive success.
+16. If runtime/shell environment is broken, switch to a safe fallback shell mode and continue.
 
 ## Plan Lifecycle Protocol
 

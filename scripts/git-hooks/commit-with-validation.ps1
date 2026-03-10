@@ -110,6 +110,16 @@ if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
 
+& npm run docs:sync
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
+
+& npm run verify:governance
+if ($LASTEXITCODE -ne 0) {
+  exit $LASTEXITCODE
+}
+
 $firstAttempt = Invoke-GitCommit -Message $message -Passthrough $passthrough -NoVerify:$false
 if ($firstAttempt.ExitCode -eq 0) {
   exit 0

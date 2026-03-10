@@ -79,3 +79,23 @@ Guardrail expectation:
 - `scripts/policy/verify-kamiflow-skill-contract.ts`
 - `resources/docs/CODEX_ANTI_PATTERNS.md`
 - Verification Command: `npm run docs:verify:skills-contract`
+
+### 2026-03-10 - Documentation Freshness Drift
+
+- Date: 2026-03-10
+- Environment: Repo governance and closeout workflow
+- Signature ID: DOC-FRESHNESS-001
+- Failure Signature: workflow and onboarding changes landed without a consistent route for updating tracked docs, generated mirrors, and decision history
+- Recurrence Count: 2
+- Root Cause: partial doc sync automation existed for a few mirrors, but there was no classifier/gate tying workflow changes to required doc updates
+- Guardrail Type: `policy | docs | skill`
+- Permanent Guardrail Added: added docs freshness classifier, unified docs artifact sync, commit-safe docs/governance validation, and explicit closeout guidance in AGENTS + skill/check docs
+- Files Changed:
+- `AGENTS.md`
+- `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`
+- `resources/docs/CODEX_ANTI_PATTERNS.md`
+- `resources/docs/CHANGELOG.md`
+- `resources/skills/kamiflow-core/SKILL.md`
+- `resources/skills/kamiflow-core/references/check.md`
+- `scripts/policy/verify-docs-freshness.ts`
+- Verification Command: `npm run docs:verify:docs-freshness`
