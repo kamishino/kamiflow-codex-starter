@@ -64,6 +64,23 @@ Pick mode before executing route logic:
 - `research` -> `references/research.md`
 - `fix` -> `references/fix.md`
 
+## Sub-Agent Orchestration Contract
+
+- Use `spawn_agent` only when work can be split into independent ownership slices.
+- Do not spawn for tightly-coupled file regions or sequential dependencies.
+- Before spawning, persist in plan notes:
+  - ownership map (`agent -> file scope`),
+  - deliverables per agent,
+  - merge/review order.
+- Require each sub-agent output to include:
+  - concrete file list,
+  - findings or patch intent,
+  - risk/blocker summary,
+  - check confidence.
+- After each slice, immediately update plan WIP (`Status`, `Blockers`, `Next step`) before starting the next.
+- If conflicts appear, set impacted files to single-agent mode and continue with non-conflicting slices in parallel.
+- Keep one route per response; sub-agent work supports that route only.
+
 ## Trigger Contract
 
 - Trigger this skill for non-trivial workflow requests that need one of:
