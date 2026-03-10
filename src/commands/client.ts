@@ -67,6 +67,15 @@ const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"])
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
 const CLIENT_AGENTS_MANAGED_BEGIN = "<!-- KFC:BEGIN MANAGED -->";
 const CLIENT_AGENTS_MANAGED_END = "<!-- KFC:END MANAGED -->";
+const CLIENT_CODEX_FULL_AUTO_OPTION_PATTERNS = [
+  "unexpected argument '--full-auto'",
+  "unknown option '--full-auto'",
+  "unknown option: --full-auto",
+  "invalid value for '--full-auto'",
+  "unexpected argument '--skip-git-repo-check'",
+  "unknown option '--skip-git-repo-check'",
+  "unknown option: --skip-git-repo-check"
+];
 
 type FrontmatterRecord = Record<string, string>;
 type MarkdownSections = Record<string, string>;
@@ -726,12 +735,59 @@ function buildClientCodexLaunchPrompt() {
   return CLIENT_CODEX_LAUNCH_PROMPT;
 }
 
-function buildClientCodexManualCommand({ skipGitRepoCheck } = {}) {
+type CodexLaunchAttempt = {
+  fullAuto: boolean;
+  skipGitRepoCheck: boolean;
+};
+
+function buildClientCodexManualCommand({ skipGitRepoCheck, fullAuto = true } = {}) {
   return buildCodexExecManualCommand({
     prompt: buildClientCodexLaunchPrompt(),
-    full_auto: true,
+    full_auto: fullAuto,
     skip_gitrepo_check: Boolean(skipGitRepoCheck)
   });
+}
+
+function buildClientCodexLaunchAttempts() {
+  return [
+    { fullAuto: true, skipGitRepoCheck: false },
+    { fullAuto: true, skipGitRepoCheck: true },
+    { fullAuto: false, skipGitRepoCheck: false },
+    { fullAuto: false, skipGitRepoCheck: true }
+  ];
+}
+
+function buildClientCodexLaunchAttemptsForRun(explicitSkipGitRepoCheck = false) {
+  if (explicitSkipGitRepoCheck) {
+    return [
+      { fullAuto: true, skipGitRepoCheck: true },
+      { fullAuto: false, skipGitRepoCheck: true }
+    ];
+  }
+  return buildClientCodexLaunchAttempts();
+}
+
+function isCodexOptionCompatibilityFailure(result) {
+  const text = String(
+    result?.stderr_tail ||
+    result?.stdout_tail ||
+    result?.failure_signature ||
+    ""
+  ).toLowerCase();
+  return CLIENT_CODEX_FULL_AUTO_OPTION_PATTERNS.some((pattern) => text.includes(pattern));
+}
+
+function shouldRetryCodexLaunch(result, attempt: CodexLaunchAttempt) {
+  if (!result) {
+    return false;
+  }
+  if (attempt.fullAuto && isCodexOptionCompatibilityFailure(result)) {
+    return true;
+  }
+  if (isTrustDirectoryFailure(result) && !attempt.skipGitRepoCheck) {
+    return true;
+  }
+  return false;
 }
 
 function resolveRunsDir(projectDir) {
@@ -1790,14 +1846,44 @@ export async function createClientReadyArtifacts({ projectDir, force, goal, prof
 }
 
 async function runClientCodexLaunch({ projectDir, planId, skipGitRepoCheck = false }) {
-  return await runCodexAction({
-    plan_id: planId,
-    action_type: "start",
-    prompt: buildClientCodexLaunchPrompt(),
-    full_auto: true,
-    cwd: projectDir,
-    skip_gitrepo_check: skipGitRepoCheck
-  });
+  const attempts: CodexLaunchAttempt[] = buildClientCodexLaunchAttemptsForRun(Boolean(skipGitRepoCheck));
+  let latestResult = null;
+  let manualCommand = buildClientCodexManualCommand({ skipGitRepoCheck });
+
+  for (const attempt of attempts) {
+    manualCommand = buildClientCodexManualCommand({
+      fullAuto: attempt.fullAuto,
+      skipGitRepoCheck: attempt.skipGitRepoCheck
+    });
+
+    latestResult = await runCodexAction({
+      plan_id: planId,
+      action_type: "start",
+      prompt: buildClientCodexLaunchPrompt(),
+      full_auto: attempt.fullAuto,
+      cwd: projectDir,
+      skip_gitrepo_check: attempt.skipGitRepoCheck
+    });
+
+    if (latestResult?.status === "completed") {
+      return {
+        result: latestResult,
+        manualCommand
+      };
+    }
+
+    if (!shouldRetryCodexLaunch(latestResult, attempt)) {
+      return {
+        result: latestResult,
+        manualCommand
+      };
+    }
+  }
+
+  return {
+    result: latestResult,
+    manualCommand
+  };
 }
 
 function isTrustDirectoryFailure(result) {
@@ -2813,21 +2899,15 @@ async function runClientReadyHandoff(options, bootstrap) {
         "Wait for Codex completion."
       )
     );
-    launchResult = await runClientCodexLaunch({
+    const launchAttempt = await runClientCodexLaunch({
       projectDir: options.project,
       planId: ready.planId
     });
+    launchResult = launchAttempt.result;
+    manualCommand = launchAttempt.manualCommand;
 
-    if (!launchResult?.status || launchResult.status !== "completed") {
-      if (isTrustDirectoryFailure(launchResult)) {
-        info(`Trust check blocked launch. Retrying with ${CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION}.`);
-        manualCommand = buildClientCodexManualCommand({ skipGitRepoCheck: true });
-        launchResult = await runClientCodexLaunch({
-          projectDir: options.project,
-          planId: ready.planId,
-          skipGitRepoCheck: true
-        });
-      }
+    if (launchResult && launchResult.status !== "completed" && isTrustDirectoryFailure(launchResult)) {
+      info(`Trust check requested. Trying skip-git-repo fallback: ${CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION}.`);
     }
 
     if (launchResult?.status === "completed") {

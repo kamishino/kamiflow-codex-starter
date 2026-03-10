@@ -25,11 +25,96 @@ function tail(text, maxChars = 4000) {
 }
 
 function firstMeaningfulLine(text) {
-  const line = String(text || "")
+  const lines = String(text || "")
     .split(/\r?\n/)
     .map((item) => item.trim())
-    .find((item) => item.length > 0);
+    .filter((item) => item.length > 0);
+  const line = lines.find((item) => item.length > 0);
   return line ? (line.length > 180 ? `${line.slice(0, 177)}...` : line) : "";
+}
+
+function firstErrorLineFromText(text) {
+  const lines = String(text || "")
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  const lowered = (value) => String(value).toLowerCase();
+  const line = lines.find((item) => {
+    const lower = lowered(item);
+    return lower.includes("error") ||
+      lower.includes("failed") ||
+      lower.includes("failure") ||
+      lower.includes("reconnecting") ||
+      lower.includes("stream disconnected") ||
+      lower.includes("os error") ||
+      lower.includes("denied") ||
+      lower.includes("permission") ||
+      lower.includes("timeout");
+  });
+  return line ? (line.length > 180 ? `${line.slice(0, 177)}...` : line) : "";
+}
+
+function failureSummaryLine(stderrText, stdoutText, fallback) {
+  const fromStderr = firstErrorLineFromText(stderrText);
+  if (fromStderr) {
+    return fromStderr;
+  }
+  const fromStdout = firstErrorLineFromText(stdoutText);
+  if (fromStdout) {
+    return fromStdout;
+  }
+  return firstMeaningfulLine(fallback || stderrText || stdoutText || "unknown failure");
+}
+
+function failureTextForHint(stderrText, stdoutText, fallback) {
+  const combined = `${String(stderrText || "").trim()}\n${String(stdoutText || "").trim()}`.trim();
+  const found = firstErrorLineFromText(combined);
+  return found || firstMeaningfulLine(combined || fallback);
+}
+
+function isConnectivityFailure(text) {
+  const normalized = String(text || "").toLowerCase();
+  return normalized.includes("stream disconnected before completion") ||
+    normalized.includes("failed to send request") ||
+    normalized.includes("connection") ||
+    normalized.includes("network");
+}
+
+function isPathPermissionFailure(text) {
+  const normalized = String(text || "").toLowerCase();
+  return normalized.includes("access is denied") ||
+    normalized.includes("permission denied") ||
+    normalized.includes("os error 5");
+}
+
+function isCodexInstallFailure(text) {
+  return String(text || "").toLowerCase().includes("failed to install system skills");
+}
+
+function recoveryHintForText(errorClass, text) {
+  const normalized = String(text || "").toLowerCase();
+  if (isConnectivityFailure(normalized)) {
+    return "Check network connectivity to OpenAI endpoints and credentials, then retry.";
+  }
+  if (isPathPermissionFailure(normalized)) {
+    return "Grant filesystem permission to Codex skill/cache directories and retry.";
+  }
+  if (isCodexInstallFailure(normalized)) {
+    return "Retry after fixing Codex user cache permissions or running with writable HOME.";
+  }
+  if (errorClass === "configuration") {
+    return "Retry with fallback codex exec args that avoid unsupported profile/config overrides.";
+  }
+  if (errorClass === "environment") {
+    return "Ensure Codex CLI is installed and executable in PATH; retry in a no-profile shell.";
+  }
+  if (errorClass === "timeout") {
+    return "Retry with a narrower action scope or increase timeout budget.";
+  }
+  if (errorClass === "runtime") {
+    return "Inspect stderr_tail, refine prompt scope, and rerun the same route.";
+  }
+  return "Inspect stderr_tail and route to research if cause is still unclear.";
 }
 
 function buildReplayArg(arg) {
@@ -147,6 +232,8 @@ function classifyFailure(result) {
     return "timeout";
   }
   const stderr = String(result.stderr_tail || "").toLowerCase();
+  const stdout = String(result.stdout_tail || "").toLowerCase();
+  const combined = `${stderr}\n${stdout}`;
   if (result.error_code === "SPAWN_FAILED") {
     if (stderr.includes("enoent") || stderr.includes("einval") || stderr.includes("eperm") || stderr.includes("spawn")) {
       return "environment";
@@ -157,7 +244,7 @@ function classifyFailure(result) {
     if (PLAN_MODE_NEGOTIATION_ERROR_PATTERNS.some((pattern) => stderr.includes(pattern))) {
       return "configuration";
     }
-    if (stderr.includes("unexpected argument") || stderr.includes("unknown option") || stderr.includes("invalid value")) {
+    if (combined.includes("unexpected argument") || combined.includes("unknown option") || combined.includes("invalid value")) {
       return "configuration";
     }
     return "runtime";
@@ -165,32 +252,17 @@ function classifyFailure(result) {
   return "unknown";
 }
 
-function recoveryHintForClass(errorClass) {
-  if (errorClass === "environment") {
-    return "Ensure Codex CLI is installed and executable in PATH; retry in a no-profile shell.";
-  }
-  if (errorClass === "configuration") {
-    return "Retry with fallback codex exec args that avoid unsupported profile/config overrides.";
-  }
-  if (errorClass === "timeout") {
-    return "Retry with a narrower action scope or increase timeout budget.";
-  }
-  if (errorClass === "runtime") {
-    return "Inspect stderr_tail, refine prompt scope, and rerun the same route.";
-  }
-  return "Inspect stderr_tail and route to research if cause is still unclear.";
-}
-
 function withFailureMetadata(result) {
   if (result.status !== "failed") {
     return result;
   }
   const errorClass = classifyFailure(result);
+  const reasonText = failureTextForHint(result.stderr_tail, result.stdout_tail, result.error_code || "unknown failure");
   return {
     ...result,
     error_class: errorClass,
-    recovery_hint: recoveryHintForClass(errorClass),
-    failure_signature: firstMeaningfulLine(result.stderr_tail || result.error_code || "unknown failure")
+    recovery_hint: recoveryHintForText(errorClass, reasonText),
+    failure_signature: failureSummaryLine(result.stderr_tail, result.stdout_tail, reasonText)
   };
 }
 
