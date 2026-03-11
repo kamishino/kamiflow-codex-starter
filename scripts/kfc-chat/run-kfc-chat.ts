@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
-import { detectProjectRoot } from "../lib/project-root.js";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 function resolveRepoRoot() {
   const initCwd = String(process.env.INIT_CWD || "").trim();

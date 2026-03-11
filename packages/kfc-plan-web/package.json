@@ -31,6 +31,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.tools.json --noEmit"
   },
   "dependencies": {
+    "@kamishino/kfc-runtime": "file:../kfc-runtime",
     "@kamishino/kfc-web-ui": "file:../kfc-web-ui",
     "@kamishino/kamiflow-codex": "file:../..",
     "@preact/signals": "2.5.1",

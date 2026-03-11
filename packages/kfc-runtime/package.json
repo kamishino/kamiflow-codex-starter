@@ -9,6 +9,10 @@
       "types": "./src/session-actions.ts",
       "default": "./dist/session-actions.js"
     },
+    "./project-root": {
+      "types": "./src/project-root.ts",
+      "default": "./dist/project-root.js"
+    },
     "./codex-runner": {
       "types": "./src/codex-runner.ts",
       "default": "./dist/codex-runner.js"

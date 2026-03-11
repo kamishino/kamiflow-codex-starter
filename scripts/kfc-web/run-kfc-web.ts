@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { detectProjectRoot } from "../lib/project-root.js";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 type BuildTarget = {
   name: string;

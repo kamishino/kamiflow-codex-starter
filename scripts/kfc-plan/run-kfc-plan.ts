@@ -1,7 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { detectProjectRoot } from "../lib/project-root.js";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

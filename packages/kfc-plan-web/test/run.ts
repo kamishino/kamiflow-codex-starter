@@ -14,7 +14,7 @@ const { validateParsedPlan } = await import(
 );
 const { SSEStream } = await import(pathToFileURL(path.join(packageDir, "dist/server/sse-stream.js")).href);
 const { detectProjectRoot } = await import(
-  pathToFileURL(path.join(packageDir, "dist/lib/project-detect.js")).href
+  pathToFileURL(path.join(packageDir, "..", "kfc-runtime", "dist", "project-root.js")).href
 );
 const {
   buildCodexExecArgVariants,
@@ -1022,14 +1022,16 @@ await runCase("runlog parser includes onboarding metadata when present", async (
 });
 
 await runCase("client AGENTS contract stays evergreen when CODEX_READY is absent", async () => {
-  const managed = buildClientAgentsManagedBlock();
-  assert.ok(managed.includes("If `.kfc/CODEX_READY.md` exists"));
-  assert.ok(managed.includes("If `.kfc/CODEX_READY.md` is absent"));
-  assert.ok(managed.includes("## Workflow Commands"));
-  assert.ok(managed.includes("`kfc plan validate`"));
-  assert.ok(managed.includes("`kfc flow ensure-plan`"));
-  assert.ok(managed.includes("`kfc client doctor --fix`"));
-  assert.ok(managed.includes("manual cleanup fallback"));
+  await withTempDir(async (tempDir) => {
+    const managed = await buildClientAgentsManagedBlock(tempDir);
+    assert.ok(managed.includes("If `.kfc/CODEX_READY.md` exists"));
+    assert.ok(managed.includes("If `.kfc/CODEX_READY.md` is absent"));
+    assert.ok(managed.includes("## Workflow Commands"));
+    assert.ok(managed.includes("`kfc plan validate`"));
+    assert.ok(managed.includes("`kfc flow ensure-plan`"));
+    assert.ok(managed.includes("`kfc client doctor --fix`"));
+    assert.ok(managed.includes("manual cleanup fallback"));
+  });
 });
 
 await runCase("client ready artifacts reuse existing mission instead of blocking", async () => {

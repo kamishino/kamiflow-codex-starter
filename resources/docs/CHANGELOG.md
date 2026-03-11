@@ -5,6 +5,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-11
 
+- Consolidated project-root detection into `@kamishino/kfc-runtime/project-root` so root CLI commands, script runners, and `kfc-plan-web` now share one runtime SSOT instead of keeping three duplicate implementations in sync.
 - Made project-root auto-detection the default for `kfc client ...` and `kfc flow ...` when `--project` is omitted, so in-project usage no longer needs `--project .` and that flag is now mainly for out-of-tree targeting.
 - Added `kfc client status` as a calm read-only re-entry lane for existing client repos, summarizing repo shape, plan state, ready-brief presence, install source, and next action without triggering bootstrap or repair.
 - Expanded the client-installed `AGENTS.md` shared contract so every `kfc client` repo now gets portable Kami Flow Core sections for plan lifecycle, evidence recovery, smooth-flow routing, and lightweight markdown readability guidance.

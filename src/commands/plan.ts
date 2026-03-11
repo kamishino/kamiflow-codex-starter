@@ -4,7 +4,7 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
 import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
-import { detectProjectRoot } from "../lib/project-root.js";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

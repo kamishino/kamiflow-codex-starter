@@ -6,7 +6,7 @@ import {
   removeWorkspaceProject,
   showWorkspace
 } from "../lib/workspace-registry.js";
-import { detectProjectRoot } from "../lib/project-detect.js";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 function parseName(args: string[]): string {
   const name = args[0];

@@ -17,10 +17,8 @@ async function findUp(startDir: string, marker: string): Promise<string | null> 
   let current = path.resolve(startDir);
   while (true) {
     const candidate = path.join(current, marker);
-    if (await pathExists(candidate)) {
-      if (path.resolve(current) !== HOME_DIR) {
-        return current;
-      }
+    if (await pathExists(candidate) && path.resolve(current) !== HOME_DIR) {
+      return current;
     }
 
     const parent = path.dirname(current);
