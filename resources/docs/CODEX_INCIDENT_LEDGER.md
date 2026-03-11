@@ -99,3 +99,21 @@ Guardrail expectation:
 - `resources/skills/kamiflow-core/references/check.md`
 - `scripts/policy/verify-docs-freshness.ts`
 - Verification Command: `npm run docs:verify:docs-freshness`
+
+### 2026-03-11 - `commit:codex` Blocked by Docs-Freshness Git Spawn
+
+- Date: 2026-03-11
+- Environment: restricted/sandboxed shell during repo commit workflow
+- Signature ID: CMD-COMMIT-002
+- Failure Signature: `verify:docs-freshness` fails with `Git execution is blocked in this environment` inside `npm run commit:codex`
+- Recurrence Count: 1
+- Root Cause: the commit helper invoked governance normally, but the docs-freshness verifier always spawned Git from Node instead of reusing changed-file context that the caller could provide.
+- Guardrail Type: `policy | docs`
+- Permanent Guardrail Added: `commit:codex` now precomputes changed paths and injects them into docs-freshness verification; verifier accepts injected changed paths before falling back to direct Git inspection.
+- Files Changed:
+- `AGENTS.md`
+- `resources/docs/CODEX_ANTI_PATTERNS.md`
+- `resources/docs/CODEX_INCIDENT_LEDGER.md`
+- `scripts/git-hooks/commit-with-validation.ps1`
+- `scripts/policy/verify-docs-freshness.ts`
+- Verification Command: `node dist/scripts/policy/verify-docs-freshness.js --changed-paths-json "[\"packages/kfc-web/src/server.ts\",\"resources/docs/CHANGELOG.md\"]"`

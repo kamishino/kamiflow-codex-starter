@@ -110,6 +110,44 @@ function Show-SemverImpact([string] $Message) {
   Write-Host "[semver] Reason: $($summary.type)$reasonSuffix"
 }
 
+function Get-ChangedPathsJson {
+  $output = & git status --porcelain=v1 --untracked-files=all 2>&1
+  if ($LASTEXITCODE -ne 0) {
+    foreach ($line in @($output)) {
+      Write-Host $line
+    }
+    throw "Unable to collect changed paths from git status."
+  }
+
+  $paths = New-Object System.Collections.Generic.List[string]
+  foreach ($rawLine in @($output)) {
+    $line = [string]$rawLine
+    if ([string]::IsNullOrWhiteSpace($line) -or $line.Length -lt 4) {
+      continue
+    }
+
+    $entry = $line.Substring(3).TrimEnd().Replace("\", "/")
+    if ([string]::IsNullOrWhiteSpace($entry)) {
+      continue
+    }
+
+    $resolved = if ($entry.Contains(" -> ")) { ($entry -split " -> ")[-1] } else { $entry }
+    if (
+      $resolved.StartsWith(".local/") -or
+      $resolved.StartsWith(".kfc/") -or
+      $resolved.StartsWith(".agents/")
+    ) {
+      continue
+    }
+
+    if (-not $paths.Contains($resolved)) {
+      $paths.Add($resolved)
+    }
+  }
+
+  return (@($paths) | ConvertTo-Json -Compress)
+}
+
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "../..")
 Set-Location $repoRoot
 
@@ -134,9 +172,28 @@ if ($LASTEXITCODE -ne 0) {
   exit $LASTEXITCODE
 }
 
-& npm run verify:governance
-if ($LASTEXITCODE -ne 0) {
-  exit $LASTEXITCODE
+$previousChangedPaths = $env:KFC_CHANGED_PATHS_JSON
+$restoreChangedPaths = $false
+try {
+  $env:KFC_CHANGED_PATHS_JSON = Get-ChangedPathsJson
+  $restoreChangedPaths = $true
+} catch {
+  Write-Warning "[commit:codex] Unable to precompute changed paths for docs-freshness verification. Falling back to verifier Git inspection."
+}
+
+try {
+  & npm run verify:governance
+  if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+  }
+} finally {
+  if ($restoreChangedPaths) {
+    if ($null -ne $previousChangedPaths) {
+      $env:KFC_CHANGED_PATHS_JSON = $previousChangedPaths
+    } else {
+      Remove-Item Env:KFC_CHANGED_PATHS_JSON -ErrorAction SilentlyContinue
+    }
+  }
 }
 
 $firstAttempt = Invoke-GitCommit -Message $message -Passthrough $passthrough -NoVerify:$false

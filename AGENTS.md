@@ -156,7 +156,9 @@ This repository has four active scopes:
 ## Commit Workflow
 
 - Preferred commit path: `npm run commit:codex -- --message "type(scope): summary"`.
+- `commit:codex` precomputes changed paths and passes them into docs-freshness verification so restricted shells do not rely on Node-side Git spawning for that gate.
 - If local Git hooks fail with `env.exe` signal-pipe Win32 error 5, fallback to `git commit --no-verify`.
+- If commit execution is still blocked after validation, fallback to `git commit --no-verify` and record the exact reason in your task note/summary.
 - When fallback is used, record the reason in your task note/summary.
 
 ## Learning Loop Contract

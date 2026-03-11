@@ -13,6 +13,7 @@ type Rule = {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../..");
+const CHANGED_PATHS_ENV = "KFC_CHANGED_PATHS_JSON";
 
 const REQUIRED_PRIVATE_IGNORES = [".kfc/", ".local/", ".agents/"];
 
@@ -79,6 +80,27 @@ function normalizePath(value: string) {
   return String(value || "").replace(/\\/g, "/").trim();
 }
 
+function normalizeChangedPaths(values: string[]) {
+  const paths = new Set<string>();
+
+  for (const value of values) {
+    const normalized = normalizePath(value);
+    if (!normalized) {
+      continue;
+    }
+    if (
+      normalized.startsWith(".local/") ||
+      normalized.startsWith(".kfc/") ||
+      normalized.startsWith(".agents/")
+    ) {
+      continue;
+    }
+    paths.add(normalized);
+  }
+
+  return [...paths];
+}
+
 function runGit(args: string[]) {
   const result = spawnSync("git", args, {
     cwd: ROOT_DIR,
@@ -107,9 +129,47 @@ function runGit(args: string[]) {
   return String(result.stdout || "");
 }
 
-function collectChangedPaths() {
+function parseInjectedChangedPaths(raw: string, source: string) {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    throw new Error(`Invalid changed-paths JSON from ${source}: ${err instanceof Error ? err.message : String(err)}`);
+  }
+
+  if (!Array.isArray(parsed) || parsed.some((value) => typeof value !== "string")) {
+    throw new Error(`Invalid changed-paths JSON from ${source}: expected an array of strings.`);
+  }
+
+  return normalizeChangedPaths(parsed);
+}
+
+function resolveInjectedChangedPaths(argv: string[]) {
+  const argIndex = argv.indexOf("--changed-paths-json");
+  if (argIndex >= 0) {
+    const raw = String(argv[argIndex + 1] || "");
+    if (!raw || raw.startsWith("--")) {
+      throw new Error("Missing value for --changed-paths-json.");
+    }
+    return parseInjectedChangedPaths(raw, "--changed-paths-json");
+  }
+
+  const envValue = String(process.env[CHANGED_PATHS_ENV] || "").trim();
+  if (envValue) {
+    return parseInjectedChangedPaths(envValue, CHANGED_PATHS_ENV);
+  }
+
+  return null;
+}
+
+function collectChangedPaths(argv: string[]) {
+  const injected = resolveInjectedChangedPaths(argv);
+  if (injected) {
+    return injected;
+  }
+
   const output = runGit(["status", "--porcelain=v1", "--untracked-files=all"]);
-  const paths = new Set<string>();
+  const entries: string[] = [];
 
   for (const rawLine of output.split(/\r?\n/)) {
     const line = rawLine.trimEnd();
@@ -121,17 +181,10 @@ function collectChangedPaths() {
       continue;
     }
     const resolved = entry.includes(" -> ") ? entry.split(" -> ").pop() || entry : entry;
-    if (
-      resolved.startsWith(".local/") ||
-      resolved.startsWith(".kfc/") ||
-      resolved.startsWith(".agents/")
-    ) {
-      continue;
-    }
-    paths.add(resolved);
+    entries.push(resolved);
   }
 
-  return [...paths];
+  return normalizeChangedPaths(entries);
 }
 
 function pathMatches(candidate: string, pattern: string) {
@@ -144,7 +197,7 @@ function read(relPath: string) {
 
 try {
   const errors: string[] = [];
-  const changedPaths = collectChangedPaths();
+  const changedPaths = collectChangedPaths(process.argv.slice(2));
   const changedSet = new Set(changedPaths);
 
   const gitignore = read(".gitignore");

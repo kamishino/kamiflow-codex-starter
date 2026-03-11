@@ -5,6 +5,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-11
 
+- Hardened `commit:codex` for restricted shells by letting the commit helper inject changed-file context into docs-freshness verification, avoiding a redundant Node-side Git spawn for that governance gate.
 - Hardened `kfc web dev` startup so it auto-resolves occupied shell/Vite ports, supports bounded fallback with `--port-strategy` and `--port-scan-limit`, and now starts Vite from inline dev config so restricted shells do not need an `esbuild` config-loader spawn just to boot the web shell.
 - Added chat session discovery and one-click bind for the hosted `/chat` surface: users can search `~/.codex/sessions` from the browser and bind directly without manually copying IDs.
 - Added balanced-route observability for Kami Flow runs via normalized runlog events, route-guardrail summary reporting, and a new `verify:route-health` governance gate.
