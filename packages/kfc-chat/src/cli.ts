@@ -1,4 +1,5 @@
 import path from "node:path";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 import { defaultSessionsRoot } from "./lib/chat-state.js";
 import { runBind } from "./commands/bind.js";
 import { runCopy } from "./commands/copy.js";
@@ -24,7 +25,7 @@ Commands:
   help        Show this usage
 
 Options:
-  --project <path>        Project root (default: current directory)
+  --project <path>        Project root (default: nearest project root)
   --host <host>           Host for serve (default: 127.0.0.1)
   --port <n>              Port for serve (default: 4322)
   --token <text>          Token for browser/API access
@@ -47,7 +48,7 @@ export function parseArgs(baseCwd: string, args: string[]) {
   const parsed: any = {
     command: "",
     action: "",
-    project: baseCwd,
+    project: "",
     host: "127.0.0.1",
     port: 4322,
     token: "",
@@ -124,6 +125,9 @@ export async function runCli(argv: string[], deps: Record<string, any> = {}) {
   let parsed: any;
   try {
     parsed = parseArgs(process.cwd(), argv);
+    if (!String(parsed.project || "").trim()) {
+      parsed.project = await detectProjectRoot(process.cwd());
+    }
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
     printUsage();

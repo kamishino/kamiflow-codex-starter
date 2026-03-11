@@ -5,6 +5,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-11
 
+- Fixed several runtime logic conflicts across KFC client/plan/web surfaces: client recovery/apply commands now keep the correct target repo for out-of-tree usage, KFC Plan now uses one Start Summary placeholder gate and blocks repeated build handoff after Check, plan mutations preserve freeform non-heading prose, and package `kfc-web`/`kfc-chat` entrypoints now align with wrapper root-detection while `kfc-web` dev assets honor the browser-visible host.
 - Consolidated project-root detection into `@kamishino/kfc-runtime/project-root` so root CLI commands, script runners, and `kfc-plan-web` now share one runtime SSOT instead of keeping three duplicate implementations in sync.
 - Made project-root auto-detection the default for `kfc client ...` and `kfc flow ...` when `--project` is omitted, so in-project usage no longer needs `--project .` and that flag is now mainly for out-of-tree targeting.
 - Added `kfc client status` as a calm read-only re-entry lane for existing client repos, summarizing repo shape, plan state, ready-brief presence, install source, and next action without triggering bootstrap or repair.

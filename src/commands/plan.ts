@@ -20,7 +20,7 @@ async function parseProjectDir(defaultCwd, args) {
   if (!value || value.startsWith("--")) {
     throw new Error("Missing value for --project.");
   }
-  return path.resolve(value);
+  return path.resolve(defaultCwd, value);
 }
 
 function readOption(args, flag, fallback = "") {

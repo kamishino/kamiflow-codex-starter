@@ -1,5 +1,6 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 import { createKfcWebServer } from "./server.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -24,7 +25,7 @@ Usage:
   kfc-web <serve|dev> [options]
 
 Options:
-  --project <path>     Project root (default: current directory)
+  --project <path>     Project root (default: nearest project root)
   --host <host>        Host for shell server (default: 127.0.0.1)
   --port <n>           Port for shell server (default: 4300)
   --port-strategy <s>  Port conflict strategy: fail|next (default: next)
@@ -34,10 +35,10 @@ Options:
 `);
 }
 
-function parseArgs(argv: string[]): ParsedArgs {
+export function parseArgs(argv: string[]): ParsedArgs {
   const parsed: ParsedArgs = {
     command: argv[0] || "",
-    project: process.cwd(),
+    project: "",
     host: "127.0.0.1",
     port: 4300,
     portStrategy: "next",
@@ -105,10 +106,19 @@ function parseArgs(argv: string[]): ParsedArgs {
   return parsed;
 }
 
+export async function resolveProjectDir(project: string, cwd = process.cwd()): Promise<string> {
+  const normalized = String(project || "").trim();
+  if (normalized) {
+    return normalized;
+  }
+  return await detectProjectRoot(cwd);
+}
+
 export async function runCli(argv: string[]) {
   let parsed: ParsedArgs;
   try {
     parsed = parseArgs(argv);
+    parsed.project = await resolveProjectDir(parsed.project, process.cwd());
   } catch (err) {
     console.error(err instanceof Error ? err.message : String(err));
     usage();

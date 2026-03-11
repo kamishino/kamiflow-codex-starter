@@ -19,9 +19,26 @@ export function assetSetFromManifest(manifest, entryName) {
   };
 }
 
-export function devAssetSet(vitePort, entryName) {
+function requestProtocol(request) {
+  const forwarded = String(request?.headers?.["x-forwarded-proto"] || "").trim();
+  if (forwarded) {
+    return forwarded.split(",")[0].trim() || "http";
+  }
+  return String(request?.protocol || "http").trim() || "http";
+}
+
+function requestHostname(request) {
+  const forwarded = String(request?.headers?.["x-forwarded-host"] || "").trim();
+  const hostHeader = forwarded || String(request?.headers?.host || "").trim();
+  const fallback = String(request?.hostname || "127.0.0.1").trim() || "127.0.0.1";
+  const hostValue = hostHeader || fallback;
+  return hostValue.replace(/:\d+$/, "");
+}
+
+export function devAssetSet(vitePort, entryName, request) {
+  const origin = `${requestProtocol(request)}://${requestHostname(request)}:${vitePort}`;
   return {
-    scripts: [`http://127.0.0.1:${vitePort}/@vite/client`, `http://127.0.0.1:${vitePort}/src/entries/${entryName}.ts`],
+    scripts: [`${origin}/@vite/client`, `${origin}/src/entries/${entryName}.ts`],
     styles: []
   };
 }

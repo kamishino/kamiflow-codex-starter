@@ -7,6 +7,7 @@ import { pathToFileURL } from "node:url";
 
 const packageDir = process.cwd();
 const { createKfcWebServer } = await import(pathToFileURL(path.join(packageDir, "dist/server.js")).href);
+const { resolveProjectDir } = await import(pathToFileURL(path.join(packageDir, "dist/cli.js")).href);
 
 function stubFeatureImplementations() {
   return {
@@ -232,7 +233,7 @@ await runCase("shell bounds auto-port search with --port-scan-limit", async () =
 await runCase("shell dev mode injects Vite client assets without requiring a built manifest", async () => {
   const server = await createKfcWebServer({
     mode: "dev",
-    host: "127.0.0.1",
+    host: "0.0.0.0",
     port: 0,
     vitePort: 5199,
     projectDir: process.cwd(),
@@ -242,13 +243,30 @@ await runCase("shell dev mode injects Vite client assets without requiring a bui
   });
   try {
     await server.ready();
-    const response = await server.fastify.inject({ method: "GET", url: "/plan" });
+    const response = await server.fastify.inject({
+      method: "GET",
+      url: "/plan",
+      headers: {
+        host: "192.168.1.8:4300"
+      }
+    });
     assert.equal(response.statusCode, 200);
-    assert.match(response.body, /@vite\/client/);
-    assert.match(response.body, /src\/entries\/plan\.ts/);
+    assert.match(response.body, /http:\/\/192\.168\.1\.8:5199\/@vite\/client/);
+    assert.match(response.body, /http:\/\/192\.168\.1\.8:5199\/src\/entries\/plan\.ts/);
   } finally {
     await server.close();
   }
+});
+
+await runCase("kfc-web CLI resolves nearest project root when --project is omitted", async () => {
+  await withStubbedShell(async ({ tmpDir }) => {
+    const projectRoot = path.join(tmpDir, "repo");
+    const nestedDir = path.join(projectRoot, "a", "b");
+    await fs.mkdir(path.join(projectRoot, ".git"), { recursive: true });
+    await fs.mkdir(nestedDir, { recursive: true });
+    const detected = await resolveProjectDir("", nestedDir);
+    assert.equal(detected, projectRoot);
+  });
 });
 
 await runCase("shell dev mode can boot a real Vite server without loading a config file", async () => {

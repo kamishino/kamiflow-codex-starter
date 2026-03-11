@@ -1,4 +1,5 @@
 import { archivePlanFile } from "../../lib/plan-archive.js";
+import { evaluateStartSummaryGate } from "../../lib/start-gate.js";
 import { loadPlanById, loadPlans } from "../../lib/plan-store.js";
 
 export function registerApiRoutes(fastify: any, deps: any): void {
@@ -37,52 +38,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     };
   }
 
-  function parseSummarySection(sectionText: string | undefined): Record<string, string> {
-    const out: Record<string, string> = {};
-    if (!sectionText) {
-      return out;
-    }
-    const lines = sectionText.split(/\r?\n/);
-    for (const line of lines) {
-      const match = line.match(/^- ([^:]+):\s*(.*)$/);
-      if (!match) {
-        continue;
-      }
-      out[match[1].trim().toLowerCase()] = match[2].trim();
-    }
-    return out;
-  }
-
-  function isPlaceholder(value: string | undefined): boolean {
-    if (!value) {
-      return true;
-    }
-    const normalized = value.trim().toLowerCase();
-    return normalized.length === 0 || normalized === "tbd" || normalized === "n/a" || normalized === "-";
-  }
-
   function evaluateStartGate(parsed: any): { ok: boolean; reason: string } {
-    const start = parseSummarySection(parsed?.sections?.["Start Summary"]);
-    const required = (start.required || "").toLowerCase();
-    const reason = start.reason || "";
-    const selectedIdea = start["selected idea"] || "";
-    const confidence = start["handoff confidence"] || "";
-
-    if (required !== "yes" && required !== "no") {
-      return { ok: false, reason: "Start Summary.Required must be yes or no." };
-    }
-    if (isPlaceholder(reason)) {
-      return { ok: false, reason: "Start Summary.Reason must be non-placeholder." };
-    }
-    if (required === "yes") {
-      if (isPlaceholder(selectedIdea)) {
-        return { ok: false, reason: "Start is required; Selected Idea must be set." };
-      }
-      if (isPlaceholder(confidence)) {
-        return { ok: false, reason: "Start is required; Handoff Confidence must be set." };
-      }
-    }
-    return { ok: true, reason: "ok" };
+    const result = evaluateStartSummaryGate(parsed?.sections?.["Start Summary"]);
+    return { ok: result.ok, reason: result.reason };
   }
 
   function evaluateAutomationTransitionGate(parsed: any, actionType: "build_result" | "check_result"): {
@@ -108,7 +66,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     }
 
     if (actionType === "build_result") {
-      if (nextCommand === "check" && lifecycle === "check") {
+      if (nextCommand === "check" || lifecycle === "check") {
         return {
           ok: false,
           reason: "Build updates are blocked while plan is in Check phase.",
@@ -359,7 +317,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
         next = deps.applyHandoffMutation(next, {
           status: "in_progress",
           next_command: "check",
-          next_mode: "Plan"
+          next_mode: "Plan",
+          lifecycle_phase: "check"
         });
         applied.push("handoff:check");
       } else {
@@ -373,7 +332,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
             next = deps.applyHandoffMutation(next, {
               status: "in_progress",
               next_command: "fix",
-              next_mode: "Build"
+              next_mode: "Build",
+              lifecycle_phase: "fix"
             });
             next = deps.applyWipMutation(next, {
               status: "Blocked at completion gate",
@@ -389,7 +349,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
           next = deps.applyHandoffMutation(next, {
             status: "done",
             next_command: "done",
-            next_mode: "done"
+            next_mode: "done",
+            lifecycle_phase: "done"
           });
           applied.push("decision:GO");
           applied.push("handoff:done");
@@ -399,7 +360,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
           next = deps.applyHandoffMutation(next, {
             status: "in_progress",
             next_command: "fix",
-            next_mode: "Build"
+            next_mode: "Build",
+            lifecycle_phase: "fix"
           });
           applied.push("decision:NO_GO");
           applied.push("handoff:fix");

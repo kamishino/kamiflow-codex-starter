@@ -9,8 +9,17 @@ const { runCli } = await import(pathToFileURL(path.join(packageDir, "dist/cli.js
 const { parsePlanFileContent } = await import(
   pathToFileURL(path.join(packageDir, "dist/parser/plan-parser.js")).href
 );
+const { serializePlan } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/plan-serializer.js")).href
+);
+const { applyTaskMutation } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/plan-mutations.js")).href
+);
 const { validateParsedPlan } = await import(
   pathToFileURL(path.join(packageDir, "dist/schema/validate-plan.js")).href
+);
+const { evaluateStartSummaryGate } = await import(
+  pathToFileURL(path.join(packageDir, "dist/lib/start-gate.js")).href
 );
 const { SSEStream } = await import(pathToFileURL(path.join(packageDir, "dist/server/sse-stream.js")).href);
 const { detectProjectRoot } = await import(
@@ -697,6 +706,55 @@ await runCase("validate succeeds for generated template", async () => {
   });
 });
 
+await runCase("validate and client gate reject placeholder Start Summary reason consistently", async () => {
+  const markdown = `---
+plan_id: PLAN-2026-03-11-PLACEHOLDER
+title: Placeholder start summary
+status: in_progress
+decision: GO
+selected_mode: Build
+next_mode: Plan
+next_command: check
+updated_at: 2026-03-11T00:00:00.000Z
+diagram_mode: hidden
+---
+
+## Start Summary
+- Required: no
+- Reason: n/a
+- Selected Idea: reuse baseline
+- Alternatives Considered: none
+- Pre-mortem Risk: low
+- Handoff Confidence: high
+
+## Objective
+- Keep parity.
+
+## Scope
+- validator
+
+## Implementation Tasks
+- [ ] T1
+
+## Acceptance Criteria
+- [ ] A1
+
+## Validation Plan
+- npm run test
+
+## WIP Log
+- Status: pending
+- Blockers: none
+- Next step: validate
+`;
+  const parsed = parsePlanFileContent(markdown, "placeholder.md");
+  const errors = validateParsedPlan(parsed);
+  assert.ok(errors.includes("Start Summary.Reason must be non-placeholder."));
+  const startGate = evaluateStartSummaryGate(parsed.sections["Start Summary"]);
+  assert.equal(startGate.ok, false);
+  assert.equal(startGate.reason, "Start Summary.Reason must be non-placeholder.");
+});
+
 await runCase("detectProjectRoot prefers git root then package then cwd", async () => {
   await withTempDir(async (tempDir) => {
     const gitRoot = path.join(tempDir, "git-root");
@@ -1019,6 +1077,44 @@ await runCase("runlog parser includes onboarding metadata when present", async (
     assert.equal(signal.onboarding_recovery, "None");
     assert.equal(signal.onboarding_next, "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.");
   });
+});
+
+await runCase("serializePlan preserves freeform body text outside section headings after mutation", async () => {
+  const markdown = `---
+plan_id: PLAN-2026-03-11-BODY
+title: Preserve body text
+status: in_progress
+decision: GO
+selected_mode: Build
+next_mode: Plan
+next_command: check
+updated_at: 2026-03-11T00:00:00.000Z
+diagram_mode: hidden
+---
+
+Intro text before any heading.
+
+## Start Summary
+- Required: no
+- Reason: keep note
+- Selected Idea: preserve prose
+- Alternatives Considered: none
+- Pre-mortem Risk: low
+- Handoff Confidence: high
+
+Interlude text between sections.
+
+## Implementation Tasks
+- [ ] T1
+
+Trailing narrative after the last section.
+`;
+  const parsed = parsePlanFileContent(markdown, "body.md");
+  const mutated = applyTaskMutation(parsed, 0, true);
+  const nextMarkdown = serializePlan(mutated);
+  assert.match(nextMarkdown, /Intro text before any heading\./);
+  assert.match(nextMarkdown, /Interlude text between sections\./);
+  assert.match(nextMarkdown, /Trailing narrative after the last section\./);
 });
 
 await runCase("client AGENTS contract stays evergreen when CODEX_READY is absent", async () => {
@@ -1662,7 +1758,20 @@ await runCase("automation apply updates transitions and archives on PASS", async
     const buildPayload = JSON.parse(buildApply.payload);
     assert.equal(buildPayload.summary.next_command, "check");
     assert.equal(buildPayload.summary.next_mode, "Plan");
+    assert.equal(buildPayload.summary.lifecycle_phase, "check");
     assert.equal(buildPayload.archive.archived, false);
+
+    const repeatedBuild = await server.inject({
+      method: "POST",
+      url: `/api/plans/${encodeURIComponent(planId)}/automation/apply`,
+      payload: {
+        action_type: "build_result",
+        task_updates: [{ index: 0, checked: false }]
+      }
+    });
+    assert.equal(repeatedBuild.statusCode, 409);
+    const repeatedBuildPayload = JSON.parse(repeatedBuild.payload);
+    assert.equal(repeatedBuildPayload.error_code, "FLOW_TRANSITION_BLOCK");
 
     const checkScopeViolation = await server.inject({
       method: "POST",

@@ -114,26 +114,38 @@ function extractFrontmatter(markdown) {
 export function parseSections(body) {
   const headings = [...body.matchAll(/^##\s+(.+)$/gm)];
   const sections = {};
+  const bodyParts: ParsedPlan["bodyParts"] = [];
+  let cursor = 0;
 
   for (let i = 0; i < headings.length; i += 1) {
     const heading = headings[i];
     const title = heading[1].trim();
-    const start = heading.index + heading[0].length;
+    const headingStart = heading.index;
+    const start = headingStart + heading[0].length;
     const end = i + 1 < headings.length ? headings[i + 1].index : body.length;
+    if (headingStart > cursor) {
+      bodyParts.push({ type: "raw", value: body.slice(cursor, headingStart) });
+    }
     const content = body.slice(start, end).trim();
     sections[title] = content;
+    bodyParts.push({ type: "section", title });
+    cursor = end;
   }
-  return sections;
+  if (cursor < body.length || bodyParts.length === 0) {
+    bodyParts.push({ type: "raw", value: body.slice(cursor) });
+  }
+  return { sections, bodyParts };
 }
 
 export function parsePlanFileContent(markdown, filePath = "<memory>") {
   const { frontmatter, body } = extractFrontmatter(markdown);
-  const sections = parseSections(body);
+  const { sections, bodyParts } = parseSections(body);
   const parsed: ParsedPlan = {
     filePath,
     fileName: path.basename(filePath),
     frontmatter,
     body,
+    bodyParts,
     sections
   };
   return parsed;

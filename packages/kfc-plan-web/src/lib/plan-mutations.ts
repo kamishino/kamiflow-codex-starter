@@ -174,7 +174,7 @@ export function applyStartSummaryMutation(
 
 export function applyHandoffMutation(
   parsed: ParsedPlan,
-  handoff: { selected_mode?: string; next_command?: string; next_mode?: string; status?: string }
+  handoff: { selected_mode?: string; next_command?: string; next_mode?: string; status?: string; lifecycle_phase?: string }
 ): ParsedPlan {
   return {
     ...parsed,
@@ -183,7 +183,8 @@ export function applyHandoffMutation(
       ...(handoff.selected_mode ? { selected_mode: handoff.selected_mode } : {}),
       ...(handoff.next_command ? { next_command: handoff.next_command } : {}),
       ...(handoff.next_mode ? { next_mode: handoff.next_mode } : {}),
-      ...(handoff.status ? { status: handoff.status } : {})
+      ...(handoff.status ? { status: handoff.status } : {}),
+      ...(handoff.lifecycle_phase ? { lifecycle_phase: handoff.lifecycle_phase } : {})
     }
   };
 }

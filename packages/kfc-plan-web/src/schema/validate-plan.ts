@@ -1,20 +1,8 @@
 import { REQUIRED_FRONTMATTER_FIELDS, REQUIRED_SECTIONS } from "../constants.js";
+import { evaluateStartSummaryGate } from "../lib/start-gate.js";
 import type { ParsedPlan } from "../types.js";
 import { resolveDiagramMode } from "../lib/diagram-mode.js";
 import { lintAndRepairMermaid } from "../lib/mermaid-safety.js";
-
-function parseStartSummary(sectionText: string): Record<string, string> {
-  const lines = sectionText.split(/\r?\n/);
-  const data: Record<string, string> = {};
-  for (const line of lines) {
-    const match = line.match(/^- ([^:]+):\s*(.*)$/);
-    if (!match) {
-      continue;
-    }
-    data[match[1].trim().toLowerCase()] = match[2].trim();
-  }
-  return data;
-}
 
 export function validateParsedPlan(plan: ParsedPlan) {
   const errors = [];
@@ -71,14 +59,9 @@ export function validateParsedPlan(plan: ParsedPlan) {
 
   const startSummary = plan.sections["Start Summary"];
   if (typeof startSummary === "string") {
-    const parsedStart = parseStartSummary(startSummary);
-    const required = parsedStart.required?.toLowerCase();
-    if (required !== "yes" && required !== "no") {
-      errors.push("`Start Summary` must include `- Required: yes|no`.");
-    }
-    const reason = parsedStart.reason ?? "";
-    if (!reason || reason.toLowerCase() === "tbd") {
-      errors.push("`Start Summary` must include a non-placeholder `Reason`.");
+    const startGate = evaluateStartSummaryGate(startSummary);
+    if (!startGate.ok) {
+      errors.push(startGate.reason);
     }
   }
 

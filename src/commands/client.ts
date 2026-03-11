@@ -962,9 +962,14 @@ function printClientOnboardingPass(payload) {
   }
 }
 
-function printClientOnboardingBlock(errorLike) {
-  const payload = classifyClientOnboardingFailure(errorLike);
+function printClientOnboardingBlock(errorLike, context = {}) {
+  const payload = classifyClientOnboardingFailure(errorLike, context);
   printClientOnboardingPayload(payload, true);
+}
+
+function buildProjectTargetArgs(projectDir) {
+  const normalized = String(projectDir || "").trim();
+  return normalized ? ["--project", normalized] : [];
 }
 
 function resolveClientReadyPath(projectDir) {
@@ -2224,13 +2229,15 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
 }
 
 function buildUpdateManualRecovery(parsed, reason) {
+  const projectArgs = buildProjectTargetArgs(parsed.project);
+  const updateCommand = ["kfc", "client", "update", ...projectArgs];
   if (parsed.from) {
-    return `kfc client update --from ${parsed.from} --apply`;
+    return [...updateCommand, "--from", parsed.from, "--apply"].join(" ");
   }
   if (reason === "link") {
-    return `npm link ${loadPackageName()} && kfc client update --apply`;
+    return `npm link ${loadPackageName()} && ${[...updateCommand, "--apply"].join(" ")}`;
   }
-  return "kfc client --force --no-launch-codex";
+  return ["kfc", "client", ...projectArgs, "--force", "--no-launch-codex"].join(" ");
 }
 
 function formatDependencyImpact(detection, nextSpec) {
@@ -2325,7 +2332,7 @@ function printClientUpdatePreview(parsed, detection, plan) {
   info(`Summary: ${plan.summary}`);
   info(`Dependency Impact: ${plan.dependencyImpact}`);
   info("Aftercare: rebootstrap + verify without Codex auto-launch");
-  const applyParts = ["kfc client update", "--project", "."];
+  const applyParts = ["kfc", "client", "update", ...buildProjectTargetArgs(parsed.project)];
   if (parsed.from) {
     applyParts.push("--from", parsed.from);
   }
@@ -2771,7 +2778,8 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
           next: inspection.next,
           stage: CLIENT_ONBOARDING_STAGES.INSPECT
         }
-      )
+      ),
+      { projectDir: options.project }
     );
     await emitClientOnboardingEvent(options.project, {
       ...blockPayload,
@@ -2789,7 +2797,8 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     buildClientOnboardingProgressPayload(
       CLIENT_ONBOARDING_STAGES.BOOTSTRAP,
       "Running client bootstrap checks.",
-      "kfc client doctor --fix"
+      "kfc client doctor --fix",
+      { projectDir: options.project }
     )
   );
   try {
@@ -2799,14 +2808,14 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
       reason: bootstrapResult.planState.summary,
       next: bootstrapResult.planState.next,
       next_steps: bootstrapResult.planState.nextSteps
-    });
+    }, { projectDir: options.project });
     await emitClientOnboardingEvent(options.project, payload);
     if (shouldPrintPass) {
       printClientOnboardingPass(payload);
     }
     return { code: 0, recoveryUsed: false, inspection: bootstrapResult.inspection, planState: bootstrapResult.planState };
   } catch (initialErr) {
-    const first = classifyClientOnboardingFailure(initialErr);
+    const first = classifyClientOnboardingFailure(initialErr, { projectDir: options.project });
     await emitClientOnboardingEvent(options.project, first);
     if (
       first.error_code === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
@@ -2823,7 +2832,8 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
       buildClientOnboardingProgressPayload(
         CLIENT_ONBOARDING_STAGES.BOOTSTRAP,
         `Running smart recovery after ${first.error_code}.`,
-        "kfc client doctor --fix"
+        "kfc client doctor --fix",
+        { projectDir: options.project }
       )
     );
 
@@ -2837,7 +2847,8 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
           CLIENT_ONBOARDING_CODES.SMART_RECOVERY_FAILED,
           `Smart recovery failed after initial bootstrap error (${first.error_code}).`,
           "kfc client doctor --fix"
-        )
+        ),
+        { projectDir: options.project }
       );
       await emitClientOnboardingEvent(options.project, blockPayload);
       printClientOnboardingPayload(blockPayload, true);
@@ -2851,14 +2862,14 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
         reason: bootstrapResult.planState.summary,
         next: bootstrapResult.planState.next,
         next_steps: bootstrapResult.planState.nextSteps
-      });
+      }, { projectDir: options.project });
       await emitClientOnboardingEvent(options.project, payload);
       if (shouldPrintPass) {
         printClientOnboardingPass(payload);
       }
       return { code: 0, recoveryUsed: true, inspection: bootstrapResult.inspection, planState: bootstrapResult.planState };
     } catch (retryErr) {
-      const blockPayload = classifyClientOnboardingFailure(retryErr);
+      const blockPayload = classifyClientOnboardingFailure(retryErr, { projectDir: options.project });
       await emitClientOnboardingEvent(options.project, blockPayload);
       printClientOnboardingPayload(blockPayload, true);
       return { code: 1, recoveryUsed: true };
@@ -2886,7 +2897,7 @@ async function runClientDoctorOnly(options) {
       force: true
     });
   } catch (err) {
-    printClientOnboardingBlock(err);
+    printClientOnboardingBlock(err, { projectDir: options.project });
     return 1;
   }
 
@@ -3050,7 +3061,8 @@ async function runClientReadyHandoff(options, bootstrap) {
         CLIENT_ONBOARDING_CODES.READY_ARTIFACT_FAILED,
         err instanceof Error ? err.message : String(err),
         "kfc flow ensure-plan"
-      )
+      ),
+      { projectDir: options.project }
     );
     await emitClientOnboardingEvent(options.project, blockPayload);
     printClientOnboardingPayload(blockPayload, true);
@@ -3070,7 +3082,8 @@ async function runClientReadyHandoff(options, bootstrap) {
         ready.reusedExisting
           ? "Reusing existing KFC handoff and waiting for Codex completion."
           : "Launching Codex and waiting for setup completion.",
-        "Wait for Codex completion."
+        "Wait for Codex completion.",
+        { projectDir: options.project }
       )
     );
     const launchAttempt = await runClientCodexLaunch({
@@ -3104,7 +3117,7 @@ async function runClientReadyHandoff(options, bootstrap) {
           reason: ready.planState.summary,
           next: handoffNext,
           next_steps: [manualCommand, ...planStateSteps]
-        }),
+        }, { projectDir: options.project }),
         stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
         reason: `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
         next: handoffNext,
@@ -3119,7 +3132,8 @@ async function runClientReadyHandoff(options, bootstrap) {
           ready.reusedExisting
             ? `Client onboarding handoff artifacts were refreshed from an existing brief. ${ready.planState.summary}`
             : `Client onboarding handoff artifacts are ready. ${ready.planState.summary}`,
-          "Wait for Codex completion."
+          "Wait for Codex completion.",
+          { projectDir: options.project }
         ),
         inspection_status: ready.inspection.inspectionStatus,
         repo_shape: ready.inspection.repoShape,
@@ -3144,16 +3158,17 @@ async function runClientReadyHandoff(options, bootstrap) {
 
   printClientCodexLaunchOutcome(launchResult, manualCommand);
   if (!launchSucceeded) {
-    const blockPayload = classifyClientOnboardingFailure(
-      createClientOnboardingError(
-        CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED,
+      const blockPayload = classifyClientOnboardingFailure(
+        createClientOnboardingError(
+          CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED,
         `Codex auto-run failed. ${launchResult?.failure_signature || launchResult?.stderr_tail || "No completion evidence."}`,
         manualCommand,
         {
           next: manualCommand,
           stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY
         }
-      )
+      ),
+      { projectDir: options.project }
     );
     await emitClientOnboardingEvent(options.project, {
       ...blockPayload,
@@ -3168,16 +3183,17 @@ async function runClientReadyHandoff(options, bootstrap) {
   }
 
   if (!completion?.complete) {
-    const blockPayload = classifyClientOnboardingFailure(
-      createClientOnboardingError(
-        CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE,
+      const blockPayload = classifyClientOnboardingFailure(
+        createClientOnboardingError(
+          CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE,
         completion?.reason || "Setup completion is still incomplete. KFC could not confirm archived done state.",
         "kfc client",
         {
           next: "kfc client",
           stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY
         }
-      )
+      ),
+      { projectDir: options.project }
     );
     await emitClientOnboardingEvent(options.project, {
       ...blockPayload,
@@ -3200,7 +3216,7 @@ async function runClientReadyHandoff(options, bootstrap) {
       next_steps: Array.isArray(completion.nextSteps) && completion.nextSteps.length > 0
         ? completion.nextSteps
         : planStateSteps
-    });
+    }, { projectDir: options.project });
     await emitClientOnboardingEvent(options.project, {
       ...workPayload,
       inspection_status: ready.inspection.inspectionStatus,
@@ -3216,16 +3232,17 @@ async function runClientReadyHandoff(options, bootstrap) {
   try {
     await runClientDone(options);
   } catch (err) {
-    const blockPayload = classifyClientOnboardingFailure(
-      createClientOnboardingError(
-        CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED,
+      const blockPayload = classifyClientOnboardingFailure(
+        createClientOnboardingError(
+          CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED,
         `Automatic cleanup failed after archived done proof. ${err instanceof Error ? err.message : String(err)}`,
         "kfc client done",
         {
           next: "kfc client done",
           stage: CLIENT_ONBOARDING_STAGES.DONE
         }
-      )
+      ),
+      { projectDir: options.project }
     );
     await emitClientOnboardingEvent(options.project, {
       ...blockPayload,
@@ -3244,7 +3261,7 @@ async function runClientReadyHandoff(options, bootstrap) {
     reason: `Client setup completed and cleanup was applied automatically. ${completion.reason}`,
     next: "kfc client",
     next_steps: ["kfc client"]
-  });
+  }, { projectDir: options.project });
   await emitClientOnboardingEvent(options.project, {
     ...donePayload,
     inspection_status: ready.inspection.inspectionStatus,
@@ -3307,7 +3324,7 @@ export async function runClient(options) {
     try {
       return await runClientStart(parsed);
     } catch (err) {
-      const blockPayload = classifyClientOnboardingFailure(err);
+      const blockPayload = classifyClientOnboardingFailure(err, { projectDir: parsed.project });
       await emitClientOnboardingEvent(parsed.project, blockPayload);
       printClientOnboardingPayload(blockPayload, true);
       return 1;

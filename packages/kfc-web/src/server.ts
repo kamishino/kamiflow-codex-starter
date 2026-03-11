@@ -1,6 +1,7 @@
 import path from "node:path";
 import { createServer as createViteServer } from "vite";
 import { createServer as createNetServer } from "node:net";
+import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 import { createFeatureServer } from "../../kfc-web-runtime/dist/feature-server.js";
 import { assetSetFromManifest, devAssetSet, loadManifest, sendBuiltAsset } from "./server/assets.js";
 import { loadBuiltInFeatureImplementations } from "./server/feature-implementations.js";
@@ -116,7 +117,7 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
   const requestedVitePort = Number(options.vitePort || 5174);
   const portStrategy = String(options.portStrategy || "next") as "fail" | "next";
   const portScanLimit = Number(options.portScanLimit || DEFAULT_PORT_ATTEMPTS);
-  const projectDir = path.resolve(options.projectDir || process.cwd());
+  const projectDir = await detectProjectRoot(path.resolve(options.projectDir || process.cwd()));
   const focus = String(options.focus || "").trim().toLowerCase();
   const packageDir = options.packageDir;
   const repoRoot = resolveRepoRoot(packageDir);
@@ -167,7 +168,7 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
         configFile: false,
         root: packageDir,
         server: {
-          host: "127.0.0.1",
+          host,
           port: vitePort,
           strictPort: true,
           fs: {
@@ -183,8 +184,8 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
     }
   }
 
-  function featureAssets(name: string) {
-    return mode === "dev" ? devAssetSet(vitePort, name) : assetSetFromManifest(manifest, name);
+  function featureAssets(name: string, request?: any) {
+    return mode === "dev" ? devAssetSet(vitePort, name, request) : assetSetFromManifest(manifest, name);
   }
 
   async function startFeatures(fastify: any) {

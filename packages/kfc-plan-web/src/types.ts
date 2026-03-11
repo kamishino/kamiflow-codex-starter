@@ -19,11 +19,16 @@ export interface PlanSummary {
   archived_path?: string;
 }
 
+export type ParsedPlanBodyPart =
+  | { type: "raw"; value: string }
+  | { type: "section"; title: string };
+
 export interface ParsedPlan {
   filePath: string;
   fileName: string;
   frontmatter: Record<string, string>;
   body: string;
+  bodyParts: ParsedPlanBodyPart[];
   sections: Record<string, string>;
 }
 

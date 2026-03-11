@@ -310,6 +310,31 @@ await runCase("server exposes onboarding when the client session file is missing
   });
 });
 
+await runCase("CLI auto-detects project root from nested directories when --project is omitted", async () => {
+  await withTempDir(async (tempDir) => {
+    const projectDir = path.join(tempDir, "project");
+    const nestedDir = path.join(projectDir, "nested", "deep");
+    const sessionsRoot = path.join(tempDir, "sessions");
+    await fs.mkdir(path.join(projectDir, ".git"), { recursive: true });
+    await fs.mkdir(nestedDir, { recursive: true });
+    await seedProject(projectDir);
+    await writeSessionFile(sessionsRoot, "019-chat-nested", [
+      { role: "assistant", text: "Nested session.", updated_at: "2026-03-08T00:01:00.000Z" }
+    ]);
+    await bindCodexSession(projectDir, "019-chat-nested", sessionsRoot);
+
+    const previousCwd = process.cwd();
+    process.chdir(nestedDir);
+    try {
+      const showResult = await captureCli(["show", "--sessions-root", sessionsRoot]);
+      assert.equal(showResult.exitCode, 0);
+      assert.ok(showResult.logs.some((line) => line.includes("Session ID: 019-chat-nested")));
+    } finally {
+      process.chdir(previousCwd);
+    }
+  });
+});
+
 await runCase("server exposes discoverable sessions with auth and query filtering", async () => {
   await withTempDir(async (tempDir) => {
     const projectDir = path.join(tempDir, "project");

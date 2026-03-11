@@ -77,8 +77,8 @@ export function createFeatureContext({ repoRoot, projectDir, sessionsRoot, host,
 
 export function registerFeaturePages(fastify, features, featureAssets) {
   for (const feature of features) {
-    fastify.get(`/${feature.slug}`, async (_request, reply) => {
-      const assets = featureAssets(feature.entryName);
+    fastify.get(`/${feature.slug}`, async (request, reply) => {
+      const assets = featureAssets(feature.entryName, request);
       reply.type("text/html; charset=utf-8");
       return await feature.render(feature.buildViewModel({ assets }));
     });

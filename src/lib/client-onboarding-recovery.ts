@@ -59,14 +59,66 @@ type ClientOnboardingPassOptions = {
   next_steps?: string[];
 };
 
-const DEFAULT_PASS_NEXT_STEPS = Object.freeze([
-  "kfc flow ensure-plan --project .",
-  "kfc flow ready --project .",
-  "kfc flow next --project . --plan <plan-id> --style narrative"
-]);
+type ClientCommandContext = {
+  projectDir?: string;
+};
 
 function normalizeMessage(value) {
   return String(value || "").trim();
+}
+
+function shellEscape(value: string): string {
+  const text = String(value || "");
+  return /\s|["']/.test(text) ? JSON.stringify(text) : text;
+}
+
+function normalizeProjectDir(value: unknown): string {
+  return String(value || "").trim();
+}
+
+function buildCommand(command: string, context: ClientCommandContext = {}, args: string[] = []) {
+  const projectDir = normalizeProjectDir(context.projectDir);
+  const parts = [command];
+  if (projectDir) {
+    parts.push("--project", shellEscape(projectDir));
+  }
+  return [...parts, ...args].map((item) => String(item)).join(" ");
+}
+
+function injectProjectTarget(commandText: string, context: ClientCommandContext = {}) {
+  const normalized = normalizeMessage(commandText);
+  const projectDir = normalizeProjectDir(context.projectDir);
+  if (!normalized || !projectDir || normalized.includes("--project")) {
+    return normalized;
+  }
+  const prefixes = [
+    "kfc client bootstrap",
+    "kfc client doctor",
+    "kfc client done",
+    "kfc client update",
+    "kfc client",
+    "kfc flow ensure-plan",
+    "kfc flow ready",
+    "kfc flow next",
+    "kfc plan validate"
+  ];
+  for (const prefix of prefixes) {
+    if (normalized === prefix) {
+      return `${prefix} --project ${shellEscape(projectDir)}`;
+    }
+    if (normalized.startsWith(`${prefix} `)) {
+      return `${prefix} --project ${shellEscape(projectDir)} ${normalized.slice(prefix.length + 1)}`.trim();
+    }
+  }
+  return normalized;
+}
+
+function defaultPassNextSteps(context: ClientCommandContext = {}) {
+  return [
+    buildCommand("kfc flow ensure-plan", context),
+    buildCommand("kfc flow ready", context),
+    buildCommand("kfc flow next", context, ["--plan", "<plan-id>", "--style", "narrative"])
+  ];
 }
 
 function normalizeStage(value: unknown): ClientOnboardingStage {
@@ -127,54 +179,54 @@ function stageForCode(code: string): ClientOnboardingStage {
   return CLIENT_ONBOARDING_STAGES.BLOCKED;
 }
 
-function nextForStage(stage) {
+function nextForStage(stage, context: ClientCommandContext = {}) {
   if (stage === CLIENT_ONBOARDING_STAGES.PLAN_READY) {
-    return "kfc flow ensure-plan --project .";
+    return buildCommand("kfc flow ensure-plan", context);
   }
   if (stage === CLIENT_ONBOARDING_STAGES.READY_BRIEF) {
     return "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
   }
   if (stage === CLIENT_ONBOARDING_STAGES.EXECUTION_READY) {
-    return DEFAULT_PASS_NEXT_STEPS[0];
+    return defaultPassNextSteps(context)[0];
   }
   if (stage === CLIENT_ONBOARDING_STAGES.DONE) {
-    return "kfc client done";
+    return buildCommand("kfc client done", context);
   }
-  return "kfc client doctor --project . --fix";
+  return buildCommand("kfc client doctor", context, ["--fix"]);
 }
 
-function recoveryForCode(code: string): string {
+function recoveryForCode(code: string, context: ClientCommandContext = {}): string {
   if (code === CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING) {
     return "npm init -y";
   }
   if (code === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS) {
-    return "kfc client done --project .";
+    return buildCommand("kfc client done", context);
   }
   if (code === CLIENT_ONBOARDING_CODES.CODEX_LAUNCH_FAILED) {
-    return "kfc client";
+    return buildCommand("kfc client", context);
   }
   if (code === CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE) {
-    return "kfc client";
+    return buildCommand("kfc client", context);
   }
   if (code === CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED) {
-    return "kfc client done --project .";
+    return buildCommand("kfc client done", context);
   }
   if (code === CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED) {
-    return "kfc flow ensure-plan --project .";
+    return buildCommand("kfc flow ensure-plan", context);
   }
   if (code === CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED) {
-    return "kfc plan validate --project .";
+    return buildCommand("kfc plan validate", context);
   }
   if (code === CLIENT_ONBOARDING_CODES.SKILL_SYNC_FAILED) {
-    return "kfc client bootstrap --project . --force";
+    return buildCommand("kfc client bootstrap", context, ["--force"]);
   }
   if (code === CLIENT_ONBOARDING_CODES.PRIVATE_STATE_FAILED) {
-    return "kfc client bootstrap --project . --force";
+    return buildCommand("kfc client bootstrap", context, ["--force"]);
   }
   if (code === CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED) {
-    return "kfc client bootstrap --project . --force --skip-serve-check";
+    return buildCommand("kfc client bootstrap", context, ["--force", "--skip-serve-check"]);
   }
-  return "kfc client doctor --project . --fix";
+  return buildCommand("kfc client doctor", context, ["--fix"]);
 }
 
 function codeFromMessage(message) {
@@ -202,14 +254,17 @@ function codeFromMessage(message) {
   return CLIENT_ONBOARDING_CODES.BOOTSTRAP_FAILED;
 }
 
-export function classifyClientOnboardingFailure(input: ClientOnboardingFailureInput | ClientOnboardingError | unknown) {
+export function classifyClientOnboardingFailure(
+  input: ClientOnboardingFailureInput | ClientOnboardingError | unknown,
+  context: ClientCommandContext = {}
+) {
   const candidate = (input && typeof input === "object" ? input : {}) as ClientOnboardingFailureInput;
   const reason = normalizeMessage(candidate.message || String(input || "Client onboarding failed."));
   const explicitCode = normalizeMessage(candidate.code || "");
   const code = (explicitCode && explicitCode.startsWith("CLIENT_") ? explicitCode : codeFromMessage(reason)) as ClientOnboardingCode;
-  const recovery = normalizeMessage(candidate.recovery || "") || recoveryForCode(code);
+  const recovery = injectProjectTarget(normalizeMessage(candidate.recovery || ""), context) || recoveryForCode(code, context);
   const stage = normalizeStage(candidate.stage || stageForCode(code));
-  const next = normalizeMessage(candidate.next || "") || recovery;
+  const next = injectProjectTarget(normalizeMessage(candidate.next || ""), context) || recovery;
   return {
     status: "BLOCK",
     stage,
@@ -220,14 +275,17 @@ export function classifyClientOnboardingFailure(input: ClientOnboardingFailureIn
   };
 }
 
-export function buildClientOnboardingPassPayload(options: boolean | ClientOnboardingPassOptions = false) {
+export function buildClientOnboardingPassPayload(
+  options: boolean | ClientOnboardingPassOptions = false,
+  context: ClientCommandContext = {}
+) {
   const normalized = typeof options === "boolean" ? { recoveryUsed: options } : options;
   const recoveryUsed = normalized.recoveryUsed === true;
   const stage = normalizeStage(normalized.stage || CLIENT_ONBOARDING_STAGES.EXECUTION_READY);
   const nextSteps = Array.isArray(normalized.next_steps) && normalized.next_steps.length > 0
-    ? normalized.next_steps.map((step) => normalizeMessage(step)).filter(Boolean)
-    : [...DEFAULT_PASS_NEXT_STEPS];
-  const next = normalizeMessage(normalized.next || nextSteps[0]) || nextForStage(stage);
+    ? normalized.next_steps.map((step) => injectProjectTarget(normalizeMessage(step), context)).filter(Boolean)
+    : defaultPassNextSteps(context);
+  const next = injectProjectTarget(normalizeMessage(normalized.next || nextSteps[0]), context) || nextForStage(stage, context);
   return {
     status: "PASS",
     stage,
@@ -243,7 +301,7 @@ export function buildClientOnboardingPassPayload(options: boolean | ClientOnboar
   };
 }
 
-export function buildClientOnboardingProgressPayload(stage, reason, next = "") {
+export function buildClientOnboardingProgressPayload(stage, reason, next = "", context: ClientCommandContext = {}) {
   const normalizedStage = normalizeStage(stage);
   return {
     status: "RUNNING",
@@ -251,6 +309,6 @@ export function buildClientOnboardingProgressPayload(stage, reason, next = "") {
     error_code: "CLIENT_ONBOARDING_PROGRESS",
     reason: normalizeMessage(reason) || "Client onboarding in progress.",
     recovery: "None",
-    next: normalizeMessage(next) || nextForStage(normalizedStage)
+    next: injectProjectTarget(normalizeMessage(next), context) || nextForStage(normalizedStage, context)
   };
 }
