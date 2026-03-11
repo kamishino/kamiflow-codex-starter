@@ -4,6 +4,12 @@ Use this route when the request is still fuzzy and needs direction.
 The goal is to produce a high-quality shortlist plus a clean handoff to `plan`.
 Treat this as the **Brainstorm phase**: analyze the problem, compare options, choose one best direction.
 
+When the user explicitly asks for **simple**, **quick**, or **pre-brainstorm** mode, follow the compact path:
+- ask only 2-3 clarifying questions on turn A.
+- prioritize speed and direction confidence over exhaustive scoping.
+- keep handoff output intentionally short and concrete.
+- still emit exactly 3 tracks and full `START_CONTEXT` for plan handoff.
+
 ## Entry Gate
 
 - Required mode: `Plan`.
@@ -21,6 +27,7 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 - 1 free-form `Other` option
 5. After answers (or after consuming `IDEATION_CONTEXT`), write a concise **Problem Analysis**:
 - core problem statement
+- if in `simple` mode, keep this to one short paragraph.
 - root causes (top 2-3)
 - target user and constraints
 6. Assign a **Clarity Score** (`1-5`) for problem understanding.
@@ -47,6 +54,7 @@ Treat this as the **Brainstorm phase**: analyze the problem, compare options, ch
 - `target_user`
 - `success_30d`
 - `constraints`
+- `start_mode` (`full` | `simple`)
 - `selected_idea`
 - `alternatives`
 - `pre_mortem_risk`

@@ -5,6 +5,7 @@ Use this guide to keep Kami Flow deterministic and easy to operate.
 ## Core Sequence
 
 1. Classify the request as implementation/workflow or low-risk operational.
+   - For explicit "simple" pre-brainstorm requests, keep Start route output compact and avoid architecture-heavy framing until needed.
 2. If low-risk operational fast path applies, execute the one-shot task without forcing a plan.
 3. Otherwise resolve active non-done plan.
 4. Choose exactly one route (`start|plan|build|check|fix|research`).

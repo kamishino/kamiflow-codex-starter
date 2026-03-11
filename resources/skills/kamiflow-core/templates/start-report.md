@@ -1,6 +1,8 @@
 # Start Report: <topic>
 
 ## Turn A: Clarifying Questions (Ask Only)
+- Simple mode: if requested, keep to 2-3 high-signal questions and move to Turn B on the next message.
+
 Q1. <question>
 - A) <option 1>
 - B) <option 2>
@@ -23,6 +25,7 @@ Q3. <question>
 
 ### Problem Frame
 - Problem:
+- Start mode: <full | simple>
 - Root causes:
 - Design Surface:
 - Non-goals:
@@ -56,6 +59,7 @@ START_CONTEXT
 - target_user:
 - success_30d:
 - constraints:
+- start_mode: <full | simple>
 - selected_idea:
 - alternatives:
 - pre_mortem_risk:

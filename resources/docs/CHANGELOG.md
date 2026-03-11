@@ -3,6 +3,10 @@
 Decision log for durable user-visible or workflow-affecting changes.
 This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
+## 2026-03-11
+
+- Added a simple pre-brainstorm option to Kami Flow Start: explicit `simple` mode path with shorter questioning and compact START_CONTEXT handoff metadata.
+
 ## 2026-03-10
 
 - Added a docs freshness protocol so workflow-impacting changes now require tracked doc review, generated doc sync, and governance verification before commit-safe completion.
