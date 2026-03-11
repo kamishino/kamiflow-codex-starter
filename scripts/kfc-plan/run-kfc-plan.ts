@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { detectProjectRoot } from "../lib/project-root.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -13,7 +14,12 @@ if (args.length === 0) {
 }
 
 const hasProjectArg = args.includes("--project");
-const projectDir = process.env.KAMIFLOW_PROJECT_DIR || process.env.INIT_CWD || process.cwd();
+const envProjectDir = String(process.env.KAMIFLOW_PROJECT_DIR || "").trim();
+const initCwd = String(process.env.INIT_CWD || "").trim();
+const baseCwd = path.resolve(initCwd || process.cwd());
+const projectDir = envProjectDir
+  ? path.resolve(initCwd || process.cwd(), envProjectDir)
+  : await detectProjectRoot(baseCwd);
 const forwarded = hasProjectArg ? args : [...args, "--project", projectDir];
 
 const npmExe = process.platform === "win32" ? "npm.cmd" : "npm";

@@ -4,16 +4,17 @@ import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { error, info } from "../lib/logger.js";
 import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
+import { detectProjectRoot } from "../lib/project-root.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const REPO_ROOT = path.resolve(__dirname, "../..");
 const REPO_KFC_PLAN_BIN = path.join(REPO_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
 
-function parseProjectDir(defaultCwd, args) {
+async function parseProjectDir(defaultCwd, args) {
   const idx = args.indexOf("--project");
   if (idx === -1) {
-    return defaultCwd;
+    return await detectProjectRoot(defaultCwd);
   }
   const value = args[idx + 1];
   if (!value || value.startsWith("--")) {
@@ -105,7 +106,7 @@ export async function runPlan(options) {
     return 1;
   }
 
-  const projectDir = subcommand === "workspace" ? options.cwd : parseProjectDir(options.cwd, rest);
+  const projectDir = subcommand === "workspace" ? options.cwd : await parseProjectDir(options.cwd, rest);
   const topic = readOption(rest, "--topic", readOption(rest, "--slug", ""));
   const route = readOption(rest, "--route", "plan");
   const hasProject = rest.includes("--project");

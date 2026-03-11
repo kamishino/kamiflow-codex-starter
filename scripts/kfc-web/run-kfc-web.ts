@@ -1,9 +1,11 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
+import { detectProjectRoot } from "../lib/project-root.js";
 
-function resolveRepoRoot() {
+async function resolveRepoRoot() {
   const initCwd = String(process.env.INIT_CWD || "").trim();
-  return path.resolve(initCwd || process.cwd());
+  const baseCwd = path.resolve(initCwd || process.cwd());
+  return await detectProjectRoot(baseCwd);
 }
 
 function hasProjectArg(args) {
@@ -20,7 +22,10 @@ function isServeLike(value: unknown): value is "serve" | "dev" {
 
 const rawArgs = process.argv.slice(2);
 const forwarded = rawArgs[0] === "serve" || rawArgs[0] === "dev" ? rawArgs.slice(1) : rawArgs;
-const nextArgs = hasProjectArg(forwarded) ? forwarded : [...forwarded, "--project", resolveRepoRoot()];
+const repoRoot = await resolveRepoRoot();
+const nextArgs = hasProjectArg(forwarded)
+  ? forwarded
+  : [...forwarded, "--project", repoRoot];
 const npmExe = process.platform === "win32" ? "npm.cmd" : "npm";
 const firstArg = typeof rawArgs[0] === "string" ? rawArgs[0] : "";
 const isHelpRequest = rawArgs.some(isHelpToken) || firstArg === "help";
@@ -28,7 +33,7 @@ const isHelpRequest = rawArgs.some(isHelpToken) || firstArg === "help";
 function runCommand(args: string[]): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const child = spawn(npmExe, args, {
-      cwd: resolveRepoRoot(),
+      cwd: repoRoot,
       stdio: "inherit",
       windowsHide: true,
       shell: process.platform === "win32"
@@ -47,7 +52,7 @@ function runCommand(args: string[]): Promise<number> {
 function runNode(args: string[]): Promise<number> {
   return new Promise<number>((resolve, reject) => {
     const child = spawn(process.execPath, args, {
-      cwd: resolveRepoRoot(),
+      cwd: repoRoot,
       stdio: "inherit",
       windowsHide: true
     });
@@ -66,7 +71,7 @@ const command = isServeLike(firstArg) ? firstArg : firstArg || "serve";
 
 try {
   if (isHelpRequest) {
-    const binPath = path.join(resolveRepoRoot(), "packages", "kfc-web", "bin", "kfc-web.js");
+    const binPath = path.join(repoRoot, "packages", "kfc-web", "bin", "kfc-web.js");
     const exitCode = await runNode([binPath, ...rawArgs]);
     process.exit(exitCode);
   }
@@ -79,7 +84,7 @@ try {
     const exitCode = await runCommand(["run", "-w", "@kamishino/kfc-web", command, "--", ...nextArgs]);
     process.exit(exitCode);
   }
-  const binPath = path.join(resolveRepoRoot(), "packages", "kfc-web", "bin", "kfc-web.js");
+  const binPath = path.join(repoRoot, "packages", "kfc-web", "bin", "kfc-web.js");
   const exitCode = await runNode([binPath, ...rawArgs]);
   process.exit(exitCode);
 } catch (err) {
