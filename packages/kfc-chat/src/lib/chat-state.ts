@@ -33,6 +33,33 @@ export interface TranscriptDisplayBlock {
   items?: Array<{ id: string; text: string; created_at: string; status: string }>;
 }
 
+export interface ChatSessionDiscoveryItem {
+  session_id: string;
+  file_name: string;
+  file_path: string;
+  relative_path: string;
+  date_path: string;
+  bytes: number;
+  modified_at: string;
+  preview_text: string;
+  preview: Array<{ role: string; text: string; timestamp: string }>;
+}
+
+export interface ChatSessionDiscoveryResponse {
+  sessions_root: string;
+  query: string;
+  date: string;
+  limit: number;
+  total_matches: number;
+  sessions: ChatSessionDiscoveryItem[];
+}
+
+type ListSessionsOptions = {
+  query?: string;
+  date?: string;
+  limit?: number;
+};
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -51,6 +78,23 @@ function hashFingerprint(value: unknown) {
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function normalizeRelativePath(value: unknown) {
+  return String(value || "").replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function parseDatePathFromRelative(relativePath: string) {
+  const normalized = normalizeRelativePath(relativePath);
+  const segments = normalized.split("/").filter(Boolean);
+  if (segments.length < 4) {
+    return null;
+  }
+  const [year, month, day] = segments;
+  if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month) || !/^\d{2}$/.test(day)) {
+    return null;
+  }
+  return `${year}/${month}/${day}`;
 }
 
 function humanizeTypeLabel(value: unknown) {
@@ -117,6 +161,52 @@ async function walkFiles(rootDir: string) {
     }
   }
   return files;
+}
+
+function extractSessionPreviewLine(rawLine: string) {
+  const trimmed = String(rawLine || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    const payload = JSON.parse(trimmed) as Record<string, unknown>;
+    const fields = [payload.message, payload.text, payload.summary, payload.content, payload.reason, payload.prompt];
+    const content = fields.find((item) => String(item || "").trim().length > 0);
+    return {
+      role: String(payload.role || payload.type || payload.event_type || "event"),
+      text: compactText(content || trimmed, 280),
+      timestamp: String(payload.updated_at || payload.created_at || payload.timestamp || "")
+    };
+  } catch {
+    return {
+      role: "raw",
+      text: compactText(trimmed, 280),
+      timestamp: ""
+    };
+  }
+}
+
+async function buildSessionDiscoveryItem(sessionsRoot: string, filePath: string) {
+  const stat = await fsp.stat(filePath);
+  const relativePath = normalizeRelativePath(path.relative(sessionsRoot, filePath));
+  const datePath = parseDatePathFromRelative(relativePath) || "";
+  const tailText = await readTailText(filePath, 65536);
+  const lines = tailText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+  const preview = lines
+    .slice(-6)
+    .map((line) => extractSessionPreviewLine(line))
+    .filter((entry): entry is NonNullable<ReturnType<typeof extractSessionPreviewLine>> => Boolean(entry));
+  return {
+    session_id: path.basename(filePath, path.extname(filePath)),
+    file_name: path.basename(filePath),
+    file_path: filePath,
+    relative_path: relativePath,
+    date_path: datePath,
+    bytes: stat.size,
+    modified_at: new Date(stat.mtimeMs).toISOString(),
+    preview_text: preview.map((item) => item.text).join(" | "),
+    preview
+  };
 }
 
 async function selectLatestFile(filePaths: string[]) {
@@ -423,6 +513,53 @@ export async function findSessionMatches(sessionsRoot: string, sessionId: string
   await assertDirectoryExists(sessionsRoot, "Codex sessions root");
   const files = await walkFiles(sessionsRoot);
   return files.filter((item) => path.extname(item).toLowerCase() === ".jsonl").filter((item) => path.basename(item).toLowerCase().includes(needle)).sort((left, right) => left.localeCompare(right));
+}
+
+function isMatch(value: string, needle: string) {
+  return String(value || "").toLowerCase().includes(needle);
+}
+
+export async function listAvailableSessions(sessionsRoot: string, options: ListSessionsOptions = {}): Promise<ChatSessionDiscoveryResponse> {
+  const query = String(options.query || "").trim().toLowerCase();
+  const date = String(options.date || "").trim();
+  const parsedLimit = Number.isFinite(Number(options.limit)) ? Number(options.limit) : 0;
+  const limit = parsedLimit >= 1 ? Math.min(parsedLimit, 200) : 50;
+  try {
+    await assertDirectoryExists(sessionsRoot, "Codex sessions root");
+  } catch {
+    return {
+      sessions_root: sessionsRoot,
+      query,
+      date,
+      limit,
+      total_matches: 0,
+      sessions: []
+    };
+  }
+  const files = (await walkFiles(sessionsRoot)).filter((item) => path.extname(item).toLowerCase() === ".jsonl");
+  const sessions: ChatSessionDiscoveryItem[] = [];
+  for (const filePath of files) {
+    const record = await buildSessionDiscoveryItem(sessionsRoot, filePath);
+    if (date && record.date_path !== date) {
+      continue;
+    }
+    if (query) {
+      const haystack = [record.session_id, record.file_name, record.relative_path, record.preview_text].join(" ").toLowerCase();
+      if (!isMatch(haystack, query)) {
+        continue;
+      }
+    }
+    sessions.push(record);
+  }
+  sessions.sort((left, right) => Date.parse(right.modified_at) - Date.parse(left.modified_at));
+  return {
+    sessions_root: sessionsRoot,
+    query,
+    date,
+    limit,
+    total_matches: sessions.length,
+    sessions: sessions.slice(0, limit)
+  };
 }
 
 export async function bindCodexSession(projectDir: string, sessionId: string, sessionsRoot = defaultSessionsRoot()) {

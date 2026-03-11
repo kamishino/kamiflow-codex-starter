@@ -182,8 +182,11 @@ This starts a separate browser surface for:
 
 - one bound Codex session per project
 - WebSocket live transcript and session state
+- one-click discover-and-bind from nearby `~/.codex/sessions` sessions
 - guarded prompt submission via `codex exec resume <SESSION_ID> <prompt>`
 - manual `codex resume <SESSION_ID>` handoff for terminal-style continuation
+
+When started through `kfc web`, the printed chat URL now includes an optional `?token=<chat-token>` query parameter for quick reopen, and also works at `/chat` without query parameters.
 
 Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`.
 

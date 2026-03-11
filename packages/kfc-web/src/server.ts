@@ -108,7 +108,9 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
       urls: {
         plan: `http://${host}:${port}/plan`,
         session: `http://${host}:${port}/session`,
-        chat: `http://${host}:${port}/chat`
+        chat: featureHandles?.chat?.token
+          ? `http://${host}:${port}/chat?token=${encodeURIComponent(String(featureHandles?.chat?.token || ""))}`
+          : `http://${host}:${port}/chat`
       },
       chatToken: featureHandles?.chat?.token || ""
     }),

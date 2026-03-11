@@ -1,8 +1,14 @@
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@kamishino/kfc-web-ui";
-import type { ChatSessionPayload } from "../types";
+import type { ChatSessionPayload, SessionDiscoveryItem } from "../types";
 
 interface SessionPanelProps {
   session: ChatSessionPayload | null;
+  discoveryItems: SessionDiscoveryItem[];
+  discoveryQuery: string;
+  canBind: boolean;
+  onDiscoverySearch: (value: string) => void;
+  onDiscoveryQueryInput: (value: string) => void;
+  onDiscoveryBind: (sessionId: string) => void;
   onCopyResume: () => void;
   onCopySessionId: () => void;
   onCopySessionPath: () => void;
@@ -23,6 +29,8 @@ export function SessionPanel(props: SessionPanelProps) {
     `Last prompt: ${props.session?.last_prompt_at || "<none>"}`,
     `Last result: ${props.session?.last_result?.text || "<none>"}`
   ];
+  const discoveryItems = props.discoveryItems || [];
+  const hasDiscoveryItems = discoveryItems.length > 0;
 
   return (
     <aside class="panel panel-session ui-card">
@@ -63,6 +71,53 @@ export function SessionPanel(props: SessionPanelProps) {
             <Button id="reveal-session-folder-button" type="button" variant="outline" onClick={props.onRevealFolder} disabled={!bound?.bound}>Reveal Folder</Button>
           </div>
           <p class="hint">These actions stay project-bound. Session browsing and switching remain in <code>kfc-session</code>.</p>
+        </CardContent>
+      </Card>
+      <Card class="action-card" id="session-discovery-card">
+        <CardHeader>
+          <CardTitle>Session Discovery</CardTitle>
+        </CardHeader>
+        <CardContent class="stack-gap-sm">
+          <label class="field">
+            <span>Search sessions</span>
+            <input
+              id="session-discovery-query"
+              type="text"
+              value={props.discoveryQuery}
+              onInput={(event: any) => props.onDiscoveryQueryInput(event.currentTarget.value)}
+              placeholder="Search by id, filename, path, or preview"
+            />
+          </label>
+          <div class="quick-actions">
+            <Button id="session-discovery-search" type="button" onClick={() => props.onDiscoverySearch(props.discoveryQuery)} disabled={!props.canBind}>Load Sessions</Button>
+            <Button id="session-discovery-clear" type="button" variant="outline" onClick={() => props.onDiscoverySearch("")}>Clear</Button>
+          </div>
+          <div id="session-discovery-empty" class="hint" hidden={hasDiscoveryItems}>
+            {props.canBind ? "Search and list nearby Codex sessions to bind this project." : "Bind this project first to enable session discovery."}
+          </div>
+          {hasDiscoveryItems ? (
+            <div class="session-discovery-list">
+              {discoveryItems.map((item) => (
+                <article class="session-discovery-item" key={item.session_id}>
+                  <div class="session-discovery-row">
+                    <p class="session-discovery-id">{item.session_id}</p>
+                    <Button
+                      id={`session-discovery-bind-${item.session_id}`}
+                      type="button"
+                      variant="outline"
+                      onClick={() => props.onDiscoveryBind(item.session_id)}
+                      disabled={!props.canBind}
+                    >
+                      Bind
+                    </Button>
+                  </div>
+                  <p class="session-discovery-path">{item.relative_path || item.file_path}</p>
+                  <p class="session-discovery-preview">{item.preview_text || item.file_name}</p>
+                  <p class="hint">Modified: {item.modified_at}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
         </CardContent>
       </Card>
       <Card class="action-card">

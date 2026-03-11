@@ -2,9 +2,9 @@ import { effect } from "@preact/signals";
 import { render } from "preact";
 import { ConversationPanel } from "./components/ConversationPanel";
 import { SessionPanel } from "./components/SessionPanel";
-import { bindSession, fetchSession, fetchTranscript, revealSession, verifyToken } from "./api";
+import { bindSession, fetchSession, fetchSessions, fetchTranscript, revealSession, verifyToken } from "./api";
 import { connected, session, statusLine, token, transcript, wsRef } from "./state";
-import type { ChatSessionPayload } from "./types";
+import type { ChatSessionPayload, SessionDiscoveryItem } from "./types";
 
 const root = document.querySelector<HTMLElement>("#app-root");
 if (!root) {
@@ -16,6 +16,8 @@ const projectDir = root.dataset.projectDir || "";
 const wsPath = root.dataset.wsPath || "/ws";
 let bindSessionId = "";
 let promptValue = "";
+let discoveryQuery = "";
+let discoveredSessions: SessionDiscoveryItem[] = [];
 
 function tokenStorageKey() {
   return `kfc-chat.token.${location.pathname}`;
@@ -36,6 +38,13 @@ async function copyText(text: string, successMessage: string) {
   } catch (err) {
     setStatus(err instanceof Error ? err.message : String(err));
   }
+}
+
+async function loadDiscovery(query = "") {
+  discoveryQuery = query;
+  const payload = await fetchSessions(query);
+  discoveredSessions = payload.sessions || [];
+  rerender();
 }
 
 async function loadBootstrap() {
@@ -119,6 +128,7 @@ async function connect() {
   try {
     await verifyToken();
     await loadBootstrap();
+    await loadDiscovery("");
     connectWebSocket();
   } catch (err) {
     setStatus(err instanceof Error ? err.message : String(err));
@@ -149,8 +159,29 @@ async function bindFromInput() {
     session.value = payload.session || session.value;
     bindSessionId = "";
     await loadBootstrap();
-    rerender();
+    await loadDiscovery("");
     setStatus("Codex session bound.");
+  } catch (err) {
+    setStatus(err instanceof Error ? err.message : String(err));
+  }
+}
+
+async function bindFromDiscovery(sessionId: string) {
+  try {
+    const payload = await bindSession(sessionId);
+    session.value = payload.session || session.value;
+    await loadBootstrap();
+    await loadDiscovery("");
+    setStatus(`Bound Codex session ${payload.session?.bound_session?.session_id || ""}.`);
+  } catch (err) {
+    setStatus(err instanceof Error ? err.message : String(err));
+  }
+}
+
+async function doDiscoverSessions(nextQuery = "") {
+  try {
+    await loadDiscovery(nextQuery);
+    setStatus(`Found ${discoveredSessions.length} session(s).`);
   } catch (err) {
     setStatus(err instanceof Error ? err.message : String(err));
   }
@@ -166,6 +197,7 @@ async function doReveal(targetName: "file" | "folder") {
 }
 
 function App(props: { session: ChatSessionPayload | null }) {
+  const canBind = Boolean(props.session?.bound_session?.can_bind);
   return (
     <div class="app-shell">
       <div class="workspace">
@@ -190,6 +222,12 @@ function App(props: { session: ChatSessionPayload | null }) {
         />
         <SessionPanel
           session={props.session}
+          discoveryItems={discoveredSessions}
+          discoveryQuery={discoveryQuery}
+          canBind={canBind}
+          onDiscoverySearch={(value) => { void doDiscoverSessions(value); }}
+          onDiscoveryQueryInput={(value) => { discoveryQuery = value; rerender(); }}
+          onDiscoveryBind={(sessionId) => { void bindFromDiscovery(sessionId); }}
           onCopyResume={() => void copyText(props.session?.bound_session?.manual_resume_command || "", "Manual resume command copied.")}
           onCopySessionId={() => void copyText(props.session?.bound_session?.session_id || "", "Session ID copied.")}
           onCopySessionPath={() => void copyText(props.session?.bound_session?.session_path || "", "Session path copied.")}

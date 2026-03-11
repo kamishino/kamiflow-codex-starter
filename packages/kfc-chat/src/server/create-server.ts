@@ -5,8 +5,10 @@ import { createFeatureServer } from "../../../kfc-web-runtime/dist/feature-serve
 import {
   appendTranscriptEntry,
   bindCodexSession,
+  defaultSessionsRoot,
   buildTranscriptDisplayBlocks,
   describeCodexResult,
+  listAvailableSessions,
   ensureChatRuntimeSession,
   hydrateTranscriptFromCodex,
   loadChatSession,
@@ -235,6 +237,18 @@ export async function registerKfcChatFeature(fastify: any, options: Record<strin
       if (denied) return denied;
       await refreshBoundSession();
       return buildSessionPayload();
+    },
+    sessions: async (request: any, reply: any) => {
+      const denied = await requireAuth(request, reply);
+      if (denied) return denied;
+      const query = String(request.query?.query || "").trim();
+      const date = String(request.query?.date || request.query?.datePath || "").trim().replaceAll("-", "/");
+      const limit = Number(request.query?.limit || "");
+      return await listAvailableSessions(sessionsRoot || defaultSessionsRoot(), {
+        query,
+        date,
+        limit
+      });
     },
     transcript: async (request: any, reply: any) => {
       const denied = await requireAuth(request, reply);

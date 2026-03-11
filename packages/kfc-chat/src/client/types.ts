@@ -55,4 +55,31 @@ export interface ChatSessionPayload {
 }
 
 export interface SessionResponse extends ChatSessionPayload {}
+export interface SessionDiscoveryPreview {
+  role: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface SessionDiscoveryItem {
+  session_id: string;
+  file_name: string;
+  file_path: string;
+  relative_path: string;
+  date_path: string;
+  bytes: number;
+  modified_at: string;
+  preview_text: string;
+  preview: SessionDiscoveryPreview[];
+}
+
+export interface SessionDiscoveryResponse {
+  sessions_root: string;
+  query: string;
+  date: string;
+  limit: number;
+  total_matches: number;
+  sessions: SessionDiscoveryItem[];
+}
+
 export interface TranscriptResponse { items: TranscriptBlock[] }

@@ -65,10 +65,21 @@ V1 supports:
 
 - one active bound Codex session per project
 - token-protected browser UI
+- session discovery for nearby `~/.codex/sessions` with query filtering
 - WebSocket live updates
 - `codex exec resume <SESSION_ID> <prompt>` prompt execution
 - mirrored local transcript cache plus Codex session tail hydration
 - manual `codex resume <SESSION_ID>` handoff for interactive terminal continuation
+
+## Session Discovery in Chat
+
+From the chat page, use the discovery panel to:
+
+- list nearby `~/.codex/sessions` files
+- search by session id, filename, path, or recent preview text
+- click **Bind** to attach a discovered session to this project
+
+The legacy manual `kfc-chat bind --session-id ...` flow remains available.
 
 V1 does not support:
 

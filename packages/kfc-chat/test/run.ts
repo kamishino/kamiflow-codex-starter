@@ -310,6 +310,55 @@ await runCase("server exposes onboarding when the client session file is missing
   });
 });
 
+await runCase("server exposes discoverable sessions with auth and query filtering", async () => {
+  await withTempDir(async (tempDir) => {
+    const projectDir = path.join(tempDir, "project");
+    const sessionsRoot = path.join(tempDir, "sessions");
+    await seedProject(projectDir);
+    await writeSessionFile(sessionsRoot, "019-chat-alpha", [
+      { role: "assistant", text: "Alpha preview.", updated_at: "2026-03-08T00:01:00.000Z" }
+    ]);
+    await writeSessionFile(sessionsRoot, "019-chat-bravo", [
+      { role: "assistant", text: "Bravo preview.", updated_at: "2026-03-08T00:02:00.000Z" }
+    ]);
+
+    const server = await createKfcChatServer({
+      projectDir,
+      sessionsRoot,
+      host: "127.0.0.1",
+      port: 0,
+      token: "chat-token"
+    });
+    await server.ready();
+    const listener = await server.listen();
+
+    const unauthorized = await fetch(`${listener.url}/api/chat/sessions`);
+    assert.equal(unauthorized.status, 401);
+    const unauthorizedBody = await unauthorized.text();
+    assert.match(unauthorizedBody, /Unauthorized/);
+
+    const all = await fetch(`${listener.url}/api/chat/sessions`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    assert.equal(all.status, 200);
+    const allPayload = await all.json();
+    assert.equal(allPayload.total_matches, 2);
+    const allIds = (allPayload.sessions || []).map((item: any) => item.session_id).sort();
+    assert.deepEqual(allIds, ["019-chat-alpha", "019-chat-bravo"]);
+
+    const alpha = await fetch(`${listener.url}/api/chat/sessions?query=alpha`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    assert.equal(alpha.status, 200);
+    const alphaPayload = await alpha.json();
+    assert.equal(alphaPayload.total_matches, 1);
+    assert.equal(alphaPayload.sessions[0].session_id, "019-chat-alpha");
+    assert.equal(alphaPayload.sessions[0].preview_text.includes("Alpha preview."), true);
+
+    await server.close();
+  });
+});
+
 await runCase("server binds an unbound project runtime from the browser", async () => {
   await withTempDir(async (tempDir) => {
     const projectDir = path.join(tempDir, "project");
@@ -350,6 +399,13 @@ await runCase("server binds an unbound project runtime from the browser", async 
     assert.equal(bindPayload.session.bound_session.bound, true);
     assert.equal(bindPayload.session.bound_session.session_id, "019-chat-delta");
     assert.equal(bindPayload.session.bound_session.session_path, sessionPath);
+    const discovered = await fetch(`${listener.url}/api/chat/sessions?query=019-chat-delta`, {
+      headers: { Authorization: "Bearer chat-token" }
+    });
+    assert.equal(discovered.status, 200);
+    const discoveredPayload = await discovered.json();
+    assert.equal(discoveredPayload.total_matches, 1);
+    assert.equal(discoveredPayload.sessions[0].session_id, "019-chat-delta");
 
     await server.close();
   });

@@ -1,5 +1,5 @@
 import { token } from "./state";
-import type { SessionResponse, TranscriptResponse } from "./types";
+import type { SessionDiscoveryResponse, SessionResponse, TranscriptResponse } from "./types";
 
 function rootEl(): HTMLElement | null {
   return document.querySelector<HTMLElement>("#app-root");
@@ -37,6 +37,15 @@ export async function fetchJson<T>(url: string, options: RequestInit = {}): Prom
 
 export function fetchSession() {
   return fetchJson<SessionResponse>(apiBase() + "/session");
+}
+
+export function fetchSessions(query = "") {
+  const params = new URLSearchParams();
+  if (query && query.trim()) {
+    params.set("query", query.trim());
+  }
+  const queryString = params.toString();
+  return fetchJson<SessionDiscoveryResponse>(`${apiBase()}/sessions${queryString ? `?${queryString}` : ""}`);
 }
 
 export function fetchTranscript() {

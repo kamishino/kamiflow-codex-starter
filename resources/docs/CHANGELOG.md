@@ -5,6 +5,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-11
 
+- Added chat session discovery and one-click bind for the hosted `/chat` surface: users can search `~/.codex/sessions` from the browser and bind directly without manually copying IDs.
 - Added balanced-route observability for Kami Flow runs via normalized runlog events, route-guardrail summary reporting, and a new `verify:route-health` governance gate.
 - Added a simple pre-brainstorm option to Kami Flow Start: explicit `simple` mode path with shorter questioning and compact START_CONTEXT handoff metadata.
 - Added route-health report mode and explicit `kfc-run` telemetry normalization for `run_state` and `phase`, plus a `route-health:report` convenience script.

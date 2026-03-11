@@ -97,6 +97,7 @@ await runCase("shell serves routed plan, session, and chat pages with shell-owne
     assert.match(chatHtml, /\/assets\/chat\.js/);
     assert.match(chatHtml, /\/assets\/chat\.css/);
     assert.match(chatHtml, new RegExp(path.basename(tmpDir).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+    assert.equal(listening.urls.chat.includes("token=test-token"), true);
   });
 });
 
