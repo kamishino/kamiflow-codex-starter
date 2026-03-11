@@ -19,6 +19,7 @@ Use this route for quality verification and release-readiness decisions.
 4. Map each validation command to its outcome.
 5. Review docs impact for workflow, onboarding, and durable user-facing changes.
    - refresh tracked docs when required
+   - when workflow-surface files changed, review `AGENTS.md` for operating-contract drift even if governance only emits a warning
    - keep private project memory on the `.kfc/LESSONS.md` and `.local/kfc-lessons/` lane
    - generated root mirrors should be refreshed through the docs sync path before commit-safe completion
 6. Decide pass or block.

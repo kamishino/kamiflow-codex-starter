@@ -164,6 +164,7 @@ Pick mode before executing route logic:
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
 - At check/closeout, review docs impact for workflow, onboarding, and durable user-facing changes; refresh tracked docs and generated mirrors before claiming commit-safe completion.
+- When workflow-surface files changed, review `AGENTS.md` for operating-contract drift even if docs-freshness only emits a warning.
 - Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`; do not move private lessons into tracked repo docs.
 
 ## Smooth Flow Checklist

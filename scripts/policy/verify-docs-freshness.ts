@@ -10,6 +10,14 @@ type Rule = {
   requiredDocs: string[];
 };
 
+type WarningRule = {
+  id: string;
+  description: string;
+  triggers: string[];
+  reviewDoc: string;
+  message: string;
+};
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT_DIR = path.resolve(__dirname, "../../..");
@@ -73,6 +81,26 @@ const RULES: Rule[] = [
       "packages/kfc-web/src/"
     ],
     requiredDocs: ["resources/docs/CHANGELOG.md", "CHANGELOG.md"]
+  }
+];
+
+const WARNING_RULES: WarningRule[] = [
+  {
+    id: "agents-review",
+    description: "Workflow-surface changes should trigger an AGENTS.md operating-contract review.",
+    triggers: [
+      "src/commands/flow.ts",
+      "src/commands/run.ts",
+      "src/commands/client.ts",
+      "src/lib/flow-policy.ts",
+      "src/lib/plan-lifecycle.ts",
+      "scripts/git-hooks/",
+      "scripts/policy/",
+      "resources/skills/kamiflow-core/",
+      "resources/rules/"
+    ],
+    reviewDoc: "AGENTS.md",
+    message: "Review `AGENTS.md` for operating-contract drift because workflow-surface files changed."
   }
 ];
 
@@ -197,6 +225,7 @@ function read(relPath: string) {
 
 try {
   const errors: string[] = [];
+  const warnings: string[] = [];
   const changedPaths = collectChangedPaths(process.argv.slice(2));
   const changedSet = new Set(changedPaths);
 
@@ -223,11 +252,28 @@ try {
     }
   }
 
+  for (const rule of WARNING_RULES) {
+    const triggeredPaths = changedPaths.filter((candidate) =>
+      rule.triggers.some((pattern) => pathMatches(candidate, pattern))
+    );
+    if (triggeredPaths.length === 0 || changedSet.has(rule.reviewDoc)) {
+      continue;
+    }
+
+    warnings.push(
+      `[agents-review] ${rule.id}: ${rule.message} Triggered by: ${triggeredPaths.slice(0, 5).join(", ")}`
+    );
+  }
+
   if (errors.length > 0) {
     for (const line of errors) {
       console.error(line);
     }
     process.exit(1);
+  }
+
+  for (const line of warnings) {
+    console.warn(line);
   }
 
   console.log("[docs-freshness] OK");
