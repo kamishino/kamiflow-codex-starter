@@ -34,6 +34,12 @@ From the root of the external client repository (new/existing folder, not `kamif
 kfc client --force
 ```
 
+For a calm read-only re-entry check in an existing client repo:
+
+```bash
+kfc client status --project .
+```
+
 `kfc client` prints doc and quick-start hints from the active install location (project-level `resourcesDir` or package resources fallback), so the exact doc paths can vary by environment.
 
 `kfc client` is the reusable client-project entrypoint. It starts with an inline inspection pass, auto-initializes a minimal `package.json` when the target folder is truly empty, creates or refreshes the root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private client lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, runs one smart-recovery cycle only for recoverable bootstrap issues, and auto-launches:
@@ -77,7 +83,7 @@ Important first-run behavior:
 
 This flow is designed for no user reminder loop after bootstrap. Codex should continue from the generated brief and the project-local skill without waiting for routine chat reminders.
 The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
-Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract. It now includes the client workflow command map plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs/closeout review. Read `.kfc/CODEX_READY.md` when present; otherwise continue from the active plan plus lessons.
+Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract. It now includes the client workflow command map for `kfc client`, `kfc client status --project .`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`, plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs/closeout review. Read `.kfc/CODEX_READY.md` when present; otherwise continue from the active plan plus lessons.
 
 To manage private project lessons after bootstrap:
 

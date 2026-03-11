@@ -114,6 +114,20 @@ type ClientPlanStateSummary = {
   next: string;
   nextSteps: string[];
 };
+type ClientStatusPlanState = ClientPlanStateKind | "no_active_plan" | "unknown";
+type ClientStatusInstallSource = "link" | "git" | "file_or_tarball" | "unknown";
+type ClientStatusSummary = {
+  status: ClientInspectionStatus;
+  repoShape: ClientRepoShape;
+  planState: ClientStatusPlanState;
+  readyBrief: "present" | "absent";
+  installSource: ClientStatusInstallSource;
+  installed: boolean;
+  reason: string;
+  next: string;
+  recovery: string;
+  nextSteps: string[];
+};
 type ClientSetupCompletionKind = "ready_for_work" | "ready_for_cleanup" | "incomplete";
 type ClientSetupCompletionResult = {
   complete: boolean;
@@ -167,6 +181,7 @@ function usage() {
   info("  kfc client bootstrap --project . --profile client --port 4310 --no-launch-codex");
   info("  kfc client doctor --project .");
   info("  kfc client doctor --project . --fix");
+  info("  kfc client status --project .");
   info("  kfc client update --project .");
   info("  kfc client update --project . --apply");
   info("  kfc client update --project . --from <git-url|folder|tgz> --apply");
@@ -737,6 +752,36 @@ function printClientNextCommandHints(planState: ClientPlanStateSummary) {
   }
 }
 
+function isMissingActivePlanError(err: unknown) {
+  return err instanceof Error && err.message.includes("Cannot find an active plan in .local/plans.");
+}
+
+function normalizeClientStatusInstallSource(sourceType: unknown): ClientStatusInstallSource {
+  const normalized = String(sourceType || "").trim();
+  if (normalized === "link" || normalized === "git" || normalized === "file_or_tarball") {
+    return normalized;
+  }
+  return "unknown";
+}
+
+function printClientStatusSummary(summary: ClientStatusSummary) {
+  const writer = summary.status === "BLOCK" ? error : info;
+  writer(`Client Status: ${summary.status}`);
+  writer(`Repo Shape: ${summary.repoShape}`);
+  writer(`Plan State: ${summary.planState}`);
+  writer(`Ready Brief: ${summary.readyBrief}`);
+  writer(`Install Source: ${summary.installSource}`);
+  writer(`Installed: ${summary.installed ? "yes" : "no"}`);
+  writer(`Status Reason: ${summary.reason}`);
+  writer(`Next: ${summary.next}`);
+  for (const step of summary.nextSteps.slice(1)) {
+    writer(`Then: ${step}`);
+  }
+  if (summary.status === "BLOCK" && summary.recovery) {
+    writer(`Recovery: ${summary.recovery}`);
+  }
+}
+
 function summarizeInspectionPlannedChanges(changes: string[]) {
   const compact = changes.map((item) => String(item || "").trim()).filter(Boolean);
   if (compact.length === 0) {
@@ -1001,6 +1046,7 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     "",
     "## Workflow Commands",
     "- `kfc client`: reusable setup, handoff refresh, and normal startup entrypoint.",
+    "- `kfc client status --project .`: read-only repo status, plan state, handoff presence, and next-action summary.",
     "- `kfc plan validate --project .`: validate the active plan file when plan state looks suspicious.",
     "- `kfc flow ensure-plan --project .`: recover a missing or inconsistent active plan scaffold.",
     "- `kfc flow ready --project .`: verify readiness only after the active plan is already build-ready.",
@@ -2034,6 +2080,133 @@ async function detectClientInstallSource(projectDir) {
   };
 }
 
+async function describeClientStatus(projectDir, options = {}): Promise<ClientStatusSummary> {
+  const inspection = await inspectClientProject(projectDir, options);
+  const packageJsonExists = fs.existsSync(projectJsonPath(projectDir));
+  const readyBrief: "present" | "absent" = fs.existsSync(resolveClientReadyPath(projectDir)) ? "present" : "absent";
+  const agentsPath = resolveClientAgentsPath(projectDir);
+  const agentsText = fs.existsSync(agentsPath) ? await fsp.readFile(agentsPath, "utf8") : "";
+  const rulesPath = path.join(projectDir, ".codex", "rules", RULES_FILE_NAME);
+  const skillPath = resolveClientSkillArtifactPath(projectDir);
+  const lessonsPath = resolveClientLessonsPath(projectDir);
+  const rawLessons = resolveClientRawLessonPaths(projectDir);
+
+  let installSource: ClientStatusInstallSource = "unknown";
+  let installed = false;
+  if (packageJsonExists) {
+    try {
+      const detection = await detectClientInstallSource(projectDir);
+      installSource = normalizeClientStatusInstallSource(detection.sourceType);
+      installed = detection.installed;
+    } catch {
+      installSource = "unknown";
+    }
+  }
+
+  let planState: ClientStatusPlanState = "unknown";
+  let reason = inspection.reason;
+  let next = inspection.next || "kfc client";
+  let recovery = inspection.recovery === "None" ? "" : inspection.recovery;
+  let nextSteps = next ? [next] : [];
+
+  const runtimeIssues: string[] = [];
+  if (!packageJsonExists) {
+    runtimeIssues.push("package.json is missing");
+  }
+  if (!fs.existsSync(agentsPath) || !hasClientAgentsManagedBlock(agentsText)) {
+    runtimeIssues.push("client AGENTS managed block is missing");
+  }
+  if (!fs.existsSync(rulesPath)) {
+    runtimeIssues.push("project rules file is missing");
+  }
+  if (!fs.existsSync(skillPath)) {
+    runtimeIssues.push("project-local KFC skill is missing");
+  }
+  if (!fs.existsSync(lessonsPath)) {
+    runtimeIssues.push("client lessons file is missing");
+  }
+  if (!fs.existsSync(rawLessons.incidentsDir) || !fs.existsSync(rawLessons.decisionsDir)) {
+    runtimeIssues.push("raw lesson directories are missing");
+  }
+
+  try {
+    const plan = await describeClientPlanState(projectDir);
+    planState = plan.kind;
+    reason = plan.summary;
+    next = plan.next;
+    recovery = "";
+    nextSteps = plan.nextSteps;
+  } catch (err) {
+    if (isMissingActivePlanError(err)) {
+      planState = "no_active_plan";
+      if (readyBrief === "present") {
+        runtimeIssues.push("ready brief exists but no active plan was found");
+        reason = "Ready handoff exists but the active plan is missing.";
+        next = "kfc flow ensure-plan --project .";
+        recovery = "kfc flow ensure-plan --project .";
+        nextSteps = [next];
+      } else {
+        reason = "No active plan is present. The client repo is idle and ready for a new goal.";
+        next = "kfc client --goal \"<goal>\"";
+        recovery = "";
+        nextSteps = [next];
+      }
+    } else {
+      runtimeIssues.push("active plan state could not be read");
+      reason = err instanceof Error ? err.message : "Active plan state could not be read.";
+      next = "kfc client doctor --project . --fix";
+      recovery = "kfc client doctor --project . --fix";
+      nextSteps = [next];
+    }
+  }
+
+  if (inspection.inspectionStatus === "BLOCK") {
+    return {
+      status: "BLOCK",
+      repoShape: inspection.repoShape,
+      planState,
+      readyBrief,
+      installSource,
+      installed,
+      reason: inspection.reason,
+      next: inspection.next || next,
+      recovery: inspection.recovery === "None" ? recovery : inspection.recovery,
+      nextSteps: [inspection.next || next].filter(Boolean)
+    };
+  }
+
+  if (runtimeIssues.length > 0) {
+    const statusRecovery = runtimeIssues.length === 1 && runtimeIssues[0] === "ready brief exists but no active plan was found"
+      ? "kfc flow ensure-plan --project ."
+      : "kfc client --force --no-launch-codex";
+    return {
+      status: "BLOCK",
+      repoShape: inspection.repoShape,
+      planState,
+      readyBrief,
+      installSource,
+      installed,
+      reason: `Client runtime is incomplete. Missing or inconsistent: ${runtimeIssues.join("; ")}.`,
+      next: statusRecovery,
+      recovery: statusRecovery,
+      nextSteps: [statusRecovery]
+    };
+  }
+
+  return {
+    status: "PASS",
+    repoShape: inspection.repoShape,
+    planState,
+    readyBrief,
+    installSource,
+    installed,
+    reason,
+    next,
+    recovery,
+    nextSteps
+  };
+}
+
 function buildUpdateManualRecovery(parsed, reason) {
   if (parsed.from) {
     return `kfc client update --project . --from ${parsed.from} --apply`;
@@ -2706,6 +2879,16 @@ async function runClientDoctorOnly(options) {
   return postFixOk ? 0 : 1;
 }
 
+async function runClientStatus(options) {
+  const summary = await describeClientStatus(options.project, options);
+  printClientStatusSummary(summary);
+  printClientDocsHints(options.project);
+  if (summary.status !== "BLOCK") {
+    info("Client status is read-only. Use `kfc client`, `kfc client doctor --project . --fix`, or `kfc client update --project .` only when action is needed.");
+  }
+  return summary.status === "BLOCK" ? 1 : 0;
+}
+
 async function runClientDoctorChecks(options) {
   let ok = await assertProjectPreflight(options.project);
   if (!ok) {
@@ -3117,6 +3300,15 @@ export async function runClient(options) {
 
   if (parsed.subcommand === "doctor") {
     return await runClientDoctorOnly(parsed);
+  }
+
+  if (parsed.subcommand === "status") {
+    try {
+      return await runClientStatus(parsed);
+    } catch (err) {
+      error(err instanceof Error ? err.message : String(err));
+      return 1;
+    }
   }
 
   if (parsed.subcommand === "bootstrap") {

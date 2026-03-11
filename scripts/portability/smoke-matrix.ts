@@ -15,7 +15,7 @@ type CaseSpec = {
   key: string;
   title: string;
   seed(projectDir: string): void;
-  expect(projectDir: string, stdout: string, stderr: string, code: number): string[];
+  expect(projectDir: string, stdout: string, stderr: string, code: number, statusRun: ReturnType<typeof runClientStatus>): string[];
 };
 
 function usage() {
@@ -81,6 +81,24 @@ function runClient(projectDir: string) {
   };
 }
 
+function runClientStatus(projectDir: string) {
+  const result = spawnSync(
+    NODE,
+    [KFC_BIN, "client", "status", "--project", projectDir],
+    {
+      cwd: ROOT_DIR,
+      encoding: "utf8",
+      shell: false
+    }
+  );
+  return {
+    code: result.status ?? 1,
+    stdout: String(result.stdout || ""),
+    stderr: String(result.stderr || ""),
+    output: `${String(result.stdout || "")}\n${String(result.stderr || "")}`.trim()
+  };
+}
+
 function assertContains(text: string, pattern: string, label: string, errors: string[]) {
   if (!text.includes(pattern)) {
     errors.push(`Missing ${label}: ${pattern}`);
@@ -100,15 +118,24 @@ const CASES: CaseSpec[] = [
     seed(projectDir) {
       ensureDir(projectDir);
     },
-    expect(projectDir, stdout, stderr, code) {
+    expect(projectDir, stdout, stderr, code, statusRun) {
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
+      const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
       if (code !== 0) {
         errors.push(`Expected PASS but exit code was ${code}.`);
+      }
+      if (statusRun.code !== 0) {
+        errors.push(`Expected status PASS but exit code was ${statusRun.code}.`);
       }
       assertContains(output, "Inspection Status: PASS", "inspection status", errors);
       assertContains(output, "Repo Shape: empty_new_repo", "repo shape", errors);
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
+      assertContains(statusOutput, "Client Status: PASS", "client status", errors);
+      assertContains(statusOutput, "Plan State:", "plan state", errors);
+      assertContains(statusOutput, "Ready Brief: present", "ready brief", errors);
+      assertContains(statusOutput, "Install Source:", "install source", errors);
+      assertContains(statusOutput, "Next:", "next action", errors);
       assertPathExists(path.join(projectDir, "package.json"), "package.json", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
@@ -141,15 +168,23 @@ const CASES: CaseSpec[] = [
       });
       writeText(path.join(projectDir, "src", "index.js"), "console.log('hello');\n");
     },
-    expect(projectDir, stdout, stderr, code) {
+    expect(projectDir, stdout, stderr, code, statusRun) {
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
+      const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
       if (code !== 0) {
         errors.push(`Expected PASS but exit code was ${code}.`);
+      }
+      if (statusRun.code !== 0) {
+        errors.push(`Expected status PASS but exit code was ${statusRun.code}.`);
       }
       assertContains(output, "Inspection Status: PASS", "inspection status", errors);
       assertContains(output, "Repo Shape: needs_minor_fixes", "repo shape", errors);
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
+      assertContains(statusOutput, "Client Status: PASS", "client status", errors);
+      assertContains(statusOutput, "Plan State:", "plan state", errors);
+      assertContains(statusOutput, "Ready Brief: present", "ready brief", errors);
+      assertContains(statusOutput, "Install Source:", "install source", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
       const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))
@@ -187,15 +222,23 @@ const CASES: CaseSpec[] = [
       writeText(path.join(projectDir, "AGENTS.md"), "# Team Notes\n\n- Preserve this note.\n");
       writeText(path.join(projectDir, ".kfc", "LESSONS.md"), "# Client Lessons\n");
     },
-    expect(projectDir, stdout, stderr, code) {
+    expect(projectDir, stdout, stderr, code, statusRun) {
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
+      const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
       if (code !== 0) {
         errors.push(`Expected PASS but exit code was ${code}.`);
+      }
+      if (statusRun.code !== 0) {
+        errors.push(`Expected status PASS but exit code was ${statusRun.code}.`);
       }
       assertContains(output, "Inspection Status: PASS", "inspection status", errors);
       assertContains(output, "Repo Shape: needs_minor_fixes", "repo shape", errors);
       assertContains(output, "Apply Mode: auto", "apply mode", errors);
+      assertContains(statusOutput, "Client Status: PASS", "client status", errors);
+      assertContains(statusOutput, "Plan State:", "plan state", errors);
+      assertContains(statusOutput, "Ready Brief: present", "ready brief", errors);
+      assertContains(statusOutput, "Install Source:", "install source", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".agents", "skills", "kamiflow-core", "SKILL.md"), "project-local skill", errors);
       const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))
@@ -218,17 +261,23 @@ const CASES: CaseSpec[] = [
       ensureDir(projectDir);
       writeText(path.join(projectDir, "README.md"), "# risky repo\n");
     },
-    expect(projectDir, stdout, stderr, code) {
+    expect(projectDir, stdout, stderr, code, statusRun) {
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
+      const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
       if (code === 0) {
         errors.push("Expected BLOCK but exit code was 0.");
+      }
+      if (statusRun.code === 0) {
+        errors.push("Expected status BLOCK but exit code was 0.");
       }
       assertContains(output, "Inspection Status: BLOCK", "inspection status", errors);
       assertContains(output, "Repo Shape: risky", "repo shape", errors);
       assertContains(output, "Apply Mode: blocked", "apply mode", errors);
       assertContains(output, "Onboarding Status: BLOCK", "onboarding block", errors);
       assertContains(output, "Recovery: npm init -y", "recovery command", errors);
+      assertContains(statusOutput, "Client Status: BLOCK", "client status", errors);
+      assertContains(statusOutput, "Recovery: npm init -y", "status recovery", errors);
       if (fs.existsSync(path.join(projectDir, ".kfc"))) {
         errors.push("Risky repo mutated before block (.kfc exists).");
       }
@@ -293,12 +342,13 @@ async function main() {
     const projectDir = path.join(baseDir, spec.key);
     spec.seed(projectDir);
     const run = runClient(projectDir);
-    const errors = spec.expect(projectDir, run.stdout, run.stderr, run.code);
+    const statusRun = runClientStatus(projectDir);
+    const errors = spec.expect(projectDir, run.stdout, run.stderr, run.code, statusRun);
     results.push({
       spec,
       projectDir,
       code: run.code,
-      output: run.output,
+      output: `${run.output}\n\n[client status]\n${statusRun.output}`,
       errors
     });
   }

@@ -553,6 +553,51 @@ async function main() {
       );
       steps.push(
         runStep(
+          "kfc client status",
+          NODE,
+          [NPM_CLI, "exec", "--no-install", "--", "kfc", "client", "status", "--project", "."],
+          projectDir
+        )
+      );
+      const statusStep = steps.at(-1);
+      const statusOutput = `${statusStep?.stdout || ""}\n${statusStep?.stderr || ""}`;
+      steps.push({
+        title: "verify client status contract",
+        cwd: projectDir,
+        command: "assert client status output contains summary contract",
+        ok:
+          statusStep?.ok === true &&
+          statusOutput.includes("Client Status: PASS") &&
+          statusOutput.includes("Plan State:") &&
+          statusOutput.includes("Ready Brief:") &&
+          statusOutput.includes("Install Source:") &&
+          statusOutput.includes("Next:"),
+        statusCode:
+          statusStep?.ok === true &&
+          statusOutput.includes("Client Status: PASS") &&
+          statusOutput.includes("Plan State:") &&
+          statusOutput.includes("Ready Brief:") &&
+          statusOutput.includes("Install Source:") &&
+          statusOutput.includes("Next:")
+            ? 0
+            : 1,
+        durationMs: 0,
+        stdout:
+          statusStep?.ok === true && statusOutput.includes("Client Status: PASS")
+            ? "client status contract present"
+            : "",
+        stderr:
+          statusStep?.ok === true &&
+          statusOutput.includes("Client Status: PASS") &&
+          statusOutput.includes("Plan State:") &&
+          statusOutput.includes("Ready Brief:") &&
+          statusOutput.includes("Install Source:") &&
+          statusOutput.includes("Next:")
+            ? ""
+            : "Missing client status contract fields."
+      });
+      steps.push(
+        runStep(
           "kfc client rerun --no-launch-codex",
           NODE,
           [
