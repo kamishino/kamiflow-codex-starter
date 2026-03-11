@@ -63,16 +63,22 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "private gitignore prep", regex: /Prepended private ignore entries:|Private ignore entries already present:/ }
   ],
   "resources/templates/client-agents-shared-contract.md": [
-    { label: "workflow contract section", regex: /## Workflow Contract/ },
+    { label: "plan lifecycle contract section", regex: /## Plan Lifecycle Contract/ },
     { label: "plan resolution guidance", regex: /Resolve one active non-done plan before implementation-bearing work\./ },
     { label: "plan touch guidance", regex: /Touch the active plan at route start and before final response/ },
-    { label: "compact response guidance", regex: /`State`, `Doing`, and `Next`/ },
-    { label: "auto check guidance", regex: /Check:\s*PASS\|BLOCK/ },
+    { label: "plan archive guidance", regex: /Archive only on `check` PASS/ },
+    { label: "gitignored local guidance", regex: /\.local\/` is gitignored; do not use `git status` as proof/ },
     { label: "autonomous execution section", regex: /## Autonomous Execution/ },
     { label: "evidence gate section", regex: /## Evidence Gate/ },
     { label: "unknown guidance", regex: /mark the result `Unknown`/ },
+    { label: "smooth flow section", regex: /## Smooth Flow Protocol/ },
+    { label: "route discipline guidance", regex: /execute exactly one route per response/ },
+    { label: "compact response guidance", regex: /`State`, `Doing`, and `Next`/ },
+    { label: "auto check guidance", regex: /Check:\s*PASS\|BLOCK/ },
     { label: "docs and closeout section", regex: /## Docs and Closeout/ },
     { label: "agents review guidance", regex: /review `AGENTS\.md` for operating-contract drift/ },
+    { label: "markdown readability section", regex: /## Markdown Readability Policy/ },
+    { label: "markdown determinism guidance", regex: /machine-sensitive fields, and parse-sensitive text deterministic/ },
     { label: "blocker contract section", regex: /## Blocker Contract/ },
     { label: "recovery guidance", regex: /`Recovery: <exact command>`/ }
   ]

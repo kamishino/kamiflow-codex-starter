@@ -117,8 +117,11 @@ const CASES: CaseSpec[] = [
         : "";
       assertContains(agents, "<!-- KFC:BEGIN MANAGED -->", "managed AGENTS block", errors);
       assertContains(agents, "If `.kfc/CODEX_READY.md` exists", "evergreen AGENTS startup order", errors);
+      assertContains(agents, "## Plan Lifecycle Contract", "plan lifecycle contract section", errors);
       assertContains(agents, "## Evidence Gate", "evidence gate section", errors);
+      assertContains(agents, "## Smooth Flow Protocol", "smooth flow protocol section", errors);
       assertContains(agents, "## Docs and Closeout", "docs and closeout section", errors);
+      assertContains(agents, "## Markdown Readability Policy", "markdown readability section", errors);
       const ready = fs.existsSync(path.join(projectDir, ".kfc", "CODEX_READY.md"))
         ? fs.readFileSync(path.join(projectDir, ".kfc", "CODEX_READY.md"), "utf8")
         : "";
@@ -153,7 +156,9 @@ const CASES: CaseSpec[] = [
         ? fs.readFileSync(path.join(projectDir, "AGENTS.md"), "utf8")
         : "";
       assertContains(agents, "If `.kfc/CODEX_READY.md` exists", "evergreen AGENTS startup order", errors);
+      assertContains(agents, "## Plan Lifecycle Contract", "plan lifecycle contract section", errors);
       assertContains(agents, "## Evidence Gate", "evidence gate section", errors);
+      assertContains(agents, "## Smooth Flow Protocol", "smooth flow protocol section", errors);
       return errors;
     }
   },
@@ -198,7 +203,10 @@ const CASES: CaseSpec[] = [
         : "";
       assertContains(agents, "<!-- KFC:BEGIN MANAGED -->", "managed AGENTS block", errors);
       assertContains(agents, "If `.kfc/CODEX_READY.md` exists", "evergreen AGENTS startup order", errors);
+      assertContains(agents, "## Plan Lifecycle Contract", "plan lifecycle contract section", errors);
+      assertContains(agents, "## Smooth Flow Protocol", "smooth flow protocol section", errors);
       assertContains(agents, "## Docs and Closeout", "docs and closeout section", errors);
+      assertContains(agents, "## Markdown Readability Policy", "markdown readability section", errors);
       assertContains(agents, "Preserve this note.", "preserved custom AGENTS content", errors);
       return errors;
     }

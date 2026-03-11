@@ -5,6 +5,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-11
 
+- Expanded the client-installed `AGENTS.md` shared contract so every `kfc client` repo now gets portable Kami Flow Core sections for plan lifecycle, evidence recovery, smooth-flow routing, and lightweight markdown readability guidance.
 - Strengthened client-installed `AGENTS.md` so `kfc client` now injects a shared Kami Flow Core runtime contract for active-plan discipline, evidence gates, compact `State/Doing/Next` responses, blocker recovery, and docs/closeout review instead of only a thin command map.
 - Added a warning-only `AGENTS.md` review lane to docs-freshness/governance so workflow-surface Codex-CLI changes now remind maintainers to review the repo operating contract without failing the run when no contract update is needed.
 - Hardened `commit:codex` for restricted shells by letting the commit helper inject changed-file context into docs-freshness verification, avoiding a redundant Node-side Git spawn for that governance gate.

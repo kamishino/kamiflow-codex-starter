@@ -541,8 +541,11 @@ async function main() {
             "<!-- KFC:BEGIN MANAGED -->",
             "<!-- KFC:END MANAGED -->",
             "If `.kfc/CODEX_READY.md` exists",
+            "## Plan Lifecycle Contract",
             "## Evidence Gate",
+            "## Smooth Flow Protocol",
             "## Docs and Closeout",
+            "## Markdown Readability Policy",
             "`State`, `Doing`, and `Next`"
           ],
           projectDir
