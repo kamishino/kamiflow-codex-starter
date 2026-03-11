@@ -1,5 +1,6 @@
 import path from "node:path";
 import { createServer as createViteServer } from "vite";
+import { existsSync } from "node:fs";
 import { createFeatureServer } from "../../kfc-web-runtime/dist/feature-server.js";
 import { assetSetFromManifest, devAssetSet, loadManifest, sendBuiltAsset } from "./server/assets.js";
 import { loadBuiltInFeatureImplementations } from "./server/feature-implementations.js";
@@ -22,6 +23,22 @@ type KfcWebServerOptions = {
 
 function resolveRepoRoot(packageDir: string) {
   return path.resolve(packageDir, "..", "..");
+}
+
+function resolveViteConfigPath(packageDir: string) {
+  const candidates = [
+    path.join(packageDir, "vite.config.ts"),
+    path.join(packageDir, "vite.config.mjs"),
+    path.join(packageDir, "vite.config.js")
+  ];
+
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  throw new Error(`Could not resolve Vite config. Checked: ${candidates.join(", ")}`);
 }
 
 export async function createKfcWebServer(options: KfcWebServerOptions) {
@@ -51,8 +68,9 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
       if (options.skipVite) {
         return;
       }
+      const configFile = resolveViteConfigPath(packageDir);
       viteServer = await createViteServer({
-        configFile: path.join(packageDir, "vite.config.mjs"),
+        configFile,
         server: { host: "127.0.0.1", port: vitePort, strictPort: true }
       });
       await viteServer.listen();
