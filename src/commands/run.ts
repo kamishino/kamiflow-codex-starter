@@ -280,6 +280,58 @@ function compactText(value, max = 240) {
   return text.length > max ? `${text.slice(0, max - 3)}...` : text;
 }
 
+function normalizeRoutePhase(value, fallbackAction = "") {
+  const explicit = String(value || "").trim();
+  if (explicit) {
+    return explicit;
+  }
+  const normalizedAction = String(fallbackAction || "").trim().toLowerCase();
+  if (normalizedAction === "start") {
+    return "Brainstorm";
+  }
+  if (["plan", "research"].includes(normalizedAction)) {
+    return "Plan";
+  }
+  if (["build", "fix"].includes(normalizedAction)) {
+    return "Build";
+  }
+  if (normalizedAction === "check") {
+    return "Check";
+  }
+  if (normalizedAction === "done") {
+    return "Done";
+  }
+  return "Plan";
+}
+
+function normalizeRunState(eventType, status, exitCode) {
+  const normalizedType = String(eventType || "").toLowerCase();
+  if (normalizedType.includes("started")) {
+    return "RUNNING";
+  }
+  if (normalizedType.includes("completed")) {
+    return "SUCCESS";
+  }
+  if (normalizedType.includes("failed")) {
+    return "FAIL";
+  }
+
+  const normalizedStatus = String(status || "").toLowerCase();
+  if (["started", "running", "queued", "in_progress"].includes(normalizedStatus)) {
+    return "RUNNING";
+  }
+  if (["completed", "complete", "done", "success", "succeeded"].includes(normalizedStatus)) {
+    return "SUCCESS";
+  }
+  if (["failed", "fail", "error", "blocked"].includes(normalizedStatus)) {
+    return "FAIL";
+  }
+  if (Number.isInteger(Number(exitCode))) {
+    return Number(exitCode) === 0 ? "SUCCESS" : "FAIL";
+  }
+  return "IDLE";
+}
+
 type RunCounterMap = Record<string, number>;
 
 function incrementCounter(map: RunCounterMap, key: string) {
@@ -311,6 +363,21 @@ async function appendRunEvent(
     message: String(event.message || event.detail || `Route event for ${actionType}`),
     detail: String(event.detail || ""),
     updated_at: String(event.updated_at || new Date().toISOString()),
+    run_state: String(
+      event.run_state
+      || normalizeRunState(
+        event.event_type || "",
+        event.status || "",
+        event.exit_code
+      )
+    ),
+    phase: String(
+      event.phase
+      || normalizeRoutePhase(
+        event.phase || "",
+        event.selected_route || event.action_type || actionType || ""
+      )
+    ),
     ...(event.command ? { command: String(event.command) } : {}),
     ...(event.exit_code !== undefined ? { exit_code: Number(event.exit_code) } : {}),
     ...(event.error_code ? { error_code: String(event.error_code) } : {}),

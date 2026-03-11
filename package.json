@@ -82,6 +82,7 @@
     "verify:typescript-first": "npm run build:scripts && node dist/scripts/policy/verify-typescript-first.js",
     "verify:workspace-hygiene": "npm run build:scripts && node dist/scripts/policy/verify-workspace-hygiene.js",
     "verify:route-health": "npm run build:scripts && node dist/scripts/policy/verify-kamiflow-route-health.js",
+    "route-health:report": "npm run verify:route-health -- --report",
     "verify:docs-artifacts": "npm run build:scripts && node dist/scripts/docs/sync-doc-artifacts.js --verify",
     "verify:docs-freshness": "npm run build:scripts && node dist/scripts/policy/verify-docs-freshness.js",
     "verify:governance": "npm run verify:command-boundary && npm run verify:codex-client-contract && npm run verify:codex-intelligence && npm run verify:typescript-first && npm run verify:workspace-hygiene && npm run verify:docs-artifacts && npm run verify:docs-freshness && npm run verify:route-health",

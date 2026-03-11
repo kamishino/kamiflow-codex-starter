@@ -133,7 +133,8 @@ When route execution fails or context is incomplete, use this exact order:
 - `AGENTS.md` for operating contract changes
 - `resources/docs/ROADMAP.md` for repo direction/context changes
 - `resources/docs/CHANGELOG.md` for durable decisions
-- `scripts/policy/verify-kamiflow-route-health.ts` updates require note of route-health observability in this guide.
+- `resources/docs/CHANGELOG.md` for durable decisions.
+- `scripts/policy/verify-kamiflow-route-health.ts` updates should also call out route-health report-mode (`npm run route-health:report`) in this guide.
 - focused runbooks (`KFC_CHAT_RUNBOOK`, `KFC_SESSION_RUNBOOK`, `PORTABILITY_RUNBOOK`) when client or hosted entrypoint behavior changes
 - root generated mirrors via `npm run docs:sync`
 - Private memory lane:

@@ -9,10 +9,12 @@ const ROOT_DIR = path.resolve(__dirname, "../../..");
 type RunEvent = {
   event_type?: string;
   status?: string;
+  run_state?: string;
   run_id?: string;
   plan_id?: string;
   action_type?: string;
   source?: string;
+  phase?: string;
   guardrail?: string;
   route_confidence?: unknown;
   selected_route?: string;
@@ -29,6 +31,8 @@ type ParseError = string;
 const REQUIRED_FIELDS = [
   "event_type",
   "status",
+  "run_state",
+  "phase",
   "run_id",
   "plan_id",
   "action_type",
@@ -110,18 +114,94 @@ function validateEvent(
     }
   }
 
+  const runState = String(event.run_state || "").toUpperCase();
+  if (!["RUNNING", "SUCCESS", "FAIL", "IDLE"].includes(runState)) {
+    errors.push(toError(sourceLine, `invalid run_state: ${event.run_state}`, filePath));
+  }
+  if (String(event.phase || "").trim().length === 0) {
+    errors.push(toError(sourceLine, "phase must be a non-empty string", filePath));
+  }
+
   const routeConfidence = Number(event.route_confidence);
   if (!Number.isFinite(routeConfidence) || routeConfidence < 0 || routeConfidence > 5) {
     errors.push(toError(sourceLine, `route_confidence out of range: ${event.route_confidence}`, filePath));
   }
 }
 
+function parseArgs() {
+  const argv = process.argv.slice(2);
+  const allowed = new Set(["--report"]);
+  const normalized = argv.map((arg) => String(arg || "").toLowerCase());
+  const hasReport = normalized.includes("--report");
+  const unknown = normalized.filter((arg) => arg.startsWith("-") && !allowed.has(arg));
+  if (normalized.includes("--help") || normalized.includes("-h")) {
+    console.log("Usage: npm run verify:route-health [-- --report]");
+    console.log("  --report    emit machine-readable latest-run health summary to stdout.");
+    process.exit(0);
+  }
+  if (unknown.length > 0) {
+    console.error(`[route-health] unknown option: ${unknown[0]}`);
+    process.exit(2);
+  }
+  return {
+    report: hasReport
+  };
+}
+
+function buildLatestSummary(
+  latestFile: string | undefined,
+  latestRouteCounter: Counter,
+  latestGuardrailCounter: Counter,
+  latestRunEvents: Array<{ event: RunEvent; sourceLine: number; filePath: string }>
+) {
+  let latestSummaryEvent: RunEvent | undefined;
+  for (let index = latestRunEvents.length - 1; index >= 0; index -= 1) {
+    const candidate = latestRunEvents[index];
+    if (candidate?.event?.event_type === "route_health_summary") {
+      latestSummaryEvent = candidate.event;
+      break;
+    }
+  }
+  if (!latestSummaryEvent) {
+    return {
+      has_summary: false,
+      file: latestFile ? path.basename(latestFile) : "",
+      run_id: "",
+      status: "",
+      plan_id: "",
+      selected_route: "",
+      event_count: latestRunEvents.length,
+      event_type_counts: latestRouteCounter,
+      guardrail_counts: latestGuardrailCounter,
+      message: "",
+      detail: ""
+    };
+  }
+
+  return {
+    has_summary: true,
+    file: latestFile ? path.basename(latestFile) : "",
+    run_id: String(latestSummaryEvent.run_id || ""),
+    status: String(latestSummaryEvent.status || ""),
+    plan_id: String(latestSummaryEvent.plan_id || ""),
+    selected_route: String(latestSummaryEvent.selected_route || ""),
+    event_count: latestRunEvents.length,
+    event_type_counts: latestRouteCounter,
+    guardrail_counts: latestGuardrailCounter,
+    message: String(latestSummaryEvent.message || ""),
+    detail: String(latestSummaryEvent.detail || "")
+  };
+}
+
 function main() {
+  const args = parseArgs();
   const runsDir = path.join(ROOT_DIR, ".local", "runs");
   const routeCounter: Counter = {};
   const guardrailCounter: Counter = {};
   let hasLatestRunEvents = false;
   const errors: ParseError[] = [];
+  const latestRouteCounter: Counter = {};
+  const latestGuardrailCounter: Counter = {};
 
   if (!hasRunlogPath()) {
     console.log("[route-health] OK (no .local/runs found; nothing to validate)");
@@ -137,6 +217,7 @@ function main() {
   const ordered = files.sort((left, right) => right.updatedAt - left.updatedAt);
   const latestFile = ordered[0]?.filePath;
   let hasLatestSummary = false;
+  const latestRunEvents: Array<{ event: RunEvent; sourceLine: number; filePath: string }> = [];
 
   const managedEvents: Array<{ event: RunEvent; filePath: string }> = [];
   for (const item of ordered) {
@@ -152,6 +233,11 @@ function main() {
       if (filePath === latestFile && event.event_type === "route_health_summary") {
         hasLatestSummary = true;
       }
+      if (filePath === latestFile && isKamiflowRunEvent(event)) {
+        latestRunEvents.push({ event, filePath, sourceLine });
+        increment(latestRouteCounter, event.event_type || "unknown");
+        increment(latestGuardrailCounter, event.guardrail || "unknown");
+      }
       if (filePath === latestFile) {
         hasLatestRunEvents = true;
       }
@@ -166,7 +252,31 @@ function main() {
   }
 
   if (managedEvents.length === 0) {
-    console.log("[route-health] OK (no kfc-run events found after scan).");
+    if (args.report) {
+      const summary = buildLatestSummary(latestFile, latestRouteCounter, latestGuardrailCounter, latestRunEvents);
+      console.log(`[route-health] report`);
+      console.log(JSON.stringify({
+        ok: true,
+        has_kfc_run_events: 0,
+        latest: summary
+      }, null, 2));
+    } else {
+      console.log("[route-health] OK (no kfc-run events found after scan).");
+    }
+    return;
+  }
+
+  if (args.report) {
+    console.log(`[route-health] report`);
+    console.log(JSON.stringify({
+      ok: true,
+      has_kfc_run_events: managedEvents.length,
+      all: {
+        event_types: routeCounter,
+        guardrails: guardrailCounter
+      },
+      latest: buildLatestSummary(latestFile, latestRouteCounter, latestGuardrailCounter, latestRunEvents)
+    }, null, 2));
     return;
   }
 
@@ -190,7 +300,6 @@ function main() {
     const repeats = highGuardrailEvents.map(([key, count]) => `${key}:${count}`).join(", ");
     console.log(`[route-health] guardrail repetition signal: ${repeats}`);
   }
-
   console.log("[route-health] OK");
 }
 
