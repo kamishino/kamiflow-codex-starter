@@ -537,7 +537,14 @@ async function main() {
         verifyFileContainsStep(
           "verify client AGENTS managed block",
           path.join(projectDir, "AGENTS.md"),
-          ["<!-- KFC:BEGIN MANAGED -->", "<!-- KFC:END MANAGED -->", "If `.kfc/CODEX_READY.md` exists"],
+          [
+            "<!-- KFC:BEGIN MANAGED -->",
+            "<!-- KFC:END MANAGED -->",
+            "If `.kfc/CODEX_READY.md` exists",
+            "## Evidence Gate",
+            "## Docs and Closeout",
+            "`State`, `Doing`, and `Next`"
+          ],
           projectDir
         )
       );

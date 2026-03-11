@@ -41,7 +41,7 @@ Goal:
 Rules:
 1) Use only `kfc ...` commands in this client project.
 2) Read `AGENTS.md` first. Treat its managed block as the KFC-owned project `/init` contract, then start from `.kfc/CODEX_READY.md` mission and plan context, then read `.kfc/LESSONS.md` when present, with `kamiflow-core` available from `.agents/skills/kamiflow-core/SKILL.md`.
-   `AGENTS.md` also contains the stable workflow command map for `kfc client`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`.
+   `AGENTS.md` also carries the stable workflow command map for `kfc client`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`, plus the shared Kami Flow Core client contract for active-plan discipline, evidence-backed `Check: PASS|BLOCK`, compact `State/Doing/Next` responses, blocker recovery, and docs review.
 3) Run routine flow commands autonomously; do not ask the user to run normal `kfc` commands.
 4) Treat onboarding PASS as environment-ready only. If the active plan is still draft, finish Brainstorm/Plan first.
 5) Before any implementation route (`build`/`fix`), run `kfc flow ready --project .` only after the active plan is actually build-ready.

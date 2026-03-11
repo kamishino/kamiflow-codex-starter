@@ -65,6 +65,7 @@ const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
 const CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION = "--skip-git-repo-check";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
+const CLIENT_AGENTS_SHARED_CONTRACT_FILE = path.join("templates", "client-agents-shared-contract.md");
 const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
 const CLIENT_AGENTS_MANAGED_BEGIN = "<!-- KFC:BEGIN MANAGED -->";
@@ -702,6 +703,10 @@ function resolveClientKickoffPromptPath(projectDir) {
   return path.join(resolveClientResourcesHint(projectDir), CLIENT_KICKOFF_PROMPT_FILE);
 }
 
+function resolveClientAgentsSharedContractPath(projectDir) {
+  return path.join(resolveClientResourcesHint(projectDir), CLIENT_AGENTS_SHARED_CONTRACT_FILE);
+}
+
 function printClientDocsHints(projectDir) {
   const quickstartPath = resolveClientQuickstartPath(projectDir);
   if (fs.existsSync(quickstartPath)) {
@@ -965,7 +970,13 @@ function hasClientAgentsManagedBlock(content) {
   return String(content || "").includes(CLIENT_AGENTS_MANAGED_BEGIN) && String(content || "").includes(CLIENT_AGENTS_MANAGED_END);
 }
 
-export function buildClientAgentsManagedBlock() {
+export async function buildClientAgentsManagedBlock(projectDir) {
+  if (!projectDir || String(projectDir).trim().length === 0) {
+    throw new Error("buildClientAgentsManagedBlock(projectDir) requires a project directory.");
+  }
+  const sharedContractPath = resolveClientAgentsSharedContractPath(projectDir);
+  const sharedContract = (await fsp.readFile(sharedContractPath, "utf8")).replace(/\r\n/g, "\n").trim();
+
   return [
     CLIENT_AGENTS_MANAGED_BEGIN,
     "# KFC Client Contract",
@@ -1002,12 +1013,7 @@ export function buildClientAgentsManagedBlock() {
     "- `.local/plans/*.md`: live execution state and next-action source of truth.",
     "- `.agents/skills/kamiflow-core/SKILL.md`: project-local runtime skill artifact.",
     "",
-    "## Workflow Contract",
-    "- Resolve one active non-done plan before implementation-bearing work.",
-    "- Touch the active plan at route start and before final response (`updated_at` + `WIP Log`).",
-    "- Only start `build`/`fix` when the active plan is build-ready.",
-    "- After implementation work, run checks and report `Check: PASS|BLOCK` with evidence.",
-    "- If blocked, return exact `Status: BLOCK`, `Reason: ...`, and `Recovery: <command>`.",
+    sharedContract,
     "",
     "## Cleanup",
     "- `kfc client` auto-removes `.kfc/CODEX_READY.md` only after the active onboarding plan reaches archived done state.",
@@ -1039,7 +1045,7 @@ async function ensureClientAgentsContract(projectDir) {
   const agentsPath = resolveClientAgentsPath(projectDir);
   const existing = fs.existsSync(agentsPath) ? await fsp.readFile(agentsPath, "utf8") : "";
   const hadManagedBlock = hasClientAgentsManagedBlock(existing);
-  const next = mergeClientAgentsContent(existing, buildClientAgentsManagedBlock());
+  const next = mergeClientAgentsContent(existing, await buildClientAgentsManagedBlock(projectDir));
   if (next === existing) {
     info(`Client AGENTS.md already current: ${agentsPath}`);
     return { changed: false, agentsPath, hadManagedBlock };

@@ -50,7 +50,9 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "managed agents block", regex: /KFC:BEGIN MANAGED/ },
     { label: "agents init contract wording", regex: /\/init`-equivalent contract/ },
     { label: "workflow commands section", regex: /## Workflow Commands/ },
-    { label: "workflow commands content", regex: /kfc plan validate --project \.|kfc flow ensure-plan --project \.|kfc client doctor --project \. --fix/ },
+    { label: "shared client agents contract file", regex: /CLIENT_AGENTS_SHARED_CONTRACT_FILE/ },
+    { label: "shared client agents contract path", regex: /resolveClientAgentsSharedContractPath/ },
+    { label: "shared client agents contract loader", regex: /buildClientAgentsManagedBlock\(projectDir\)|fsp\.readFile\(sharedContractPath/ },
     { label: "setup completion detection", regex: /evaluateClientSetupCompletion/ },
     { label: "inspection output", regex: /Inspection Status:\s*\$\{summary\.inspectionStatus\}/ },
     { label: "structured onboarding block output", regex: /Onboarding Status:\s*BLOCK/ },
@@ -59,6 +61,20 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "project-local skill sync", regex: /Project-local skill synced:/ },
     { label: "client lessons scaffold", regex: /Client lessons scaffolded:|Client lessons preserved:/ },
     { label: "private gitignore prep", regex: /Prepended private ignore entries:|Private ignore entries already present:/ }
+  ],
+  "resources/templates/client-agents-shared-contract.md": [
+    { label: "workflow contract section", regex: /## Workflow Contract/ },
+    { label: "plan resolution guidance", regex: /Resolve one active non-done plan before implementation-bearing work\./ },
+    { label: "plan touch guidance", regex: /Touch the active plan at route start and before final response/ },
+    { label: "compact response guidance", regex: /`State`, `Doing`, and `Next`/ },
+    { label: "auto check guidance", regex: /Check:\s*PASS\|BLOCK/ },
+    { label: "autonomous execution section", regex: /## Autonomous Execution/ },
+    { label: "evidence gate section", regex: /## Evidence Gate/ },
+    { label: "unknown guidance", regex: /mark the result `Unknown`/ },
+    { label: "docs and closeout section", regex: /## Docs and Closeout/ },
+    { label: "agents review guidance", regex: /review `AGENTS\.md` for operating-contract drift/ },
+    { label: "blocker contract section", regex: /## Blocker Contract/ },
+    { label: "recovery guidance", regex: /`Recovery: <exact command>`/ }
   ]
 };
 
@@ -67,14 +83,19 @@ const TARGET_FILES = [
   "resources/docs/QUICKSTART.md",
   "resources/docs/CLIENT_KICKOFF_PROMPT.md",
   "resources/docs/CLIENT_A2Z_PLAYBOOK.md",
-  "src/commands/client.ts"
+  "src/commands/client.ts",
+  "resources/templates/client-agents-shared-contract.md"
 ];
+
+const FILES_WITHOUT_GLOBAL_PATTERNS = new Set([
+  "resources/templates/client-agents-shared-contract.md"
+]);
 
 function verifyFile(relPath) {
   const absPath = path.join(ROOT_DIR, relPath);
   const content = fs.readFileSync(absPath, "utf8");
   const required = [
-    ...REQUIRED_PATTERNS,
+    ...(FILES_WITHOUT_GLOBAL_PATTERNS.has(relPath) ? [] : REQUIRED_PATTERNS),
     ...(FILE_SPECIFIC_PATTERNS[relPath] || [])
   ];
   const missing = required.filter((rule) => !rule.regex.test(content));

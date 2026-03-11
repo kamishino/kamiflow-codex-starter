@@ -16,6 +16,7 @@ This repository has four active scopes:
 - `resources/skills/*`: behavior contracts, route discipline, output contracts, recovery logic.
 - `resources/docs/CODEX_FLOW_SMOOTH_GUIDE.md`: deterministic execution checklist for stable route flow.
 - `resources/docs/CHANGELOG.md`: tracked decision log for durable workflow and user-facing changes.
+- `resources/templates/client-agents-shared-contract.md`: shared Kami Flow Core client-contract fragments injected into client-root `AGENTS.md` by `kfc client`.
 - `.kfc/CODEX_READY.md`: runtime mission brief for client-project execution.
 - `.local/plans/*.md`: live execution state and next action source of truth.
 
