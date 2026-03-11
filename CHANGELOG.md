@@ -8,6 +8,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-11
 
+- Added balanced-route observability for Kami Flow runs via normalized runlog events, route-guardrail summary reporting, and a new `verify:route-health` governance gate.
 - Added a simple pre-brainstorm option to Kami Flow Start: explicit `simple` mode path with shorter questioning and compact START_CONTEXT handoff metadata.
 
 ## 2026-03-10
