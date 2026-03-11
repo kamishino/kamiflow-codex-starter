@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
+import net from "node:net";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -59,6 +60,49 @@ async function withStubbedShell(fn) {
   }
 }
 
+async function withOccupiedPort(port: number, fn: () => Promise<void>) {
+  const server = net.createServer();
+  await new Promise<void>((resolve, reject) => {
+    const done = (err?: Error) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    };
+    server.on("error", (error) => reject(error as Error));
+    server.listen(port, "127.0.0.1", () => done());
+  });
+
+  try {
+    await fn();
+  } finally {
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
+    });
+  }
+}
+
+async function withOccupiedPorts(ports: number[], fn: () => Promise<void>) {
+  const servers = ports.map(() => net.createServer());
+  await Promise.all(
+    servers.map((server, index) => new Promise<void>((resolve, reject) => {
+      server.once("error", (error) => reject(error as Error));
+      server.listen(ports[index], "127.0.0.1", () => resolve());
+    }))
+  );
+
+  try {
+    await fn();
+  } finally {
+    await Promise.all(
+      servers.map((server) => new Promise<void>((resolve) => {
+        server.close(() => resolve());
+      }))
+    );
+  }
+}
+
 let failed = 0;
 async function runCase(name, fn) {
   try {
@@ -113,6 +157,78 @@ await runCase("shell mounts plan, session, and chat APIs in-process", async () =
   });
 });
 
+await runCase("shell auto-selects a free shell port when the requested port is occupied", async () => {
+  const blockedPort = 43810;
+  await withOccupiedPort(blockedPort, async () => {
+    const server = await createKfcWebServer({
+      mode: "serve",
+      host: "127.0.0.1",
+      port: blockedPort,
+      portStrategy: "next",
+      projectDir: process.cwd(),
+      packageDir,
+      manifestOverride: manifestOverride(),
+      featureImplementations: stubFeatureImplementations()
+    });
+    try {
+      await server.ready();
+      const listening = await server.listen();
+      const selectedPort = Number(new URL(listening.url).port);
+
+      assert.notEqual(selectedPort, blockedPort);
+      assert.ok(selectedPort > blockedPort);
+      assert.ok(selectedPort <= blockedPort + 20);
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+await runCase("shell fails startup when requested port is occupied and strategy is fail", async () => {
+  const blockedPort = 43811;
+  await withOccupiedPort(blockedPort, async () => {
+    await assert.rejects(
+      createKfcWebServer({
+        mode: "serve",
+        host: "127.0.0.1",
+        port: blockedPort,
+        portStrategy: "fail",
+        projectDir: process.cwd(),
+        packageDir,
+        manifestOverride: manifestOverride(),
+        featureImplementations: stubFeatureImplementations()
+      }),
+      (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        return message.includes("already in use") && message.includes("port-strategy next");
+      }
+  );
+  });
+});
+
+await runCase("shell bounds auto-port search with --port-scan-limit", async () => {
+  const blockedPort = 43812;
+  await withOccupiedPorts([blockedPort, blockedPort + 1], async () => {
+    await assert.rejects(
+      createKfcWebServer({
+        mode: "serve",
+        host: "127.0.0.1",
+        port: blockedPort,
+        portStrategy: "next",
+        portScanLimit: 1,
+        projectDir: process.cwd(),
+        packageDir,
+        manifestOverride: manifestOverride(),
+        featureImplementations: stubFeatureImplementations()
+      }),
+      (error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        return message.includes("No available Shell port found");
+      }
+  );
+  });
+});
+
 await runCase("shell dev mode injects Vite client assets without requiring a built manifest", async () => {
   const server = await createKfcWebServer({
     mode: "dev",
@@ -130,6 +246,29 @@ await runCase("shell dev mode injects Vite client assets without requiring a bui
     assert.equal(response.statusCode, 200);
     assert.match(response.body, /@vite\/client/);
     assert.match(response.body, /src\/entries\/plan\.ts/);
+  } finally {
+    await server.close();
+  }
+});
+
+await runCase("shell dev mode can boot a real Vite server without loading a config file", async () => {
+  const server = await createKfcWebServer({
+    mode: "dev",
+    host: "127.0.0.1",
+    port: 0,
+    vitePort: 5293,
+    portStrategy: "next",
+    projectDir: process.cwd(),
+    packageDir,
+    featureImplementations: stubFeatureImplementations()
+  });
+  try {
+    await server.ready();
+    const listening = await server.listen();
+    const response = await fetch(listening.urls.plan).then((result) => result.text());
+
+    assert.match(response, /@vite\/client/);
+    assert.match(response, /src\/entries\/plan\.ts/);
   } finally {
     await server.close();
   }

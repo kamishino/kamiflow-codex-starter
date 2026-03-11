@@ -11,6 +11,8 @@ type ParsedArgs = {
   project: string;
   host: string;
   port: number;
+  portStrategy: "fail" | "next";
+  portScanLimit: number;
   focus: string;
   vitePort: number;
 };
@@ -25,6 +27,8 @@ Options:
   --project <path>     Project root (default: current directory)
   --host <host>        Host for shell server (default: 127.0.0.1)
   --port <n>           Port for shell server (default: 4300)
+  --port-strategy <s>  Port conflict strategy: fail|next (default: next)
+  --port-scan-limit <n> Maximum auto-scan attempts when conflict strategy is next (default: 20)
   --focus <surface>    plan | session | chat
   --vite-port <n>      Vite dev asset port (default: 5174)
 `);
@@ -36,6 +40,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     project: process.cwd(),
     host: "127.0.0.1",
     port: 4300,
+    portStrategy: "next",
+    portScanLimit: 20,
     focus: "",
     vitePort: 5174
   };
@@ -57,6 +63,24 @@ function parseArgs(argv: string[]): ParsedArgs {
       const value = Number(next || "");
       if (!Number.isInteger(value) || value <= 0 || value > 65535) throw new Error("Invalid --port value.");
       parsed.port = value;
+      i += 1;
+      continue;
+    }
+    if (token === "--port-strategy") {
+      const value = String(next || "").toLowerCase();
+      if (value !== "fail" && value !== "next") {
+        throw new Error("Invalid --port-strategy value. Use 'fail' or 'next'.");
+      }
+      parsed.portStrategy = value;
+      i += 1;
+      continue;
+    }
+    if (token === "--port-scan-limit") {
+      const value = Number(next || "");
+      if (!Number.isInteger(value) || value <= 0 || value > 1000) {
+        throw new Error("Invalid --port-scan-limit value.");
+      }
+      parsed.portScanLimit = value;
       i += 1;
       continue;
     }
@@ -106,6 +130,8 @@ export async function runCli(argv: string[]) {
     projectDir: parsed.project,
     host: parsed.host,
     port: parsed.port,
+    portStrategy: parsed.portStrategy,
+    portScanLimit: parsed.portScanLimit,
     focus: parsed.focus,
     vitePort: parsed.vitePort,
     packageDir

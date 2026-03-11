@@ -1,6 +1,6 @@
 import path from "node:path";
 import { createServer as createViteServer } from "vite";
-import { existsSync } from "node:fs";
+import { createServer as createNetServer } from "node:net";
 import { createFeatureServer } from "../../kfc-web-runtime/dist/feature-server.js";
 import { assetSetFromManifest, devAssetSet, loadManifest, sendBuiltAsset } from "./server/assets.js";
 import { loadBuiltInFeatureImplementations } from "./server/feature-implementations.js";
@@ -12,6 +12,8 @@ type KfcWebServerOptions = {
   host?: string;
   port?: number;
   vitePort?: number;
+  portStrategy?: "fail" | "next";
+  portScanLimit?: number;
   projectDir?: string;
   focus?: string;
   packageDir: string;
@@ -25,34 +27,127 @@ function resolveRepoRoot(packageDir: string) {
   return path.resolve(packageDir, "..", "..");
 }
 
-function resolveViteConfigPath(packageDir: string) {
-  const candidates = [
-    path.join(packageDir, "vite.config.ts"),
-    path.join(packageDir, "vite.config.mjs"),
-    path.join(packageDir, "vite.config.js")
-  ];
+type PortResolutionOptions = {
+  host: string;
+  requested: number;
+  role: string;
+  strategy: "fail" | "next";
+  avoidPorts?: Set<number>;
+  maxAttempts?: number;
+};
 
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
+const DEFAULT_PORT_ATTEMPTS = 20;
+
+function isPortAvailable(host: string, port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = createNetServer();
+    let settled = false;
+    const finalize = (value: boolean) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+
+    server.once("error", (error: NodeJS.ErrnoException) => {
+      if (error.code === "EADDRINUSE" || error.code === "EACCES") {
+        finalize(false);
+        return;
+      }
+      finalize(false);
+    });
+
+    server.once("listening", () => {
+      server.close(() => finalize(true));
+    });
+
+    server.listen({ host, port });
+  });
+}
+
+async function resolvePort(options: PortResolutionOptions): Promise<number> {
+  const {
+    host,
+    requested,
+    role,
+    strategy,
+    avoidPorts = new Set<number>(),
+    maxAttempts = DEFAULT_PORT_ATTEMPTS
+  } = options;
+
+  if (strategy === "fail") {
+    if (avoidPorts.has(requested)) {
+      throw new Error(`[kfc-web] ${role} port ${requested} is unavailable (${host}).`);
+    }
+
+    const available = await isPortAvailable(host, requested);
+    if (!available) {
+      throw new Error(`[kfc-web] ${role} port ${requested} is already in use on ${host}. Use --port-strategy next to auto-select a free port.`);
+    }
+
+    return requested;
+  }
+
+  let selected = -1;
+  for (let offset = 0; offset <= maxAttempts; offset += 1) {
+    const candidate = requested + offset;
+    if (candidate > 65535) {
+      break;
+    }
+    if (avoidPorts.has(candidate)) {
+      continue;
+    }
+    const available = await isPortAvailable(host, candidate);
+    if (available) {
+      selected = candidate;
+      if (offset > 0) {
+        console.log(`[kfc-web] ${role} port ${requested} is already in use. Switched to ${candidate}.`);
+      }
+      return selected;
     }
   }
 
-  throw new Error(`Could not resolve Vite config. Checked: ${candidates.join(", ")}`);
+  throw new Error(`[kfc-web] No available ${role} port found from ${requested} within +${maxAttempts} attempts on ${host}.`);
 }
 
 export async function createKfcWebServer(options: KfcWebServerOptions) {
   const mode = options.mode === "dev" ? "dev" : "serve";
   const host = String(options.host || "127.0.0.1");
-  const port = Number(options.port || 4300);
-  const vitePort = Number(options.vitePort || 5174);
+  const requestedPort = Number(options.port || 4300);
+  const requestedVitePort = Number(options.vitePort || 5174);
+  const portStrategy = String(options.portStrategy || "next") as "fail" | "next";
+  const portScanLimit = Number(options.portScanLimit || DEFAULT_PORT_ATTEMPTS);
   const projectDir = path.resolve(options.projectDir || process.cwd());
   const focus = String(options.focus || "").trim().toLowerCase();
   const packageDir = options.packageDir;
   const repoRoot = resolveRepoRoot(packageDir);
+  const workspaceRoot = path.resolve(packageDir, "..");
   let viteServer = null;
   let manifest = options.manifestOverride || null;
   let featureHandles = null;
+
+  const port = requestedPort > 0 ? await resolvePort({
+    host,
+    requested: requestedPort,
+    role: "Shell",
+    strategy: portStrategy,
+    maxAttempts: portScanLimit
+  }) : 0;
+  const vitePort = requestedVitePort > 0 ? await resolvePort({
+    host,
+    requested: requestedVitePort,
+    role: "Vite",
+    strategy: portStrategy,
+    avoidPorts: new Set([port]),
+    maxAttempts: portScanLimit
+  }) : 0;
+
+  if (requestedPort > 0) {
+    console.log(`[kfc-web] Shell port requested: ${requestedPort}, resolved: ${port}.`);
+  }
+  if (requestedVitePort > 0) {
+    console.log(`[kfc-web] Vite port requested: ${requestedVitePort}, resolved: ${vitePort}.`);
+  }
+
   const featureContext = createFeatureContext({
     repoRoot,
     projectDir,
@@ -68,10 +163,17 @@ export async function createKfcWebServer(options: KfcWebServerOptions) {
       if (options.skipVite) {
         return;
       }
-      const configFile = resolveViteConfigPath(packageDir);
       viteServer = await createViteServer({
-        configFile,
-        server: { host: "127.0.0.1", port: vitePort, strictPort: true }
+        configFile: false,
+        root: packageDir,
+        server: {
+          host: "127.0.0.1",
+          port: vitePort,
+          strictPort: true,
+          fs: {
+            allow: [workspaceRoot]
+          }
+        }
       });
       await viteServer.listen();
       return;
