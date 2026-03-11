@@ -24,6 +24,8 @@ Q3. <question>
 ### Problem Frame
 - Problem:
 - Root causes:
+- Design Surface:
+- Non-goals:
 - Target user:
 - Success in 30 days:
 - Constraints:

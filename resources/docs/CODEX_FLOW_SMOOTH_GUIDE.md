@@ -71,6 +71,7 @@ Notes:
 - `executor` profile prioritizes deterministic edits + concrete evidence.
 - `review` profile prioritizes findings-first verification and decision clarity.
 - For vague feature requests asking for inspiration/what-to-build-next, use `research` ideation preset before `start`.
+- In `start`, for architecture-heavy or broad requests, keep the first turn to scoped questions and avoid committing design decisions too early.
 
 ## Deterministic Fallback Order
 
