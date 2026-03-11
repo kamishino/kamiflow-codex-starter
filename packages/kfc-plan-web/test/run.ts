@@ -1026,9 +1026,9 @@ await runCase("client AGENTS contract stays evergreen when CODEX_READY is absent
   assert.ok(managed.includes("If `.kfc/CODEX_READY.md` exists"));
   assert.ok(managed.includes("If `.kfc/CODEX_READY.md` is absent"));
   assert.ok(managed.includes("## Workflow Commands"));
-  assert.ok(managed.includes("`kfc plan validate --project .`"));
-  assert.ok(managed.includes("`kfc flow ensure-plan --project .`"));
-  assert.ok(managed.includes("`kfc client doctor --project . --fix`"));
+  assert.ok(managed.includes("`kfc plan validate`"));
+  assert.ok(managed.includes("`kfc flow ensure-plan`"));
+  assert.ok(managed.includes("`kfc client doctor --fix`"));
   assert.ok(managed.includes("manual cleanup fallback"));
 });
 

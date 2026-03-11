@@ -21,8 +21,8 @@ const FILE_SPECIFIC_PATTERNS = {
   "resources/docs/QUICKSTART.md": [
     { label: "root agents guidance", regex: /root `AGENTS\.md`|AGENTS\.md first/i },
     { label: "agents init contract guidance", regex: /\/init` contract|\/init equivalent/i },
-    { label: "workflow command map guidance", regex: /workflow command map|`kfc plan validate --project \.`|`kfc flow ensure-plan --project \.`/i },
-    { label: "status command guidance", regex: /`kfc client status --project \.`/i },
+    { label: "workflow command map guidance", regex: /workflow command map|`kfc plan validate`|`kfc flow ensure-plan`/i },
+    { label: "status command guidance", regex: /`kfc client status`/i },
     { label: "reusable entrypoint guidance", regex: /reusable client-project entrypoint|rerunning plain `kfc client`/i },
     { label: "auto cleanup guidance", regex: /auto-cleans? `.kfc\/CODEX_READY\.md`|archived done/i },
     { label: "no reminder loop guidance", regex: /no user reminder loop/i },
@@ -33,8 +33,8 @@ const FILE_SPECIFIC_PATTERNS = {
   "resources/docs/CLIENT_KICKOFF_PROMPT.md": [
     { label: "agents first guidance", regex: /Read `AGENTS\.md` first/i },
     { label: "agents init contract guidance", regex: /project `\/init` contract|project-specific `\/init` contract/i },
-    { label: "workflow command map guidance", regex: /workflow command map|`kfc plan validate --project \.`|`kfc client doctor --project \. --fix`/i },
-    { label: "status command guidance", regex: /`kfc client status --project \.`/i },
+    { label: "workflow command map guidance", regex: /workflow command map|`kfc plan validate`|`kfc client doctor --fix`/i },
+    { label: "status command guidance", regex: /`kfc client status`/i },
     { label: "rerun handoff guidance", regex: /reuse or refresh the existing handoff/i },
     { label: "plan touch cadence", regex: /Touch active plan markdown twice per request/i },
     { label: "onboarding error code guidance", regex: /Error Code:\s*CLIENT_/i }
@@ -42,8 +42,8 @@ const FILE_SPECIFIC_PATTERNS = {
   "resources/docs/CLIENT_A2Z_PLAYBOOK.md": [
     { label: "stable agents guidance", regex: /stable client-repo operating contract|Read `AGENTS\.md` first/i },
     { label: "agents init contract guidance", regex: /project-specific `\/init` contract|KFC-owned `\/init` equivalent/i },
-    { label: "workflow command map guidance", regex: /workflow command map|`kfc flow ensure-plan --project \.`|`kfc client done`/i },
-    { label: "status command guidance", regex: /`kfc client status --project \.`/i },
+    { label: "workflow command map guidance", regex: /workflow command map|`kfc flow ensure-plan`|`kfc client done`/i },
+    { label: "status command guidance", regex: /`kfc client status`/i },
     { label: "auto cleanup guidance", regex: /auto-clean `.kfc\/CODEX_READY\.md`|manual cleanup fallback/i },
     { label: "plan touch cadence", regex: /Touch active plan markdown at route start and before final response/i },
     { label: "smart recovery guidance", regex: /smart-recovery cycle/i }
@@ -53,7 +53,7 @@ const FILE_SPECIFIC_PATTERNS = {
     { label: "managed agents block", regex: /KFC:BEGIN MANAGED/ },
     { label: "agents init contract wording", regex: /\/init`-equivalent contract/ },
     { label: "workflow commands section", regex: /## Workflow Commands/ },
-    { label: "status command workflow entry", regex: /`kfc client status --project \.`/ },
+    { label: "status command workflow entry", regex: /`kfc client status`/ },
     { label: "shared client agents contract file", regex: /CLIENT_AGENTS_SHARED_CONTRACT_FILE/ },
     { label: "shared client agents contract path", regex: /resolveClientAgentsSharedContractPath/ },
     { label: "shared client agents contract loader", regex: /buildClientAgentsManagedBlock\(projectDir\)|fsp\.readFile\(sharedContractPath/ },

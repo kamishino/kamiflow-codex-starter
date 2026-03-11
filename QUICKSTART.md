@@ -40,7 +40,7 @@ kfc client --force
 For a calm read-only re-entry check in an existing client repo:
 
 ```bash
-kfc client status --project .
+kfc client status
 ```
 
 `kfc client` prints doc and quick-start hints from the active install location (project-level `resourcesDir` or package resources fallback), so the exact doc paths can vary by environment.
@@ -71,7 +71,7 @@ kfc client --force --no-launch-codex
 Low-level equivalent (only when you need manual bootstrap control):
 
 ```bash
-kfc client bootstrap --project . --profile client --force
+kfc client bootstrap --profile client --force
 ```
 
 If auto-launch is disabled or fails, run the exact fallback command printed by KFC. Codex should then read `AGENTS.md` first, read `.kfc/CODEX_READY.md` when present, read `.kfc/LESSONS.md` when present, and continue autonomously.
@@ -81,21 +81,21 @@ Important first-run behavior:
 - rerunning plain `kfc client` should reuse or refresh the existing handoff instead of blocking on an old `.kfc/CODEX_READY.md`
 - risky mixed repos BLOCK before mutation instead of letting KFC guess
 - if bootstrap created a fresh draft plan, `.kfc/CODEX_READY.md` will direct Codex to finish Brainstorm/Plan before any build route
-- `kfc flow ready --project .` should only be the first action when the active plan is already build-ready
+- `kfc flow ready` should only be the first action when the active plan is already build-ready
 - KFC auto-cleans `.kfc/CODEX_READY.md` only after the active onboarding plan is archived done; otherwise the handoff is preserved for recovery
 
 This flow is designed for no user reminder loop after bootstrap. Codex should continue from the generated brief and the project-local skill without waiting for routine chat reminders.
 The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
-Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract. It now includes the client workflow command map for `kfc client`, `kfc client status --project .`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`, plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs/closeout review. Read `.kfc/CODEX_READY.md` when present; otherwise continue from the active plan plus lessons.
+Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract. It now includes the client workflow command map for `kfc client`, `kfc client status`, `kfc plan validate`, `kfc flow ensure-plan`, `kfc flow ready`, `kfc client doctor --fix`, and `kfc client done`, plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs/closeout review. Read `.kfc/CODEX_READY.md` when present; otherwise continue from the active plan plus lessons. Add `--project <path>` only when you intentionally target a project from outside its tree.
 
 To manage private project lessons after bootstrap:
 
 ```bash
-kfc client lessons capture --project . --type incident --title "Broken setup" --lesson "Use X before Y" --context "Short trigger/context"
-kfc client lessons pending --project .
-kfc client lessons show --project . --id LESSON-20260307-001
-kfc client lessons promote --project . --id LESSON-20260307-001 --summary "Durable lesson Codex should remember"
-kfc client lessons list --project .
+kfc client lessons capture --type incident --title "Broken setup" --lesson "Use X before Y" --context "Short trigger/context"
+kfc client lessons pending
+kfc client lessons show --id LESSON-20260307-001
+kfc client lessons promote --id LESSON-20260307-001 --summary "Durable lesson Codex should remember"
+kfc client lessons list
 ```
 
 Use `.local/kfc-lessons/` for raw private history and `.kfc/LESSONS.md` for the curated lessons Codex should read in future sessions.
@@ -113,7 +113,7 @@ During normal implementation turns, Codex should run check validations automatic
 If the client project already has KFC installed, use the client-side update flow:
 
 ```bash
-kfc client update --project .
+kfc client update
 ```
 
 This is preview-only by default. It reports:
@@ -125,7 +125,7 @@ This is preview-only by default. It reports:
 To execute the update:
 
 ```bash
-kfc client update --project . --apply
+kfc client update --apply
 ```
 
 Important behavior:
@@ -208,8 +208,8 @@ Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`.
 - Codex did not auto-launch: rerun the exact `Manual fallback:` command printed by KFC, or use `kfc client --force --no-launch-codex` if you want setup only.
 - `kfc client update` is blocked for file/tarball installs: rerun with `--from <folder|tgz> --apply`.
 - Missing `package.json` in a non-empty folder: run `npm init -y`, then rerun `kfc client --force`.
-- Plan bootstrap failed: run `kfc flow ensure-plan --project .` (or `kfc plan init --project . --new` as compatibility fallback).
-- Flow behavior mismatch: run `kfc client doctor --project . --fix`.
+- Plan bootstrap failed: run `kfc flow ensure-plan` (or `kfc plan init --new` as compatibility fallback).
+- Flow behavior mismatch: run `kfc client doctor --fix`.
 - If onboarding reports `Onboarding Status: BLOCK`, follow the printed `Recovery:` command exactly.
 - Rules mismatch: rerun `kfc client --force`.
 - Cannot find local Codex sessions folder: run `kfc session where`.

@@ -64,11 +64,16 @@ function writeText(filePath: string, value: string) {
 }
 
 function runClient(projectDir: string) {
+  const result = runKfc(["client", "--project", projectDir, "--force", "--no-launch-codex", "--skip-serve-check"], ROOT_DIR);
+  return result;
+}
+
+function runKfc(args: string[], cwd: string) {
   const result = spawnSync(
     NODE,
-    [KFC_BIN, "client", "--project", projectDir, "--force", "--no-launch-codex", "--skip-serve-check"],
+    [KFC_BIN, ...args],
     {
-      cwd: ROOT_DIR,
+      cwd,
       encoding: "utf8",
       shell: false
     }
@@ -82,21 +87,15 @@ function runClient(projectDir: string) {
 }
 
 function runClientStatus(projectDir: string) {
-  const result = spawnSync(
-    NODE,
-    [KFC_BIN, "client", "status", "--project", projectDir],
-    {
-      cwd: ROOT_DIR,
-      encoding: "utf8",
-      shell: false
-    }
-  );
-  return {
-    code: result.status ?? 1,
-    stdout: String(result.stdout || ""),
-    stderr: String(result.stderr || ""),
-    output: `${String(result.stdout || "")}\n${String(result.stderr || "")}`.trim()
-  };
+  return runKfc(["client", "status", "--project", projectDir], ROOT_DIR);
+}
+
+function runClientStatusFrom(projectDir: string, cwd: string) {
+  return runKfc(["client", "status"], cwd);
+}
+
+function runFlowEnsurePlanFrom(cwd: string) {
+  return runKfc(["flow", "ensure-plan"], cwd);
 }
 
 function assertContains(text: string, pattern: string, label: string, errors: string[]) {
@@ -122,6 +121,12 @@ const CASES: CaseSpec[] = [
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
       const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
+      const nestedDir = path.join(projectDir, "nested", "deeper");
+      ensureDir(nestedDir);
+      const nestedStatusRun = runClientStatusFrom(projectDir, nestedDir);
+      const nestedFlowRun = runFlowEnsurePlanFrom(nestedDir);
+      const nestedStatusOutput = `${nestedStatusRun.stdout}\n${nestedStatusRun.stderr}`;
+      const nestedFlowOutput = `${nestedFlowRun.stdout}\n${nestedFlowRun.stderr}`;
       if (code !== 0) {
         errors.push(`Expected PASS but exit code was ${code}.`);
       }
@@ -136,6 +141,14 @@ const CASES: CaseSpec[] = [
       assertContains(statusOutput, "Ready Brief: present", "ready brief", errors);
       assertContains(statusOutput, "Install Source:", "install source", errors);
       assertContains(statusOutput, "Next:", "next action", errors);
+      if (nestedStatusRun.code !== 0) {
+        errors.push(`Expected nested status PASS but exit code was ${nestedStatusRun.code}.`);
+      }
+      assertContains(nestedStatusOutput, "Client Status: PASS", "nested client status", errors);
+      if (nestedFlowRun.code !== 0) {
+        errors.push(`Expected nested flow ensure-plan PASS but exit code was ${nestedFlowRun.code}.`);
+      }
+      assertContains(nestedFlowOutput, `"project_dir": "${projectDir.replace(/\\/g, "\\\\")}"`, "nested flow project root", errors);
       assertPathExists(path.join(projectDir, "package.json"), "package.json", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
@@ -172,6 +185,12 @@ const CASES: CaseSpec[] = [
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
       const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
+      const nestedDir = path.join(projectDir, "nested", "deeper");
+      ensureDir(nestedDir);
+      const nestedStatusRun = runClientStatusFrom(projectDir, nestedDir);
+      const nestedFlowRun = runFlowEnsurePlanFrom(nestedDir);
+      const nestedStatusOutput = `${nestedStatusRun.stdout}\n${nestedStatusRun.stderr}`;
+      const nestedFlowOutput = `${nestedFlowRun.stdout}\n${nestedFlowRun.stderr}`;
       if (code !== 0) {
         errors.push(`Expected PASS but exit code was ${code}.`);
       }
@@ -185,6 +204,14 @@ const CASES: CaseSpec[] = [
       assertContains(statusOutput, "Plan State:", "plan state", errors);
       assertContains(statusOutput, "Ready Brief: present", "ready brief", errors);
       assertContains(statusOutput, "Install Source:", "install source", errors);
+      if (nestedStatusRun.code !== 0) {
+        errors.push(`Expected nested status PASS but exit code was ${nestedStatusRun.code}.`);
+      }
+      assertContains(nestedStatusOutput, "Client Status: PASS", "nested client status", errors);
+      if (nestedFlowRun.code !== 0) {
+        errors.push(`Expected nested flow ensure-plan PASS but exit code was ${nestedFlowRun.code}.`);
+      }
+      assertContains(nestedFlowOutput, `"project_dir": "${projectDir.replace(/\\/g, "\\\\")}"`, "nested flow project root", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".kfc", "CODEX_READY.md"), "ready file", errors);
       const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))
@@ -226,6 +253,12 @@ const CASES: CaseSpec[] = [
       const errors: string[] = [];
       const output = `${stdout}\n${stderr}`;
       const statusOutput = `${statusRun.stdout}\n${statusRun.stderr}`;
+      const nestedDir = path.join(projectDir, "nested", "deeper");
+      ensureDir(nestedDir);
+      const nestedStatusRun = runClientStatusFrom(projectDir, nestedDir);
+      const nestedFlowRun = runFlowEnsurePlanFrom(nestedDir);
+      const nestedStatusOutput = `${nestedStatusRun.stdout}\n${nestedStatusRun.stderr}`;
+      const nestedFlowOutput = `${nestedFlowRun.stdout}\n${nestedFlowRun.stderr}`;
       if (code !== 0) {
         errors.push(`Expected PASS but exit code was ${code}.`);
       }
@@ -239,6 +272,14 @@ const CASES: CaseSpec[] = [
       assertContains(statusOutput, "Plan State:", "plan state", errors);
       assertContains(statusOutput, "Ready Brief: present", "ready brief", errors);
       assertContains(statusOutput, "Install Source:", "install source", errors);
+      if (nestedStatusRun.code !== 0) {
+        errors.push(`Expected nested status PASS but exit code was ${nestedStatusRun.code}.`);
+      }
+      assertContains(nestedStatusOutput, "Client Status: PASS", "nested client status", errors);
+      if (nestedFlowRun.code !== 0) {
+        errors.push(`Expected nested flow ensure-plan PASS but exit code was ${nestedFlowRun.code}.`);
+      }
+      assertContains(nestedFlowOutput, `"project_dir": "${projectDir.replace(/\\/g, "\\\\")}"`, "nested flow project root", errors);
       assertPathExists(path.join(projectDir, "AGENTS.md"), "root AGENTS.md", errors);
       assertPathExists(path.join(projectDir, ".agents", "skills", "kamiflow-core", "SKILL.md"), "project-local skill", errors);
       const agents = fs.existsSync(path.join(projectDir, "AGENTS.md"))

@@ -41,15 +41,15 @@ Goal:
 Rules:
 1) Use only `kfc ...` commands in this client project.
 2) Read `AGENTS.md` first. Treat its managed block as the KFC-owned project `/init` contract, then start from `.kfc/CODEX_READY.md` mission and plan context, then read `.kfc/LESSONS.md` when present, with `kamiflow-core` available from `.agents/skills/kamiflow-core/SKILL.md`.
-   `AGENTS.md` also carries the stable workflow command map for `kfc client`, `kfc client status --project .`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`, plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs review.
+   `AGENTS.md` also carries the stable workflow command map for `kfc client`, `kfc client status`, `kfc plan validate`, `kfc flow ensure-plan`, `kfc flow ready`, `kfc client doctor --fix`, and `kfc client done`, plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs review. Add `--project <path>` only when intentionally targeting a project from outside its tree.
 3) Run routine flow commands autonomously; do not ask the user to run normal `kfc` commands.
 4) Treat onboarding PASS as environment-ready only. If the active plan is still draft, finish Brainstorm/Plan first.
-5) Before any implementation route (`build`/`fix`), run `kfc flow ready --project .` only after the active plan is actually build-ready.
+5) Before any implementation route (`build`/`fix`), run `kfc flow ready` only after the active plan is actually build-ready.
 6) Touch active plan markdown twice per request: at route start and before final response.
-7) If plan resolution fails or route behavior is inconsistent, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.
+7) If plan resolution fails or route behavior is inconsistent, run `kfc client doctor --fix` and return BLOCK with exact recovery.
 8) Keep phase tracking updated after each meaningful step:
-   - Build progress: `kfc flow apply --project . --plan <plan-id> --route build --result progress`
-   - Check pass/block: `kfc flow apply --project . --plan <plan-id> --route check --result pass|block`
+   - Build progress: `kfc flow apply --plan <plan-id> --route build --result progress`
+   - Check pass/block: `kfc flow apply --plan <plan-id> --route check --result pass|block`
 9) After finishing implementation in a turn, run check validations and report `Check: PASS|BLOCK`.
 10) After each response, always provide:
    - current phase,

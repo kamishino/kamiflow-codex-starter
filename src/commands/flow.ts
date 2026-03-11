@@ -15,6 +15,7 @@ import {
 } from "../lib/plan-lifecycle.js";
 import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../lib/flow-policy.js";
 import { parsePlanFrontmatter } from "../lib/plan-frontmatter.js";
+import { detectProjectRoot } from "../lib/project-root.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -55,11 +56,12 @@ type JsonResponse<T = any> = {
 function usage() {
   info("Usage: kfc flow <ensure-plan|ready|apply|next> [options]");
   info("Examples:");
-  info("  kfc flow ensure-plan --project . --topic \"improve flow\" --route plan");
-  info("  kfc flow ready --project .");
-  info("  kfc flow ready --project . --no-sync-block");
-  info("  kfc flow apply --project . --plan PLAN-YYYY-MM-DD-001 --route build --result progress");
-  info("  kfc flow next --project . --plan PLAN-YYYY-MM-DD-001 --style narrative");
+  info("  kfc flow ensure-plan --topic \"improve flow\" --route plan");
+  info("  kfc flow ready");
+  info("  kfc flow ready --no-sync-block");
+  info("  kfc flow apply --plan PLAN-YYYY-MM-DD-001 --route build --result progress");
+  info("  kfc flow next --plan PLAN-YYYY-MM-DD-001 --style narrative");
+  info("  kfc flow ensure-plan --project <path> --topic \"improve flow\" --route plan");
 }
 
 function readFlag(args, flag) {
@@ -78,9 +80,9 @@ function readOption(args, flag, fallback = "") {
   return value;
 }
 
-function resolveProjectDir(defaultCwd, args) {
+async function resolveProjectDir(defaultCwd, args) {
   const value = readOption(args, "--project", "");
-  return value ? path.resolve(value) : defaultCwd;
+  return value ? path.resolve(defaultCwd, value) : await detectProjectRoot(defaultCwd);
 }
 
 function resolveBaseUrl(args) {
@@ -604,7 +606,7 @@ async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic =
 }
 
 async function runEnsurePlan(options, args) {
-  const projectDir = resolveProjectDir(options.cwd, args);
+  const projectDir = await resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const forceNew = readFlag(args, "--new");
   const topic = readOption(args, "--topic", readOption(args, "--slug", ""));
@@ -643,7 +645,7 @@ async function runEnsurePlan(options, args) {
 }
 
 async function runReady(options, args) {
-  const projectDir = resolveProjectDir(options.cwd, args);
+  const projectDir = await resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const forceNew = readFlag(args, "--new");
   const topic = readOption(args, "--topic", readOption(args, "--slug", ""));
@@ -703,10 +705,10 @@ async function runReady(options, args) {
   }
   if (validateExitCode !== 0) {
     await syncBlockToPlan("kfc plan validate failed.", [
-      "Run `kfc plan validate --project .` and fix validation errors before build."
+      "Run `kfc plan validate` and fix validation errors before build."
     ]);
     printReadinessBlock(projectDir, "kfc plan validate failed.", [
-      "Run `kfc plan validate --project .` and fix validation errors before build."
+      "Run `kfc plan validate` and fix validation errors before build."
     ]);
     return 1;
   }
@@ -737,7 +739,7 @@ async function runReady(options, args) {
 }
 
 async function runApply(options, args) {
-  const projectDir = resolveProjectDir(options.cwd, args);
+  const projectDir = await resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const route = readOption(args, "--route", "").toLowerCase();
   const result = readOption(args, "--result", "").toLowerCase();
@@ -825,7 +827,7 @@ async function runApply(options, args) {
 }
 
 async function runNext(options, args) {
-  const projectDir = resolveProjectDir(options.cwd, args);
+  const projectDir = await resolveProjectDir(options.cwd, args);
   const planRef = readOption(args, "--plan", "");
   const style = readOption(args, "--style", "narrative");
   if (!planRef) {

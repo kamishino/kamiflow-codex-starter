@@ -40,6 +40,7 @@ import { error, info, warn } from "../lib/logger.js";
 import { evaluateBuildReadiness } from "../lib/plan-lifecycle.js";
 import type { FrontmatterRecord } from "../lib/plan-frontmatter.js";
 import { parsePlanFrontmatter, serializePlanFrontmatter, splitPlanFrontmatter } from "../lib/plan-frontmatter.js";
+import { detectProjectRoot } from "../lib/project-root.js";
 import { buildCodexExecManualCommand, runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
 import { runDoctor } from "./doctor.js";
 import { runFlow } from "./flow.js";
@@ -177,21 +178,34 @@ function usage() {
   info("  kfc client --no-launch-codex");
   info("  kfc client --skip-git-repo-check");
   info("  kfc client done");
-  info("  kfc client bootstrap --project .");
-  info("  kfc client bootstrap --project . --profile client --port 4310 --no-launch-codex");
-  info("  kfc client doctor --project .");
-  info("  kfc client doctor --project . --fix");
-  info("  kfc client status --project .");
-  info("  kfc client update --project .");
-  info("  kfc client update --project . --apply");
-  info("  kfc client update --project . --from <git-url|folder|tgz> --apply");
-  info("  kfc client lessons capture --project . --type incident --title \"Broken setup\" --lesson \"Remember X\" --context \"While bootstrapping\"");
-  info("  kfc client lessons pending --project .");
-  info("  kfc client lessons show --project . --id LESSON-20260307-001");
-  info("  kfc client lessons promote --project . --id LESSON-20260307-001 --summary \"Use X before Y\"");
-  info("  kfc client lessons list --project .");
+  info("  kfc client bootstrap");
+  info("  kfc client bootstrap --profile client --port 4310 --no-launch-codex");
+  info("  kfc client doctor");
+  info("  kfc client doctor --fix");
+  info("  kfc client status");
+  info("  kfc client update");
+  info("  kfc client update --apply");
+  info("  kfc client update --from <git-url|folder|tgz> --apply");
+  info("  kfc client lessons capture --type incident --title \"Broken setup\" --lesson \"Remember X\" --context \"While bootstrapping\"");
+  info("  kfc client lessons pending");
+  info("  kfc client lessons show --id LESSON-20260307-001");
+  info("  kfc client lessons promote --id LESSON-20260307-001 --summary \"Use X before Y\"");
+  info("  kfc client lessons list");
+  info("  kfc client status --project <path>");
   info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle and Codex auto-launch by default.");
   info("Note: `kfc client update` defaults to preview; use --apply to execute the update and refresh flow.");
+}
+
+async function resolveProjectDir(baseCwd, args) {
+  const idx = args.indexOf("--project");
+  if (idx === -1) {
+    return await detectProjectRoot(baseCwd);
+  }
+  const value = args[idx + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error("Missing value for --project.");
+  }
+  return path.resolve(baseCwd, value);
 }
 
 function parseMajorVersion(version) {
@@ -199,7 +213,7 @@ function parseMajorVersion(version) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
-function parseArgs(baseCwd, args) {
+async function parseArgs(baseCwd, args) {
   let subcommand = "start";
   let rest = args;
   if (args.length > 0 && !String(args[0]).startsWith("-")) {
@@ -213,10 +227,12 @@ function parseArgs(baseCwd, args) {
     rest = rest.slice(1);
   }
 
+  const projectDir = await resolveProjectDir(baseCwd, rest);
+
   const parsed = {
     subcommand,
     action,
-    project: baseCwd,
+    project: projectDir,
     profile: "client",
     port: DEFAULT_PORT,
     force: false,
@@ -242,7 +258,6 @@ function parseArgs(baseCwd, args) {
       if (!value) {
         throw new Error("Missing value for --project.");
       }
-      parsed.project = path.resolve(baseCwd, value);
       i += 1;
       continue;
     }
@@ -1046,12 +1061,13 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     "",
     "## Workflow Commands",
     "- `kfc client`: reusable setup, handoff refresh, and normal startup entrypoint.",
-    "- `kfc client status --project .`: read-only repo status, plan state, handoff presence, and next-action summary.",
-    "- `kfc plan validate --project .`: validate the active plan file when plan state looks suspicious.",
-    "- `kfc flow ensure-plan --project .`: recover a missing or inconsistent active plan scaffold.",
-    "- `kfc flow ready --project .`: verify readiness only after the active plan is already build-ready.",
-    "- `kfc client doctor --project . --fix`: recover onboarding or flow drift when the normal route breaks.",
+    "- `kfc client status`: read-only repo status, plan state, handoff presence, and next-action summary.",
+    "- `kfc plan validate`: validate the active plan file when plan state looks suspicious.",
+    "- `kfc flow ensure-plan`: recover a missing or inconsistent active plan scaffold.",
+    "- `kfc flow ready`: verify readiness only after the active plan is already build-ready.",
+    "- `kfc client doctor --fix`: recover onboarding or flow drift when the normal route breaks.",
     "- `kfc client done`: manual cleanup fallback after the mission is complete.",
+    "- Add `--project <path>` only when you intentionally target a project from outside its tree.",
     "",
     "## Runtime Artifacts",
     "- `.kfc/CODEX_READY.md`: current mission and onboarding handoff.",
@@ -1591,10 +1607,10 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
       buildReady: true,
       readinessFindings: [],
       summary: "Active plan is build-ready. Codex can verify readiness and start the next build slice.",
-      next: "kfc flow ready --project .",
+      next: "kfc flow ready",
       nextSteps: [
-        "kfc flow ready --project .",
-        "kfc flow next --project . --plan <plan-id> --style narrative"
+        "kfc flow ready",
+        "kfc flow next --plan <plan-id> --style narrative"
       ]
     };
   }
@@ -1617,7 +1633,7 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
       next: "Resolve the active plan blocker before any build route.",
       nextSteps: [
         "Resolve the active plan blocker before any build route.",
-        "kfc client doctor --project . --fix"
+        "kfc client doctor --fix"
       ]
     };
   }
@@ -1638,7 +1654,7 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
     next: "Complete Brainstorm/Plan in the active plan before any build route.",
     nextSteps: [
       "Complete Brainstorm/Plan in the active plan before any build route.",
-      "After the plan is GO + build-ready, run `kfc flow ready --project .`."
+      "After the plan is GO + build-ready, run `kfc flow ready`."
     ]
   };
 }
@@ -1648,7 +1664,7 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     ? goal.trim()
     : "Define the mission for this client project before implementation.";
   const stateRouteLine = planState.kind === "build_ready"
-    ? "3. Verify the active plan is ready with `kfc flow ready --project .`, then begin the next build slice."
+    ? "3. Verify the active plan is ready with `kfc flow ready`, then begin the next build slice."
     : planState.kind === "blocked_plan"
       ? "3. Resolve the active plan blocker first. Do not start build work until the blocker is cleared."
       : "3. The active plan is still a draft. Finish Brainstorm/Plan work first; do not start build work yet.";
@@ -1659,7 +1675,7 @@ function buildReadyFileContent({ goal, planState, inspection }) {
       : "4. Update the active plan until `decision=GO`, `next_command=build`, `next_mode=Build`, and Open Decisions are resolved.";
   const readinessPolicyLine = planState.kind === "build_ready"
     ? "5. After each build/fix slice, run checks and report `Check: PASS|BLOCK` with evidence."
-    : "5. Only run `kfc flow ready --project .` after the plan is actually build-ready.";
+    : "5. Only run `kfc flow ready` after the plan is actually build-ready.";
 
   return [
     "# CODEX READY",
@@ -1708,7 +1724,7 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     "3. Execute routine flow commands yourself; do not ask the user to run normal `kfc` commands.",
     "4. Ask the user only when execution is impossible from agent context (permissions/auth/out-of-workspace).",
     "5. Before `build`/`fix`, ensure the active plan is truly build-ready. Fresh draft plans stay in Brainstorm/Plan first.",
-    "6. If readiness or flow behavior fails, run `kfc client doctor --project . --fix` and return BLOCK with exact recovery.",
+    "6. If readiness or flow behavior fails, run `kfc client doctor --fix` and return BLOCK with exact recovery.",
     "7. After completing implementation in a turn, run check validations and report `Check: PASS|BLOCK` before final response.",
     "",
     "## Blocker Contract",
@@ -1773,7 +1789,7 @@ export async function evaluateClientSetupCompletion(projectDir, planId): Promise
         reason: `Active onboarding plan archived successfully: ${donePlan.filePath}`,
         recovery: "None",
         planPath: donePlan.filePath,
-        nextAction: "kfc client done --project ."
+        nextAction: "kfc client done"
       };
     }
   }
@@ -2142,8 +2158,8 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
       if (readyBrief === "present") {
         runtimeIssues.push("ready brief exists but no active plan was found");
         reason = "Ready handoff exists but the active plan is missing.";
-        next = "kfc flow ensure-plan --project .";
-        recovery = "kfc flow ensure-plan --project .";
+        next = "kfc flow ensure-plan";
+        recovery = "kfc flow ensure-plan";
         nextSteps = [next];
       } else {
         reason = "No active plan is present. The client repo is idle and ready for a new goal.";
@@ -2154,8 +2170,8 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
     } else {
       runtimeIssues.push("active plan state could not be read");
       reason = err instanceof Error ? err.message : "Active plan state could not be read.";
-      next = "kfc client doctor --project . --fix";
-      recovery = "kfc client doctor --project . --fix";
+      next = "kfc client doctor --fix";
+      recovery = "kfc client doctor --fix";
       nextSteps = [next];
     }
   }
@@ -2177,7 +2193,7 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
 
   if (runtimeIssues.length > 0) {
     const statusRecovery = runtimeIssues.length === 1 && runtimeIssues[0] === "ready brief exists but no active plan was found"
-      ? "kfc flow ensure-plan --project ."
+      ? "kfc flow ensure-plan"
       : "kfc client --force --no-launch-codex";
     return {
       status: "BLOCK",
@@ -2209,10 +2225,10 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
 
 function buildUpdateManualRecovery(parsed, reason) {
   if (parsed.from) {
-    return `kfc client update --project . --from ${parsed.from} --apply`;
+    return `kfc client update --from ${parsed.from} --apply`;
   }
   if (reason === "link") {
-    return `npm link ${loadPackageName()} && kfc client update --project . --apply`;
+    return `npm link ${loadPackageName()} && kfc client update --apply`;
   }
   return "kfc client --force --no-launch-codex";
 }
@@ -2369,7 +2385,7 @@ async function applyClientUpdate(parsed, detection, plan) {
   );
   if (result.code !== 0) {
     error("Update rebootstrap failed.");
-    info("Recovery: kfc client doctor --project . --fix");
+    info("Recovery: kfc client doctor --fix");
     return result.code;
   }
 
@@ -2590,7 +2606,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED,
       "Client preflight checks failed.",
-      "kfc client doctor --project . --fix"
+      "kfc client doctor --fix"
     );
   }
 
@@ -2611,7 +2627,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.CONFIG_INVALID,
       err instanceof Error ? err.message : String(err),
-      "kfc client bootstrap --project . --force"
+      "kfc client bootstrap --force"
     );
   }
 
@@ -2621,7 +2637,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.PLAN_UI_MISSING,
       err instanceof Error ? err.message : String(err),
-      "kfc client bootstrap --project . --force"
+      "kfc client bootstrap --force"
     );
   }
 
@@ -2635,7 +2651,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.RULES_SYNC_FAILED,
       err instanceof Error ? err.message : String(err),
-      "kfc client bootstrap --project . --force"
+      "kfc client bootstrap --force"
     );
   }
 
@@ -2647,7 +2663,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.SKILL_SYNC_FAILED,
       err instanceof Error ? err.message : String(err),
-      "kfc client bootstrap --project . --force"
+      "kfc client bootstrap --force"
     );
   }
 
@@ -2659,7 +2675,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.PRIVATE_STATE_FAILED,
       err instanceof Error ? err.message : String(err),
-      "kfc client bootstrap --project . --force"
+      "kfc client bootstrap --force"
     );
   }
 
@@ -2668,7 +2684,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.DOCTOR_FAILED,
       "`kfc doctor` failed.",
-      "kfc client doctor --project . --fix"
+      "kfc client doctor --fix"
     );
   }
 
@@ -2680,7 +2696,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED,
       "`kfc flow ensure-plan` failed.",
-      "kfc flow ensure-plan --project ."
+      "kfc flow ensure-plan"
     );
   }
 
@@ -2692,7 +2708,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED,
       "`kfc plan validate` failed.",
-      "kfc plan validate --project ."
+      "kfc plan validate"
     );
   }
 
@@ -2705,7 +2721,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
       throw createClientOnboardingError(
         CLIENT_ONBOARDING_CODES.HEALTHCHECK_FAILED,
         err instanceof Error ? err.message : String(err),
-        "kfc client bootstrap --project . --force --skip-serve-check"
+        "kfc client bootstrap --force --skip-serve-check"
       );
     }
     info(`Health check OK: http://127.0.0.1:${options.port}/api/health`);
@@ -2773,7 +2789,7 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
     buildClientOnboardingProgressPayload(
       CLIENT_ONBOARDING_STAGES.BOOTSTRAP,
       "Running client bootstrap checks.",
-      "kfc client doctor --project . --fix"
+      "kfc client doctor --fix"
     )
   );
   try {
@@ -2800,14 +2816,14 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
       return { code: 1, recoveryUsed: false };
     }
     warn(
-      `Onboarding bootstrap blocked (${first.error_code}). Running one smart recovery cycle via \`kfc client doctor --project . --fix\`.`
+      `Onboarding bootstrap blocked (${first.error_code}). Running one smart recovery cycle via \`kfc client doctor --fix\`.`
     );
     await emitClientOnboardingEvent(
       options.project,
       buildClientOnboardingProgressPayload(
         CLIENT_ONBOARDING_STAGES.BOOTSTRAP,
         `Running smart recovery after ${first.error_code}.`,
-        "kfc client doctor --project . --fix"
+        "kfc client doctor --fix"
       )
     );
 
@@ -2820,7 +2836,7 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
         createClientOnboardingError(
           CLIENT_ONBOARDING_CODES.SMART_RECOVERY_FAILED,
           `Smart recovery failed after initial bootstrap error (${first.error_code}).`,
-          "kfc client doctor --project . --fix"
+          "kfc client doctor --fix"
         )
       );
       await emitClientOnboardingEvent(options.project, blockPayload);
@@ -2884,7 +2900,7 @@ async function runClientStatus(options) {
   printClientStatusSummary(summary);
   printClientDocsHints(options.project);
   if (summary.status !== "BLOCK") {
-    info("Client status is read-only. Use `kfc client`, `kfc client doctor --project . --fix`, or `kfc client update --project .` only when action is needed.");
+  info("Client status is read-only. Use `kfc client`, `kfc client doctor --fix`, or `kfc client update` only when action is needed.");
   }
   return summary.status === "BLOCK" ? 1 : 0;
 }
@@ -3033,7 +3049,7 @@ async function runClientReadyHandoff(options, bootstrap) {
       createClientOnboardingError(
         CLIENT_ONBOARDING_CODES.READY_ARTIFACT_FAILED,
         err instanceof Error ? err.message : String(err),
-        "kfc flow ensure-plan --project ."
+        "kfc flow ensure-plan"
       )
     );
     await emitClientOnboardingEvent(options.project, blockPayload);
@@ -3180,7 +3196,7 @@ async function runClientReadyHandoff(options, bootstrap) {
       recoveryUsed: bootstrap.recoveryUsed,
       stage: CLIENT_ONBOARDING_STAGES.EXECUTION_READY,
       reason: completion.reason,
-      next: completion.nextAction || planStateSteps[0] || "kfc flow ready --project .",
+      next: completion.nextAction || planStateSteps[0] || "kfc flow ready",
       next_steps: Array.isArray(completion.nextSteps) && completion.nextSteps.length > 0
         ? completion.nextSteps
         : planStateSteps
@@ -3204,9 +3220,9 @@ async function runClientReadyHandoff(options, bootstrap) {
       createClientOnboardingError(
         CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED,
         `Automatic cleanup failed after archived done proof. ${err instanceof Error ? err.message : String(err)}`,
-        "kfc client done --project .",
+        "kfc client done",
         {
-          next: "kfc client done --project .",
+          next: "kfc client done",
           stage: CLIENT_ONBOARDING_STAGES.DONE
         }
       )
@@ -3280,7 +3296,7 @@ async function runClientUpdate(options) {
 }
 
 export async function runClient(options) {
-  const parsed = parseArgs(options.cwd, options.args);
+  const parsed = await parseArgs(options.cwd, options.args);
 
   if (parsed.subcommand === "help" || parsed.subcommand === "--help" || parsed.subcommand === "-h") {
     usage();

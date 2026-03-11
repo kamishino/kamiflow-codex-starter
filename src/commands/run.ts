@@ -509,7 +509,7 @@ export async function runWorkflow(options) {
   const activePlans = await listPlanRecords(parsed.project, false);
   let activePlan = selectActivePlan(activePlans);
   if (!activePlan) {
-    error("No active plan found after guardrails. Run `kfc flow ensure-plan --project .`.");
+    error("No active plan found after guardrails. Run `kfc flow ensure-plan`.");
     return 1;
   }
 
@@ -774,7 +774,7 @@ export async function runWorkflow(options) {
           `next=${nextRoute || "unknown"}`,
           "signal=FLOW_STALLED_NO_ADVANCE"
         ]),
-        next_step: "Run `kfc flow ensure-plan --project .` then `kfc flow ready --project .` before rerun."
+        next_step: "Run `kfc flow ensure-plan` then `kfc flow ready` before rerun."
       });
 
       const failureMessage = normalizeBlockers("Plan state did not advance after route execution.", [
@@ -792,13 +792,13 @@ export async function runWorkflow(options) {
         route_confidence: 2,
         fallback_route: nextRoute || "plan",
         selected_route: currentRoute,
-        recovery_step: "Run `kfc flow ensure-plan --project .` then `kfc flow ready --project .` before rerun.",
+        recovery_step: "Run `kfc flow ensure-plan` then `kfc flow ready` before rerun.",
         message: "Flow stalled: no plan-state advance",
         detail: compactText(failureMessage, 600),
         updated_at: new Date().toISOString()
       });
       error("Plan state did not advance after route execution. Stopping to avoid loop.");
-      error("Recovery: Run `kfc flow ensure-plan --project .` then `kfc flow ready --project .` before rerun.");
+      error("Recovery: Run `kfc flow ensure-plan` then `kfc flow ready` before rerun.");
       await emitRouteHealthSummary("blocked", "Plan state stalled without advancement.");
       return 1;
     }

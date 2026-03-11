@@ -40,10 +40,10 @@ plan options:
   kfc plan validate [--project <path>]
 
 flow options:
-  kfc flow ensure-plan --project <path> [--plan <path|plan_id>] [--new] [--topic <text>] [--route <start|plan|build|check|fix|research>]
-  kfc flow ready --project <path> [--plan <path|plan_id>] [--new] [--no-sync-block] [--no-sync-ready]
-  kfc flow apply --project <path> --plan <path|plan_id> --route <plan|build|check|fix|research|start> --result <go|progress|pass|block>
-  kfc flow next --project <path> --plan <path|plan_id> --style narrative
+  kfc flow ensure-plan [--project <path>] [--plan <path|plan_id>] [--new] [--topic <text>] [--route <start|plan|build|check|fix|research>]
+  kfc flow ready [--project <path>] [--plan <path|plan_id>] [--new] [--no-sync-block] [--no-sync-ready]
+  kfc flow apply [--project <path>] --plan <path|plan_id> --route <plan|build|check|fix|research|start> --result <go|progress|pass|block>
+  kfc flow next [--project <path>] --plan <path|plan_id> --style narrative
 
 run options:
   kfc run [--project <path>] [--skip-ready] [--route <start|plan|build|check|fix|research>] [--max-steps <n>] [--timeout-ms <n>]
@@ -51,6 +51,7 @@ run options:
 client options:
   kfc client [--goal <text>] [--project <path>] [--force] [--skip-serve-check] [--skip-git-repo-check] [--no-launch-codex]
   kfc client bootstrap [--project <path>] [--profile <client|dogfood>] [--port <n>] [--force] [--skip-serve-check] [--skip-git-repo-check] [--no-launch-codex]
+  kfc client status [--project <path>]
   kfc client doctor [--project <path>] [--fix]
   kfc client done [--project <path>]
   kfc client update [--project <path>] [--from <git-url|folder|tgz>] [--apply] [--skip-serve-check]

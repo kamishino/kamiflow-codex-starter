@@ -61,9 +61,10 @@ This repository has four active scopes:
 
 - In KFC repo (`kamiflow-codex-starter`), use `npm run ...` maintainer scripts.
 - In client projects, use `kfc ...` (or `npx --no-install kfc ...`), not this repo's `npm run ...`.
+- When a `kfc` command accepts `--project`, treat it as an override for out-of-tree targeting. If omitted, `kfc client`, `kfc flow`, `kfc plan`, and `kfc web` should auto-detect the nearest project root from the current working directory.
 - Client bootstrap flow is `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done` for cleanup.
 - Primary lifecycle behavior is direct markdown mutation in `.local/plans/*.md`; do not require `kfc flow ...` commands in normal route execution.
-- `kfc flow ensure-plan --project .` and `kfc flow ready --project .` are fallback recovery commands when plan files are missing or inconsistent.
+- `kfc flow ensure-plan` and `kfc flow ready` are fallback recovery commands when plan files are missing or inconsistent.
 
 ## Plan Lifecycle Contract
 
