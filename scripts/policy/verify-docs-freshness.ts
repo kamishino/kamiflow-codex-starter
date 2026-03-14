@@ -34,8 +34,8 @@ const RULES: Rule[] = [
       "resources/rules/",
       "src/commands/flow.ts",
       "src/commands/run.ts",
-      "src/lib/flow-policy.ts",
-      "src/lib/plan-lifecycle.ts"
+      "src/lib/plan/flow-policy.ts",
+      "src/lib/plan/plan-lifecycle.ts"
     ],
     requiredDocs: [
       "AGENTS.md",
@@ -52,7 +52,7 @@ const RULES: Rule[] = [
     description: "Client bootstrap/onboarding changes must refresh onboarding docs and generated mirrors.",
     triggers: [
       "src/commands/client.ts",
-      "src/lib/skill-sync.ts",
+      "src/lib/core/skill-sync.ts",
       "resources/docs/QUICKSTART.md",
       "resources/docs/CLIENT_KICKOFF_PROMPT.md",
       "resources/docs/CLIENT_A2Z_PLAYBOOK.md"
@@ -92,8 +92,8 @@ const WARNING_RULES: WarningRule[] = [
       "src/commands/flow.ts",
       "src/commands/run.ts",
       "src/commands/client.ts",
-      "src/lib/flow-policy.ts",
-      "src/lib/plan-lifecycle.ts",
+      "src/lib/plan/flow-policy.ts",
+      "src/lib/plan/plan-lifecycle.ts",
       "scripts/git-hooks/",
       "scripts/policy/",
       "resources/skills/kamiflow-core/",
@@ -281,3 +281,4 @@ try {
   console.error(`[docs-freshness] ERROR: ${err instanceof Error ? err.message : String(err)}`);
   process.exit(1);
 }
+

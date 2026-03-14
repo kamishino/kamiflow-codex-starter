@@ -2,19 +2,19 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../lib/core/logger.js";
 import { runPlan } from "./plan.js";
-import { createLocalPlanTemplate, ensurePlanFileTechnicalSolutionDiagram } from "../lib/plan-bootstrap.js";
-import type { FrontmatterRecord } from "../lib/plan-frontmatter.js";
+import { createLocalPlanTemplate, ensurePlanFileTechnicalSolutionDiagram } from "../../lib/plan/plan-bootstrap.js";
+import type { FrontmatterRecord } from "../../lib/plan/plan-frontmatter.js";
 import {
   applyLifecycleMutation,
   buildPhaseDigest,
   evaluateArchiveGate,
   evaluateBuildReadiness as evaluateBuildReadinessFromLifecycle,
   toNextAction as toNextActionFromLifecycle
-} from "../lib/plan-lifecycle.js";
-import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../lib/flow-policy.js";
-import { parsePlanFrontmatter } from "../lib/plan-frontmatter.js";
+} from "../../lib/plan/plan-lifecycle.js";
+import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../../lib/plan/flow-policy.js";
+import { parsePlanFrontmatter } from "../../lib/plan/plan-frontmatter.js";
 import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -860,5 +860,7 @@ async function runNext(options, args) {
   console.log(`Next Mode: ${payload.next_mode}`);
   return 0;
 }
+
+
 
 

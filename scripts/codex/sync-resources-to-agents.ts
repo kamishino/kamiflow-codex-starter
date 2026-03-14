@@ -12,13 +12,13 @@ import {
   getRepoRootDir,
   readRulesProfileFromProjectConfig,
   validateRulesProfile
-} from "../../lib/rules.js";
+} from "../../lib/core/rules.js";
 import {
   getProjectSkillsTargetDir,
   getRepoSkillsTargetDir,
   getSkillsSourceDir,
   syncSkillsArtifacts
-} from "../../lib/skill-sync.js";
+} from "../../lib/core/skill-sync.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -327,3 +327,4 @@ function onEperm(err, targetPath) {
   }
   return err;
 }
+

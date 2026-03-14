@@ -1,6 +1,6 @@
 import fs from "node:fs/promises";
-import { defaultConfig, getConfigPath } from "../lib/config.js";
-import { info } from "../lib/logger.js";
+import { defaultConfig, getConfigPath } from "../../lib/core/config.js";
+import { info } from "../../lib/core/logger.js";
 
 function hasFlag(args, flag) {
   return args.includes(flag);
@@ -30,3 +30,5 @@ export async function runInit(options) {
   info(`Wrote config: ${configPath}`);
   return 0;
 }
+
+

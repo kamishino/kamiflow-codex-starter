@@ -4,9 +4,9 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";
-import { createRemoteServer } from "../lib/remote-server.js";
-import { ensureRemoteAuth, loadRemoteAuth, loadRemoteSession, remoteTokenPresent, revokeRemoteAuth } from "../lib/remote-state.js";
-import { error, info, warn } from "../lib/logger.js";
+import { createRemoteServer } from "../../lib/remote/remote-server.js";
+import { ensureRemoteAuth, loadRemoteAuth, loadRemoteSession, remoteTokenPresent, revokeRemoteAuth } from "../../lib/remote/remote-state.js";
+import { error, info, warn } from "../../lib/core/logger.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -350,3 +350,5 @@ export async function runRemote({ cwd, args }) {
   usage();
   return 1;
 }
+
+

@@ -3,8 +3,8 @@ import {
   readRawConfig,
   resolveResourcesDir,
   validateConfig
-} from "../lib/config.js";
-import { error, info } from "../lib/logger.js";
+} from "../../lib/core/config.js";
+import { error, info } from "../../lib/core/logger.js";
 
 function parseMajorVersion(version) {
   const parsed = Number.parseInt(version.split(".")[0], 10);
@@ -55,3 +55,5 @@ export async function runDoctor(options) {
 
   return hasFailure ? 1 : 0;
 }
+
+

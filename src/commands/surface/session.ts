@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import os from "node:os";
 import path from "node:path";
 import { spawn } from "node:child_process";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../lib/core/logger.js";
 
 const INDEX_FILE_NAME = "kfc-session-index.json";
 const ENVELOPE_FORMAT = "kfc-session-age-envelope-v1";
@@ -1118,3 +1118,5 @@ export async function runSession(options) {
   usage();
   return 1;
 }
+
+

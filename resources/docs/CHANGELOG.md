@@ -32,3 +32,5 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 - Added advisory semantic-version impact reporting to `commit:codex`, with `none|patch|minor|major` derived from the conventional commit message while keeping actual workspace version bumps release-only.
 - Expanded the generated client-root `AGENTS.md` contract so fresh client sessions now see a short workflow command map for plan validation, readiness recovery, doctor recovery, and cleanup without relying on repo-only scripts.
 - Refined client-bootstrap script/docs resolution so doc/help paths for `kfc client` are derived from active `resourcesDir` or install fallback, making reuse in new project locations cleaner and less brittle.
+## 2026-03-14
+- Reorganized CLI source surface/lib layout into subdomains (`src/commands/surface`, `src/lib/core|plan|remote`) while preserving backward-compatible import shims at previous entrypoints.

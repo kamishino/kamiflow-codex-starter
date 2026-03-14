@@ -5,18 +5,18 @@ import {
   readRawConfig,
   resolveResourcesDir,
   validateConfig
-} from "../lib/config.js";
+} from "../../lib/core/config.js";
 import { runCodexAction } from "@kamishino/kfc-runtime/codex-runner";
-import { error, info } from "../lib/logger.js";
+import { error, info } from "../../lib/core/logger.js";
 import {
   applyLifecycleMutation,
   normalizeBlockers,
   toIsoTimestamp
-} from "../lib/plan-lifecycle.js";
-import { buildPreflightFailureContinuity, evaluateRouteTransition } from "../lib/flow-policy.js";
+} from "../../lib/plan/plan-lifecycle.js";
+import { buildPreflightFailureContinuity, evaluateRouteTransition } from "../../lib/plan/flow-policy.js";
 import { runFlow } from "./flow.js";
-import type { FrontmatterRecord } from "../lib/plan-frontmatter.js";
-import { parsePlanFrontmatter } from "../lib/plan-frontmatter.js";
+import type { FrontmatterRecord } from "../../lib/plan/plan-frontmatter.js";
+import { parsePlanFrontmatter } from "../../lib/plan/plan-frontmatter.js";
 
 const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "research"]);
 const DEFAULT_MAX_STEPS = 6;
@@ -815,3 +815,5 @@ export async function runWorkflow(options) {
   await emitRouteHealthSummary("blocked", `Reached max steps (${parsed.maxSteps}) before completion.`);
   return 1;
 }
+
+

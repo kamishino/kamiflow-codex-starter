@@ -227,3 +227,4 @@ Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`.
 - `resources/docs/REMOTE_RUNBOOK.md`
 - `resources/docs/KFC_CHAT_RUNBOOK.md`
 
+- `src/commands` and `src/lib` now use explicit subdomain folders (`commands/surface`, `lib/core|plan|remote`) with compatibility exports kept in old entrypoints for external stability.

@@ -9,6 +9,17 @@ This repository has four active scopes:
 
 `resources/` is the SSOT area.
 
+## Folder Contract
+
+- `src/`: CLI product runtime and command implementation.
+- `bin/`: runtime entrypoint scripts.
+- `packages/`: workspace package boundaries (plan web, chat, web UI, session, runtime, etc.).
+- `scripts/`: maintainer and workflow scripts, organized by domain (`scripts/client`, `scripts/codex`, `scripts/doc*`, etc.).
+- `resources/`: portable SSOT (rules, skills, docs, templates).
+- `dogfood/`: controlled in-repo fixtures for install/usage validation.
+- `dist/`: repository build output (generated).
+- `node_modules/`, `.local/`, `.npm-cache/`: local environment/caches and workflow state.
+
 ## Instruction Topology
 
 - `AGENTS.md`: global boundaries, context routing, anti-pattern routing.

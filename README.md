@@ -21,9 +21,13 @@ This repository is the KFC CLI source plus dogfooding workspace.
 
 - `bin/`: CLI executable entrypoint.
 - `src/`: command and runtime source.
-- `dogfood/`: in-repo consumer fixtures.
-- `scripts/`: maintainer automation.
+- `packages/`: workspace packages and package-local product surfaces.
+- `scripts/`: maintainer automation and repo tooling.
 - `resources/`: SSOT docs/rules/skills.
+- `dogfood/`: in-repo consumer fixtures.
+- `dist/`: compiled output (generated).
+- `packages/*/dist/`: package build outputs (generated).
+- `node_modules/`, `.local/`, `.npm-cache/`: local environment or generated artifacts (not part of source ownership).
 
 ## CLI Commands
 

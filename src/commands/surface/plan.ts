@@ -2,8 +2,8 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { error, info } from "../lib/logger.js";
-import { createLocalPlanTemplate } from "../lib/plan-bootstrap.js";
+import { error, info } from "../../lib/core/logger.js";
+import { createLocalPlanTemplate } from "../../lib/plan/plan-bootstrap.js";
 import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -144,4 +144,6 @@ export async function runPlan(options) {
   }
   return exitCode;
 }
+
+
 

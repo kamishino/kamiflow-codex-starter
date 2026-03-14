@@ -1,14 +1,14 @@
 import path from "node:path";
-import { runInit } from "./commands/init.js";
-import { runDoctor } from "./commands/doctor.js";
-import { runWorkflow } from "./commands/run.js";
-import { runPlan } from "./commands/plan.js";
-import { runFlow } from "./commands/flow.js";
-import { runClient } from "./commands/client.js";
-import { runSession } from "./commands/session.js";
-import { runRemote } from "./commands/remote.js";
-import { runWeb } from "./commands/web.js";
-import { error } from "./lib/logger.js";
+import { runInit } from "./commands/surface/init.js";
+import { runDoctor } from "./commands/surface/doctor.js";
+import { runWorkflow } from "./commands/surface/run.js";
+import { runPlan } from "./commands/surface/plan.js";
+import { runFlow } from "./commands/surface/flow.js";
+import { runClient } from "./commands/surface/client.js";
+import { runSession } from "./commands/surface/session.js";
+import { runRemote } from "./commands/surface/remote.js";
+import { runWeb } from "./commands/surface/web.js";
+import { error } from "./lib/core/logger.js";
 
 function printUsage() {
   console.log(`Kami Flow CLI
@@ -153,4 +153,5 @@ export async function runCli(argv) {
     return 1;
   }
 }
+
 
