@@ -23,6 +23,16 @@ export type PlanRecord<TFrontmatter = Record<string, unknown>> = {
 };
 
 type FrontmatterParser<TFrontmatter> = (markdown: string) => TFrontmatter;
+type PlanFileState = { mtimeMs: number; size: number };
+
+type PlanWorkspaceCacheEntry<TFrontmatter> = {
+  includeDone: boolean;
+  files: Map<string, PlanFileState>;
+  records: Map<string, PlanRecord<TFrontmatter>>;
+  byPlanId: Map<string, string>;
+  byFileName: Map<string, string>;
+  refreshedAt: number;
+};
 
 function toTimestamp(value: unknown, fallback = 0): number {
   if (!value) {
@@ -61,6 +71,43 @@ function humanizeSlug(slug: string, fallback = "Plan"): string {
     .join(" ")
     .trim();
   return value || fallback;
+}
+
+function cacheKey(includeDone: boolean) {
+  return includeDone ? "plans+done" : "plans";
+}
+
+function normalizeCacheSize(value: unknown): number {
+  const parsed = Number.parseInt(String(value || 0), 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+}
+
+async function collectPlanFileStates(directoryPath: string): Promise<Map<string, PlanFileState>> {
+  const out = new Map<string, PlanFileState>();
+  try {
+    const entries = await fs.readdir(directoryPath, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isFile()) {
+        continue;
+      }
+      if (!entry.name.toLowerCase().endsWith(".md")) {
+        continue;
+      }
+      const filePath = path.join(directoryPath, entry.name);
+      try {
+        const stat = await fs.stat(filePath);
+        out.set(filePath, { mtimeMs: stat.mtimeMs, size: normalizeCacheSize(stat.size) });
+      } catch {
+        continue;
+      }
+    }
+  } catch (err) {
+    if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
+      return out;
+    }
+    throw err;
+  }
+  return out;
 }
 
 export function resolvePlansDir(projectDir: string): string {
@@ -267,19 +314,9 @@ export async function listPlanFiles(projectDir: string, includeDone = false): Pr
   const files: string[] = [];
 
   async function collectFrom(dirPath: string): Promise<void> {
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
-          continue;
-        }
-        files.push(path.join(dirPath, entry.name));
-      }
-    } catch (err) {
-      if (err && typeof err === "object" && "code" in err && err.code === "ENOENT") {
-        return;
-      }
-      throw err;
+    const states = await collectPlanFileStates(dirPath);
+    for (const filePath of states.keys()) {
+      files.push(filePath);
     }
   }
 
@@ -347,4 +384,184 @@ export function selectActivePlan<TFrontmatter = Record<string, unknown>>(
   const active = plans.filter((item) => !isDonePlan(item));
   active.sort((left, right) => right.updatedAtMs - left.updatedAtMs);
   return active[0] || null;
+}
+
+export function createPlanWorkspace<TFrontmatter = Record<string, unknown>>(
+  projectDir: string,
+  parseFrontmatter?: FrontmatterParser<TFrontmatter>
+) {
+  const projectRoot = path.resolve(projectDir);
+  const cache = new Map<string, PlanWorkspaceCacheEntry<TFrontmatter>>();
+  const inFlight = new Map<string, Promise<PlanWorkspaceCacheEntry<TFrontmatter>>>();
+
+  async function scanState(includeDone: boolean): Promise<Map<string, PlanFileState>> {
+    const plansDir = resolvePlansDir(projectRoot);
+    const states = await collectPlanFileStates(plansDir);
+    if (!includeDone) {
+      return states;
+    }
+    const doneDir = resolveDonePlansDir(projectRoot);
+    const doneStates = await collectPlanFileStates(doneDir);
+    for (const [filePath, state] of doneStates) {
+      states.set(filePath, state);
+    }
+    return states;
+  }
+
+  async function sync(includeDone: boolean): Promise<PlanWorkspaceCacheEntry<TFrontmatter>> {
+    const key = cacheKey(includeDone);
+    const nextSnapshot = await scanState(includeDone);
+    const cached = cache.get(key);
+    if (!cached) {
+      const records = new Map<string, PlanRecord<TFrontmatter>>();
+      const byPlanId = new Map<string, string>();
+      const byFileName = new Map<string, string>();
+      for (const filePath of nextSnapshot.keys()) {
+        try {
+          const record = await readPlanRecord(filePath, parseFrontmatter);
+          records.set(filePath, record);
+          byPlanId.set(record.planId, filePath);
+          byFileName.set(record.fileName, filePath);
+        } catch {
+          // Ignore unreadable plan files.
+        }
+      }
+      return {
+        includeDone,
+        files: nextSnapshot,
+        records,
+        byPlanId,
+        byFileName,
+        refreshedAt: Date.now()
+      };
+    }
+
+    const existingFiles = cached.files;
+    if (existingFiles.size === nextSnapshot.size) {
+      let same = true;
+      for (const [filePath, state] of nextSnapshot) {
+        const known = existingFiles.get(filePath);
+        if (!known || known.mtimeMs !== state.mtimeMs || known.size !== state.size) {
+          same = false;
+          break;
+        }
+      }
+      if (same) {
+        cached.refreshedAt = Date.now();
+        return cached;
+      }
+    }
+
+    const currentRecords = new Map<string, PlanRecord<TFrontmatter>>(cached.records);
+    const byPlanId = new Map<string, string>(cached.byPlanId);
+    const byFileName = new Map<string, string>(cached.byFileName);
+
+    for (const existingPath of existingFiles.keys()) {
+      if (!nextSnapshot.has(existingPath)) {
+        existingFiles.delete(existingPath);
+        const removed = currentRecords.get(existingPath);
+        if (removed) {
+          currentRecords.delete(existingPath);
+          byPlanId.delete(removed.planId);
+          byFileName.delete(removed.fileName);
+        }
+      }
+    }
+
+    for (const [filePath, state] of nextSnapshot) {
+      const known = existingFiles.get(filePath);
+      if (known && known.mtimeMs === state.mtimeMs && known.size === state.size) {
+        continue;
+      }
+      existingFiles.set(filePath, state);
+      const existingRecord = currentRecords.get(filePath);
+      if (existingRecord) {
+        byPlanId.delete(existingRecord.planId);
+        byFileName.delete(existingRecord.fileName);
+      }
+
+      try {
+        const record = await readPlanRecord(filePath, parseFrontmatter);
+        currentRecords.set(filePath, record);
+        byPlanId.set(record.planId, filePath);
+        byFileName.set(record.fileName, filePath);
+      } catch {
+        currentRecords.delete(filePath);
+        if (existingRecord) {
+          byPlanId.delete(existingRecord.planId);
+          byFileName.delete(existingRecord.fileName);
+        }
+      }
+    }
+
+    cached.files = existingFiles;
+    cached.records = currentRecords;
+    cached.byPlanId = byPlanId;
+    cached.byFileName = byFileName;
+    cached.refreshedAt = Date.now();
+    return cached;
+  }
+
+  async function getSnapshot(includeDone = false): Promise<PlanWorkspaceCacheEntry<TFrontmatter>> {
+    const key = cacheKey(includeDone);
+    const running = inFlight.get(key);
+    if (running) {
+      return running;
+    }
+
+    const next = (async () => sync(includeDone))();
+    inFlight.set(key, next);
+    try {
+      const snapshot = await next;
+      cache.set(key, snapshot);
+      return snapshot;
+    } finally {
+      inFlight.delete(key);
+    }
+  }
+
+  function sortByFileName(records: Array<PlanRecord<TFrontmatter>>) {
+    records.sort((left, right) => left.fileName.localeCompare(right.fileName));
+  }
+
+  return {
+    getActivePlan: async (): Promise<PlanRecord<TFrontmatter> | null> => {
+      const snapshot = await loadSnapshot(false);
+      return selectActivePlan(Array.from(snapshot.records.values()));
+    },
+    getPlanByRef: async (
+      planRef: string,
+      includeDone = true
+    ): Promise<PlanRecord<TFrontmatter> | null> => {
+      const snapshot = await loadSnapshot(includeDone);
+      const { records } = snapshot;
+      const resolved = path.resolve(projectRoot, planRef);
+      const directPath = snapshot.byFileName.get(planRef) || snapshot.byPlanId.get(planRef) || resolved;
+      const direct = records.get(directPath);
+      if (direct) {
+        return direct;
+      }
+      for (const item of records.values()) {
+        if (item.planId === planRef || item.fileName === planRef || path.resolve(item.filePath) === resolved) {
+          return item;
+        }
+      }
+      return null;
+    },
+    getPlanRecords: async (includeDone = false): Promise<Array<PlanRecord<TFrontmatter>>> => {
+      const snapshot = await loadSnapshot(includeDone);
+      const out = Array.from(snapshot.records.values());
+      sortByFileName(out);
+      return out;
+    },
+    invalidate() {
+      cache.clear();
+      inFlight.clear();
+    }
+  };
+
+  async function loadSnapshot(includeDone = false): Promise<PlanWorkspaceCacheEntry<TFrontmatter>> {
+    const snapshot = await getSnapshot(includeDone);
+    return snapshot;
+  }
 }

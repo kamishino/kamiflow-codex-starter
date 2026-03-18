@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
+  createPlanWorkspace,
   isDonePlan,
-  loadPlanRecords,
   resolveRunsDir,
   selectActivePlan
 } from "@kamishino/kfc-runtime/plan-workspace";
@@ -26,7 +26,6 @@ import { parsePlanFrontmatter } from "../../lib/plan/plan-frontmatter.js";
 const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "research"]);
 const DEFAULT_MAX_STEPS = 6;
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
-
 type RunArgs = {
   project: string;
   skipReady: boolean;
@@ -363,10 +362,6 @@ function formatCounterSummary(counter: RunCounterMap) {
     .join(", ");
 }
 
-async function resolvePlanById(projectDir, planId, includeDone = true) {
-  const plans = await loadPlanRecords(projectDir, parsePlanFrontmatter, includeDone);
-  return plans.find((item) => item.planId === planId) || null;
-}
 
 export async function runWorkflow(options) {
   const parsed = parseArgs(options.cwd, options.args);
@@ -427,7 +422,8 @@ export async function runWorkflow(options) {
   info(`Profile: ${raw.data.workflow.profile ?? "default"}`);
   info(`Resources: ${resourcesDir}`);
 
-  const activePlans = await loadPlanRecords(parsed.project, parsePlanFrontmatter, false);
+  const planWorkspace = createPlanWorkspace(parsed.project, parsePlanFrontmatter);
+  const activePlans = await planWorkspace.getPlanRecords(false);
   let activePlan = selectActivePlan(activePlans);
   if (!activePlan) {
     error("No active plan found after guardrails. Run `kfc flow ensure-plan`.");
@@ -635,7 +631,7 @@ export async function runWorkflow(options) {
       return 1;
     }
 
-    const refreshed = await resolvePlanById(parsed.project, activePlan.planId, true);
+    const refreshed = await planWorkspace.getPlanByRef(activePlan.planId, true);
     if (refreshed) {
       activePlan = refreshed;
     }

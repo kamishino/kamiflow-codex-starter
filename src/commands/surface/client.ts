@@ -37,6 +37,11 @@ import {
   syncSkillsArtifacts
 } from "../../lib/core/skill-sync.js";
 import { error, info, warn } from "../../lib/core/logger.js";
+import {
+  createPlanWorkspace,
+  isDonePlan,
+  selectActivePlan
+} from "@kamishino/kfc-runtime/plan-workspace";
 import { evaluateBuildReadiness } from "../../lib/plan/plan-lifecycle.js";
 import type { FrontmatterRecord } from "../../lib/plan/plan-frontmatter.js";
 import { parsePlanFrontmatter, serializePlanFrontmatter, splitPlanFrontmatter } from "../../lib/plan/plan-frontmatter.js";
@@ -1540,46 +1545,17 @@ function toTimestamp(value, fallback) {
 }
 
 async function resolveActivePlan(projectDir) {
-  const plansDir = path.join(projectDir, ".local", "plans");
-  let entries = [];
-  try {
-    entries = await fsp.readdir(plansDir, { withFileTypes: true });
-  } catch (err) {
-    if (err && typeof err === "object" && err.code === "ENOENT") {
-      return null;
-    }
-    throw err;
+  const workspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
+  const plans = await workspace.getPlanRecords(false);
+  const activeCandidates = plans.filter((item) => {
+    const status = String(item.status || "").toLowerCase();
+    return status === "draft" || status === "ready";
+  });
+  if (activeCandidates.length > 0) {
+    activeCandidates.sort((left, right) => right.updatedAtMs - left.updatedAtMs);
+    return activeCandidates[0];
   }
-
-  const planCandidates = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
-      continue;
-    }
-    const filePath = path.join(plansDir, entry.name);
-    try {
-      const raw = await fsp.readFile(filePath, "utf8");
-      const stat = await fsp.stat(filePath);
-      const fm = parsePlanFrontmatter(raw);
-      planCandidates.push({
-        filePath,
-        planId: fm.plan_id || path.basename(entry.name, ".md"),
-        status: fm.status || "",
-        updatedAtMs: toTimestamp(fm.updated_at, stat.mtimeMs)
-      });
-    } catch {
-      // Ignore unreadable files.
-    }
-  }
-
-  if (planCandidates.length === 0) {
-    return null;
-  }
-
-  const active = planCandidates.filter((item) => item.status === "draft" || item.status === "ready");
-  const source = active.length > 0 ? active : planCandidates;
-  source.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
-  return source[0];
+  return selectActivePlan(plans);
 }
 
 async function describeClientPlanState(projectDir): Promise<ClientPlanStateSummary> {
@@ -1588,9 +1564,8 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
     throw new Error("Cannot find an active plan in .local/plans.");
   }
 
-  const raw = await fsp.readFile(plan.filePath, "utf8");
-  const frontmatter = parsePlanFrontmatter(raw);
-  const readiness = evaluateBuildReadiness({ frontmatter, raw });
+  const readiness = evaluateBuildReadiness(plan);
+  const frontmatter = plan.frontmatter;
   const status = String(frontmatter.status || "draft").trim() || "draft";
   const decision = String(frontmatter.decision || "Unknown").trim() || "Unknown";
   const nextCommand = String(frontmatter.next_command || "plan").trim() || "plan";
@@ -1752,34 +1727,16 @@ function extractExistingReadyMission(readyMarkdown) {
 }
 
 async function findDonePlanById(projectDir, planId) {
-  const doneDir = path.join(projectDir, ".local", "plans", "done");
-  let entries = [];
-  try {
-    entries = await fsp.readdir(doneDir, { withFileTypes: true });
-  } catch (err) {
-    if (err && typeof err === "object" && err.code === "ENOENT") {
-      return null;
-    }
-    throw err;
+  const workspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
+  const planRecord = await workspace.getPlanByRef(planId, true);
+  if (!planRecord || !isDonePlan(planRecord)) {
+    return null;
   }
-
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
-      continue;
-    }
-    const filePath = path.join(doneDir, entry.name);
-    const raw = await fsp.readFile(filePath, "utf8");
-    const frontmatter = parsePlanFrontmatter(raw);
-    if (String(frontmatter.plan_id || "").trim() !== String(planId || "").trim()) {
-      continue;
-    }
-    return {
-      filePath,
-      raw,
-      frontmatter
-    };
-  }
-  return null;
+  return {
+    filePath: planRecord.filePath,
+    raw: planRecord.raw,
+    frontmatter: planRecord.frontmatter
+  };
 }
 
 export async function evaluateClientSetupCompletion(projectDir, planId): Promise<ClientSetupCompletionResult> {

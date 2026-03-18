@@ -3,12 +3,10 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
+  createPlanWorkspace,
   isDonePlan,
-  loadPlanRecords,
   readPlanRecord,
-  resolveDonePlansDir,
-  resolvePlanByRef,
-  selectActivePlan
+  resolveDonePlansDir
 } from "@kamishino/kfc-runtime/plan-workspace";
 import { error, info } from "../../lib/core/logger.js";
 import { runPlan } from "./plan.js";
@@ -42,6 +40,8 @@ type PlanRecord = {
   mtimeMs: number;
   raw: string;
 };
+
+type PlanWorkspace = ReturnType<typeof createPlanWorkspace<FrontmatterRecord>>;
 
 type RunNodeResult = {
   code: number;
@@ -461,25 +461,42 @@ export async function runFlow(options) {
   return 1;
 }
 
-async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic = "", route = "plan" }) {
+async function resolveOrCreatePlan({
+  projectDir,
+  planRef,
+  forceNew,
+  cwd,
+  topic = "",
+  route = "plan",
+  planWorkspace
+}: {
+  projectDir: string;
+  planRef: string;
+  forceNew: boolean;
+  cwd: string;
+  topic?: string;
+  route?: string;
+  planWorkspace: PlanWorkspace;
+}) {
   let selected = null;
   let created = false;
   let source = "existing";
   let archivedDone = 0;
 
   if (planRef) {
-    selected = await resolvePlanByRef(projectDir, planRef, parsePlanFrontmatter);
+    selected = await planWorkspace.getPlanByRef(planRef, true);
     if (!selected) {
       throw new Error(`Plan not found from --plan reference: ${planRef}`);
     }
     source = "provided";
   } else {
-    let plans = await loadPlanRecords(projectDir, parsePlanFrontmatter);
+    let plans = await planWorkspace.getPlanRecords(false);
     archivedDone = await archiveDonePlansInRoot(projectDir, plans);
     if (archivedDone > 0) {
-      plans = await loadPlanRecords(projectDir, parsePlanFrontmatter);
+      planWorkspace.invalidate();
+      plans = await planWorkspace.getPlanRecords(false);
     }
-    selected = selectActivePlan(plans);
+    selected = await planWorkspace.getActivePlan();
     if (selected && topic && !forceNew && !planMatchesTopic(selected, topic)) {
       selected = null;
       source = "topic_split";
@@ -518,12 +535,14 @@ async function runEnsurePlan(options, args) {
   if (route) {
     ensureRoute(route);
   }
+  const planWorkspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
   const resolved = await resolveOrCreatePlan({
     projectDir,
     planRef,
     forceNew,
     topic,
     route,
+    planWorkspace,
     cwd: options.cwd
   });
 
@@ -559,12 +578,14 @@ async function runReady(options, args) {
   }
   const syncBlock = !readFlag(args, "--no-sync-block");
   const syncReady = !readFlag(args, "--no-sync-ready");
+  const planWorkspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
   const resolved = await resolveOrCreatePlan({
     projectDir,
     planRef,
     forceNew,
     topic,
     route,
+    planWorkspace,
     cwd: options.cwd
   });
 
@@ -664,7 +685,8 @@ async function runApply(options, args) {
   ensureRoute(route);
   ensureResult(result);
 
-  const planRecord = await resolvePlanByRef(projectDir, planRef, parsePlanFrontmatter);
+  const planWorkspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
+  const planRecord = await planWorkspace.getPlanByRef(planRef, true);
   if (!planRecord) {
     throw new Error(`Plan not found: ${planRef}`);
   }
@@ -716,7 +738,7 @@ async function runApply(options, args) {
   };
 
   try {
-    const refreshed = await resolvePlanByRef(projectDir, planId, parsePlanFrontmatter, true);
+    const refreshed = await planWorkspace.getPlanByRef(planId, true);
     if (refreshed) {
       output.phase_digest = buildPhaseDigest(refreshed);
       output.archive_gate = evaluateArchiveGate(refreshed.raw);
@@ -741,7 +763,8 @@ async function runNext(options, args) {
     throw new Error(`Unsupported --style: ${style}. Supported: narrative`);
   }
 
-  const planRecord = await resolvePlanByRef(projectDir, planRef, parsePlanFrontmatter, true);
+  const planWorkspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
+  const planRecord = await planWorkspace.getPlanByRef(planRef, true);
   if (!planRecord) {
     throw new Error(`Plan not found: ${planRef}`);
   }
