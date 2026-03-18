@@ -2,7 +2,11 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-const HOME_DIR = path.resolve(os.homedir());
+type ProjectRootOptions = {
+  homeDir?: string;
+};
+
+const DEFAULT_HOME_DIR = path.resolve(os.homedir());
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -13,11 +17,13 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-async function findUp(startDir: string, marker: string): Promise<string | null> {
+async function findUp(startDir: string, marker: string, homeDir: string): Promise<string | null> {
+  const resolvedStartDir = path.resolve(startDir);
   let current = path.resolve(startDir);
   while (true) {
     const candidate = path.join(current, marker);
-    if (await pathExists(candidate) && path.resolve(current) !== HOME_DIR) {
+    const isHomeDir = path.resolve(current) === homeDir;
+    if (await pathExists(candidate) && (!isHomeDir || current === resolvedStartDir)) {
       return current;
     }
 
@@ -29,13 +35,15 @@ async function findUp(startDir: string, marker: string): Promise<string | null> 
   }
 }
 
-export async function detectProjectRoot(cwd: string): Promise<string> {
-  const fromGit = await findUp(cwd, ".git");
+export async function detectProjectRoot(cwd: string, options: ProjectRootOptions = {}): Promise<string> {
+  const homeDir = path.resolve(options.homeDir || DEFAULT_HOME_DIR);
+
+  const fromGit = await findUp(cwd, ".git", homeDir);
   if (fromGit) {
     return fromGit;
   }
 
-  const fromPackage = await findUp(cwd, "package.json");
+  const fromPackage = await findUp(cwd, "package.json", homeDir);
   if (fromPackage) {
     return fromPackage;
   }

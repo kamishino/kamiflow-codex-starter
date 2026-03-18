@@ -37,3 +37,10 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 - Refined client-bootstrap script/docs resolution so doc/help paths for `kfc client` are derived from active `resourcesDir` or install fallback, making reuse in new project locations cleaner and less brittle.
 ## 2026-03-14
 - Reorganized CLI source surface/lib layout into subdomains (`src/commands/surface`, `src/lib/core|plan|remote`) while preserving backward-compatible import shims at previous entrypoints.
+
+## 2026-03-18
+
+- Simplified KFC runtime plan-workspace behavior by moving shared plan path/selection helpers into `@kamishino/kfc-runtime`, then reusing that SSOT in repo bootstrap, `kfc-plan init`, and flow/run surfaces instead of keeping duplicated filesystem logic in each caller.
+- Normalized new plan creation so both repo fallback bootstrap and `kfc-plan init` create sequenced filenames under the documented `YYYY-MM-DD-<seq>-<route>-<topic-slug>.md` contract while still leaving legacy plan files readable.
+- Hardened project-root auto-detection so a valid project rooted directly at the user home directory is detected correctly without letting nested home subfolders accidentally bubble up to home.
+- Reworked `verify:codex-intelligence` from long exact-sentence matching to structured heading/anchor checks so documentation wording can evolve without breaking governance as long as required sections, IDs, and command anchors remain present.

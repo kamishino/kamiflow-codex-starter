@@ -1,4 +1,4 @@
-import { evaluateRouteTransition } from "./flow-policy.js";
+import { evaluateRouteTransition } from "../flow-policy.js";
 import { serializePlanFrontmatter, splitPlanFrontmatter } from "./plan-frontmatter.js";
 
 function markdownEscapeRegExp(value) {

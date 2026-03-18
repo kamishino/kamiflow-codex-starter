@@ -1,7 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ensureTechnicalSolutionDiagramSection } from "./technical-solution-diagram.js";
+import {
+  parsePlanFileIdentity,
+  resolvePlanFilePath,
+  resolvePlansDir
+} from "@kamishino/kfc-runtime/plan-workspace";
+import { ensureTechnicalSolutionDiagramSection } from "../technical-solution-diagram.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -94,70 +99,8 @@ type PlanBootstrapOptions = {
   log?: (message: string) => void;
 };
 
-export function resolvePlansDir(projectDir) {
-  return path.join(projectDir, ".local", "plans");
-}
-
-function slugifySegment(value, fallback = "") {
-  const slug = String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-  if (!slug) {
-    return fallback;
-  }
-  return slug;
-}
-
-function buildSlugBase(options: PlanBootstrapOptions = {}) {
-  const route = slugifySegment(options.route || "plan", "plan");
-  const topic = slugifySegment(options.topic || options.slug || "", "");
-  const combined = topic ? `${route}-${topic}` : route;
-  return combined.slice(0, 64).replace(/-+$/g, "") || "plan";
-}
-
 function toIsoNow() {
   return new Date().toISOString();
-}
-
-function toLocalDateStamp(date = new Date()) {
-  const year = String(date.getFullYear());
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function humanizeSlug(slug, fallback = "Plan") {
-  const value = String(slug || "")
-    .split("-")
-    .filter(Boolean)
-    .map((part) => `${part.slice(0, 1).toUpperCase()}${part.slice(1)}`)
-    .join(" ")
-    .trim();
-  return value || fallback;
-}
-
-function parsePlanFileIdentity(filePath: string, options: PlanBootstrapOptions = {}) {
-  const fallbackDate = toLocalDateStamp();
-  const baseName = path.basename(filePath, ".md");
-  const match = baseName.match(/^(?<date>\d{4}-\d{2}-\d{2})(?:-(?<seq>\d{3}))?(?:-(?<slug>.+))?$/i);
-  const date = match?.groups?.date || fallbackDate;
-  const seq = match?.groups?.seq || "001";
-  const slug = String(match?.groups?.slug || "").trim();
-  const slugParts = slug.split("-").filter(Boolean);
-  const route = slugifySegment(slugParts[0] || options.route || "plan", "plan");
-  const topicSlug = slugParts.length > 1
-    ? slugifySegment(slugParts.slice(1).join("-"), "")
-    : slugifySegment(options.topic || options.slug || "", "");
-  const rawTopic = String(options.topic || "").trim();
-  const title = rawTopic || humanizeSlug(topicSlug, `${humanizeSlug(route)} Plan`);
-  return {
-    date,
-    seq,
-    route,
-    topicSlug,
-    title
-  };
 }
 
 function updateFrontmatterField(markdown, key, value) {
@@ -205,64 +148,6 @@ function materializeTemplate(template, targetPath, options = {}) {
   return next;
 }
 
-function buildDefaultPlanFileName(options = {}) {
-  const date = toLocalDateStamp();
-  const slugBase = buildSlugBase(options);
-  return `${date}-${slugBase}.md`;
-}
-
-async function resolveUniqueNewPlanPath(plansDir, options = {}) {
-  const date = toLocalDateStamp();
-  const slugBase = buildSlugBase(options);
-  const usedSequenceNumbers = new Set();
-  const pattern = new RegExp(`^${date}-(\\d{3})(?:-.+)?\\.md$`, "i");
-  let highestSequence = 0;
-
-  async function collectUsedSequences(dirPath) {
-    try {
-      const entries = await fs.readdir(dirPath, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isFile()) {
-          continue;
-        }
-        const match = entry.name.match(pattern);
-        if (!match) {
-          continue;
-        }
-        const parsed = Number.parseInt(match[1], 10);
-        if (Number.isFinite(parsed) && parsed >= 1 && parsed <= 999) {
-          usedSequenceNumbers.add(parsed);
-          highestSequence = Math.max(highestSequence, parsed);
-        }
-      }
-    } catch {
-      // Ignore missing directories.
-    }
-  }
-
-  await collectUsedSequences(plansDir);
-  await collectUsedSequences(path.join(plansDir, "done"));
-
-  if (highestSequence >= 999) {
-    throw new Error("Unable to allocate new plan filename in .local/plans.");
-  }
-
-  for (let i = highestSequence + 1; i <= 999; i += 1) {
-    if (usedSequenceNumbers.has(i)) {
-      continue;
-    }
-    const suffix = String(i).padStart(3, "0");
-    const candidate = path.join(plansDir, `${date}-${suffix}-${slugBase}.md`);
-    try {
-      await fs.access(candidate);
-      continue;
-    } catch {
-      return candidate;
-    }
-  }
-  throw new Error("Unable to allocate new plan filename in .local/plans.");
-}
-
 async function readPlanTemplate() {
   try {
     return await fs.readFile(REPO_KFC_PLAN_TEMPLATE, "utf8");
@@ -282,9 +167,7 @@ export async function createLocalPlanTemplate(projectDir: string, options: PlanB
   await fs.mkdir(plansDir, { recursive: true });
 
   const template = await readPlanTemplate();
-  const targetPath = forceNew
-    ? await resolveUniqueNewPlanPath(plansDir, naming)
-    : path.join(plansDir, buildDefaultPlanFileName(naming));
+  const targetPath = await resolvePlanFilePath(plansDir, naming, { forceNew });
 
   if (!forceNew) {
     try {

@@ -19,7 +19,7 @@ import {
   buildClientOnboardingPassPayload,
   classifyClientOnboardingFailure,
   createClientOnboardingError
-} from "../../lib/client/client-onboarding-recovery.js";
+} from "../../lib/client-onboarding-recovery.js";
 import {
   DEFAULT_RULES_PROFILE,
   RULES_FILE_NAME,
@@ -48,7 +48,7 @@ import { runPlan } from "./plan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const PACKAGE_ROOT = path.resolve(__dirname, "../..");
+const PACKAGE_ROOT = path.resolve(__dirname, "../../..");
 const PACKAGE_JSON_PATH = path.join(PACKAGE_ROOT, "package.json");
 const KFC_BIN = path.join(PACKAGE_ROOT, "bin", "kamiflow.js");
 const REPO_KFC_PLAN_BIN = path.join(PACKAGE_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");

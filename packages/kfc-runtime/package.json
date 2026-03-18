@@ -9,6 +9,10 @@
       "types": "./src/session-actions.ts",
       "default": "./dist/session-actions.js"
     },
+    "./plan-workspace": {
+      "types": "./src/plan-workspace.ts",
+      "default": "./dist/plan-workspace.js"
+    },
     "./project-root": {
       "types": "./src/project-root.ts",
       "default": "./dist/project-root.js"

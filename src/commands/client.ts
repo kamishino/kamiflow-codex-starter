@@ -1,4 +1,9 @@
-export { runClient } from "./surface/client.js";
+export {
+  buildClientAgentsManagedBlock,
+  createClientReadyArtifacts,
+  evaluateClientSetupCompletion,
+  runClient
+} from "./surface/client.js";
 
 /**
  * Client AGENTS.md scaffolded:

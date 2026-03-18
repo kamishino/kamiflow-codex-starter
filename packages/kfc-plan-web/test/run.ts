@@ -25,6 +25,9 @@ const { SSEStream } = await import(pathToFileURL(path.join(packageDir, "dist/ser
 const { detectProjectRoot } = await import(
   pathToFileURL(path.join(packageDir, "..", "kfc-runtime", "dist", "project-root.js")).href
 );
+const { resolvePlanFilePath } = await import(
+  pathToFileURL(path.join(packageDir, "..", "kfc-runtime", "dist", "plan-workspace.js")).href
+);
 const {
   buildCodexExecArgVariants,
   buildCodexExecManualCommand,
@@ -46,6 +49,9 @@ const {
 } = await import(pathToFileURL(path.join(packageDir, "..", "..", "dist/commands/client.js")).href);
 const { analyzeCommitMessageSemver } = await import(
   pathToFileURL(path.join(packageDir, "..", "..", "dist/scripts/release/semver-from-commits.js")).href
+);
+const { verifyCodexIntelligenceContract } = await import(
+  pathToFileURL(path.join(packageDir, "..", "..", "dist/scripts/policy/verify-codex-intelligence-contract.js")).href
 );
 
 const __dirname = path.join(packageDir, "test");
@@ -556,10 +562,25 @@ await runCase("init creates plan template", async () => {
     const files = await fs.readdir(plansDir);
     assert.ok(files.some((name) => name.endsWith(".md")));
     const createdFile = files.find((name) => name.endsWith(".md"));
+    assert.match(createdFile, /-\d{3}-plan(?:-[a-z0-9-]+)?\.md$/i);
     const markdown = await fs.readFile(path.join(plansDir, createdFile), "utf8");
     const parsed = parsePlanFileContent(markdown, createdFile);
     assert.ok(/^PLAN-\d{4}-\d{2}-\d{2}-\d{3}$/.test(parsed.frontmatter.plan_id), parsed.frontmatter.plan_id);
     assert.notEqual(parsed.frontmatter.plan_id, "PLAN-YYYY-MM-DD-001");
+  });
+});
+
+await runCase("init without --new reuses the same sequenced file for matching topic and route", async () => {
+  await withTempDir(async (tempDir) => {
+    const first = await runCli(["init", "--project", tempDir, "--route", "build", "--topic", "Runtime SSOT"]);
+    assert.equal(first, 0);
+    const second = await runCli(["init", "--project", tempDir, "--route", "build", "--topic", "Runtime SSOT"]);
+    assert.equal(second, 0);
+
+    const plansDir = path.join(tempDir, ".local", "plans");
+    const files = (await fs.readdir(plansDir)).filter((name) => name.endsWith(".md")).sort();
+    assert.equal(files.length, 1);
+    assert.match(files[0], /-\d{3}-build-runtime-ssot\.md$/i);
   });
 });
 
@@ -697,6 +718,22 @@ await runCase("init --new uses monotonic sequence across active and done folders
   });
 });
 
+await runCase("shared plan path helper reuses matching sequenced file before allocating a new sequence", async () => {
+  await withTempDir(async (tempDir) => {
+    const plansDir = path.join(tempDir, ".local", "plans");
+    await fs.mkdir(plansDir, { recursive: true });
+    const dateStamp = toLocalDateStamp();
+    const existing = path.join(plansDir, `${dateStamp}-003-build-runtime-ssot.md`);
+    await fs.writeFile(existing, "# existing", "utf8");
+
+    const reused = await resolvePlanFilePath(plansDir, { route: "build", topic: "Runtime SSOT" }, { forceNew: false });
+    assert.equal(reused, existing);
+
+    const created = await resolvePlanFilePath(plansDir, { route: "build", topic: "Runtime SSOT" }, { forceNew: true });
+    assert.match(path.basename(created), /-004-build-runtime-ssot\.md$/i);
+  });
+});
+
 await runCase("validate succeeds for generated template", async () => {
   await withTempDir(async (tempDir) => {
     const initExit = await runCli(["init", "--project", tempDir]);
@@ -776,6 +813,39 @@ await runCase("detectProjectRoot prefers git root then package then cwd", async 
     await fs.mkdir(plainNested, { recursive: true });
     const detectedPlain = await detectProjectRoot(plainNested);
     assert.equal(detectedPlain, plainNested);
+  });
+});
+
+await runCase("detectProjectRoot allows a project rooted directly at home without bubbling nested folders to home", async () => {
+  await withTempDir(async (tempDir) => {
+    await fs.mkdir(path.join(tempDir, ".git"), { recursive: true });
+    const nested = path.join(tempDir, "nested");
+    await fs.mkdir(nested, { recursive: true });
+
+    const detectedHomeRoot = await detectProjectRoot(tempDir, { homeDir: tempDir });
+    assert.equal(detectedHomeRoot, tempDir);
+
+    const detectedNested = await detectProjectRoot(nested, { homeDir: tempDir });
+    assert.equal(detectedNested, nested);
+  });
+});
+
+await runCase("codex intelligence verifier tolerates equivalent wording changes when required structure remains", async () => {
+  const repoRoot = path.resolve(__dirname, "../../..");
+  await withTempDir(async (tempDir) => {
+    await fs.cp(path.join(repoRoot, "resources"), path.join(tempDir, "resources"), { recursive: true });
+    await fs.mkdir(path.join(tempDir, "scripts", "policy"), { recursive: true });
+    await fs.writeFile(path.join(tempDir, "scripts", "policy", ".keep"), "", "utf8");
+
+    const originalAgents = await fs.readFile(path.join(repoRoot, "AGENTS.md"), "utf8");
+    const modifiedAgents = originalAgents.replace(
+      "Every route call must persist plan updates before final response.",
+      "Every route call must persist plan-state updates before the final response."
+    );
+    await fs.writeFile(path.join(tempDir, "AGENTS.md"), modifiedAgents, "utf8");
+
+    const result = verifyCodexIntelligenceContract({ rootDir: tempDir });
+    assert.equal(result.ok, true, result.errors.join("\n"));
   });
 });
 

@@ -31,7 +31,8 @@ npm run kfc-plan -- workspace add <name> [--project <path>]
 npm run kfc-plan -- serve --workspace <name> --port 4310
 ```
 
-`init --new` always creates a unique file using `YYYY-MM-DD-00x-<route>-<topic-slug>.md` (defaults to `...-plan.md` when no topic is provided).
+`init` now creates or reuses sequenced files under `YYYY-MM-DD-00x-<route>-<topic-slug>.md`.
+`init --new` always allocates the next unique daily sequence; plain `init` reuses the latest matching active file for the same route/topic when one already exists.
 
 Then open:
 

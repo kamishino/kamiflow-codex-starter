@@ -158,6 +158,7 @@ When route execution fails or context is incomplete, use this exact order:
 ## Recovery Shortcuts
 
 - Missing/inconsistent plan: `kfc flow ensure-plan --project .`
+- Plan file creation contract: plain bootstrap/init should create or reuse a sequenced file matching `YYYY-MM-DD-<seq>-<route>-<topic-slug>.md`; `--new` always allocates the next daily sequence.
 - Build-readiness uncertainty: `kfc flow ready --project .`
 - Shell/profile crash: rerun with no-profile/non-login shell.
 - Runtime skill/rules drift: `npm run codex:sync -- --scope repo --force`

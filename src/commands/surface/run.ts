@@ -1,6 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import {
+  isDonePlan,
+  loadPlanRecords,
+  resolveRunsDir,
+  selectActivePlan
+} from "@kamishino/kfc-runtime/plan-workspace";
+import {
   assertReadableDirectory,
   readRawConfig,
   resolveResourcesDir,
@@ -13,9 +19,8 @@ import {
   normalizeBlockers,
   toIsoTimestamp
 } from "../../lib/plan/plan-lifecycle.js";
-import { buildPreflightFailureContinuity, evaluateRouteTransition } from "../../lib/plan/flow-policy.js";
+import { buildPreflightFailureContinuity, evaluateRouteTransition } from "../../lib/flow-policy.js";
 import { runFlow } from "./flow.js";
-import type { FrontmatterRecord } from "../../lib/plan/plan-frontmatter.js";
 import { parsePlanFrontmatter } from "../../lib/plan/plan-frontmatter.js";
 
 const VALID_ROUTES = new Set(["start", "plan", "build", "check", "fix", "research"]);
@@ -103,14 +108,6 @@ function parseArgs(baseCwd: string, args: string[]): RunArgs {
   return parsed;
 }
 
-function resolvePlansDir(projectDir) {
-  return path.join(projectDir, ".local", "plans");
-}
-
-function resolveRunsDir(projectDir) {
-  return path.join(projectDir, ".local", "runs");
-}
-
 function normalizeRoute(value) {
   const normalized = String(value || "").trim().toLowerCase();
   return ["start", "plan", "build", "check", "fix", "research", "done"].includes(normalized)
@@ -144,82 +141,6 @@ function lifecyclePhaseForRoute(route) {
     return normalized;
   }
   return "plan";
-}
-
-function toTimestamp(value, fallback = 0) {
-  if (!value) {
-    return fallback;
-  }
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? fallback : parsed;
-}
-
-async function readPlanRecord(filePath: string) {
-  const raw = await fs.readFile(filePath, "utf8");
-  const stat = await fs.stat(filePath);
-  const frontmatter = parsePlanFrontmatter(raw);
-  return {
-    filePath,
-    raw,
-    frontmatter,
-    planId: frontmatter.plan_id || path.basename(filePath, path.extname(filePath)),
-    status: frontmatter.status || "unknown",
-    updatedAt: frontmatter.updated_at || "",
-    updatedAtMs: toTimestamp(frontmatter.updated_at, stat.mtimeMs)
-  };
-}
-
-async function listPlanRecords(projectDir, includeDone = false) {
-  const plansDir = resolvePlansDir(projectDir);
-  const files = [];
-  const collect = async (dirPath) => {
-    let entries = [];
-    try {
-      entries = await fs.readdir(dirPath, { withFileTypes: true });
-    } catch (err) {
-      if (err && typeof err === "object" && err.code === "ENOENT") {
-        return;
-      }
-      throw err;
-    }
-    for (const entry of entries) {
-      if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".md")) {
-        continue;
-      }
-      files.push(path.join(dirPath, entry.name));
-    }
-  };
-
-  await collect(plansDir);
-  if (includeDone) {
-    await collect(path.join(plansDir, "done"));
-  }
-
-  const plans = [];
-  for (const filePath of files) {
-    try {
-      plans.push(await readPlanRecord(filePath));
-    } catch {
-      // Skip unreadable plan.
-    }
-  }
-  return plans;
-}
-
-function isDonePlan(plan) {
-  const fm = plan?.frontmatter || {};
-  return (
-    String(fm.status || "").toLowerCase() === "done" ||
-    String(fm.next_command || "").toLowerCase() === "done" ||
-    String(fm.next_mode || "").toLowerCase() === "done" ||
-    String(fm.lifecycle_phase || "").toLowerCase() === "done"
-  );
-}
-
-function selectActivePlan(plans) {
-  const active = plans.filter((item) => !isDonePlan(item));
-  active.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
-  return active[0] || null;
 }
 
 function modeHintForRoute(route) {
@@ -443,7 +364,7 @@ function formatCounterSummary(counter: RunCounterMap) {
 }
 
 async function resolvePlanById(projectDir, planId, includeDone = true) {
-  const plans = await listPlanRecords(projectDir, includeDone);
+  const plans = await loadPlanRecords(projectDir, parsePlanFrontmatter, includeDone);
   return plans.find((item) => item.planId === planId) || null;
 }
 
@@ -506,7 +427,7 @@ export async function runWorkflow(options) {
   info(`Profile: ${raw.data.workflow.profile ?? "default"}`);
   info(`Resources: ${resourcesDir}`);
 
-  const activePlans = await listPlanRecords(parsed.project, false);
+  const activePlans = await loadPlanRecords(parsed.project, parsePlanFrontmatter, false);
   let activePlan = selectActivePlan(activePlans);
   if (!activePlan) {
     error("No active plan found after guardrails. Run `kfc flow ensure-plan`.");

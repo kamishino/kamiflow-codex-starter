@@ -2,6 +2,14 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import {
+  isDonePlan,
+  loadPlanRecords,
+  readPlanRecord,
+  resolveDonePlansDir,
+  resolvePlanByRef,
+  selectActivePlan
+} from "@kamishino/kfc-runtime/plan-workspace";
 import { error, info } from "../../lib/core/logger.js";
 import { runPlan } from "./plan.js";
 import { createLocalPlanTemplate, ensurePlanFileTechnicalSolutionDiagram } from "../../lib/plan/plan-bootstrap.js";
@@ -13,7 +21,7 @@ import {
   evaluateBuildReadiness as evaluateBuildReadinessFromLifecycle,
   toNextAction as toNextActionFromLifecycle
 } from "../../lib/plan/plan-lifecycle.js";
-import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../../lib/plan/flow-policy.js";
+import { buildReadinessBlockPayload, buildReadinessReadyPayload } from "../../lib/flow-policy.js";
 import { parsePlanFrontmatter } from "../../lib/plan/plan-frontmatter.js";
 import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
@@ -97,100 +105,6 @@ function resolveBaseUrl(args) {
   return DEFAULT_BASE_URL;
 }
 
-function resolvePlansDir(projectDir) {
-  return path.join(projectDir, ".local", "plans");
-}
-
-function toTimestamp(value, fallback) {
-  if (!value) {
-    return fallback;
-  }
-  const parsed = Date.parse(value);
-  if (Number.isNaN(parsed)) {
-    return fallback;
-  }
-  return parsed;
-}
-
-async function readPlanRecord(filePath) {
-  const raw = await fs.readFile(filePath, "utf8");
-  const stat = await fs.stat(filePath);
-  const fm = parsePlanFrontmatter(raw);
-  return {
-    filePath,
-    fileName: path.basename(filePath),
-    frontmatter: fm,
-    planId: fm.plan_id || path.basename(filePath, path.extname(filePath)),
-    status: fm.status || "unknown",
-    updatedAt: fm.updated_at || "",
-    updatedAtMs: toTimestamp(fm.updated_at, stat.mtimeMs),
-    mtimeMs: stat.mtimeMs,
-    raw
-  };
-}
-
-async function listPlanFiles(projectDir, includeDone = false) {
-  const plansDir = resolvePlansDir(projectDir);
-  const files = [];
-  const enqueueMarkdownFrom = async (dirPath) => {
-    let entries;
-    try {
-      entries = await fs.readdir(dirPath, { withFileTypes: true });
-    } catch (err) {
-      if (err && typeof err === "object" && err.code === "ENOENT") {
-        return;
-      }
-      throw err;
-    }
-    for (const entry of entries) {
-      const full = path.join(dirPath, entry.name);
-      if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-        files.push(full);
-      }
-    }
-  };
-
-  await enqueueMarkdownFrom(plansDir);
-  if (includeDone) {
-    await enqueueMarkdownFrom(path.join(plansDir, "done"));
-  }
-  return files;
-}
-
-async function loadPlans(projectDir, includeDone = false) {
-  const files = await listPlanFiles(projectDir, includeDone);
-  const plans = [];
-  for (const filePath of files) {
-    try {
-      plans.push(await readPlanRecord(filePath));
-    } catch {
-      // Ignore unreadable/invalid files for deterministic selection.
-    }
-  }
-  return plans;
-}
-
-async function resolvePlanByRef(projectDir, planRef, includeDone = true) {
-  const refPath = path.resolve(projectDir, planRef);
-  try {
-    const stat = await fs.stat(refPath);
-    if (stat.isFile()) {
-      return await readPlanRecord(refPath);
-    }
-  } catch {
-    // Not a path; continue lookup by plan_id.
-  }
-
-  const plans = await loadPlans(projectDir, includeDone);
-  return plans.find((item) => item.planId === planRef || item.fileName === planRef) || null;
-}
-
-function selectActivePlan(plans) {
-  const active = plans.filter((item) => String(item.status || "").toLowerCase() !== "done");
-  active.sort((a, b) => b.updatedAtMs - a.updatedAtMs);
-  return active[0] || null;
-}
-
 function normalizeText(value) {
   return String(value || "")
     .toLowerCase()
@@ -210,16 +124,6 @@ function planMatchesTopic(planRecord, topic) {
   return title.includes(normalizedTopic) || normalizedTopic.includes(title);
 }
 
-function isPlanDoneRecord(planRecord) {
-  const fm = planRecord?.frontmatter || {};
-  return (
-    String(fm.status || "").toLowerCase() === "done" ||
-    String(fm.next_command || "").toLowerCase() === "done" ||
-    String(fm.next_mode || "").toLowerCase() === "done" ||
-    String(fm.lifecycle_phase || "").toLowerCase() === "done"
-  );
-}
-
 async function resolveUniqueArchivePath(doneDir, fileName) {
   const parsed = path.parse(fileName);
   for (let i = 0; i < 1000; i += 1) {
@@ -236,11 +140,11 @@ async function resolveUniqueArchivePath(doneDir, fileName) {
 }
 
 async function archiveDonePlansInRoot(projectDir, plans) {
-  const doneDir = path.join(resolvePlansDir(projectDir), "done");
+  const doneDir = resolveDonePlansDir(projectDir);
   let moved = 0;
   await fs.mkdir(doneDir, { recursive: true });
   for (const plan of plans) {
-    if (!isPlanDoneRecord(plan)) {
+    if (!isDonePlan(plan)) {
       continue;
     }
     if (plan.filePath.includes(`${path.sep}done${path.sep}`)) {
@@ -564,16 +468,16 @@ async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic =
   let archivedDone = 0;
 
   if (planRef) {
-    selected = await resolvePlanByRef(projectDir, planRef);
+    selected = await resolvePlanByRef(projectDir, planRef, parsePlanFrontmatter);
     if (!selected) {
       throw new Error(`Plan not found from --plan reference: ${planRef}`);
     }
     source = "provided";
   } else {
-    let plans = await loadPlans(projectDir);
+    let plans = await loadPlanRecords(projectDir, parsePlanFrontmatter);
     archivedDone = await archiveDonePlansInRoot(projectDir, plans);
     if (archivedDone > 0) {
-      plans = await loadPlans(projectDir);
+      plans = await loadPlanRecords(projectDir, parsePlanFrontmatter);
     }
     selected = selectActivePlan(plans);
     if (selected && topic && !forceNew && !planMatchesTopic(selected, topic)) {
@@ -584,7 +488,7 @@ async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic =
 
   if (!selected || forceNew) {
     const createdPath = await createPlanViaInit(projectDir, cwd, { topic, route });
-    selected = await readPlanRecord(createdPath);
+    selected = await readPlanRecord(createdPath, parsePlanFrontmatter);
     created = true;
     source = "created";
   }
@@ -596,7 +500,7 @@ async function resolveOrCreatePlan({ projectDir, planRef, forceNew, cwd, topic =
     });
     technicalDiagramBackfilled = Boolean(normalized?.changed);
     if (technicalDiagramBackfilled) {
-      selected = await readPlanRecord(selected.filePath);
+      selected = await readPlanRecord(selected.filePath, parsePlanFrontmatter);
     }
   } catch (err) {
     info(`Technical Solution Diagram normalization skipped: ${err instanceof Error ? err.message : String(err)}`);
@@ -685,7 +589,7 @@ async function runReady(options, args) {
     try {
       const changed = await persistReadinessReady(resolved.selected);
       if (changed) {
-        resolved.selected = await readPlanRecord(resolved.selected.filePath);
+        resolved.selected = await readPlanRecord(resolved.selected.filePath, parsePlanFrontmatter);
         console.error(`- Plan readiness context synced: ${resolved.selected.filePath}`);
       }
     } catch (err) {
@@ -760,7 +664,7 @@ async function runApply(options, args) {
   ensureRoute(route);
   ensureResult(result);
 
-  const planRecord = await resolvePlanByRef(projectDir, planRef);
+  const planRecord = await resolvePlanByRef(projectDir, planRef, parsePlanFrontmatter);
   if (!planRecord) {
     throw new Error(`Plan not found: ${planRef}`);
   }
@@ -812,7 +716,7 @@ async function runApply(options, args) {
   };
 
   try {
-    const refreshed = await resolvePlanByRef(projectDir, planId, true);
+    const refreshed = await resolvePlanByRef(projectDir, planId, parsePlanFrontmatter, true);
     if (refreshed) {
       output.phase_digest = buildPhaseDigest(refreshed);
       output.archive_gate = evaluateArchiveGate(refreshed.raw);
@@ -837,7 +741,7 @@ async function runNext(options, args) {
     throw new Error(`Unsupported --style: ${style}. Supported: narrative`);
   }
 
-  const planRecord = await resolvePlanByRef(projectDir, planRef, true);
+  const planRecord = await resolvePlanByRef(projectDir, planRef, parsePlanFrontmatter, true);
   if (!planRecord) {
     throw new Error(`Plan not found: ${planRef}`);
   }

@@ -1,5 +1,9 @@
 import path from "node:path";
-import { DEFAULT_PLAN_DIR, DEFAULT_RUN_DIR } from "../constants.js";
+import {
+  resolveDonePlansDir as resolveRuntimeDonePlansDir,
+  resolvePlansDir as resolveRuntimePlansDir,
+  resolveRunsDir as resolveRuntimeRunsDir
+} from "@kamishino/kfc-runtime/plan-workspace";
 
 export function resolveProjectDir(args) {
   const idx = args.indexOf("--project");
@@ -14,13 +18,13 @@ export function resolveProjectDir(args) {
 }
 
 export function resolvePlansDir(projectDir) {
-  return path.join(projectDir, DEFAULT_PLAN_DIR);
+  return resolveRuntimePlansDir(projectDir);
 }
 
 export function resolveDonePlansDir(projectDir) {
-  return path.join(resolvePlansDir(projectDir), "done");
+  return resolveRuntimeDonePlansDir(projectDir);
 }
 
 export function resolveRunsDir(projectDir) {
-  return path.join(projectDir, DEFAULT_RUN_DIR);
+  return resolveRuntimeRunsDir(projectDir);
 }

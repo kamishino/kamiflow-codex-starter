@@ -87,6 +87,7 @@ Important first-run behavior:
 This flow is designed for no user reminder loop after bootstrap. Codex should continue from the generated brief and the project-local skill without waiting for routine chat reminders.
 The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
 Root `AGENTS.md` is the stable client-repo brain. KFC owns and refreshes its managed block as the project-specific `/init` contract. It now includes the client workflow command map for `kfc client`, `kfc client status`, `kfc plan validate`, `kfc flow ensure-plan`, `kfc flow ready`, `kfc client doctor --fix`, and `kfc client done`, plus portable Kami Flow Core sections for `Plan Lifecycle Contract`, `Evidence Gate`, `Smooth Flow Protocol`, `Markdown Readability Policy`, blocker recovery, and docs/closeout review. Read `.kfc/CODEX_READY.md` when present; otherwise continue from the active plan plus lessons. Project-root auto-detection is shared across these KFC entrypoints, so add `--project <path>` only when you intentionally target a project from outside its tree.
+Repo-built KFC also resolves packaged client onboarding resources from the repository root even when the command is executing from compiled `dist` entrypoints, so generated AGENTS/ready-brief artifacts do not depend on a `dist/package.json` mirror.
 When KFC prints an apply/recovery command for an out-of-tree client target, keep the emitted absolute `--project <path>` intact instead of replacing it with `.`.
 
 To manage private project lessons after bootstrap:
