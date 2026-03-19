@@ -6,6 +6,10 @@
 Decision log for durable user-visible or workflow-affecting changes.
 This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
+## 2026-03-19
+
+- Expanded the KFC Plan and remote session workflow with richer runlog-aware activity surfaces: plan-web now exposes stronger activity journal metadata and copy affordances, while the hosted remote UI adds queue visibility, cancel controls, queue ETA/session status details, and more resilient live transcript/session refresh behavior.
+
 ## 2026-03-11
 
 - Fixed several runtime logic conflicts across KFC client/plan/web surfaces: client recovery/apply commands now keep the correct target repo for out-of-tree usage, KFC Plan now uses one Start Summary placeholder gate and blocks repeated build handoff after Check, plan mutations preserve freeform non-heading prose, and package `kfc-web`/`kfc-chat` entrypoints now align with wrapper root-detection while `kfc-web` dev assets honor the browser-visible host.

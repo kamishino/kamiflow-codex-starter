@@ -21,6 +21,12 @@ export const CLIENT_ONBOARDING_CODES = Object.freeze({
   PASS_RECOVERED: "CLIENT_ONBOARDING_PASS_RECOVERED"
 });
 
+export const CLIENT_ONBOARDING_RETRY_MODES = Object.freeze({
+  AUTO: "auto",
+  MANUAL: "manual",
+  NONE: "none"
+});
+
 export const CLIENT_ONBOARDING_STAGES = Object.freeze({
   INIT: "init",
   INSPECT: "inspect",
@@ -179,6 +185,20 @@ function stageForCode(code: string): ClientOnboardingStage {
   return CLIENT_ONBOARDING_STAGES.BLOCKED;
 }
 
+function retryModeForCode(code: string): string {
+  const normalized = String(code || "").trim();
+  if (
+    normalized === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
+    normalized === CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING ||
+    normalized === CLIENT_ONBOARDING_CODES.READY_FILE_EXISTS ||
+    normalized === CLIENT_ONBOARDING_CODES.AUTO_CLEANUP_FAILED ||
+    normalized === CLIENT_ONBOARDING_CODES.SETUP_INCOMPLETE
+  ) {
+    return CLIENT_ONBOARDING_RETRY_MODES.MANUAL;
+  }
+  return CLIENT_ONBOARDING_RETRY_MODES.AUTO;
+}
+
 function nextForStage(stage, context: ClientCommandContext = {}) {
   if (stage === CLIENT_ONBOARDING_STAGES.PLAN_READY) {
     return buildCommand("kfc flow ensure-plan", context);
@@ -269,6 +289,7 @@ export function classifyClientOnboardingFailure(
     status: "BLOCK",
     stage,
     error_code: code,
+    retry_mode: retryModeForCode(code),
     reason,
     recovery,
     next
@@ -290,6 +311,7 @@ export function buildClientOnboardingPassPayload(
     status: "PASS",
     stage,
     error_code: recoveryUsed ? CLIENT_ONBOARDING_CODES.PASS_RECOVERED : CLIENT_ONBOARDING_CODES.PASS,
+    retry_mode: CLIENT_ONBOARDING_RETRY_MODES.NONE,
     reason: normalizeMessage(normalized.reason) || (
       recoveryUsed
         ? "Client onboarding completed after one smart-recovery cycle."
@@ -307,6 +329,7 @@ export function buildClientOnboardingProgressPayload(stage, reason, next = "", c
     status: "RUNNING",
     stage: normalizedStage,
     error_code: "CLIENT_ONBOARDING_PROGRESS",
+    retry_mode: CLIENT_ONBOARDING_RETRY_MODES.NONE,
     reason: normalizeMessage(reason) || "Client onboarding in progress.",
     recovery: "None",
     next: injectProjectTarget(normalizeMessage(next), context) || nextForStage(normalizedStage, context)

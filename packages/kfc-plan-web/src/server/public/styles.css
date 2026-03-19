@@ -2174,6 +2174,22 @@ textarea {
   gap: var(--space-1);
 }
 
+.activity-copy-button {
+  margin-top: var(--space-1);
+  width: fit-content;
+  gap: var(--space-1);
+  padding: 0.18rem var(--space-2);
+}
+
+.activity-copy-button:hover {
+  opacity: 0.95;
+}
+
+.activity-current-signal-copy {
+  display: grid;
+  gap: var(--space-1);
+}
+
 .activity-now-message {
   font-weight: 600;
   line-height: var(--lh-normal);

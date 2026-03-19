@@ -8,9 +8,12 @@ export interface RunlogSignal {
   event_type: "runlog_started" | "runlog_completed" | "runlog_failed" | "runlog_updated";
   run_state: RunlogState;
   action_type?: string;
+  action_hint?: string;
+  suggested_command?: string;
   status?: string;
   run_id?: string;
   phase?: string;
+  retry_mode?: "auto" | "manual" | "none";
   source: string;
   message: string;
   detail: string;
@@ -25,6 +28,17 @@ export interface RunlogSignal {
   onboarding_error_code?: string;
   onboarding_recovery?: string;
   onboarding_next?: string;
+}
+
+export interface RunlogSignalEnvelope extends RunlogSignal {
+  updated_at?: string;
+}
+
+export interface RunlogLookupResult {
+  plan_id: string;
+  file_path: string;
+  updated_at: string;
+  signal: RunlogSignal;
 }
 
 function compactLine(value: string, max = 200): string {
@@ -120,6 +134,11 @@ function deriveEventType(runState: RunlogState): RunlogSignal["event_type"] {
   return "runlog_updated";
 }
 
+export function resolveRunlogPath(projectDir: string, planId: string): string {
+  const safePlanId = String(planId || "").trim();
+  return path.join(projectDir, ".local", "runs", `${safePlanId}.jsonl`);
+}
+
 export function derivePlanIdFromRunlogPath(filePath: string): string {
   return path.basename(String(filePath || ""), path.extname(String(filePath || "")));
 }
@@ -145,6 +164,15 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
   const actionType = entry?.action_type ? String(entry.action_type) : undefined;
   const status = entry?.status ? String(entry.status) : undefined;
   const explicitPhase = entry?.phase ? String(entry.phase) : undefined;
+  const actionHint = entry?.action_hint
+    ? compactLine(String(entry.action_hint), 400)
+    : entry?.recovery_step
+      ? compactLine(String(entry.recovery_step), 400)
+      : entry?.onboarding_recovery
+        ? compactLine(String(entry.onboarding_recovery), 400)
+        : entry?.onboarding_next
+          ? compactLine(String(entry.onboarding_next), 400)
+          : undefined;
   const runState = deriveRunState(entry || {});
   const eventType = deriveEventType(runState);
 
@@ -173,9 +201,12 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
     event_type: eventType,
     run_state: runState,
     action_type: actionType,
+    action_hint: actionHint || undefined,
+    suggested_command: entry?.suggested_command ? compactLine(String(entry.suggested_command), 400) : undefined,
     status,
     run_id: entry?.run_id ? String(entry.run_id) : undefined,
     phase: explicitPhase || mapActionToPhase(actionType),
+    retry_mode: (entry?.retry_mode as any) || undefined,
     source: entry?.source ? String(entry.source) : "runlog",
     message: derivedMessage,
     detail,
@@ -191,4 +222,25 @@ export async function readRunlogSignal(filePath: string): Promise<RunlogSignal |
     onboarding_recovery: entry?.onboarding_recovery ? compactLine(String(entry.onboarding_recovery), 300) : undefined,
     onboarding_next: entry?.onboarding_next ? compactLine(String(entry.onboarding_next), 300) : undefined
   };
+}
+
+export async function readLatestRunlogSignalForPlan(
+  projectDir: string,
+  planId: string
+): Promise<RunlogSignalEnvelope | null> {
+  const safePlanId = String(planId || "").trim();
+  if (!safePlanId) {
+    return null;
+  }
+  const filePath = resolveRunlogPath(projectDir, safePlanId);
+  const signal = await readRunlogSignal(filePath);
+  if (!signal) {
+    return null;
+  }
+  try {
+    const stat = await fs.stat(filePath);
+    return { ...signal, updated_at: stat.mtime.toISOString() };
+  } catch {
+    return { ...signal };
+  }
 }

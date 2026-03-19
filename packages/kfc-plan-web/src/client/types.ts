@@ -23,6 +23,30 @@ export interface PlanSummary {
   is_archived?: boolean;
   is_done?: boolean;
   error_count?: number;
+  latest_runlog?: {
+    event_type?: string;
+    run_state?: "RUNNING" | "SUCCESS" | "FAIL" | "IDLE";
+    action_type?: string;
+    action_hint?: string;
+    suggested_command?: string;
+    status?: string;
+    phase?: string;
+    message?: string;
+    detail?: string;
+    evidence?: string;
+    guardrail?: string;
+    route_confidence?: number;
+    fallback_route?: string;
+    selected_route?: string;
+    recovery_step?: string;
+    onboarding_status?: string;
+    onboarding_stage?: string;
+    onboarding_error_code?: string;
+    onboarding_recovery?: string;
+    onboarding_next?: string;
+    updated_at?: string;
+    source?: string;
+  };
 }
 
 export interface PlanListResponse {

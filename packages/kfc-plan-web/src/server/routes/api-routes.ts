@@ -15,6 +15,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     checklistAllChecked,
     withProjectSummary,
     toDetail,
+    withProjectSummaryAndRunlog,
     persistMutation,
     broadcastPlanEvent
   } = deps;
@@ -171,6 +172,7 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       includeDone: true,
       ...planLoadOptions(project)
     });
+    const updatedWithRunlog = updated ? await withProjectSummaryAndRunlog(projectId, updated) : null;
     await broadcastPlanEvent(projectId, planId, "plan_updated");
     stream.publish(
       "plan_archived",
@@ -181,8 +183,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       statusCode: 200,
       payload: {
         summary: updated
-          ? withProjectSummary(projectId, updated).summary
-          : withProjectSummary(projectId, existing).summary,
+          ? updatedWithRunlog?.summary ?? (await withProjectSummaryAndRunlog(projectId, updated)).summary
+          : (await withProjectSummaryAndRunlog(projectId, existing)).summary,
         archived_path: archivedPath
       }
     };
@@ -425,8 +427,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     const includeDone = query?.include_done === "true";
     const project = getProject(defaultProjectId)!;
     const plans = await loadPlans(project.project_dir, { includeDone, ...planLoadOptions(project) });
+    const plansWithRunlog = await Promise.all(plans.map((item) => withProjectSummaryAndRunlog(defaultProjectId, item)));
     return {
-      plans: plans.map((item) => withProjectSummary(defaultProjectId, item).summary)
+      plans: plansWithRunlog.map((item) => item.summary)
     };
   });
 
@@ -440,7 +443,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       reply.code(404);
       return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: id };
     }
-    return toDetail(withProjectSummary(defaultProjectId, plan));
+    const hydrated = await withProjectSummaryAndRunlog(defaultProjectId, plan);
+    return toDetail(hydrated);
   });
 
   fastify.get("/api/plans/:id/events", async (request, reply) => {
@@ -610,8 +614,9 @@ export function registerApiRoutes(fastify: any, deps: any): void {
     const query = request.query as { include_done?: string };
     const includeDone = query?.include_done === "true";
     const plans = await loadPlans(project.project_dir, { includeDone, ...planLoadOptions(project) });
+    const plansWithRunlog = await Promise.all(plans.map((item) => withProjectSummaryAndRunlog(project_id, item)));
     return {
-      plans: plans.map((item) => withProjectSummary(project_id, item).summary)
+      plans: plansWithRunlog.map((item) => item.summary)
     };
   });
 
@@ -629,7 +634,8 @@ export function registerApiRoutes(fastify: any, deps: any): void {
       reply.code(404);
       return { error: "Plan not found", error_code: "PLAN_NOT_FOUND", plan_id: id };
     }
-    return toDetail(withProjectSummary(project_id, plan));
+    const hydrated = await withProjectSummaryAndRunlog(project_id, plan);
+    return toDetail(hydrated);
   });
 
   fastify.get("/api/projects/:project_id/plans/:id/events", async (request, reply) => {

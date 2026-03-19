@@ -9,7 +9,7 @@ import { WorkflowTimeline } from "./components/WorkflowTimeline";
 import { initializeThemePreference } from "./theme";
 import { activityDensity, activityFilter, activityItems, detail, emptyPanelState, route, selectedProjectId, statusMessage } from "./state";
 import type { ActivityItem, ActivityMeta, PlanSummary } from "./types";
-import { activityTone, deriveStage, formatEventLabel, nowIso, parseRoute } from "./utils";
+import { activityTone, deriveStage, formatClock, formatEventLabel, nowIso, parseRoute } from "./utils";
 
 const projectEl = document.querySelector<HTMLSelectElement>("#project-filter");
 const filterEl = document.querySelector<HTMLSelectElement>("#plan-filter");
@@ -94,6 +94,20 @@ function selectedPlanDisplayLabel(summary: Partial<PlanSummary> | null | undefin
   }
   const title = summary.title ? ` - ${summary.title}` : "";
   return `${summary.plan_id}${title}`;
+}
+
+function summarizePlanRuntimeHint(summary: Partial<PlanSummary> | null | undefined): { label: string; updated: string } {
+  const runlog = summary?.latest_runlog;
+  if (!runlog?.run_state && !runlog?.action_type && !runlog?.status && !runlog?.action_hint) {
+    return { label: "", updated: "" };
+  }
+  const runState = runlog?.run_state ? `state=${runlog.run_state}` : "";
+  const action = runlog?.action_type ? `action=${runlog.action_type}` : "";
+  const status = runlog?.status ? `status=${runlog.status}` : "";
+  const updated = runlog?.updated_at ? runlog.updated_at : "";
+  const primary = [runState, action, status].filter(Boolean).join(" ");
+  const hint = runlog?.action_hint || runlog?.suggested_command || "";
+  return { label: [primary, hint].filter(Boolean).join(" | "), updated };
 }
 
 function currentPlanFilter(): string {
@@ -212,7 +226,11 @@ function syncPlanSelectionHelp(): void {
   const title = selected?.title ? ` - ${selected.title}` : "";
   const status = selected?.status ? ` | ${selected.status}` : "";
   const nextCommand = selected?.next_command ? ` | next: ${selected.next_command}` : "";
-  planSelectionHelpEl.textContent = `Selected plan: ${selectedPlanId}${title}${status}${nextCommand}`;
+  const runtime = summarizePlanRuntimeHint(selected);
+  const runtimeState = runtime.label ? ` | ${runtime.label}` : "";
+  const runtimeUpdated =
+    runtime.updated ? ` | runtime updated ${formatClock(runtime.updated)}` : "";
+  planSelectionHelpEl.textContent = `Selected plan: ${selectedPlanId}${title}${status}${nextCommand}${runtimeState}${runtimeUpdated}`;
   if (canSyncInput) {
     planSearchQuery = "";
     planSearchInputEl.value = displayLabel;

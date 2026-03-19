@@ -18,6 +18,69 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+const MAX_PROMPT_DURATION_SAMPLES = 8;
+const PROMPT_REPLAY_TTL_MS = 5 * 60 * 1000;
+const PROMPT_TEXT_DEDUPE_TTL_MS = 30_000;
+
+function normalizePromptId(value: unknown) {
+  return String(value || "").trim();
+}
+
+type PromptQueueStatus = "queued" | "running";
+
+type PromptQueueEntry = {
+  id: string;
+  prompt: string;
+  created_at: string;
+  status: PromptQueueStatus;
+  estimated_wait_ms?: number;
+  started_at?: string;
+};
+
+type PromptQueueSnapshotEntry = {
+  prompt_id: string;
+  status: PromptQueueStatus;
+  queue_position: number;
+  created_at: string;
+  estimated_wait_ms?: number;
+};
+
+type PromptReplayState = {
+  prompt_id: string;
+  status: "running" | "completed" | "blocked" | "cancelled";
+  accepted_state: "running" | "completed" | "blocked" | "cancelled";
+  queue_depth: number;
+  updated_at: number;
+};
+
+type PromptSignatureState = {
+  prompt_id: string;
+  seen_at: number;
+};
+
+function averageRunDuration(samples: number[]): number | undefined {
+  if (!Array.isArray(samples) || samples.length === 0) {
+    return undefined;
+  }
+  const valid = samples
+    .map((value) => Number(value))
+    .filter((value) => Number.isFinite(value) && value > 0)
+    .map((value) => Math.max(250, Math.round(value)));
+  if (!valid.length) {
+    return undefined;
+  }
+  const sum = valid.reduce((total, value) => total + value, 0);
+  return Math.max(500, Math.round(sum / valid.length));
+}
+
+function buildPromptSignature(prompt: string): string {
+  return compactText(prompt, 260).toLowerCase();
+}
+
+function nowMs() {
+  return Date.now();
+}
+
 function createEventHub(limit = 200) {
   const emitter = new EventEmitter();
   const replay = [];
@@ -33,7 +96,20 @@ function createEventHub(limit = 200) {
       return event;
     },
     replaySince(lastId = 0) {
+      if (lastId <= 0 || replay.length === 0) {
+        return replay.slice();
+      }
+      const oldestId = replay[0]?.id || 0;
+      if (oldestId && lastId < oldestId) {
+        return null;
+      }
       return replay.filter((item) => item.id > lastId);
+    },
+    earliestEventId() {
+      if (replay.length === 0) {
+        return null;
+      }
+      return replay[0]?.id || null;
     },
     subscribe(listener) {
       emitter.on("event", listener);
@@ -87,6 +163,8 @@ function buildInitialSession({ projectDir, host, port, boundSession, previous })
     status: previous?.status || "idle",
     busy: false,
     queue_depth: 0,
+    queue_snapshot: [],
+    queue_eta_ms: 0,
     current_prompt_id: null,
     last_prompt_at: previous?.last_prompt_at || "",
     last_result: previous?.last_result || null,
@@ -104,14 +182,106 @@ export async function createRemoteServer(options) {
   await ensureRemoteScaffold(projectDir);
   const eventHub = createEventHub();
   const fastify = Fastify({ logger: false });
-  const promptQueue = [];
+  const promptQueue: PromptQueueEntry[] = [];
+  const promptReplay = new Map<string, PromptReplayState>();
+  const promptTextReplay = new Map<string, PromptSignatureState>();
+  const promptRunDurations: number[] = [];
   const transcriptCache = await readTranscript(projectDir, 200);
   const previousSession = await loadRemoteSession(projectDir);
   let boundSession = await resolveBoundSession(projectDir);
   let session = buildInitialSession({ projectDir, host, port, boundSession, previous: previousSession });
   let processing = false;
 
+  function cleanupReplayState(now = nowMs()) {
+    for (const [key, state] of promptReplay.entries()) {
+      if (now - state.updated_at > PROMPT_REPLAY_TTL_MS) {
+        promptReplay.delete(key);
+      }
+    }
+    for (const [signature, state] of promptTextReplay.entries()) {
+      if (now - state.seen_at > PROMPT_TEXT_DEDUPE_TTL_MS) {
+        promptTextReplay.delete(signature);
+      }
+    }
+  }
+
+  function rememberPromptReplay(promptId: string, status: PromptReplayState["status"], acceptedState: PromptReplayState["accepted_state"], queueDepth: number) {
+    promptReplay.set(promptId, {
+      prompt_id: promptId,
+      status,
+      accepted_state: acceptedState,
+      queue_depth: queueDepth,
+      updated_at: nowMs()
+    });
+  }
+
+  function rememberPromptSignature(prompt: string, promptId: string) {
+    const signature = buildPromptSignature(prompt);
+    if (!signature) {
+      return;
+    }
+    promptTextReplay.set(signature, {
+      prompt_id: promptId,
+      seen_at: nowMs()
+    });
+  }
+
+  function resolvePromptReplayState(promptId: string) {
+    return promptReplay.get(promptId) || null;
+  }
+
+  function resolvePromptQueueState(promptId: string) {
+    const index = promptQueue.findIndex((item) => item.id === promptId);
+    if (index === -1) {
+      if (processing && session.current_prompt_id === promptId) {
+        return {
+          status: "running" as const,
+          accepted_state: "running" as const,
+          queue_depth: promptQueue.length
+        };
+      }
+      return null;
+    }
+    const status = index === 0 && processing ? "running" : "queued";
+    return {
+      status,
+      accepted_state: status,
+      queue_depth: promptQueue.length
+    };
+  }
+
+  function estimateQueueWait(position: number): number | undefined {
+    const avgMs = averageRunDuration(promptRunDurations);
+    if (!avgMs || !position || position <= 0) {
+      return position <= 0 ? 0 : undefined;
+    }
+    return avgMs * position;
+  }
+
+  function buildQueueSnapshot(): PromptQueueSnapshotEntry[] {
+    return promptQueue.map((item, index) => ({
+      prompt_id: item.id,
+      status: item.status,
+      queue_position: index + 1,
+      created_at: item.created_at,
+      estimated_wait_ms: index === 0 ? 0 : estimateQueueWait(index)
+    }));
+  }
+
+  function refreshSessionQueueSnapshot() {
+    const snapshot = buildQueueSnapshot();
+    const remaining = snapshot.length > 0 ? snapshot[snapshot.length - 1].estimated_wait_ms || 0 : 0;
+    session = {
+      ...session,
+      queue_depth: promptQueue.length,
+      queue_snapshot: snapshot,
+      queue_eta_ms: remaining,
+      busy: processing || promptQueue.length > 0
+    };
+  }
+
   async function persistSession() {
+    refreshSessionQueueSnapshot();
     session = {
       ...session,
       updated_at: nowIso()
@@ -168,12 +338,21 @@ export async function createRemoteServer(options) {
     }
     const next = promptQueue[0];
     if (!next) {
-      session = { ...session, busy: false, current_prompt_id: null, queue_depth: 0, status: session.status === "blocked" ? "blocked" : "idle" };
+      session = {
+        ...session,
+        busy: false,
+        current_prompt_id: null,
+        queue_depth: 0,
+        status: session.status === "blocked" ? "blocked" : "idle"
+      };
       await persistSession();
       return;
     }
 
     processing = true;
+    next.status = "running";
+    next.started_at = nowIso();
+    rememberPromptReplay(next.id, "running", "running", promptQueue.length);
     session = {
       ...session,
       busy: true,
@@ -188,48 +367,64 @@ export async function createRemoteServer(options) {
       prompt_id: next.id
     });
 
+    let summary = null;
+    let errorMessage = "";
+
     try {
       await refreshBoundSession();
       if (!boundSession.bound) {
         throw new Error(boundSession.reason || "No bound session.");
       }
       const executePrompt = options.executePrompt || defaultExecutePrompt;
-      const result = await executePrompt({
+      summary = await executePrompt({
         projectDir,
         prompt: next.prompt,
         planId: boundSession.plan_id,
         timeoutMs,
         promptId: next.id
       });
-      const summary = summarizeRemoteResult(result);
+      const derivedSummary = summarizeRemoteResult(summary);
       await appendEntry({
         role: "assistant",
         kind: "codex_result",
-        text: summary.text,
-        status: summary.state,
+        text: derivedSummary.text,
+        status: derivedSummary.state,
         meta: {
           prompt_id: next.id,
-          result_status: result.status || "failed",
-          error_code: result.error_code || null
+          result_status: summary.status || "failed",
+          error_code: summary.error_code || null
         }
       });
       session = {
         ...session,
-        status: summary.state === "completed" ? "done" : "blocked",
-        last_result: summary
+        status: derivedSummary.state === "completed" ? "done" : "blocked",
+        last_result: derivedSummary
       };
+      if (next.started_at) {
+        const startedAt = Date.parse(next.started_at);
+        if (Number.isFinite(startedAt) && derivedSummary.state === "completed") {
+          const elapsed = Math.max(250, nowMs() - startedAt);
+          promptRunDurations.push(elapsed);
+          if (promptRunDurations.length > MAX_PROMPT_DURATION_SAMPLES) {
+            promptRunDurations.shift();
+          }
+        }
+      }
       eventHub.publish("prompt_completed", {
         event_type: "prompt_completed",
         prompt_id: next.id,
-        result: summary
+        result: derivedSummary
       });
+      rememberPromptReplay(next.id, derivedSummary.state === "completed" ? "completed" : "blocked", derivedSummary.state === "completed" ? "completed" : "blocked", promptQueue.length);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      const summary = { state: "blocked", text: compactText(message) };
+      errorMessage = compactText(message);
+      const compactError = compactText(message);
+      const summaryOnError = { state: "blocked", text: compactError || "Prompt failed." };
       await appendEntry({
         role: "system",
         kind: "prompt_error",
-        text: summary.text,
+        text: summaryOnError.text,
         status: "blocked",
         meta: {
           prompt_id: next.id
@@ -238,23 +433,41 @@ export async function createRemoteServer(options) {
       session = {
         ...session,
         status: "blocked",
-        last_result: summary
+        last_result: summaryOnError
       };
       eventHub.publish("prompt_failed", {
         event_type: "prompt_failed",
         prompt_id: next.id,
         error: message
       });
-    } finally {
+      rememberPromptReplay(next.id, "blocked", "blocked", promptQueue.length);
+    }
+
+    try {
       promptQueue.shift();
       session = {
         ...session,
         busy: false,
         current_prompt_id: null,
-        queue_depth: promptQueue.length
+        queue_depth: promptQueue.length,
+        last_prompt_at: (next as PromptQueueEntry).created_at
       };
+      if (summary) {
+        await persistSession();
+      } else {
+        await appendEntry({
+          role: "system",
+          kind: "remote_error",
+          text: errorMessage || "Prompt processing error.",
+          status: "blocked",
+          meta: {
+            prompt_id: next.id
+          }
+        });
+        await persistSession();
+      }
+    } finally {
       processing = false;
-      await persistSession();
       if (promptQueue.length > 0) {
         queueMicrotask(() => {
           void processQueue();
@@ -298,7 +511,8 @@ export async function createRemoteServer(options) {
       return denied;
     }
     await refreshBoundSession();
-    session = { ...session, bound_session: boundSession, queue_depth: promptQueue.length, busy: processing || promptQueue.length > 0 };
+    refreshSessionQueueSnapshot();
+    session = { ...session, bound_session: boundSession };
     return session;
   });
 
@@ -323,17 +537,64 @@ export async function createRemoteServer(options) {
         error_code: "REMOTE_SESSION_NOT_BOUND"
       };
     }
+
     const prompt = readPromptFromBody(request.body);
     if (!prompt) {
       reply.code(400);
       return { error: "Missing prompt.", error_code: "REMOTE_PROMPT_REQUIRED" };
     }
-    const item = {
-      id: createPromptId(),
+
+    const now = nowMs();
+    cleanupReplayState(now);
+
+    const requestedId = normalizePromptId((request.body as { prompt_id?: unknown })?.prompt_id);
+    if (requestedId) {
+      const live = resolvePromptQueueState(requestedId);
+      if (live) {
+        return {
+          ok: true,
+          prompt_id: requestedId,
+          queue_depth: live.queue_depth,
+          accepted_state: live.accepted_state
+        };
+      }
+      const replay = resolvePromptReplayState(requestedId);
+      if (replay && now - replay.updated_at <= PROMPT_REPLAY_TTL_MS) {
+        return {
+          ok: true,
+          prompt_id: replay.prompt_id,
+          queue_depth: replay.queue_depth,
+          accepted_state: replay.accepted_state
+        };
+      }
+    }
+
+    const signature = buildPromptSignature(prompt);
+    if (!requestedId && signature) {
+      const replay = promptTextReplay.get(signature);
+      if (replay) {
+        const live = resolvePromptReplayState(replay.prompt_id) || resolvePromptQueueState(replay.prompt_id);
+        if (live && now - replay.seen_at <= PROMPT_TEXT_DEDUPE_TTL_MS) {
+          return {
+            ok: true,
+            prompt_id: replay.prompt_id,
+            queue_depth: live.queue_depth,
+            accepted_state: live.accepted_state
+          };
+        }
+      }
+    }
+
+    const item: PromptQueueEntry = {
+      id: requestedId || createPromptId(),
       prompt,
-      created_at: nowIso()
+      created_at: nowIso(),
+      status: "queued"
     };
+
     promptQueue.push(item);
+    rememberPromptSignature(prompt, item.id);
+    rememberPromptReplay(item.id, "queued", processing ? "running" : "queued", promptQueue.length);
     await appendEntry({
       role: "user",
       kind: "prompt",
@@ -360,6 +621,60 @@ export async function createRemoteServer(options) {
     };
   });
 
+  fastify.delete("/api/remote/prompt/:prompt_id", async (request, reply) => {
+    const denied = await requireAuth(request, reply);
+    if (denied) {
+      return denied;
+    }
+
+    const promptId = normalizePromptId(request.params?.prompt_id);
+    if (!promptId) {
+      reply.code(400);
+      return { error: "Missing prompt id.", error_code: "REMOTE_PROMPT_ID_REQUIRED" };
+    }
+
+    const index = promptQueue.findIndex((item) => item.id === promptId);
+    if (index === -1) {
+      reply.code(404);
+      return { error: "Prompt not found in queue.", error_code: "REMOTE_PROMPT_NOT_FOUND" };
+    }
+    if (index === 0 && processing && session.current_prompt_id === promptId) {
+      reply.code(409);
+      return {
+        error: "Cannot cancel a running prompt.",
+        error_code: "REMOTE_PROMPT_ALREADY_RUNNING"
+      };
+    }
+
+    promptQueue.splice(index, 1);
+    rememberPromptReplay(promptId, "cancelled", "cancelled", promptQueue.length);
+    await appendEntry({
+      role: "system",
+      kind: "prompt_cancelled",
+      text: `Prompt ${promptId} canceled from queue.`,
+      status: "blocked",
+      meta: {
+        prompt_id: promptId
+      }
+    });
+    session = {
+      ...session,
+      current_prompt_id: session.current_prompt_id === promptId ? null : session.current_prompt_id,
+      queue_depth: promptQueue.length
+    };
+    await persistSession();
+    eventHub.publish("prompt_cancelled", {
+      event_type: "prompt_cancelled",
+      prompt_id: promptId
+    });
+    return {
+      ok: true,
+      prompt_id: promptId,
+      queue_depth: promptQueue.length,
+      accepted_state: "cancelled"
+    };
+  });
+
   fastify.get("/api/remote/events", async (request, reply) => {
     const denied = await requireAuth(request, reply);
     if (denied) {
@@ -371,16 +686,30 @@ export async function createRemoteServer(options) {
       Connection: "keep-alive"
     });
     reply.raw.write("\n");
-    const lastEventId = Number(request.headers["last-event-id"] || 0);
 
+    const lastEventId = Number(request.headers["last-event-id"] || 0);
     const writeEvent = (event) => {
       reply.raw.write(`id: ${event.id}\n`);
       reply.raw.write(`event: ${event.eventType}\n`);
       reply.raw.write(`data: ${JSON.stringify(event.payload)}\n\n`);
     };
 
-    for (const event of eventHub.replaySince(lastEventId)) {
-      writeEvent(event);
+    const writeTransient = (eventType, payload) => {
+      reply.raw.write(`event: ${eventType}\n`);
+      reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    const replay = eventHub.replaySince(lastEventId);
+    if (replay === null) {
+      writeTransient("resync_required", {
+        event_type: "resync_required",
+        reason: "replay_window_exhausted",
+        earliest_event_id: eventHub.earliestEventId()
+      });
+    } else {
+      for (const event of replay) {
+        writeEvent(event);
+      }
     }
 
     writeEvent(

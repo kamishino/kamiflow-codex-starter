@@ -1,4 +1,3 @@
-import Fastify from "fastify";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { loadPlanByFilePath, loadPlanById } from "../lib/plan-store.js";
@@ -8,7 +7,7 @@ import { SSEStream } from "./sse-stream.js";
 import { parsePlanFileContent } from "../parser/plan-parser.js";
 import { validateParsedPlan } from "../schema/validate-plan.js";
 import { serializePlan } from "../lib/plan-serializer.js";
-import { derivePlanIdFromRunlogPath, readRunlogSignal } from "../lib/runlog.js";
+import { derivePlanIdFromRunlogPath, readLatestRunlogSignalForPlan, readRunlogSignal } from "../lib/runlog.js";
 import {
   applyAcceptanceCriteriaMutation,
   applyDecisionMutation,
@@ -31,11 +30,74 @@ interface ProjectContext {
   project_done_plans_dir?: string;
 }
 
+function mergeRunlogMetadata(
+  summary: { latest_runlog?: Record<string, unknown> } & Record<string, any>,
+  runlog: Awaited<ReturnType<typeof readLatestRunlogSignalForPlan>>
+) {
+  if (!runlog) {
+    return summary;
+  }
+  return {
+    ...summary,
+    latest_runlog: {
+      event_type: runlog.event_type,
+      run_state: runlog.run_state,
+      action_type: runlog.action_type,
+      action_hint: runlog.action_hint,
+      suggested_command: runlog.suggested_command,
+      status: runlog.status,
+      phase: runlog.phase,
+      message: runlog.message,
+      detail: runlog.detail,
+      evidence: runlog.evidence,
+      guardrail: runlog.guardrail,
+      route_confidence: runlog.route_confidence,
+      fallback_route: runlog.fallback_route,
+      selected_route: runlog.selected_route,
+      recovery_step: runlog.recovery_step,
+      onboarding_status: runlog.onboarding_status,
+      onboarding_stage: runlog.onboarding_stage,
+      onboarding_error_code: runlog.onboarding_error_code,
+      onboarding_recovery: runlog.onboarding_recovery,
+      onboarding_next: runlog.onboarding_next,
+      source: runlog.source,
+      updated_at: runlog.updated_at
+    }
+  } as typeof summary;
+}
+
 function scopeKey(projectId: string, planId: string) {
   return `${projectId}::${planId}`;
 }
 
-function toDetail(plan: PlanRecord) {
+async function hydrateSummaryWithLatestRunlog(project: ProjectContext, summary: any): Promise<any> {
+  const planId = String(summary?.plan_id || "").trim();
+  if (!planId) {
+    return summary;
+  }
+  const latestRunlog = await readLatestRunlogSignalForPlan(project.project_dir, planId);
+  if (!latestRunlog) {
+    return summary;
+  }
+  return mergeRunlogMetadata(summary, latestRunlog);
+}
+
+async function withProjectSummaryAndRunlog(projectId: string, plan: PlanRecord): Promise<PlanRecord> {
+  const base = {
+    ...plan,
+    summary: withProjectSummary(projectId, plan).summary
+  };
+  const project = getProject(projectId);
+  if (!project) {
+    return base;
+  }
+  return {
+    ...base,
+    summary: await hydrateSummaryWithLatestRunlog(project, base.summary)
+  };
+}
+
+function toDetail(plan: PlanRecord, projectId: string) {
   return {
     summary: plan.summary,
     frontmatter: plan.parsed?.frontmatter ?? {},
@@ -96,7 +158,7 @@ function checklistAllChecked(section: string | undefined): boolean {
   const lines = section.split(/\r?\n/);
   let found = false;
   for (const line of lines) {
-    const m = line.match(/^- \[( |x|X)\]/);
+    const m = line.match(/^\- \[( |x|X)\]/);
     if (!m) {
       continue;
     }
@@ -136,12 +198,13 @@ export async function registerKfcPlanFeature(fastify, options) {
       includeDone: true,
       ...planLoadOptions(project)
     });
-    const payload = plan
+    const planWithMetadata = plan ? await withProjectSummaryAndRunlog(projectId, plan) : null;
+    const payload = planWithMetadata
       ? {
           event_type: type,
           project_id: projectId,
-          plan_id: plan.summary.plan_id,
-          summary: withProjectSummary(projectId, plan).summary,
+          plan_id: planWithMetadata.summary.plan_id,
+          summary: planWithMetadata.summary,
           updated_at: Date.now()
         }
       : { event_type: type, project_id: projectId, plan_id: planId, summary: null, updated_at: Date.now() };
@@ -217,10 +280,16 @@ export async function registerKfcPlanFeature(fastify, options) {
       includeDone: true,
       ...planLoadOptions(project)
     });
+    const withRunlog = updated ? await withProjectSummaryAndRunlog(projectId, updated) : null;
+    const existingWithRunlog = updated
+      ? withRunlog
+      : existing
+        ? await withProjectSummaryAndRunlog(projectId, existing)
+        : existing;
     return {
       statusCode: 200,
       payload: {
-        summary: updated ? withProjectSummary(projectId, updated).summary : withProjectSummary(projectId, existing).summary,
+        summary: withRunlog ? withRunlog.summary : existingWithRunlog?.summary,
         write_warning: warning
       }
     };
@@ -237,6 +306,7 @@ export async function registerKfcPlanFeature(fastify, options) {
     scopeKey,
     checklistAllChecked,
     withProjectSummary,
+    withProjectSummaryAndRunlog,
     toDetail,
     persistMutation,
     broadcastPlanEvent,

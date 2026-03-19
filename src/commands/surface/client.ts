@@ -2774,6 +2774,10 @@ async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRu
   } catch (initialErr) {
     const first = classifyClientOnboardingFailure(initialErr, { projectDir: options.project });
     await emitClientOnboardingEvent(options.project, first);
+    if (first.retry_mode === "manual") {
+      printClientOnboardingPayload(first, true);
+      return { code: 1, recoveryUsed: false };
+    }
     if (
       first.error_code === CLIENT_ONBOARDING_CODES.PREFLIGHT_FAILED ||
       first.error_code === CLIENT_ONBOARDING_CODES.PACKAGE_JSON_MISSING

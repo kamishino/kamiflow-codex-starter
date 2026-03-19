@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle2, Clock3, Info, ListChecks, MoveRight, TriangleAlert } from "lucide-preact";
+import { AlertCircle, CheckCircle2, ClipboardCopy, Clock3, Info, ListChecks, MoveRight, TriangleAlert } from "lucide-preact";
 import type { ActivityDensity, ActivityFilter, ActivityItem, PlanDetail } from "../types";
 import { renderInlineMarkdown } from "../lib/inline-markdown";
 import { Badge } from "../ui/Badge";
@@ -54,6 +54,36 @@ function compactText(value: string, max = 120): string {
     return "";
   }
   return singleLine.length > max ? singleLine.slice(0, max - 3) + "..." : singleLine;
+}
+
+function copyTextToClipboard(value: string): void {
+  const text = String(value || "").trim();
+  if (!text) {
+    return;
+  }
+  if (window?.navigator?.clipboard?.writeText) {
+    void navigator.clipboard.writeText(text).catch(() => {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.setAttribute("readonly", "true");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    });
+    return;
+  }
+  const textarea = document.createElement("textarea");
+  textarea.value = text;
+  textarea.setAttribute("readonly", "true");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.appendChild(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  document.body.removeChild(textarea);
 }
 
 function eventFamily(eventType: string): string {
@@ -354,6 +384,13 @@ export function ActivityJournal(props: ActivityJournalProps) {
   const runtimeState = resolveRuntimeSignalState(props.items);
   const pinnedBlockers = collectPinnedBlockers(props.items, 2);
   const timelineTraceHint = resolveTraceHint(nextCommand);
+  const runtimeCopyText =
+    runtimeSignal?.meta?.recovery_step ||
+    runtimeSignal?.meta?.onboarding_next ||
+    runtimeSignal?.meta?.fallback_route ||
+    runtimeSignal?.meta?.guardrail ||
+    runtimeSignal?.meta?.selected_route ||
+    runtimeNext;
 
   const resolveToneIcon = (tone: ActivityItem["tone"]) => {
     if (tone === "ok") return CheckCircle2;
@@ -390,7 +427,7 @@ export function ActivityJournal(props: ActivityJournalProps) {
               </div>
             </div>
 
-            <section class="activity-current-signal activity-current-summary">
+              <section class="activity-current-signal activity-current-summary">
               <p class="activity-current-signal-label">
                 <Icon icon={Clock3} />
                 Current Run Summary
@@ -408,6 +445,17 @@ export function ActivityJournal(props: ActivityJournalProps) {
                     Phase {runtimePhase} | Updated at {runtimeTime}
                   </small>
                   <small class="activity-block-meta">Next action: {compactText(runtimeNext, isCompact ? 140 : 260)}</small>
+                  {runtimeNext ? (
+                    <button
+                      class="activity-copy-button ui-button ui-button-outline"
+                      type="button"
+                      title={`Copy next action: ${runtimeCopyText}`}
+                      onClick={() => copyTextToClipboard(runtimeCopyText)}
+                    >
+                      <Icon icon={ClipboardCopy} />
+                      Copy next action
+                    </button>
+                  ) : null}
                   {runtimeTraceHint ? <small class="activity-trace-hint">{runtimeTraceHint}</small> : null}
                 </span>
               </p>
