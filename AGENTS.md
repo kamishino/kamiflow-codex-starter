@@ -135,6 +135,14 @@ This repository has four active scopes:
 - Ask the user to run a command only when execution is impossible from agent context (for example: external terminal permissions, interactive auth, or environment outside workspace access).
 - When escalation is needed, explain the blocker briefly and keep user action minimal.
 
+## Surface Ownership Contract
+
+- KFC surface hierarchy is explicit: automate through `Codex-CLI`, collaborate through Codex App/chat, and govern both through plan state plus evidence.
+- Keep `Codex-CLI` as the canonical execution substrate for `codex exec`-style work that KFC wraps, replays, validates, and recovers.
+- Keep Codex App/chat as the human-facing control plane for communication, planning, review, delegation, and session continuity.
+- Keep app/browser surfaces observer-first by default: they may show state, guide next actions, bind or resume sessions, and explain recovery, but they must not become hidden execution engines.
+- Keep KFC Plan observer-first and do not treat it as a competing execution surface.
+
 ## Markdown Readability Policy
 
 - Emoji is allowed in human-facing markdown documentation and summaries to reduce wall-of-text.

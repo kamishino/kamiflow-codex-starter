@@ -8,6 +8,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-19
 
+- Added `CODEX_SURFACE_ARCHITECTURE.md` and aligned the repo operating contract around a clearer KFC surface hierarchy: automate through Codex-CLI, use Codex App/chat as the human-facing control plane, keep KFC Plan observer-first, and treat broader app/browser execution boundaries as a docs-and-governance doctrine unless a deterministic command rule exists.
 - Expanded the KFC Plan and remote session workflow with richer runlog-aware activity surfaces: plan-web now exposes stronger activity journal metadata and copy affordances, while the hosted remote UI adds queue visibility, cancel controls, queue ETA/session status details, and more resilient live transcript/session refresh behavior.
 
 ## 2026-03-11

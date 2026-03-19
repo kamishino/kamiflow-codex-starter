@@ -9,6 +9,7 @@ Current phase:
 - docs freshness protocol added for tracked governance docs and generated doc mirrors
 - `.agents/skills` is runtime working surface
 - Plan Contract v1 and Codex+KFC Plan runbook added
+- Codex surface architecture doctrine now makes CLI execution, App control-plane usage, and observer-first KFC surfaces explicit
 - portability validation toolkit added:
   - one-repo runbook (`PORTABILITY_RUNBOOK.md`)
   - smoke log template (`resources/templates/portability-smoke-log.md`)
@@ -25,6 +26,6 @@ Next phase:
 
 1. run one external-repo portability smoke and compare it with the local repo-shape matrix evidence
 2. tune route prompts and gate wording from onboarding/portability feedback
-3. clarify hosted product hierarchy (`kfc`, `kfc web`, `kfc-session`, `kfc-chat`, desktop shell)
+3. carry the clarified surface hierarchy (`Codex-CLI`, Codex App, `kfc`, `kfc web`, `kfc-session`, `kfc-chat`, desktop shell) into targeted rules/reviews where deterministic boundaries exist
 4. extend portability proof to a wider multi-repo matrix (JS/TS + non-JS)
 
