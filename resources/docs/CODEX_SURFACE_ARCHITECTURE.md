@@ -12,6 +12,38 @@ This is a hierarchy, not a menu of equivalent surfaces:
 - `Codex App` is the human-facing control plane for communication, review, and session continuity.
 - KFC owns workflow state, readiness, evidence, and route discipline.
 
+## Platform Support Policy
+
+KFC support tiers are based on execution-contract compatibility, not model branding:
+
+- `Official support`: `Codex-CLI`
+- `Official companion support`: Codex App
+- `Experimental support`: OpenCode using Codex model
+- `Not supported yet`: model-only compatibility claims
+
+### `Official support`: `Codex-CLI`
+
+- Treat `codex exec` and related native CLI behavior as the canonical KFC execution contract.
+- Validate automation, bootstrap, portability, plan flow, and recovery here first.
+- If a workflow passes only outside Codex CLI, KFC should still treat the contract as incomplete.
+
+### `Official companion support`: Codex App
+
+- Position Codex App as the human-facing place for communication, visibility, planning, review, and session continuity.
+- Keep it first-class for user experience without promoting it to canonical execution authority.
+- Describe it as the best place to guide and observe work, not the surface that owns execution truth.
+
+### `Experimental support`: OpenCode using Codex model
+
+- Treat OpenCode as a separate compatibility target because the surrounding tool contract is different even when the model family is similar.
+- Make no parity promise until KFC adds and validates an explicit adapter lane.
+- Frame support as best-effort only, with risk around prompt wrapping, tool semantics, session behavior, and recovery.
+
+### `Not supported yet`: model-only claims
+
+- Do not present "uses the Codex model" as equivalent to "works with KFC."
+- Promote platform compatibility only after KFC proves the execution contract, not because the model label matches.
+
 ## Surface Map
 
 | Surface | Primary Role | Owns | Must Not Own |
@@ -34,6 +66,12 @@ This is a hierarchy, not a menu of equivalent surfaces:
    App-facing surfaces may explain, guide, bind, and resume, but they must not quietly become hidden execution engines.
 5. Encode only deterministic boundaries as rules.
    When a boundary can be expressed as a command policy, put it in rules; when it is architectural guidance, keep it explicit in docs and governance review.
+
+## Messaging Hierarchy
+
+- `Codex-CLI` = worker
+- `Codex App` = cockpit
+- `OpenCode` = separate experimental surface
 
 ## Surface Guidance
 
@@ -105,3 +143,6 @@ Do not:
 - Review workflow-surface changes against this doctrine before adding new UX affordances.
 - Prefer docs and governance review for architectural boundaries that are not safely expressible as command rules.
 - If a future surface needs launch affordances, keep the execution path explicit and CLI-backed instead of inventing a second execution protocol.
+- Promote a platform to `official` only after it passes the same proof lanes KFC uses for Codex-native bootstrap, execution, plan lifecycle, and recovery.
+- Use `companion` only for surfaces that are strong for steering and visibility while remaining non-canonical for execution.
+- Use `experimental` only when the surface may work in practice but KFC has not yet validated contract-level compatibility.

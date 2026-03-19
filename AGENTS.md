@@ -140,6 +140,8 @@ This repository has four active scopes:
 - KFC surface hierarchy is explicit: automate through `Codex-CLI`, collaborate through Codex App/chat, and govern both through plan state plus evidence.
 - Keep `Codex-CLI` as the canonical execution substrate for `codex exec`-style work that KFC wraps, replays, validates, and recovers.
 - Keep Codex App/chat as the human-facing control plane for communication, planning, review, delegation, and session continuity.
+- Support-tier policy is explicit: `Codex-CLI` is official support, Codex App is official companion support, OpenCode-style Codex-model surfaces are experimental until proven through the same KFC contract lanes.
+- Do not claim compatibility from model branding alone; execution-contract proof is the promotion gate for platform support.
 - Keep app/browser surfaces observer-first by default: they may show state, guide next actions, bind or resume sessions, and explain recovery, but they must not become hidden execution engines.
 - Keep KFC Plan observer-first and do not treat it as a competing execution surface.
 

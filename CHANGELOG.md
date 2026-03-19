@@ -8,6 +8,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-19
 
+- Defined a KFC platform support policy that distinguishes official `Codex-CLI` execution support, official companion support for Codex App, experimental support for OpenCode-style Codex-model surfaces, and rejects model-only compatibility claims until the execution contract is proven.
 - Fixed linked external-client bootstrap so `kfc client --force` can complete its `kfc plan validate` step using the repo-bundled KFC Plan fallback, restoring the intended one-command path for empty client repos without separately installing `@kamishino/kfc-plan-web`.
 - Updated the `kamiflow-core` brainstorm and ideation skill contract so `start` and `research` now default to PM-style ranked recommendation cards with `Total Score`, `MoSCoW`, recommendation language, and natural-language "why now" guidance instead of visible multi-subscore grids.
 - Added `CODEX_SURFACE_ARCHITECTURE.md` and aligned the repo operating contract around a clearer KFC surface hierarchy: automate through Codex-CLI, use Codex App/chat as the human-facing control plane, keep KFC Plan observer-first, and treat broader app/browser execution boundaries as a docs-and-governance doctrine unless a deterministic command rule exists.
