@@ -8,8 +8,8 @@ import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, "../..");
-const REPO_KFC_PLAN_BIN = path.join(REPO_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
+const PACKAGE_ROOT = path.resolve(__dirname, "../../..");
+const REPO_KFC_PLAN_BIN = path.join(PACKAGE_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
 
 async function parseProjectDir(defaultCwd, args) {
   const idx = args.indexOf("--project");
@@ -45,7 +45,7 @@ async function pathExists(filePath) {
 }
 
 async function resolveKfcPlanRunner(projectDir) {
-  if (path.resolve(projectDir) === REPO_ROOT && (await pathExists(REPO_KFC_PLAN_BIN))) {
+  if (path.resolve(projectDir) === PACKAGE_ROOT && (await pathExists(REPO_KFC_PLAN_BIN))) {
     return {
       command: process.execPath,
       args: [REPO_KFC_PLAN_BIN]
