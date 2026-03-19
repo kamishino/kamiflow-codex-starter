@@ -38,15 +38,34 @@ Q3. <question>
 - If score <= 3: ask follow-up questions before selecting options.
 - If score >= 4: proceed to option selection.
 
-### Solution Tracks (Scored)
-1) Quick Win - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Confidence <1-5>, Total </20>, Verdict: Go|Maybe|Kill
-2) Balanced - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Confidence <1-5>, Total </20>, Verdict: Go|Maybe|Kill
-3) Ambitious - Impact <1-5>, Feasibility <1-5>, Effort <1-5>, Confidence <1-5>, Total </20>, Verdict: Go|Maybe|Kill
+### Ranked Recommendation Cards
+1) Quick Win
+- Total Score: <0.0-10.0>
+- MoSCoW: Must|Should|Could|Won't for now
+- Recommendation: Do now|Strong next bet|Good, but not urgent|Later / only if strategy changes
+- Why now: <one short PM rationale>
+
+2) Balanced
+- Total Score: <0.0-10.0>
+- MoSCoW: Must|Should|Could|Won't for now
+- Recommendation: Do now|Strong next bet|Good, but not urgent|Later / only if strategy changes
+- Why now: <one short PM rationale>
+
+3) Ambitious
+- Total Score: <0.0-10.0>
+- MoSCoW: Must|Should|Could|Won't for now
+- Recommendation: Do now|Strong next bet|Good, but not urgent|Later / only if strategy changes
+- Why now: <one short PM rationale>
 
 ### Recommendations
 - Best Solution: <Quick Win|Balanced|Ambitious + why>
 - Tradeoffs: <what you gain vs what you accept>
 - Runner-up option: <second-best + why>
+
+### PM Takeaway
+- Build first:
+- Build second:
+- Build third:
 
 ### Pre-Mortem (Best Bet)
 - Likely failure:

@@ -20,7 +20,9 @@ Use this route when missing facts or high risk would make execution unsafe.
    - group ideas into 3-5 categories.
    - provide 2-3 practical ideas per category.
    - produce top 3 shortlist tracks: Quick Win, Balanced, Ambitious.
-   - include one recommended track with rationale.
+   - rank the 3 tracks in PM-style recommendation cards with `Total Score` (`/10`), `MoSCoW`, `Recommendation`, and `Why now`.
+   - keep visible output natural-language and decision-friendly; do not show visible impact/feasibility/effort/confidence sub-score grids unless the user explicitly asks.
+   - include one recommended track with rationale plus a short PM takeaway when a first/second/third build order would help.
    - emit `IDEATION_CONTEXT` ... `END_IDEATION_CONTEXT` block for downstream `start`/`plan`.
    - default depth is Balanced unless user explicitly asks for quick/deep.
 7. Persist handoff phase by direct markdown mutation:
@@ -41,7 +43,8 @@ Provide:
 For ideation preset, include:
 
 - Idea Categories (3-5)
-- Top Shortlist (Quick Win, Balanced, Ambitious)
+- Ranked Top Shortlist (Quick Win, Balanced, Ambitious) with `Total Score`, `MoSCoW`, `Recommendation`, and `Why now`
+- PM Takeaway when there is a meaningful build order recommendation
 - IDEATION_CONTEXT block
 
 Example block:

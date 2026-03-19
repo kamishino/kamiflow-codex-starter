@@ -129,7 +129,13 @@ Pick mode before executing route logic:
   - `Doing`
   - `Next`
 - Route references may define additional route-specific blocks, but compact guidance remains mandatory.
-
+- For idea-generation routes (`start` and `research` ideation preset), default to PM-style ranked recommendation cards with:
+  - `Rank`
+  - `Idea`
+  - `Total Score`
+  - `MoSCoW`
+  - `Recommendation`
+  - `Why now`
 ## Evidence Contract
 
 - Every claim must be evidence-backed by command output, repository file state, or explicit user-provided data.
@@ -141,6 +147,7 @@ Pick mode before executing route logic:
 - Keep output concise, structured, and human-readable.
 - No emoji in machine-critical contract fields.
 - Emoji is allowed in human-facing markdown summaries/docs when it improves readability.
+- For brainstorm and ideation outputs, prefer product-manager style natural language over visible sub-score grids unless the user explicitly asks for scoring detail.
 - Do not skip required gates in the selected route reference.
 - If scope or risk increases, route back to `research` or `plan`.
 - For vague feature-discovery requests, prefer `research` ideation preset before `start`.
