@@ -1201,6 +1201,8 @@ await runCase("client AGENTS contract stays evergreen when CODEX_READY is absent
     assert.ok(managed.includes("`kfc client doctor --fix`"));
     assert.ok(managed.includes("`.codex/config.toml`"));
     assert.ok(managed.includes("manual cleanup fallback"));
+    assert.ok(managed.includes("cleanup only, not proof of mission completion"));
+    assert.ok(managed.includes("successful archive"));
   });
 });
 
@@ -2237,5 +2239,6 @@ if (failed > 0) {
 } else {
   console.log("[test] all tests passed.");
 }
+
 
 

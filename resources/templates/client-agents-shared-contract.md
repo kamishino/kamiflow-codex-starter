@@ -5,6 +5,8 @@
 - Create a new plan only when no active non-done plan exists or the user explicitly splits scope.
 - Only start `build`/`fix` when the active plan is build-ready.
 - Archive only on `check` PASS when the plan's acceptance and go/no-go gates are complete.
+- Treat a task as done only after `check` PASS and successful archive of the active plan.
+- If PASS is reported but archive fails, keep the plan active and continue recovery instead of treating the task as done.
 - `.local/` is gitignored; do not use `git status` as proof that plan files were touched.
 
 ## Autonomous Execution
@@ -28,6 +30,7 @@
 - Review docs impact for workflow, onboarding, and durable user-facing changes before commit-safe completion.
 - When workflow-surface files changed, review `AGENTS.md` for operating-contract drift.
 - Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`; do not move it into tracked docs.
+- `kfc client done` is cleanup only, not proof of mission completion.
 
 ## Markdown Readability Policy
 - Prefer concise, readable markdown for non-trivial responses.
@@ -39,3 +42,5 @@
 - `Status: BLOCK`
 - `Reason: <single concrete cause>`
 - `Recovery: <exact command>`
+
+

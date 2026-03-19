@@ -61,9 +61,11 @@ Rules:
    - `Status: BLOCK`
    - `Reason: <single concrete cause>`
    - `Recovery: <exact command>`
-13) Before declaring completion, ensure cleanup happened:
+13) Before declaring completion, enforce the archive-first closeout contract:
+   - `Check: PASS` alone is not enough; the active onboarding plan must archive successfully
+   - if PASS is reported but archive fails, keep recovery active instead of treating the task as done
    - prefer the automatic cleanup done by `kfc client` after archived-done proof
-   - if recovery/manual cleanup is needed, run `kfc client done`
+   - if recovery/manual cleanup is needed, run `kfc client done`, but treat it as cleanup only, not completion proof
    - confirm `.kfc/CODEX_READY.md` is removed
    - keep `.kfc/LESSONS.md` as private project memory.
 14) For onboarding/bootstrap failures, report:
@@ -82,5 +84,7 @@ Deliverable expectations:
 - Validate outcomes before moving to the next phase.
 - Do not skip next-step guidance.
 ```
+
+
 
 

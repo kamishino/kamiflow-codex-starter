@@ -82,7 +82,9 @@ Important first-run behavior:
 - `kfc flow ready` should only be the first action when the active plan is already build-ready
 - `kfc client status` now auto-recovers a missing active plan in a bootstrapped repo instead of leaving you on a manual repair step
 - in `kfc client status`, `Installed: yes` now means KFC is operationally usable in this repo; `Install Source` is best-effort provenance metadata and may still be `unknown`
+- A task is only done after `Check: PASS` and successful archive of the active onboarding plan
 - KFC auto-cleans `.kfc/CODEX_READY.md` only after the active onboarding plan is archived done; otherwise the handoff is preserved for recovery
+- `kfc client done` is cleanup only, not proof of mission completion
 
 This flow is designed for no user reminder loop after bootstrap once a real mission exists. Until then, KFC should leave you in a successful guided handoff state instead of treating the missing mission as a failure.
 The lesson scaffolding is private and gitignored by design; Codex can still read it locally.
@@ -107,6 +109,8 @@ Manual cleanup fallback:
 ```bash
 kfc client done
 ```
+
+This command is cleanup only. It does not itself prove that the mission is complete; archive success remains the completion gate.
 
 During normal implementation turns, Codex should run check validations automatically and report `Check: PASS|BLOCK` before final response.
 
@@ -232,5 +236,7 @@ Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`.
 - `resources/docs/KFC_CHAT_RUNBOOK.md`
 
 - `src/commands` and `src/lib` now use explicit subdomain folders (`commands/surface`, `lib/core|plan|remote`) with compatibility exports kept in old entrypoints for external stability.
+
+
 
 

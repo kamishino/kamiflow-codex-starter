@@ -80,8 +80,10 @@ That managed block should also be the first place Codex learns the client-projec
   - `Recovery: <exact command>`
 
 7. Finish Policy (Required)
+- Treat completion as valid only after `Check: PASS` and successful archive of the active plan.
+- If PASS is reported but archive fails, keep the plan active and continue recovery instead of treating the task as done.
 - `kfc client` should auto-clean `.kfc/CODEX_READY.md` only after archived-done proof.
-- Use `kfc client done` only as the manual cleanup fallback.
+- Use `kfc client done` only as the manual cleanup fallback; it is cleanup only, not proof of completion.
 - Confirm `.kfc/CODEX_READY.md` was removed before declaring completion.
 - Keep `.kfc/LESSONS.md` for future sessions.
 - Do not mark complete before cleanup succeeds.
@@ -89,5 +91,7 @@ That managed block should also be the first place Codex learns the client-projec
 ## Standard Client Entry
 
 Use `resources/docs/CLIENT_KICKOFF_PROMPT.md` as the default first message to Codex in any client project.
+
+
 
 

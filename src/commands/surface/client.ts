@@ -1148,8 +1148,10 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     sharedContract,
     "",
     "## Cleanup",
+    "- `Check: PASS` alone is not enough; the active onboarding plan must archive successfully before the task is done.",
+    "- If PASS is reported but archive fails, keep recovery active instead of treating cleanup as completion.",
     "- `kfc client` auto-removes `.kfc/CODEX_READY.md` only after the active onboarding plan reaches archived done state.",
-    "- `kfc client done` remains the manual cleanup fallback; it removes `.kfc/CODEX_READY.md` but keeps `.kfc/LESSONS.md` for future sessions.",
+    "- `kfc client done` remains the manual cleanup fallback; it is cleanup only, not proof of mission completion, and keeps `.kfc/LESSONS.md` for future sessions.",
     CLIENT_AGENTS_MANAGED_END
   ].join("\n");
 }
@@ -1827,9 +1829,11 @@ function buildReadyFileContent({ goal, planState, inspection }) {
     "  - `Recovery: <exact command>`",
     "",
     "## Finish Checklist (Required)",
-    "1. `kfc client` will auto-clean this file only after the active onboarding plan is archived done.",
-    "2. If manual recovery is needed, run `kfc client done`.",
-    "3. Do not mark task complete until `.kfc/CODEX_READY.md` is removed.",
+    "1. Treat completion as valid only after `Check: PASS` and successful archive of the active onboarding plan.",
+    "2. `kfc client` will auto-clean this file only after the active onboarding plan is archived done.",
+    "3. If PASS is reported but archive fails, keep recovery active instead of treating the task as done.",
+    "4. If manual recovery is needed, run `kfc client done` for cleanup only; it is not proof of completion.",
+    "5. Do not mark task complete until `.kfc/CODEX_READY.md` is removed.",
     ""
   ].join("\n");
 }
@@ -3518,6 +3522,10 @@ export async function runClient(options) {
   usage();
   return 1;
 }
+
+
+
+
 
 
 
