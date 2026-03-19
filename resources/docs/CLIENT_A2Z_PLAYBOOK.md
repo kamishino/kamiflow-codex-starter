@@ -20,7 +20,8 @@ kfc client --force
 ```
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
-KFC now inspects the target repo first. If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. This creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates or refreshes `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex by default.
+KFC now inspects the target repo first. If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. This creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates or refreshes `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex when a real mission is available.
+If no real mission exists yet, bootstrap should still PASS, preserve `.kfc/CODEX_READY.md`, and direct the next action to `kfc client --goal "<goal>"`.
 Client bootstrap includes one smart-recovery cycle and prints `Inspection Status`, `Repo Shape`, `Apply Mode`, `Planned Changes`, plus `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 If auto-launch is disabled or fails, use the exact manual fallback command printed by KFC.
 Treat the root `AGENTS.md` managed block as KFC's project-specific `/init` contract. KFC refreshes that block during `kfc client` and `kfc client update` while preserving notes outside it.

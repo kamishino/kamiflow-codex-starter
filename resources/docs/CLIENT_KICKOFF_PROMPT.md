@@ -20,13 +20,14 @@ kfc client --force
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-Bootstrap now includes one smart-recovery cycle, creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches:
+Bootstrap now includes one smart-recovery cycle, creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex when a real mission is available:
 
 ```bash
 codex exec --full-auto "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission."
 ```
 
 If auto-launch is disabled (`--no-launch-codex`) or fails, use the exact manual fallback command printed by KFC.
+If no real mission is available yet, bootstrap should still PASS, keep `.kfc/CODEX_READY.md`, skip auto-launch, and point you to `kfc client --goal "<goal>"`.
 KFC now inspects the repo first. If the target folder is truly empty, KFC may auto-create a minimal `package.json` before continuing bootstrap, while risky mixed repos should BLOCK before mutation.
 Rerunning `kfc client` should reuse or refresh the existing handoff instead of blocking on `.kfc/CODEX_READY.md`.
 

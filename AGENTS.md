@@ -50,7 +50,7 @@ This repository has four active scopes:
 
 - Repo context (`kamiflow-codex-starter`): use `npm run ...` maintainer commands.
 - Client-project context: use `kfc ...` (or `npx --no-install kfc ...`), never repo-only `npm run ...`.
-- Client bootstrap flow: `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done`.
+- Client bootstrap flow: `kfc client` prepares or refreshes `.kfc/CODEX_READY.md`; when a real mission is available Codex should continue from that handoff, and `kfc client done` handles cleanup after archived-done proof.
 
 ## Session Bootstrap Contract
 

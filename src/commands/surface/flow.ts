@@ -25,8 +25,8 @@ import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const REPO_ROOT = path.resolve(__dirname, "../..");
-const KFC_BIN = path.join(REPO_ROOT, "bin", "kamiflow.js");
+const PACKAGE_ROOT = path.resolve(__dirname, "../../..");
+const KFC_BIN = path.join(PACKAGE_ROOT, "bin", "kamiflow.js");
 const DEFAULT_BASE_URL = "http://127.0.0.1:4310";
 
 type PlanRecord = {

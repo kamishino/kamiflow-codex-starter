@@ -47,6 +47,9 @@ const {
   createClientReadyArtifacts,
   evaluateClientSetupCompletion
 } = await import(pathToFileURL(path.join(packageDir, "..", "..", "dist/commands/client.js")).href);
+const { runFlow } = await import(
+  pathToFileURL(path.join(packageDir, "..", "..", "dist/commands/surface/flow.js")).href
+);
 const { analyzeCommitMessageSemver } = await import(
   pathToFileURL(path.join(packageDir, "..", "..", "dist/scripts/release/semver-from-commits.js")).href
 );
@@ -1231,8 +1234,40 @@ await runCase("client ready artifacts reuse existing mission instead of blocking
     });
 
     assert.equal(ready.reusedExisting, true);
+    assert.equal(ready.hasRealMission, true);
     const nextReady = await fs.readFile(path.join(tempDir, ".kfc", "CODEX_READY.md"), "utf8");
     assert.ok(nextReady.includes("- Preserve this mission"));
+  });
+});
+
+await runCase("client ready artifacts mark placeholder mission as not auto-launchable", async () => {
+  await withTempDir(async (tempDir) => {
+    const plansDir = path.join(tempDir, ".local", "plans");
+    await fs.mkdir(plansDir, { recursive: true });
+    await fs.writeFile(path.join(plansDir, "2026-03-10-001-plan.md"), buildClientPlan(), "utf8");
+
+    const ready = await createClientReadyArtifacts({
+      projectDir: tempDir,
+      force: false,
+      goal: "",
+      profileName: "client",
+      inspection: {
+        inspectionStatus: "PASS",
+        repoShape: "ready",
+        applyMode: "auto",
+        reason: "Existing repo ready.",
+        recovery: "None",
+        next: "Continue automatically.",
+        plannedChanges: ["reuse existing managed onboarding artifacts"],
+        plannedChangesSummary: "reuse existing managed onboarding artifacts",
+        onboardingPath: "verify_existing_repo"
+      }
+    });
+
+    assert.equal(ready.hasRealMission, false);
+    assert.equal(ready.effectiveGoal, "Define the mission for this client project before implementation.");
+    const nextReady = await fs.readFile(path.join(tempDir, ".kfc", "CODEX_READY.md"), "utf8");
+    assert.ok(nextReady.includes("- Define the mission for this client project before implementation."));
   });
 });
 
@@ -1256,6 +1291,22 @@ archived_at: 2026-03-10T00:05:00.000Z
     const completion = await evaluateClientSetupCompletion(tempDir, "PLAN-2026-03-10-001");
     assert.equal(completion.complete, true);
     assert.ok(String(completion.reason).includes("archived successfully"));
+  });
+});
+
+await runCase("compiled flow ensure-plan uses the real repo bin path", async () => {
+  await withTempDir(async (tempDir) => {
+    const exitCode = await withSuppressedConsoleError(async () => {
+      return await runFlow({
+        cwd: tempDir,
+        args: ["ensure-plan", "--project", tempDir, "--new"]
+      });
+    });
+
+    assert.equal(exitCode, 0);
+    const planDir = path.join(tempDir, ".local", "plans");
+    const entries = await fs.readdir(planDir);
+    assert.ok(entries.some((name) => name.endsWith(".md")));
   });
 });
 

@@ -69,6 +69,8 @@ const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CLIENT_LESSONS_FILE = path.join(".kfc", "LESSONS.md");
 const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
+const CLIENT_DEFAULT_MISSION = "Define the mission for this client project before implementation.";
+const CLIENT_GOAL_GUIDANCE_COMMAND = 'kfc client --goal "<goal>"';
 const CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION = "--skip-git-repo-check";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 const CLIENT_AGENTS_SHARED_CONTRACT_FILE = path.join("templates", "client-agents-shared-contract.md");
@@ -197,7 +199,7 @@ function usage() {
   info("  kfc client lessons promote --id LESSON-20260307-001 --summary \"Use X before Y\"");
   info("  kfc client lessons list");
   info("  kfc client status --project <path>");
-  info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle and Codex auto-launch by default.");
+  info("Note: `kfc client` and `kfc client bootstrap` include one smart-recovery cycle and auto-launch Codex when a real mission is available.");
   info("Note: `kfc client update` defaults to preview; use --apply to execute the update and refresh flow.");
 }
 
@@ -834,6 +836,15 @@ function buildClientCodexManualCommand({ skipGitRepoCheck, fullAuto = true } = {
     full_auto: fullAuto,
     skip_gitrepo_check: Boolean(skipGitRepoCheck)
   });
+}
+
+function isPlaceholderClientMission(value) {
+  return String(value || "").trim() === CLIENT_DEFAULT_MISSION;
+}
+
+function hasRealClientMission(value) {
+  const mission = String(value || "").trim();
+  return mission.length > 0 && !isPlaceholderClientMission(mission);
 }
 
 function buildClientCodexLaunchAttempts() {
@@ -1640,9 +1651,9 @@ async function describeClientPlanState(projectDir): Promise<ClientPlanStateSumma
 }
 
 function buildReadyFileContent({ goal, planState, inspection }) {
-  const mission = goal && goal.trim().length > 0
-    ? goal.trim()
-    : "Define the mission for this client project before implementation.";
+  const mission = hasRealClientMission(goal)
+    ? String(goal).trim()
+    : CLIENT_DEFAULT_MISSION;
   const stateRouteLine = planState.kind === "build_ready"
     ? "3. Verify the active plan is ready with `kfc flow ready`, then begin the next build slice."
     : planState.kind === "blocked_plan"
@@ -1726,6 +1737,14 @@ function extractExistingReadyMission(readyMarkdown) {
   return match ? String(match[1] || "").trim() : "";
 }
 
+function resolveClientMission(goal, existingReadyMarkdown) {
+  const explicitGoal = String(goal || "").trim();
+  if (explicitGoal.length > 0) {
+    return explicitGoal;
+  }
+  return extractExistingReadyMission(existingReadyMarkdown);
+}
+
 async function findDonePlanById(projectDir, planId) {
   const workspace = createPlanWorkspace(projectDir, parsePlanFrontmatter);
   const planRecord = await workspace.getPlanByRef(planId, true);
@@ -1797,9 +1816,8 @@ export async function createClientReadyArtifacts({ projectDir, force, goal, prof
   const readyPath = resolveClientReadyPath(projectDir);
   const readyExists = fs.existsSync(readyPath);
   const existingReady = readyExists ? await fsp.readFile(readyPath, "utf8") : "";
-  const effectiveGoal = goal && goal.trim().length > 0
-    ? goal
-    : extractExistingReadyMission(existingReady);
+  const effectiveGoal = resolveClientMission(goal, existingReady);
+  const realMissionAvailable = hasRealClientMission(effectiveGoal);
 
   await fsp.mkdir(path.dirname(readyPath), { recursive: true });
   await fsp.writeFile(
@@ -1838,7 +1856,9 @@ export async function createClientReadyArtifacts({ projectDir, force, goal, prof
     planId: planState.planId,
     planState,
     inspection,
-    reusedExisting: readyExists && !force
+    reusedExisting: readyExists && !force,
+    effectiveGoal: realMissionAvailable ? effectiveGoal.trim() : CLIENT_DEFAULT_MISSION,
+    hasRealMission: realMissionAvailable
   };
 }
 
@@ -3035,6 +3055,35 @@ async function runClientReadyHandoff(options, bootstrap) {
   });
   let launchResult = null;
   let completion = null;
+  const goalCommand = CLIENT_GOAL_GUIDANCE_COMMAND;
+
+  if (!options.noLaunchCodex && !ready.hasRealMission) {
+    const noGoalPayload = buildClientOnboardingPassPayload({
+      recoveryUsed: bootstrap.recoveryUsed,
+      stage: CLIENT_ONBOARDING_STAGES.READY_BRIEF,
+      reason: `Client onboarding handoff artifacts are ready. No mission goal was provided yet, so Codex auto-run was skipped. ${ready.planState.summary}`,
+      next: goalCommand,
+      next_steps: [
+        goalCommand,
+        "Or continue planning manually from the active draft plan without rerunning."
+      ]
+    }, { projectDir: options.project });
+    await emitClientOnboardingEvent(options.project, {
+      ...noGoalPayload,
+      inspection_status: ready.inspection.inspectionStatus,
+      repo_shape: ready.inspection.repoShape,
+      planned_changes: ready.inspection.plannedChangesSummary,
+      apply_mode: ready.inspection.applyMode
+    });
+    printClientOnboardingPass(noGoalPayload);
+    info(`Stable contract: ${path.join(options.project, CLIENT_AGENTS_FILE)}`);
+    info(`Ready file: ${ready.readyPath}`);
+    info(ready.reusedExisting ? "Reusing existing KFC handoff." : "Prepared a fresh KFC handoff.");
+    info("Codex auto-launch skipped because no real mission is available yet.");
+    info("Manual cleanup fallback: kfc client done");
+    return 0;
+  }
+
   if (!options.noLaunchCodex) {
     await emitClientOnboardingEvent(
       options.project,
