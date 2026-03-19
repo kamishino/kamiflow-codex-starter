@@ -1,6 +1,11 @@
 import fs from "node:fs/promises";
+import fsSync from "node:fs";
 import path from "node:path";
 import { constants as fsConstants } from "node:fs";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const CONFIG_FILE_NAME = "kamiflow.config.json";
 
@@ -24,6 +29,24 @@ export function defaultConfig() {
   };
 }
 
+export function resolveBundledResourcesDir(cwd = process.cwd()) {
+  const candidates = [
+    path.resolve(cwd, "resources"),
+    path.resolve(__dirname, "../../..", "resources")
+  ];
+
+  for (const candidate of candidates) {
+    if (
+      fsSync.existsSync(path.join(candidate, "rules", "base.rules")) &&
+      fsSync.existsSync(path.join(candidate, "docs", "QUICKSTART.md"))
+    ) {
+      return candidate;
+    }
+  }
+
+  return candidates[candidates.length - 1];
+}
+
 export async function readRawConfig(cwd) {
   const configPath = getConfigPath(cwd);
   const raw = await fs.readFile(configPath, "utf8");
@@ -33,6 +56,26 @@ export async function readRawConfig(cwd) {
   };
 }
 
+export async function readConfigOrDefault(cwd, options = {}) {
+  try {
+    const raw = await readRawConfig(cwd);
+    return {
+      ...raw,
+      source: "file"
+    };
+  } catch (err) {
+    if (!(err && typeof err === "object" && "code" in err && err.code === "ENOENT")) {
+      throw err;
+    }
+    const config = defaultConfig();
+    config.paths.resourcesDir = options.fallbackResourcesDir || resolveBundledResourcesDir(cwd);
+    return {
+      configPath: getConfigPath(cwd),
+      data: config,
+      source: "default"
+    };
+  }
+}
 export function validateConfig(data) {
   const errors = [];
 
@@ -103,3 +146,4 @@ export async function assertReadableDirectory(dirPath) {
     throw new Error(`Path is not a directory: ${dirPath}`);
   }
 }
+

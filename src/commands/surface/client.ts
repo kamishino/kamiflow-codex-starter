@@ -8,7 +8,9 @@ import {
   assertReadableDirectory,
   defaultConfig,
   getConfigPath,
+  readConfigOrDefault,
   readRawConfig,
+  resolveBundledResourcesDir,
   resolveResourcesDir,
   validateConfig
 } from "../../lib/core/config.js";
@@ -61,20 +63,22 @@ const PLAN_UI_PACKAGE = "@kamishino/kfc-plan-web";
 const DEFAULT_PORT = 4310;
 const DEFAULT_HEALTH_TIMEOUT_MS = 15000;
 const DEFAULT_HEALTH_POLL_MS = 500;
-const QUICKSTART_FILE = path.join("resources", "docs", "QUICKSTART.md");
-const CLIENT_KICKOFF_PROMPT_FILE = path.join("resources", "docs", "CLIENT_KICKOFF_PROMPT.md");
+const QUICKSTART_FILE = path.join("docs", "QUICKSTART.md");
+const CLIENT_KICKOFF_PROMPT_FILE = path.join("docs", "CLIENT_KICKOFF_PROMPT.md");
 const CLIENT_AGENTS_FILE = "AGENTS.md";
 const CLIENT_READY_FILE = path.join(".kfc", "CODEX_READY.md");
 const CLIENT_SESSION_FILE = path.join(".kfc", "session.json");
 const CLIENT_LESSONS_FILE = path.join(".kfc", "LESSONS.md");
 const CLIENT_RAW_LESSONS_DIR = path.join(".local", "kfc-lessons");
+const CLIENT_CODEX_CONFIG_FILE = path.join(".codex", "config.toml");
+const CLIENT_CODEX_CONFIG_TEMPLATE = 'sandbox_mode = "workspace-write"\n';
 const CLIENT_CODEX_LAUNCH_PROMPT = "Read AGENTS.md first, then read .kfc/CODEX_READY.md and execute the mission.";
 const CLIENT_DEFAULT_MISSION = "Define the mission for this client project before implementation.";
 const CLIENT_GOAL_GUIDANCE_COMMAND = 'kfc client --goal "<goal>"';
 const CLIENT_CODEX_SKIP_TRUST_CHECK_OPTION = "--skip-git-repo-check";
 const CLIENT_RUNTIME_SKILL = "kamiflow-core";
 const CLIENT_AGENTS_SHARED_CONTRACT_FILE = path.join("templates", "client-agents-shared-contract.md");
-const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/"]);
+const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/", ".codex/config.toml"]);
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
 const CLIENT_AGENTS_MANAGED_BEGIN = "<!-- KFC:BEGIN MANAGED -->";
 const CLIENT_AGENTS_MANAGED_END = "<!-- KFC:END MANAGED -->";
@@ -135,6 +139,10 @@ type ClientStatusSummary = {
   next: string;
   recovery: string;
   nextSteps: string[];
+};
+type ClientOperationalStatus = {
+  operationallyInstalled: boolean;
+  runtimeIssues: string[];
 };
 type ClientSetupCompletionKind = "ready_for_work" | "ready_for_cleanup" | "incomplete";
 type ClientSetupCompletionResult = {
@@ -472,6 +480,10 @@ function buildAutoInitPackageJson(projectDir) {
   };
 }
 
+function projectJsonPath(projectDir) {
+  return path.join(projectDir, "package.json");
+}
+
 async function ensureProjectPackageJsonForBootstrap(projectDir) {
   const manifestPath = projectJsonPath(projectDir);
   if (fs.existsSync(manifestPath)) {
@@ -506,8 +518,8 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
   const gitignorePath = path.join(projectDir, ".gitignore");
   const gitignoreText = fs.existsSync(gitignorePath) ? await fsp.readFile(gitignorePath, "utf8") : "";
   const hasAllGitignoreEntries = CLIENT_GITIGNORE_ENTRIES.every((entry) => gitignoreText.includes(entry));
-  const configPath = getConfigPath(projectDir);
   const rulesPath = path.join(projectDir, ".codex", "rules", RULES_FILE_NAME);
+  const codexConfigPath = path.join(projectDir, CLIENT_CODEX_CONFIG_FILE);
   const skillPath = resolveClientSkillArtifactPath(projectDir);
   const agentsPath = resolveClientAgentsPath(projectDir);
   const agentsText = fs.existsSync(agentsPath) ? await fsp.readFile(agentsPath, "utf8") : "";
@@ -519,9 +531,8 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
   if (!hasPackageJson && meaningfulEntries.length === 0) {
     const plannedChanges = [
       "create minimal package.json",
-      "create or refresh kamiflow.config.json",
       "create root AGENTS.md",
-      "sync .codex/rules/kamiflow.rules",
+      "activate client-local Codex rules under .codex/",
       "sync .agents/skills/kamiflow-core/SKILL.md",
       "scaffold .kfc/LESSONS.md and .local/kfc-lessons/",
       "prepend private .gitignore entries",
@@ -557,14 +568,11 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
 
   const missingSafeArtifacts: string[] = [];
   const refreshManagedChanges: string[] = [];
-  if (!fs.existsSync(configPath)) {
-    missingSafeArtifacts.push("create kamiflow.config.json");
-  }
   if (!fs.existsSync(agentsPath) || !hasManagedAgentsBlock) {
     missingSafeArtifacts.push("sync root AGENTS.md");
   }
-  if (!fs.existsSync(rulesPath)) {
-    missingSafeArtifacts.push("sync .codex/rules/kamiflow.rules");
+  if (!fs.existsSync(rulesPath) || !fs.existsSync(codexConfigPath)) {
+    missingSafeArtifacts.push("activate client-local Codex rules under .codex/");
   }
   if (!fs.existsSync(skillPath)) {
     missingSafeArtifacts.push("sync .agents/skills/kamiflow-core/SKILL.md");
@@ -613,19 +621,19 @@ async function inspectClientProject(projectDir, options: { force?: boolean } = {
         "verify plan, health, and private scaffolding",
         "reuse existing managed onboarding artifacts"
       ];
+
   return {
     inspectionStatus: "PASS",
     repoShape: "ready",
     applyMode: "auto",
-    reason: "Existing Node repo already looks compatible with KFC onboarding.",
+    reason: "Client repo already contains the managed onboarding scaffold. KFC will verify and reuse it.",
     recovery: "None",
-    next: "Bootstrap will continue automatically.",
+    next: options.force ? "Managed artifacts will be refreshed automatically." : "Verification will continue automatically.",
     plannedChanges,
     plannedChangesSummary: summarizeInspectionPlannedChanges(plannedChanges),
-    onboardingPath: options.force ? "refresh_existing_repo" : "verify_existing_repo"
+    onboardingPath: options.force ? "forced_refresh" : "verify_existing_repo"
   };
 }
-
 async function assertProjectPreflight(projectDir, options: { requirePackageJson?: boolean } = {}) {
   const requirePackageJson = options.requirePackageJson !== false;
   let ok = true;
@@ -683,10 +691,6 @@ async function assertProjectPreflight(projectDir, options: { requirePackageJson?
   return ok;
 }
 
-function projectJsonPath(projectDir) {
-  return path.join(projectDir, "package.json");
-}
-
 function loadPackageName() {
   const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
   return pkg.name;
@@ -716,20 +720,17 @@ function resolveClientResourcesHint(projectDir) {
           return resolved;
         }
       }
-    } catch (err) {
+    } catch {
       // config not parseable yet; fallback to probing package and package-root resources.
     }
   }
 
-  const packagedPath = packagedClientResourcesDir(projectDir);
-  if (fs.existsSync(packagedPath)) {
-    return packagedPath;
+  const packaged = packagedClientResourcesDir(projectDir);
+  if (fs.existsSync(packaged)) {
+    return packaged;
   }
-  const bundledPath = bundledResourcesDirAbsolute();
-  if (fs.existsSync(bundledPath)) {
-    return bundledPath;
-  }
-  return packagedPath;
+
+  return bundledResourcesDirAbsolute();
 }
 
 function resolveClientQuickstartPath(projectDir) {
@@ -743,7 +744,6 @@ function resolveClientKickoffPromptPath(projectDir) {
 function resolveClientAgentsSharedContractPath(projectDir) {
   return path.join(resolveClientResourcesHint(projectDir), CLIENT_AGENTS_SHARED_CONTRACT_FILE);
 }
-
 function printClientDocsHints(projectDir) {
   const quickstartPath = resolveClientQuickstartPath(projectDir);
   if (fs.existsSync(quickstartPath)) {
@@ -786,6 +786,53 @@ function normalizeClientStatusInstallSource(sourceType: unknown): ClientStatusIn
   return "unknown";
 }
 
+function evaluateClientOperationalStatus({
+  inspectionStatus,
+  packageJsonExists,
+  hasManagedAgentsBlock,
+  rulesPath,
+  codexConfigPath,
+  skillPath,
+  lessonsPath,
+  rawLessons
+}: {
+  inspectionStatus: ClientInspectionStatus;
+  packageJsonExists: boolean;
+  hasManagedAgentsBlock: boolean;
+  rulesPath: string;
+  codexConfigPath: string;
+  skillPath: string;
+  lessonsPath: string;
+  rawLessons: { incidentsDir: string; decisionsDir: string };
+}): ClientOperationalStatus {
+  const runtimeIssues: string[] = [];
+  if (!packageJsonExists) {
+    runtimeIssues.push("package.json is missing");
+  }
+  if (!hasManagedAgentsBlock) {
+    runtimeIssues.push("client AGENTS managed block is missing");
+  }
+  if (!fs.existsSync(rulesPath)) {
+    runtimeIssues.push("project rules file is missing");
+  }
+  if (!fs.existsSync(codexConfigPath)) {
+    runtimeIssues.push("client-local Codex binding is missing");
+  }
+  if (!fs.existsSync(skillPath)) {
+    runtimeIssues.push("project-local KFC skill is missing");
+  }
+  if (!fs.existsSync(lessonsPath)) {
+    runtimeIssues.push("client lessons file is missing");
+  }
+  if (!fs.existsSync(rawLessons.incidentsDir) || !fs.existsSync(rawLessons.decisionsDir)) {
+    runtimeIssues.push("raw lesson directories are missing");
+  }
+
+  return {
+    operationallyInstalled: inspectionStatus !== "BLOCK" && runtimeIssues.length === 0,
+    runtimeIssues
+  };
+}
 function printClientStatusSummary(summary: ClientStatusSummary) {
   const writer = summary.status === "BLOCK" ? error : info;
   writer(`Client Status: ${summary.status}`);
@@ -1069,7 +1116,7 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     "1. Read `AGENTS.md`.",
     "2. If `.kfc/CODEX_READY.md` exists, read it for the current mission and active-plan handoff.",
     "3. Read `.kfc/LESSONS.md` when present for curated durable project memory.",
-    "4. If `.kfc/CODEX_READY.md` is absent, resolve the active non-done plan in `.local/plans/` and continue from plan plus lessons.",
+    "4. If no active non-done plan exists, recover it immediately with `kfc flow ensure-plan --project .` before implementation and continue from the recovered plan plus lessons.",
     "",
     "## Ownership",
     "- KFC refreshes this managed block during `kfc client` and `kfc client update`.",
@@ -1082,7 +1129,7 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     "",
     "## Workflow Commands",
     "- `kfc client`: reusable setup, handoff refresh, and normal startup entrypoint.",
-    "- `kfc client status`: read-only repo status, plan state, handoff presence, and next-action summary.",
+    "- `kfc client status`: calm repo status plus automatic active-plan recovery when the scaffold is missing.",
     "- `kfc plan validate`: validate the active plan file when plan state looks suspicious.",
     "- `kfc flow ensure-plan`: recover a missing or inconsistent active plan scaffold.",
     "- `kfc flow ready`: verify readiness only after the active plan is already build-ready.",
@@ -1095,6 +1142,8 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     "- `.kfc/LESSONS.md`: curated durable project memory.",
     "- `.local/plans/*.md`: live execution state and next-action source of truth.",
     "- `.agents/skills/kamiflow-core/SKILL.md`: project-local runtime skill artifact.",
+    "- `.codex/rules/kamiflow.rules`: generated KFC execution-policy rules for this repo.",
+    "- `.codex/config.toml`: private project-local Codex binding managed by KFC.",
     "",
     sharedContract,
     "",
@@ -1104,7 +1153,6 @@ export async function buildClientAgentsManagedBlock(projectDir) {
     CLIENT_AGENTS_MANAGED_END
   ].join("\n");
 }
-
 function mergeClientAgentsContent(existingContent, managedBlock) {
   const existing = String(existingContent || "").replace(/\r\n/g, "\n");
   const block = String(managedBlock || "").trim();
@@ -1163,6 +1211,60 @@ async function ensureClientGitignoreEntries(projectDir) {
   return { changed: true, gitignorePath, added: missing };
 }
 
+function getClientCodexConfigPath(projectDir) {
+  return path.join(projectDir, CLIENT_CODEX_CONFIG_FILE);
+}
+
+function hasClientRulesActivation(projectDir) {
+  return (
+    fs.existsSync(path.join(projectDir, ".codex", "rules", RULES_FILE_NAME)) &&
+    fs.existsSync(getClientCodexConfigPath(projectDir))
+  );
+}
+
+function buildClientCodexConfigContent() {
+  return [
+    "# Managed by kfc client bootstrap",
+    "# Private project-local Codex runtime settings for this client repo.",
+    "# KFC keeps the matching project policy in .codex/rules/kamiflow.rules.",
+    String(CLIENT_CODEX_CONFIG_TEMPLATE).trimEnd(),
+    ""
+  ].join("\n");
+}
+
+async function ensureClientCodexBinding(projectDir) {
+  const configPath = getClientCodexConfigPath(projectDir);
+  await fsp.mkdir(path.dirname(configPath), { recursive: true });
+
+  if (fs.existsSync(configPath)) {
+    info(`Client Codex binding preserved: ${configPath}`);
+    return { changed: false, configPath };
+  }
+
+  await fsp.writeFile(configPath, buildClientCodexConfigContent(), "utf8");
+  info(`Client Codex binding scaffolded: ${configPath}`);
+  return { changed: true, configPath };
+}
+
+async function ensureClientActivePlan(projectDir) {
+  const ensurePlanCode = await runFlow({
+    cwd: projectDir,
+    args: ["ensure-plan", "--project", projectDir]
+  });
+  if (ensurePlanCode !== 0) {
+    throw new Error("`kfc flow ensure-plan` failed.");
+  }
+
+  const validateCode = await runPlan({
+    cwd: projectDir,
+    args: ["validate", "--project", projectDir]
+  });
+  if (validateCode !== 0) {
+    throw new Error("`kfc plan validate` failed.");
+  }
+
+  return await describeClientPlanState(projectDir);
+}
 async function ensureClientLessonsScaffold(projectDir) {
   const lessonsPath = resolveClientLessonsPath(projectDir);
   const raw = resolveClientRawLessonPaths(projectDir);
@@ -2085,17 +2187,18 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
   const agentsPath = resolveClientAgentsPath(projectDir);
   const agentsText = fs.existsSync(agentsPath) ? await fsp.readFile(agentsPath, "utf8") : "";
   const rulesPath = path.join(projectDir, ".codex", "rules", RULES_FILE_NAME);
+  const codexConfigPath = getClientCodexConfigPath(projectDir);
   const skillPath = resolveClientSkillArtifactPath(projectDir);
   const lessonsPath = resolveClientLessonsPath(projectDir);
   const rawLessons = resolveClientRawLessonPaths(projectDir);
 
   let installSource: ClientStatusInstallSource = "unknown";
-  let installed = false;
+  let packageInstalled = false;
   if (packageJsonExists) {
     try {
       const detection = await detectClientInstallSource(projectDir);
       installSource = normalizeClientStatusInstallSource(detection.sourceType);
-      installed = detection.installed;
+      packageInstalled = detection.installed;
     } catch {
       installSource = "unknown";
     }
@@ -2107,25 +2210,17 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
   let recovery = inspection.recovery === "None" ? "" : inspection.recovery;
   let nextSteps = next ? [next] : [];
 
-  const runtimeIssues: string[] = [];
-  if (!packageJsonExists) {
-    runtimeIssues.push("package.json is missing");
-  }
-  if (!fs.existsSync(agentsPath) || !hasClientAgentsManagedBlock(agentsText)) {
-    runtimeIssues.push("client AGENTS managed block is missing");
-  }
-  if (!fs.existsSync(rulesPath)) {
-    runtimeIssues.push("project rules file is missing");
-  }
-  if (!fs.existsSync(skillPath)) {
-    runtimeIssues.push("project-local KFC skill is missing");
-  }
-  if (!fs.existsSync(lessonsPath)) {
-    runtimeIssues.push("client lessons file is missing");
-  }
-  if (!fs.existsSync(rawLessons.incidentsDir) || !fs.existsSync(rawLessons.decisionsDir)) {
-    runtimeIssues.push("raw lesson directories are missing");
-  }
+  const operational = evaluateClientOperationalStatus({
+    inspectionStatus: inspection.inspectionStatus,
+    packageJsonExists,
+    hasManagedAgentsBlock: hasClientAgentsManagedBlock(agentsText),
+    rulesPath,
+    codexConfigPath,
+    skillPath,
+    lessonsPath,
+    rawLessons
+  });
+  const runtimeIssues = [...operational.runtimeIssues];
 
   try {
     const plan = await describeClientPlanState(projectDir);
@@ -2136,18 +2231,26 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
     nextSteps = plan.nextSteps;
   } catch (err) {
     if (isMissingActivePlanError(err)) {
-      planState = "no_active_plan";
-      if (readyBrief === "present") {
-        runtimeIssues.push("ready brief exists but no active plan was found");
-        reason = "Ready handoff exists but the active plan is missing.";
+      try {
+        const recoveredPlan = await ensureClientActivePlan(projectDir);
+        planState = recoveredPlan.kind;
+        reason = `Recovered missing active plan automatically. ${recoveredPlan.summary}`;
+        next = recoveredPlan.next;
+        recovery = "";
+        nextSteps = recoveredPlan.nextSteps;
+      } catch (recoverErr) {
+        planState = "no_active_plan";
+        reason = readyBrief === "present"
+          ? "Ready handoff exists but the active plan is missing and automatic recovery failed."
+          : "No active plan is present and automatic recovery failed.";
         next = "kfc flow ensure-plan";
         recovery = "kfc flow ensure-plan";
         nextSteps = [next];
-      } else {
-        reason = "No active plan is present. The client repo is idle and ready for a new goal.";
-        next = "kfc client --goal \"<goal>\"";
-        recovery = "";
-        nextSteps = [next];
+        runtimeIssues.push(
+          recoverErr instanceof Error
+            ? `active plan recovery failed: ${recoverErr.message}`
+            : "active plan recovery failed"
+        );
       }
     } else {
       runtimeIssues.push("active plan state could not be read");
@@ -2165,7 +2268,7 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
       planState,
       readyBrief,
       installSource,
-      installed,
+      installed: operational.operationallyInstalled,
       reason: inspection.reason,
       next: inspection.next || next,
       recovery: inspection.recovery === "None" ? recovery : inspection.recovery,
@@ -2174,7 +2277,7 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
   }
 
   if (runtimeIssues.length > 0) {
-    const statusRecovery = runtimeIssues.length === 1 && runtimeIssues[0] === "ready brief exists but no active plan was found"
+    const statusRecovery = runtimeIssues.some((issue) => issue.startsWith("active plan recovery failed"))
       ? "kfc flow ensure-plan"
       : "kfc client --force --no-launch-codex";
     return {
@@ -2183,7 +2286,7 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
       planState,
       readyBrief,
       installSource,
-      installed,
+      installed: false,
       reason: `Client runtime is incomplete. Missing or inconsistent: ${runtimeIssues.join("; ")}.`,
       next: statusRecovery,
       recovery: statusRecovery,
@@ -2197,14 +2300,13 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
     planState,
     readyBrief,
     installSource,
-    installed,
+    installed: operational.operationallyInstalled || packageInstalled,
     reason,
     next,
     recovery,
     nextSteps
   };
 }
-
 function buildUpdateManualRecovery(parsed, reason) {
   const projectArgs = buildProjectTargetArgs(parsed.project);
   const updateCommand = ["kfc", "client", "update", ...projectArgs];
@@ -2390,9 +2492,8 @@ async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
     const selectedProfile = determineProfile(explicitProfile, config);
     config.codex.rulesProfile = selectedProfile;
     config.paths.resourcesDir = resourceHint;
-    await writeConfigFile(configPath, config);
-    info(`Created config: ${configPath}`);
-    return { configPath, configData: config, selectedProfile, changed: true };
+    info(`Config optional: using bundled defaults for bootstrap (${configPath} not present).`);
+    return { configPath, configData: config, selectedProfile, changed: false, source: "default" };
   }
 
   const raw = await readRawConfig(projectDir);
@@ -2428,8 +2529,8 @@ async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
   const resolvedResourcesDir = resolveResourcesDir(config, configPath);
   try {
     await assertReadableDirectory(resolvedResourcesDir);
-  } catch (err) {
-    const fallbackResourceHint = bundledResourcesDirAbsolute();
+  } catch {
+    const fallbackResourceHint = resolveBundledResourcesDir(projectDir);
     const fallbackReadable = fs.existsSync(fallbackResourceHint);
     if (!force && !fallbackReadable) {
       throw new Error(
@@ -2448,9 +2549,8 @@ async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
     info(`Config already valid: ${configPath}`);
   }
 
-  return { configPath, configData: config, selectedProfile, changed };
+  return { configPath, configData: config, selectedProfile, changed, source: "file" };
 }
-
 async function ensurePlanUi(projectDir) {
   const kfcPlanBin = path.join(
     projectDir,
@@ -2653,6 +2753,7 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
 
   try {
     await ensureClientGitignoreEntries(options.project);
+    await ensureClientCodexBinding(options.project);
     await ensureClientAgentsContract(options.project);
     await ensureClientLessonsScaffold(options.project);
   } catch (err) {
@@ -2672,27 +2773,22 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     );
   }
 
-  const ensurePlanCode = await runFlow({
-    cwd: options.project,
-    args: ["ensure-plan", "--project", options.project]
-  });
-  if (ensurePlanCode !== 0) {
+  let planState;
+  try {
+    planState = await ensureClientActivePlan(options.project);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes("plan validate")) {
+      throw createClientOnboardingError(
+        CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED,
+        message,
+        "kfc plan validate"
+      );
+    }
     throw createClientOnboardingError(
       CLIENT_ONBOARDING_CODES.ENSURE_PLAN_FAILED,
-      "`kfc flow ensure-plan` failed.",
+      message,
       "kfc flow ensure-plan"
-    );
-  }
-
-  const validateCode = await runPlan({
-    cwd: options.project,
-    args: ["validate", "--project", options.project]
-  });
-  if (validateCode !== 0) {
-    throw createClientOnboardingError(
-      CLIENT_ONBOARDING_CODES.PLAN_VALIDATE_FAILED,
-      "`kfc plan validate` failed.",
-      "kfc plan validate"
     );
   }
 
@@ -2711,8 +2807,6 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     info(`Health check OK: http://127.0.0.1:${options.port}/api/health`);
   }
 
-  const planState = await describeClientPlanState(options.project);
-
   info("Client bootstrap completed successfully.");
   if (!runtime.suppressSuccessHints) {
     printClientDocsHints(options.project);
@@ -2727,7 +2821,6 @@ async function runBootstrapOnce(options, runtime: ClientBootstrapRuntime = {}, i
     planState
   } satisfies ClientBootstrapOutcome;
 }
-
 async function runBootstrapWithSmartRecovery(options, runtime: ClientBootstrapRuntime = {}) {
   const shouldPrintPass = runtime.printPass !== false;
   const inspection = await inspectClientProject(options.project, options);
@@ -2904,7 +2997,7 @@ async function runClientDoctorChecks(options) {
   }
 
   try {
-    const raw = await readRawConfig(options.project);
+    const raw = await readConfigOrDefault(options.project);
     const validationErrors = validateConfig(raw.data);
     if (validationErrors.length > 0) {
       for (const msg of validationErrors) {
@@ -2912,7 +3005,10 @@ async function runClientDoctorChecks(options) {
       }
       ok = false;
     } else {
-      info(`Config schema OK: ${raw.configPath}`);
+      const configLabel = raw.source === "file"
+        ? `Config schema OK: ${raw.configPath}`
+        : `Config optional: using bundled defaults (${raw.configPath} not present).`;
+      info(configLabel);
       const resourcesDir = resolveResourcesDir(raw.data, raw.configPath);
       await assertReadableDirectory(resourcesDir);
       info(`Resources directory OK: ${resourcesDir}`);
@@ -2953,6 +3049,17 @@ async function runClientDoctorChecks(options) {
     } else {
       warn("Rules profile header not found or invalid.");
     }
+  }
+
+  const codexConfigPath = getClientCodexConfigPath(options.project);
+  if (!fs.existsSync(codexConfigPath)) {
+    error(`Missing client-local Codex binding: ${codexConfigPath}`);
+    ok = false;
+  } else {
+    info(`Client-local Codex binding OK: ${codexConfigPath}`);
+  }
+  if (hasClientRulesActivation(options.project)) {
+    info(`Client-local KFC rules active: ${rulesPath}`);
   }
 
   const skillPath = resolveClientSkillArtifactPath(options.project);
@@ -3003,8 +3110,27 @@ async function runClientDoctorChecks(options) {
     info(`Private gitignore entries OK: ${gitignorePath}`);
   }
 
+  let planState = null;
   if (ok) {
-    const planState = await describeClientPlanState(options.project);
+    try {
+      planState = await describeClientPlanState(options.project);
+    } catch (err) {
+      if (isMissingActivePlanError(err)) {
+        try {
+          planState = await ensureClientActivePlan(options.project);
+          info(`Recovered missing active plan automatically: ${planState.planPath}`);
+        } catch (recoverErr) {
+          error(`Active plan recovery failed: ${recoverErr instanceof Error ? recoverErr.message : String(recoverErr)}`);
+          ok = false;
+        }
+      } else {
+        error(`Plan state check failed: ${err instanceof Error ? err.message : String(err)}`);
+        ok = false;
+      }
+    }
+  }
+
+  if (ok && planState) {
     printClientDocsHints(options.project);
     printClientNextCommandHints(planState);
     info("Manual cleanup fallback: kfc client done");
@@ -3013,7 +3139,6 @@ async function runClientDoctorChecks(options) {
 
   return ok;
 }
-
 async function runClientStart(options) {
   const bootstrap = await runBootstrapWithSmartRecovery(options, {
     printPass: false,
@@ -3393,6 +3518,21 @@ export async function runClient(options) {
   usage();
   return 1;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

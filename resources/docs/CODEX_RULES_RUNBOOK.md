@@ -13,7 +13,7 @@ Keep a single source of truth for rules in:
 Then synchronize into runtime locations that Codex loads:
 
 - repo scope: `<repo>/.codex/rules/kamiflow.rules`
-- project scope: `<project>/.codex/rules/kamiflow.rules`
+- project scope: `<project>/.codex/rules/kamiflow.rules` paired with `<project>/.codex/config.toml` for project-local activation
 - home scope: `$CODEX_HOME/rules/kamiflow.rules` (or `~/.codex/rules/kamiflow.rules`)
 
 ## Rules of Engagement
@@ -27,7 +27,7 @@ Then synchronize into runtime locations that Codex loads:
 Profile is resolved in this order:
 
 1. `--profile <dogfood|client>`
-2. `<project>/kamiflow.config.json` -> `codex.rulesProfile`
+2. existing `<project>/kamiflow.config.json` -> `codex.rulesProfile`
 3. default: `client`
 
 Project config example:
@@ -74,6 +74,8 @@ npm run codex:sync:rules -- --scope project --project <path-to-project> --profil
 
 Client-project preferred path:
 
+`kamiflow.config.json` is now optional advanced config. KFC reads it when present, but default client bootstrap uses bundled defaults plus local runtime artifacts instead of generating the file automatically.
+
 ### Run in Client Project
 
 ```bash
@@ -82,7 +84,7 @@ kfc client --force
 ```
 
 Run from the client repository root (external project folder, not this KFC repo).
-`kfc client --force` creates or validates config, ensures plan UI availability (project-local install or linked fallback), creates a root `AGENTS.md` managed contract, syncs project rules, syncs the project-local runtime skill to `.agents/skills/kamiflow-core/SKILL.md`, scaffolds `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, and `.agents/`, and creates `.kfc/CODEX_READY.md`.
+`kfc client --force` keeps `kamiflow.config.json` optional by default, ensures plan UI availability (project-local install or linked fallback), creates a root `AGENTS.md` managed contract, syncs project rules, creates the private project-local Codex binding at `.codex/config.toml`, syncs the project-local runtime skill to `.agents/skills/kamiflow-core/SKILL.md`, scaffolds `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, ensures `.gitignore` contains `.kfc/`, `.local/`, `.agents/`, and `.codex/config.toml`, and creates `.kfc/CODEX_READY.md` plus one active plan.
 
 ## Verification
 
@@ -109,3 +111,5 @@ Expected pattern:
 - `Permission denied writing ...`: rerun sync from an elevated terminal if destination is outside writable scope.
 - `Missing SSOT rules file`: ensure `resources/rules/base.rules` and `resources/rules/profiles/<profile>.rules` exist.
 - rule not matching: run `codex execpolicy check "<exact command>"` and adjust `pattern/match/not_match`.
+
+

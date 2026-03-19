@@ -20,7 +20,7 @@ kfc client --force
 ```
 
 Run those commands from the client repository root (external project folder, not this KFC repo).
-KFC now inspects the target repo first. If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. This creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, generates or refreshes `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, and auto-launches Codex when a real mission is available.
+KFC now inspects the target repo first. If the target folder is truly empty, KFC auto-initializes a minimal `package.json` first. Default bootstrap keeps `kamiflow.config.json` optional, creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, syncs `.codex/rules/kamiflow.rules`, creates the private project-local binding at `.codex/config.toml`, generates or refreshes `.kfc/CODEX_READY.md` for Codex handoff, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, auto-recovers a missing active plan, and auto-launches Codex when a real mission is available.
 If no real mission exists yet, bootstrap should still PASS, preserve `.kfc/CODEX_READY.md`, and direct the next action to `kfc client --goal "<goal>"`.
 Client bootstrap includes one smart-recovery cycle and prints `Inspection Status`, `Repo Shape`, `Apply Mode`, `Planned Changes`, plus `Onboarding Status: PASS|BLOCK`, `Stage: ...`, `Error Code: CLIENT_*`, `Recovery: ...`, and `Next: ...`.
 If auto-launch is disabled or fails, use the exact manual fallback command printed by KFC.
@@ -35,11 +35,13 @@ That managed block should also be the first place Codex learns the client-projec
 
 2. Environment and Plan Readiness
 - Read `AGENTS.md` first as the stable client-repo operating contract and KFC-owned `/init` equivalent.
-- Use `kfc client status` when you need a read-only repo health + next-action snapshot before deciding whether bootstrap, doctor, or update is necessary.
+- Use `kfc client status` when you need a repo health + next-action snapshot before deciding whether bootstrap, doctor, or update is necessary. In a bootstrapped repo it now auto-recovers a missing active plan scaffold.
+- Treat `Installed` in `kfc client status` as operational truth: if the managed KFC scaffold is healthy, the repo should read as installed even when `Install Source` remains `unknown`.
 - Use the workflow command map in `AGENTS.md` before inventing alternate recovery or plan commands.
 - Use `.kfc/CODEX_READY.md` as mission + plan contract when it is present.
 - Use `.kfc/LESSONS.md` as curated private project memory when present.
 - Use `.agents/skills/kamiflow-core/SKILL.md` as the visible project-local runtime skill artifact.
+- Treat `.codex/rules/kamiflow.rules` plus `.codex/config.toml` as the KFC-managed local Codex policy pair for this repo.
 - Keep raw lesson history private under `.local/kfc-lessons/`.
 - Use `kfc client lessons capture|pending|show|promote|list` to maintain the private-history -> curated-memory lesson flow.
 - Codex should execute routine flow commands autonomously without user reminders.
@@ -47,6 +49,7 @@ That managed block should also be the first place Codex learns the client-projec
 - Rerunning `kfc client` should reuse or refresh the handoff instead of blocking on an existing ready brief.
 - Respect the inspection contract: `risky` repos should BLOCK before mutation, while `ready` and `needs_minor_fixes` can continue automatically.
 - Treat onboarding PASS as environment-ready only. If the active plan is still draft, Codex should complete Brainstorm/Plan first.
+- If no active non-done plan exists, recover it immediately with `kfc flow ensure-plan --project .` before implementation.
 - Before any implementation route (`build`/`fix`), Codex should confirm the active plan is build-ready, then run `kfc flow ready`.
 - Touch active plan markdown at route start and before final response.
 - If route behavior looks inconsistent, run `kfc client doctor --fix`.
@@ -86,3 +89,5 @@ That managed block should also be the first place Codex learns the client-projec
 ## Standard Client Entry
 
 Use `resources/docs/CLIENT_KICKOFF_PROMPT.md` as the default first message to Codex in any client project.
+
+

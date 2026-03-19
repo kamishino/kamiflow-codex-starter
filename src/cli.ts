@@ -17,8 +17,8 @@ Usage:
   kfc <command> [options]
 
 Commands:
-  init       Create kamiflow.config.json in current directory
-  doctor     Validate environment, config, and resources directory
+  init       Create optional kamiflow.config.json in current directory
+  doctor     Validate environment, optional config, and resources directory
   plan       Run kfc-plan plan workflow (init|serve|validate)
   flow       Deterministic plan guardrails (ensure-plan|ready|apply|next)
   client     Client-project one-command setup, diagnostics, and cleanup
@@ -153,5 +153,6 @@ export async function runCli(argv) {
     return 1;
   }
 }
+
 
 

@@ -1,6 +1,6 @@
 import {
   assertReadableDirectory,
-  readRawConfig,
+  readConfigOrDefault,
   resolveResourcesDir,
   validateConfig
 } from "../../lib/core/config.js";
@@ -24,14 +24,19 @@ export async function runDoctor(options) {
 
   let config;
   let configPath;
+  let configSource = "file";
   try {
-    const raw = await readRawConfig(options.cwd);
+    const raw = await readConfigOrDefault(options.cwd);
     config = raw.data;
     configPath = raw.configPath;
-    info(`Config found: ${configPath}`);
+    configSource = raw.source;
+    if (configSource === "file") {
+      info(`Config found: ${configPath}`);
+    } else {
+      info(`Config optional: using bundled defaults for this project (no ${configPath} present).`);
+    }
   } catch (readErr) {
-    error(`Missing or unreadable config: ${readErr.message}`);
-    error("Run `kfc init` to create a default config.");
+    error(`Unable to resolve project config: ${readErr.message}`);
     return 1;
   }
 
@@ -42,7 +47,7 @@ export async function runDoctor(options) {
     }
     return 1;
   }
-  info("Config schema OK.");
+  info(configSource === "file" ? "Config schema OK." : "Bundled default config OK.");
 
   const resourcesDir = resolveResourcesDir(config, configPath);
   try {
@@ -55,5 +60,3 @@ export async function runDoctor(options) {
 
   return hasFailure ? 1 : 0;
 }
-
-

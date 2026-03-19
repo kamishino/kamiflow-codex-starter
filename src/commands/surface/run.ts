@@ -8,7 +8,7 @@ import {
 } from "@kamishino/kfc-runtime/plan-workspace";
 import {
   assertReadableDirectory,
-  readRawConfig,
+  readConfigOrDefault,
   resolveResourcesDir,
   validateConfig
 } from "../../lib/core/config.js";
@@ -218,153 +218,126 @@ function normalizeRoutePhase(value, fallbackAction = "") {
   if (normalizedAction === "check") {
     return "Check";
   }
-  if (normalizedAction === "done") {
-    return "Done";
-  }
   return "Plan";
 }
 
-function normalizeRunState(eventType, status, exitCode) {
-  const normalizedType = String(eventType || "").toLowerCase();
-  if (normalizedType.includes("started")) {
-    return "RUNNING";
-  }
-  if (normalizedType.includes("completed")) {
-    return "SUCCESS";
-  }
-  if (normalizedType.includes("failed")) {
-    return "FAIL";
-  }
-
-  const normalizedStatus = String(status || "").toLowerCase();
-  if (["started", "running", "queued", "in_progress"].includes(normalizedStatus)) {
-    return "RUNNING";
-  }
-  if (["completed", "complete", "done", "success", "succeeded"].includes(normalizedStatus)) {
-    return "SUCCESS";
-  }
-  if (["failed", "fail", "error", "blocked"].includes(normalizedStatus)) {
-    return "FAIL";
-  }
-  if (Number.isInteger(Number(exitCode))) {
-    return Number(exitCode) === 0 ? "SUCCESS" : "FAIL";
-  }
-  return "IDLE";
+function buildRunSummary({ step, maxSteps, route, responseText }) {
+  const text = String(responseText || "").trim();
+  const firstLine = compactText(text.split(/\r?\n/).find((line) => line.trim().length > 0) || "No response.");
+  return `Step ${step}/${maxSteps} [${route}] ${firstLine}`;
 }
 
-type RunCounterMap = Record<string, number>;
-
-function incrementCounter(map: RunCounterMap, key: string) {
-  const normalized = String(key || "unknown");
-  map[normalized] = (map[normalized] || 0) + 1;
+function buildJsonlEvent(event) {
+  return `${JSON.stringify({ ts: new Date().toISOString(), ...event })}\n`;
 }
 
-async function appendRunEvent(
-  projectDir: string,
-  planId: string,
-  actionType: string,
-  runId: string,
-  routeCounters: RunCounterMap,
-  guardrailCounters: RunCounterMap,
-  event: Record<string, unknown>
-) {
-  const normalized = {
-    event_type: String(event.event_type || "codex_run_event"),
-    status: String(event.status || "unknown"),
-    run_id: String(runId),
-    plan_id: String(planId),
-    action_type: String(event.action_type || actionType || "unknown"),
-    source: String(event.source || "kfc-run"),
-    guardrail: String(event.guardrail || "execution"),
-    route_confidence: Number(event.route_confidence ?? 0),
-    fallback_route: String(event.fallback_route || ""),
-    selected_route: String(event.selected_route || actionType || event.action_type || "unknown"),
-    recovery_step: String(event.recovery_step || ""),
-    message: String(event.message || event.detail || `Route event for ${actionType}`),
-    detail: String(event.detail || ""),
-    updated_at: String(event.updated_at || new Date().toISOString()),
-    run_state: String(
-      event.run_state
-      || normalizeRunState(
-        event.event_type || "",
-        event.status || "",
-        event.exit_code
-      )
-    ),
-    phase: String(
-      event.phase
-      || normalizeRoutePhase(
-        event.phase || "",
-        event.selected_route || event.action_type || actionType || ""
-      )
-    ),
-    ...(event.command ? { command: String(event.command) } : {}),
-    ...(event.exit_code !== undefined ? { exit_code: Number(event.exit_code) } : {}),
-    ...(event.error_code ? { error_code: String(event.error_code) } : {}),
-    ...(event.error_class ? { error_class: String(event.error_class) } : {}),
-    ...(event.stdout_tail ? { stdout_tail: String(event.stdout_tail) } : {}),
-    ...(event.stderr_tail ? { stderr_tail: String(event.stderr_tail) } : {})
-  };
-
-  incrementCounter(routeCounters, normalized.event_type);
-  incrementCounter(guardrailCounters, normalized.guardrail);
-
-  await appendRunlog(projectDir, planId, normalized);
-}
-
-function summarizeRouteOutcome(route, planRecord) {
-  const fm = planRecord?.frontmatter || {};
-  const next = normalizeRoute(fm.next_command);
-  const status = String(fm.status || "").toLowerCase();
-  if (isDonePlan(planRecord)) {
-    return { state: "SUCCESS", message: `Route ${route} completed plan.` };
-  }
-  if (route === "check" && next === "fix") {
-    return { state: "FAIL", message: "Check returned BLOCK and moved flow to fix." };
-  }
-  if (route === "check" && next === "done") {
-    return { state: "SUCCESS", message: "Check passed and moved flow to done." };
-  }
-  if (route === "build" || route === "fix") {
-    if (next === "check") {
-      return { state: "SUCCESS", message: "Build/Fix slice completed and moved flow to check." };
-    }
-  }
-  if (status === "in_progress") {
-    return { state: "SUCCESS", message: `Route ${route} updated plan state.` };
-  }
-  return { state: "IDLE", message: `Route ${route} completed without explicit handoff change.` };
-}
-
-function buildPlanSignature(planRecord) {
-  const fm = planRecord?.frontmatter || {};
-  return [
-    String(planRecord?.updatedAt || ""),
-    String(fm.lifecycle_phase || ""),
-    String(fm.status || ""),
-    String(fm.decision || ""),
-    String(fm.next_command || ""),
-    String(fm.next_mode || "")
-  ].join("|");
-}
-
-async function appendRunlog(projectDir, planId, entry) {
-  const runsDir = resolveRunsDir(projectDir);
+async function appendRunLog(runsDir, planId, event) {
+  const filePath = path.join(runsDir, `${planId}.jsonl`);
   await fs.mkdir(runsDir, { recursive: true });
-  const target = path.join(runsDir, `${planId}.jsonl`);
-  await fs.appendFile(target, `${JSON.stringify(entry)}\n`, "utf8");
+  await fs.appendFile(filePath, buildJsonlEvent(event), "utf8");
+  return filePath;
 }
 
-function formatCounterSummary(counter: RunCounterMap) {
-  return Object.entries(counter)
-    .sort(([left], [right]) => String(left).localeCompare(String(right)))
-    .map(([name, count]) => `${name}:${count}`)
-    .join(", ");
+async function ensurePlanWorkspace(projectDir) {
+  return await createPlanWorkspace(projectDir);
 }
 
+async function resolveActivePlan(projectDir) {
+  const workspace = await ensurePlanWorkspace(projectDir);
+  const planRecord = await selectActivePlan(workspace);
+  if (!planRecord) {
+    return null;
+  }
+  if (isDonePlan(planRecord)) {
+    return null;
+  }
+  return planRecord;
+}
+
+async function readProjectConfig(projectDir) {
+  const raw = await readConfigOrDefault(projectDir);
+  const validationErrors = validateConfig(raw.data);
+  if (validationErrors.length > 0) {
+    throw new Error(validationErrors.join(" | "));
+  }
+  const resourcesDir = resolveResourcesDir(raw.data, raw.configPath);
+  await assertReadableDirectory(resourcesDir);
+  return {
+    ...raw,
+    resourcesDir
+  };
+}
+
+async function ensureReady(projectDir) {
+  const ensurePlanCode = await runFlow({
+    cwd: projectDir,
+    args: ["ensure-plan", "--project", projectDir]
+  });
+  if (ensurePlanCode !== 0) {
+    error("Run guardrail failed: `kfc flow ensure-plan` did not succeed.");
+    return false;
+  }
+  return true;
+}
+
+function buildRouteCommand(route, projectDir) {
+  return route
+    ? `kfc run --project ${projectDir} --route ${route}`
+    : `kfc run --project ${projectDir}`;
+}
+
+async function readPlanStatus(planPath) {
+  const raw = await fs.readFile(planPath, "utf8");
+  const frontmatter = parsePlanFrontmatter(raw);
+  return {
+    status: String(frontmatter.status || "").trim().toLowerCase(),
+    decision: String(frontmatter.decision || "").trim().toUpperCase(),
+    next_command: String(frontmatter.next_command || "").trim(),
+    next_mode: String(frontmatter.next_mode || "").trim(),
+    route_confidence: String(frontmatter.route_confidence || "").trim(),
+    flow_guardrail: String(frontmatter.flow_guardrail || "").trim(),
+    frontmatter
+  };
+}
+
+async function markPostRunProgress(planRecord, route, responseText) {
+  const raw = await fs.readFile(planRecord.filePath, "utf8");
+  const frontmatter = parsePlanFrontmatter(raw);
+  const normalizedRoute = normalizeRoute(route || frontmatter.next_command || "");
+  const continuity = evaluateRouteTransition({
+    requestedRoute: normalizedRoute || "plan",
+    routeConfidence: 5,
+    readiness: { buildReady: true, reasons: [] },
+    mode: modeHintForRoute(normalizedRoute || "plan")
+  });
+
+  await persistPlanRunContinuity(planRecord, {
+    route: normalizedRoute || "plan",
+    route_confidence: continuity.routeConfidence,
+    flow_guardrail: continuity.guardrail,
+    next_mode: frontmatter.next_mode || modeHintForRoute(normalizedRoute || "plan"),
+    next_command: frontmatter.next_command || normalizedRoute || "plan",
+    wip_status: buildRunSummary({
+      step: 1,
+      maxSteps: 1,
+      route: normalizedRoute || "plan",
+      responseText
+    }),
+    wip_blockers: normalizeBlockers([]),
+    next_step: frontmatter.next_command || "Run check validations before closing the slice."
+  });
+}
 
 export async function runWorkflow(options) {
-  const parsed = parseArgs(options.cwd, options.args);
+  let parsed;
+  try {
+    parsed = parseArgs(options.cwd, options.args);
+  } catch (err) {
+    error(err instanceof Error ? err.message : String(err));
+    usage();
+    return 1;
+  }
+
   if (parsed.help) {
     usage();
     return 0;
@@ -372,10 +345,9 @@ export async function runWorkflow(options) {
 
   let raw;
   try {
-    raw = await readRawConfig(parsed.project);
+    raw = await readConfigOrDefault(parsed.project);
   } catch (readErr) {
-    error(`Cannot read config: ${readErr.message}`);
-    error("Run `kfc init` first.");
+    error(`Cannot resolve project config: ${readErr.message}`);
     return 1;
   }
 
@@ -387,350 +359,109 @@ export async function runWorkflow(options) {
     return 1;
   }
 
-  const resourcesDir = resolveResourcesDir(raw.data, raw.configPath);
   try {
+    const resourcesDir = resolveResourcesDir(raw.data, raw.configPath);
     await assertReadableDirectory(resourcesDir);
-  } catch (dirErr) {
-    error(`Resources directory is not usable: ${dirErr.message}`);
+  } catch (err) {
+    error(`Resources directory check failed: ${err.message}`);
     return 1;
   }
 
-  const ensurePlanCode = await runFlow({
-    cwd: parsed.project,
-    args: ["ensure-plan", "--project", parsed.project]
-  });
-  if (ensurePlanCode !== 0) {
-    error("Run guardrail failed: `kfc flow ensure-plan` did not succeed.");
-    return ensurePlanCode;
-  }
-
   if (!parsed.skipReady) {
-    const readyCode = await runFlow({
-      cwd: parsed.project,
-      args: ["ready", "--project", parsed.project]
-    });
-    if (readyCode !== 0) {
-      error("Run guardrail failed: plan is not build-ready. Fix the plan before running implementation.");
-      return readyCode;
+    const ready = await ensureReady(parsed.project);
+    if (!ready) {
+      return 1;
     }
-  } else {
-    info("Skipping build-readiness gate (--skip-ready).");
   }
 
-  info("Run guardrails passed.");
-  info(`Provider: ${raw.data.workflow.defaultProvider}`);
-  info(`Profile: ${raw.data.workflow.profile ?? "default"}`);
-  info(`Resources: ${resourcesDir}`);
-
-  const planWorkspace = createPlanWorkspace(parsed.project, parsePlanFrontmatter);
-  const activePlans = await planWorkspace.getPlanRecords(false);
-  let activePlan = selectActivePlan(activePlans);
-  if (!activePlan) {
+  const planRecord = await resolveActivePlan(parsed.project);
+  if (!planRecord) {
     error("No active plan found after guardrails. Run `kfc flow ensure-plan`.");
     return 1;
   }
 
-  const routeEventCounts: RunCounterMap = {};
-  const guardrailCounts: RunCounterMap = {};
-  let completedSteps = 0;
-  const emitRouteHealthSummary = async (finalStatus: string, finalMessage = "") => {
-    runOutcome = finalStatus;
-    outcomeMessage = finalMessage || runOutcome;
-    const summary = {
-      event_type: "route_health_summary",
-      status: runOutcome,
-      action_type: "run",
-      source: "kfc-run",
-      guardrail: "route_health",
-      route_confidence: 5,
-      selected_route: currentRoute || "unknown",
-      fallback_route: normalizeRoute(activePlan?.frontmatter?.next_command) || "",
-      recovery_step: "",
-      message: outcomeMessage,
-      detail: compactText(
-        [
-          `plan_id=${activePlan?.planId || "unknown"}`,
-          `events=[${formatCounterSummary(routeEventCounts) || "none"}]`,
-          `guards=[${formatCounterSummary(guardrailCounts) || "none"}]`,
-          `runtime_steps=${completedSteps}`,
-          `next_route=${normalizeRoute(activePlan?.frontmatter?.next_command) || "unknown"}`
-        ].join(" | "),
-        1200
-      )
-    };
+  const planStatus = await readPlanStatus(planRecord.filePath);
+  const route = parsed.route || normalizeRoute(planStatus.next_command) || "plan";
+  const mode = modeHintForRoute(route);
+  const readiness = evaluateRouteTransition({
+    requestedRoute: route,
+    routeConfidence: 5,
+    readiness: { buildReady: true, reasons: [] },
+    mode
+  });
 
-    await appendRunEvent(
-      parsed.project,
-      activePlan.planId,
-      "run",
-      runId,
-      routeEventCounts,
-      guardrailCounts,
-      summary
-    );
-  };
-
-  const runId = `run_${Date.now()}`;
-  let currentRoute = parsed.route || normalizeRoute(activePlan.frontmatter.next_command) || "plan";
-  let previousPlanSignature = buildPlanSignature(activePlan);
-  let lastOutcomeMessage = "";
-  let runOutcome = "unknown";
-  let outcomeMessage = "";
-
-  info(`Run orchestrator started: plan=${activePlan.planId}, route=${currentRoute}, max_steps=${parsed.maxSteps}`);
-  for (let step = 1; step <= parsed.maxSteps; step += 1) {
-    if (currentRoute === "done") {
-      info("Plan already resolved to done.");
-      await emitRouteHealthSummary("completed", "plan already done");
-      return 0;
-    }
-    completedSteps = step;
-
-    const preflight = evaluateRouteTransition(activePlan, currentRoute);
-    if (!preflight.ok) {
-      const failureContinuity = buildPreflightFailureContinuity(currentRoute, preflight, {
-        nextStep: preflight.fallback_route
-          ? `Expected route: ${preflight.fallback_route}`
-          : "Align plan handoff in plan frontmatter then rerun."
-      });
-      await persistPlanRunContinuity(activePlan, {
-        route: currentRoute,
-        route_confidence: Number(failureContinuity.frontmatter.route_confidence),
-        flow_guardrail: failureContinuity.frontmatter.flow_guardrail,
-        selected_mode: failureContinuity.frontmatter.selected_mode,
-        lifecycle_phase: failureContinuity.frontmatter.lifecycle_phase,
-        next_mode: failureContinuity.frontmatter.next_mode,
-        next_command: failureContinuity.frontmatter.next_command,
-        wip_status: failureContinuity.wip.status,
-        wip_blockers: failureContinuity.wip.blockers,
-        next_step: failureContinuity.wip.next_step
-      });
-
-      if (preflight.route_confidence < 4 && preflight.fallback_route && preflight.fallback_route !== currentRoute) {
-        await appendRunEvent(parsed.project, activePlan.planId, currentRoute, runId, routeEventCounts, guardrailCounts, {
-          event_type: "runlog_updated",
-          status: "reroute",
-          action_type: currentRoute,
-          source: "kfc-run",
-          guardrail: preflight.guardrail || "transition_guard",
-          route_confidence: preflight.route_confidence,
-          fallback_route: preflight.fallback_route,
-          selected_route: currentRoute,
-          recovery_step: preflight.recovery || "",
-          message: `REROUTE ${currentRoute.toUpperCase()} -> ${String(preflight.fallback_route).toUpperCase()}`,
-          detail: compactText(preflight.reason || "Route confidence below threshold.", 500),
-          updated_at: new Date().toISOString()
-        });
-        currentRoute = normalizeRoute(preflight.fallback_route) || "plan";
-        continue;
-      }
-
-      await appendRunEvent(parsed.project, activePlan.planId, currentRoute, runId, routeEventCounts, guardrailCounts, {
-        event_type: "codex_run_failed",
-        status: "blocked",
-        action_type: currentRoute,
-        source: "kfc-run",
-        error_code: preflight.error_code || "FLOW_GUARD_BLOCKED",
-        guardrail: preflight.guardrail || "transition_guard",
-        route_confidence: preflight.route_confidence,
-        fallback_route: preflight.fallback_route || "",
-        selected_route: currentRoute,
-        recovery_step: preflight.recovery || "",
-        message: compactText(preflight.reason || "Flow guardrail blocked route execution.", 140),
-        detail: compactText(preflight.recovery || preflight.reason || "", 600),
-        updated_at: new Date().toISOString()
-      });
-      error(`Flow guardrail blocked route ${currentRoute} (${preflight.error_code || "FLOW_GUARD_BLOCKED"}).`);
-      if (preflight.recovery) {
-        error(`Recovery: ${preflight.recovery}`);
-      }
-      await emitRouteHealthSummary("blocked", `Flow guardrail blocked: ${preflight.error_code || "FLOW_GUARD_BLOCKED"}`);
-      return 1;
-    }
-
-    await persistPlanRunContinuity(activePlan, {
-      route: currentRoute,
-      route_confidence: preflight.route_confidence,
-      flow_guardrail: preflight.guardrail || "route_alignment",
-      wip_status: "Running",
-      wip_blockers: "None",
-      next_step: "Observe Codex output, then review plan handoff in next step."
+  if (!readiness.allowed) {
+    const continuity = buildPreflightFailureContinuity({
+      route,
+      routeConfidence: 5,
+      buildReadinessReasons: readiness.reasons,
+      fallbackRoute: readiness.fallbackRoute || "plan"
     });
-
-    await appendRunEvent(parsed.project, activePlan.planId, currentRoute, runId, routeEventCounts, guardrailCounts, {
-      event_type: "codex_run_started",
-      status: "started",
-      action_type: currentRoute,
-      source: "kfc-run",
-      guardrail: preflight.guardrail || "route_alignment",
-      route_confidence: preflight.route_confidence,
-      fallback_route: preflight.fallback_route || "",
-      selected_route: currentRoute,
-      recovery_step: "",
-      message: `RUNNING ${currentRoute.toUpperCase()}`,
-      detail: `step ${step}/${parsed.maxSteps}`,
-      updated_at: new Date().toISOString()
+    await persistPlanRunContinuity(planRecord, {
+      route,
+      route_confidence: continuity.routeConfidence,
+      flow_guardrail: continuity.guardrail,
+      next_mode: continuity.nextMode,
+      next_command: continuity.nextCommand,
+      wip_status: "Run blocked by flow guardrails.",
+      wip_blockers: normalizeBlockers(readiness.reasons),
+      next_step: "Run `kfc flow ensure-plan` then `kfc flow ready` before rerun."
     });
-
-    const prompt = buildRoutePrompt({
-      route: currentRoute,
-      planRecord: activePlan,
-      projectDir: parsed.project,
-      step,
-      maxSteps: parsed.maxSteps
-    });
-
-    const actionResult = await runCodexAction({
-      plan_id: activePlan.planId,
-      action_type: currentRoute,
-      mode_hint: modeHintForRoute(currentRoute),
-      prompt,
-      run_id: runId,
-      timeout_ms: parsed.timeoutMs
-    });
-
-    if (actionResult.status !== "completed") {
-      await persistPlanRunContinuity(activePlan, {
-        route: currentRoute,
-        route_confidence: preflight.route_confidence,
-        flow_guardrail: preflight.guardrail || "execution",
-        wip_status: "Route execution failed",
-        wip_blockers: normalizeBlockers(actionResult.failure_signature || `Route ${currentRoute} failed`, [
-          actionResult.error_code || "unknown",
-          actionResult.recovery_hint || ""
-        ]),
-        next_step: actionResult.recovery_hint ? `Run: ${actionResult.recovery_hint}` : "Retry route with corrected context."
-      });
-
-      await appendRunEvent(parsed.project, activePlan.planId, currentRoute, runId, routeEventCounts, guardrailCounts, {
-        event_type: "codex_run_failed",
-        status: "failed",
-        action_type: currentRoute,
-        source: "kfc-run",
-        command: actionResult.command,
-        exit_code: actionResult.exit_code,
-        error_code: actionResult.error_code,
-        error_class: actionResult.error_class || "unknown",
-        recovery_hint: actionResult.recovery_hint || "",
-        guardrail: preflight.guardrail || "execution",
-        route_confidence: preflight.route_confidence,
-        fallback_route: preflight.fallback_route || "",
-        selected_route: currentRoute,
-        recovery_step: actionResult.recovery_hint || "",
-        stderr_tail: actionResult.stderr_tail || "",
-        stdout_tail: actionResult.stdout_tail || "",
-        message: compactText(actionResult.failure_signature || `${currentRoute} failed`, 120),
-        detail: compactText(actionResult.stderr_tail || actionResult.stdout_tail || "", 600),
-        updated_at: new Date().toISOString()
-      });
-      error(`Route ${currentRoute} failed (${actionResult.error_code || "UNKNOWN"}).`);
-      if (actionResult.recovery_hint) {
-        error(`Recovery: ${actionResult.recovery_hint}`);
-      }
-      await emitRouteHealthSummary("blocked", `Route ${currentRoute} failed.`);
-      return 1;
-    }
-
-    const refreshed = await planWorkspace.getPlanByRef(activePlan.planId, true);
-    if (refreshed) {
-      activePlan = refreshed;
-    }
-    const outcome = summarizeRouteOutcome(currentRoute, activePlan);
-    lastOutcomeMessage = outcome.message;
-    await persistPlanRunContinuity(activePlan, {
-      route: currentRoute,
-      route_confidence: preflight.route_confidence,
-      flow_guardrail: preflight.guardrail || "route_alignment",
-      wip_status: outcome.state === "FAIL" ? "Route completed with findings" : `Route ${currentRoute} completed`,
-      wip_blockers: outcome.state === "FAIL" ? "Known issues detected." : "None",
-      next_step: `Next route: ${normalizeRoute(activePlan?.frontmatter?.next_command) || "plan"}`
-    });
-
-    await appendRunEvent(parsed.project, activePlan.planId, currentRoute, runId, routeEventCounts, guardrailCounts, {
-      event_type: outcome.state === "FAIL" ? "codex_run_failed" : "codex_run_completed",
-      status: outcome.state === "FAIL" ? "blocked" : "completed",
-      action_type: currentRoute,
-      source: "kfc-run",
-      command: actionResult.command,
-      exit_code: actionResult.exit_code,
-      guardrail: preflight.guardrail || "route_alignment",
-      route_confidence: preflight.route_confidence,
-      fallback_route: preflight.fallback_route || "",
-      selected_route: currentRoute,
-      recovery_step: "",
-      stderr_tail: actionResult.stderr_tail || "",
-      stdout_tail: actionResult.stdout_tail || "",
-      message: outcome.message,
-      detail: compactText(actionResult.stdout_tail || actionResult.stderr_tail || "", 600),
-      updated_at: new Date().toISOString()
-    });
-
-    info(`Step ${step}/${parsed.maxSteps}: ${currentRoute} -> ${outcome.message}`);
-    if (isDonePlan(activePlan)) {
-      info(`Run completed: ${activePlan.planId} is done.`);
-      await emitRouteHealthSummary("done", `Run completed plan ${activePlan.planId}.`);
-      return 0;
-    }
-
-    const nextRoute = normalizeRoute(activePlan.frontmatter.next_command) || "plan";
-    if (currentRoute === "check" && nextRoute === "fix") {
-      error("Check route returned BLOCK. Stop run loop and continue with fix.");
-      await emitRouteHealthSummary("blocked", "Check route returned BLOCK and moved flow to fix.");
-      return 2;
-    }
-
-    const signature = buildPlanSignature(activePlan);
-    if (signature === previousPlanSignature) {
-      await persistPlanRunContinuity(activePlan, {
-        route: currentRoute,
-        route_confidence: 2,
-        flow_guardrail: "loop_guard",
-        wip_status: "Flow stalled",
-        wip_blockers: normalizeBlockers("Plan state did not advance after route execution.", [
-          `route=${currentRoute}`,
-          `next=${nextRoute || "unknown"}`,
-          "signal=FLOW_STALLED_NO_ADVANCE"
-        ]),
-        next_step: "Run `kfc flow ensure-plan` then `kfc flow ready` before rerun."
-      });
-
-      const failureMessage = normalizeBlockers("Plan state did not advance after route execution.", [
-        `route=${currentRoute}`,
-        `next=${nextRoute || "unknown"}`,
-        "signal=FLOW_STALLED_NO_ADVANCE"
-      ]);
-      await appendRunEvent(parsed.project, activePlan.planId, currentRoute, runId, routeEventCounts, guardrailCounts, {
-        event_type: "codex_run_failed",
-        status: "blocked",
-        action_type: currentRoute,
-        source: "kfc-run",
-        error_code: "FLOW_STALLED_NO_ADVANCE",
-        guardrail: "loop_guard",
-        route_confidence: 2,
-        fallback_route: nextRoute || "plan",
-        selected_route: currentRoute,
-        recovery_step: "Run `kfc flow ensure-plan` then `kfc flow ready` before rerun.",
-        message: "Flow stalled: no plan-state advance",
-        detail: compactText(failureMessage, 600),
-        updated_at: new Date().toISOString()
-      });
-      error("Plan state did not advance after route execution. Stopping to avoid loop.");
-      error("Recovery: Run `kfc flow ensure-plan` then `kfc flow ready` before rerun.");
-      await emitRouteHealthSummary("blocked", "Plan state stalled without advancement.");
-      return 1;
-    }
-
-    previousPlanSignature = signature;
-    currentRoute = nextRoute;
+    error(`Route ${route} is not allowed: ${readiness.reason}`);
+    error("Recovery: Run `kfc flow ensure-plan` then `kfc flow ready` before rerun.");
+    return 1;
   }
 
-  error(`Reached max steps (${parsed.maxSteps}) before completion.`);
-  if (lastOutcomeMessage) {
-    error(`Last outcome: ${lastOutcomeMessage}`);
+  const runsDir = resolveRunsDir(parsed.project);
+  const logPath = await appendRunLog(runsDir, planRecord.planId, {
+    event_type: "run_started",
+    action_type: "workflow",
+    route,
+    mode,
+    max_steps: parsed.maxSteps,
+    timeout_ms: parsed.timeoutMs,
+    plan_id: planRecord.planId,
+    plan_path: planRecord.filePath,
+    summary: `Starting ${route} route`
+  });
+  info(`Run log: ${logPath}`);
+
+  const prompt = buildRoutePrompt({
+    route,
+    planRecord,
+    projectDir: parsed.project,
+    step: 1,
+    maxSteps: parsed.maxSteps
+  });
+
+  const result = await runCodexAction({
+    cwd: parsed.project,
+    prompt,
+    fullAuto: false,
+    timeoutMs: parsed.timeoutMs,
+    additionalWritableRoots: []
+  });
+
+  const responseText = String(result?.stdout || result?.message || "").trim();
+  await appendRunLog(runsDir, planRecord.planId, {
+    event_type: "run_completed",
+    action_type: "workflow",
+    route,
+    mode,
+    plan_id: planRecord.planId,
+    plan_path: planRecord.filePath,
+    exit_code: result?.exitCode ?? 0,
+    summary: buildRunSummary({ step: 1, maxSteps: parsed.maxSteps, route, responseText }),
+    response_preview: compactText(responseText, 600)
+  });
+
+  await markPostRunProgress(planRecord, route, responseText);
+
+  if (result?.exitCode && result.exitCode !== 0) {
+    error(`Run failed with exit code ${result.exitCode}.`);
+    return result.exitCode;
   }
-  info(`Next command from plan: ${activePlan.frontmatter.next_command || "plan"}`);
-  await emitRouteHealthSummary("blocked", `Reached max steps (${parsed.maxSteps}) before completion.`);
-  return 1;
+
+  info(responseText || `Completed route ${route}.`);
+  return 0;
 }
-
-

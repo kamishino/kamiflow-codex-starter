@@ -43,6 +43,7 @@ This repository has four active scopes:
 - Treat `.codex/rules/kamiflow.rules` as generated runtime output, not manual-edit files.
 - Keep `.codex/rules/default.rules` for Codex-managed approvals; do not overwrite it from SSOT.
 - Never commit private/secrets-bearing `.codex` runtime config.
+- Treat `kamiflow.config.json` as optional advanced client-project config; default `kfc client` bootstrap should work without generating it.
 - Do not import `src/*` directly from dogfood fixtures.
 - Dogfood fixtures must consume the CLI as users do (`npm link` or tarball install).
 
@@ -75,6 +76,7 @@ This repository has four active scopes:
 - In client projects, use `kfc ...` (or `npx --no-install kfc ...`), not this repo's `npm run ...`.
 - When a `kfc` command accepts `--project`, treat it as an override for out-of-tree targeting. If omitted, `kfc client`, `kfc flow`, `kfc plan`, and `kfc web` should auto-detect the nearest project root from the current working directory.
 - Client bootstrap flow is `kfc client` -> Codex reads `.kfc/CODEX_READY.md` -> `kfc client done` for cleanup.
+- In bootstrapped client repos, `kfc client` and `kfc client status` should auto-recover a missing active non-done plan instead of leaving plan repair as a manual first step.
 - Primary lifecycle behavior is direct markdown mutation in `.local/plans/*.md`; do not require `kfc flow ...` commands in normal route execution.
 - `kfc flow ensure-plan` and `kfc flow ready` are fallback recovery commands when plan files are missing or inconsistent.
 
@@ -211,4 +213,6 @@ This repository has four active scopes:
 - Do not run destructive git commands unless explicitly requested.
 - Do not revert unrelated user changes.
 - Do not manually edit generated runtime outputs unless the task explicitly targets generated output behavior.
+
+
 

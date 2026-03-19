@@ -1194,11 +1194,12 @@ await runCase("client AGENTS contract stays evergreen when CODEX_READY is absent
   await withTempDir(async (tempDir) => {
     const managed = await buildClientAgentsManagedBlock(tempDir);
     assert.ok(managed.includes("If `.kfc/CODEX_READY.md` exists"));
-    assert.ok(managed.includes("If `.kfc/CODEX_READY.md` is absent"));
+    assert.ok(managed.includes("If no active non-done plan exists"));
     assert.ok(managed.includes("## Workflow Commands"));
     assert.ok(managed.includes("`kfc plan validate`"));
     assert.ok(managed.includes("`kfc flow ensure-plan`"));
     assert.ok(managed.includes("`kfc client doctor --fix`"));
+    assert.ok(managed.includes("`.codex/config.toml`"));
     assert.ok(managed.includes("manual cleanup fallback"));
   });
 });
@@ -1268,6 +1269,100 @@ await runCase("client ready artifacts mark placeholder mission as not auto-launc
     assert.equal(ready.effectiveGoal, "Define the mission for this client project before implementation.");
     const nextReady = await fs.readFile(path.join(tempDir, ".kfc", "CODEX_READY.md"), "utf8");
     assert.ok(nextReady.includes("- Define the mission for this client project before implementation."));
+  });
+});
+
+await runCase("client bootstrap keeps config optional and activates local rules", async () => {
+  await withTempDir(async (tempDir) => {
+    await fs.writeFile(
+      path.join(tempDir, "package.json"),
+      JSON.stringify({ name: "client-cleanup-test", private: true, version: "1.0.0" }, null, 2) + "\n",
+      "utf8"
+    );
+
+    const exitCode = await withSuppressedConsoleError(async () => {
+      return await runCli(["--cwd", tempDir, "client", "--force", "--no-launch-codex", "--skip-serve-check"]);
+    });
+
+    assert.equal(exitCode, 0);
+    await assert.rejects(fs.access(path.join(tempDir, "kamiflow.config.json")));
+    await fs.access(path.join(tempDir, ".codex", "rules", "kamiflow.rules"));
+    await fs.access(path.join(tempDir, ".codex", "config.toml"));
+    await fs.access(path.join(tempDir, ".agents", "skills", "kamiflow-core", "SKILL.md"));
+    const plans = await fs.readdir(path.join(tempDir, ".local", "plans"));
+    assert.ok(plans.some((name) => name.endsWith(".md")));
+  });
+});
+
+await runCase("client status auto-recovers a missing active plan in bootstrapped repos", async () => {
+  await withTempDir(async (tempDir) => {
+    await fs.writeFile(
+      path.join(tempDir, "package.json"),
+      JSON.stringify({ name: "client-status-recovery", private: true, version: "1.0.0" }, null, 2) + "\n",
+      "utf8"
+    );
+
+    const bootstrapCode = await withSuppressedConsoleError(async () => {
+      return await runCli(["--cwd", tempDir, "client", "--force", "--no-launch-codex", "--skip-serve-check"]);
+    });
+    assert.equal(bootstrapCode, 0);
+
+    await fs.rm(path.join(tempDir, ".local", "plans"), { recursive: true, force: true });
+
+    const statusCode = await withSuppressedConsoleError(async () => {
+      return await runCli(["--cwd", tempDir, "client", "status"]);
+    });
+    assert.equal(statusCode, 0);
+
+    const plans = await fs.readdir(path.join(tempDir, ".local", "plans"));
+    assert.ok(plans.some((name) => name.endsWith(".md")));
+  });
+});
+
+await runCase("client status treats healthy scaffold as installed even without local package marker", async () => {
+  await withTempDir(async (tempDir) => {
+    const rootBin = path.resolve(__dirname, "../../../bin/kamiflow.js");
+    await fs.writeFile(
+      path.join(tempDir, "package.json"),
+      JSON.stringify({ name: "client-installed-status", private: true, version: "1.0.0" }, null, 2) + "\n",
+      "utf8"
+    );
+
+    const bootstrapCode = await withSuppressedConsoleError(async () => {
+      return await runCli(["--cwd", tempDir, "client", "--force", "--no-launch-codex", "--skip-serve-check"]);
+    });
+    assert.equal(bootstrapCode, 0);
+
+    const result = await runNodeProcess(process.execPath, [rootBin, "client", "status", "--project", tempDir], tempDir);
+    const output = `${result.stdout}\n${result.stderr}`;
+    assert.equal(result.exitCode, 0, output);
+    assert.match(output, /Install Source: unknown/);
+    assert.match(output, /Installed: yes/);
+  });
+});
+
+await runCase("client status keeps incomplete scaffold blocked and uninstalled", async () => {
+  await withTempDir(async (tempDir) => {
+    const rootBin = path.resolve(__dirname, "../../../bin/kamiflow.js");
+    await fs.writeFile(
+      path.join(tempDir, "package.json"),
+      JSON.stringify({ name: "client-installed-blocked", private: true, version: "1.0.0" }, null, 2) + "\n",
+      "utf8"
+    );
+
+    const bootstrapCode = await withSuppressedConsoleError(async () => {
+      return await runCli(["--cwd", tempDir, "client", "--force", "--no-launch-codex", "--skip-serve-check"]);
+    });
+    assert.equal(bootstrapCode, 0);
+
+    await fs.rm(path.join(tempDir, ".codex", "config.toml"), { force: true });
+
+    const result = await runNodeProcess(process.execPath, [rootBin, "client", "status", "--project", tempDir], tempDir);
+    const output = `${result.stdout}\n${result.stderr}`;
+    assert.equal(result.exitCode, 1, output);
+    assert.match(output, /Install Source: unknown/);
+    assert.match(output, /Installed: no/);
+    assert.match(output, /client-local Codex binding is missing/);
   });
 });
 
@@ -2142,4 +2237,5 @@ if (failed > 0) {
 } else {
   console.log("[test] all tests passed.");
 }
+
 

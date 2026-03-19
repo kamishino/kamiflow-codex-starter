@@ -156,6 +156,7 @@ Pick mode before executing route logic:
 - Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.
 - In client projects, if `.kfc/LESSONS.md` exists, read it as curated durable project memory before implementation.
 - In client projects, if `.kfc/CODEX_READY.md` exists, treat its repo-shape inspection summary and onboarding handoff as authoritative until evidence shows drift.
+- In bootstrapped client projects, if no active non-done plan exists, recover it immediately with `kfc flow ensure-plan --project .` before implementation instead of asking the user to repair plan state manually.
 - Every top-level implementation or workflow request must resolve one active non-done plan in `.local/plans` before route output.
 - Low-risk operational requests may use the no-plan fast path when they do not need acceptance criteria, phase/archive tracking, or multi-step workflow state.
 - Allowed no-plan fast-path categories: commit/amend/reword, git status/diff/log, explain/summarize current state, sync generated docs/rules/skills, and narrow maintenance chores with low workflow risk.
@@ -257,3 +258,6 @@ When current mode is incompatible, output:
 - Verbose response footers are optional.
 - Route handoff state is authoritative in plan markdown (`selected_mode`, `next_command`, `next_mode`, `lifecycle_phase`, `updated_at`).
 - Prefer one concise next-step sentence in user-facing output when it improves clarity.
+
+
+

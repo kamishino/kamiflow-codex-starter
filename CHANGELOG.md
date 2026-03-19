@@ -8,6 +8,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-19
 
+- Refined `kfc client status` install semantics so `Installed` now reflects whether a client repo is operationally usable with a healthy KFC-managed scaffold, while `Install Source` remains best-effort provenance metadata and may still be `unknown`.
 - Fixed two client-bootstrap UX issues together: linked `kfc flow ensure-plan`/`kfc plan init` now resolves the real repo `bin/kamiflow.js` entrypoint instead of a missing `dist/bin` path, and `kfc client --force` without a real mission now completes as a guided PASS handoff that preserves `.kfc/CODEX_READY.md`, skips auto-launch, and points the user to `kfc client --goal "<goal>"` instead of failing with `CLIENT_SETUP_INCOMPLETE`.
 - Defined a KFC platform support policy that distinguishes official `Codex-CLI` execution support, official companion support for Codex App, experimental support for OpenCode-style Codex-model surfaces, and rejects model-only compatibility claims until the execution contract is proven.
 - Fixed linked external-client bootstrap so `kfc client --force` can complete its `kfc plan validate` step using the repo-bundled KFC Plan fallback, restoring the intended one-command path for empty client repos without separately installing `@kamishino/kfc-plan-web`.

@@ -1,5 +1,6 @@
 ## Plan Lifecycle Contract
 - Resolve one active non-done plan before implementation-bearing work.
+- If no active non-done plan exists, recover it immediately with `kfc flow ensure-plan --project .` before continuing.
 - Touch the active plan at route start and before final response (`updated_at` + `WIP Log`).
 - Create a new plan only when no active non-done plan exists or the user explicitly splits scope.
 - Only start `build`/`fix` when the active plan is build-ready.
