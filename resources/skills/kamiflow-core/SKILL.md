@@ -64,6 +64,16 @@ Pick mode before executing route logic:
 - `research` -> `references/research.md`
 - `fix` -> `references/fix.md`
 
+## Command Boundary Quick Rules
+
+- In KFC repo, prefer `npm run ...` maintainer commands.
+- In client projects, prefer `kfc ...` or `npx --no-install kfc ...`.
+- First-time in-client bootstrap uses `npx --package @kamishino/kamiflow-codex kfc client install`.
+- Normal client re-entry should point to `kfc client status`.
+- Never surface repo-only `npm run ...` commands as the normal client path.
+- If runtime skill instructions are stale in repo, recover with `npm run codex:sync:skills -- --force`.
+- Use `references/command-map.md` as the central command playbook; keep route references limited to short command recipes plus route-specific recovery hints.
+
 ## Sub-Agent Orchestration Contract
 
 - Use `spawn_agent` only when work can be split into independent ownership slices.
@@ -171,7 +181,7 @@ Pick mode before executing route logic:
 - Client-facing command guidance must use `kfc` (not direct `kfc-plan`), except package-internal docs.
 - Never claim completion, validation, or behavior without evidence from commands/files/user-provided facts.
 - If evidence is unavailable, mark status as `Unknown` and reroute to `research` or `plan`.
-- At check/closeout, review docs impact for workflow, onboarding, and durable user-facing changes; refresh tracked docs and generated mirrors before claiming commit-safe completion.
+- At check/closeout, review docs impact for workflow, onboarding, and durable user-facing changes; refresh tracked docs and any required generated runtime outputs before claiming commit-safe completion.
 - When workflow-surface files changed, review `AGENTS.md` for operating-contract drift even if docs-freshness only emits a warning.
 - Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`; do not move private lessons into tracked repo docs.
 

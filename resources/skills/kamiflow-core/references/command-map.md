@@ -20,6 +20,61 @@ When rerouting, return:
 - `Fallback Route: <start|plan|research>`
 - `Reason: <single concrete cause>`
 
+## Context Lock
+
+Pick the command lane before selecting a route:
+
+- KFC repo context:
+  - use `npm run ...` maintainer commands
+  - valid when working inside `kamiflow-codex-starter` on `src/`, `bin/`, `packages/`, `resources/`, or `scripts/`
+  - do not present these commands as the normal answer for a client repo
+- Client project context:
+  - use `kfc ...`
+  - if `kfc` is not visible in PATH but KFC is already present in the client repo, use `npx --no-install kfc ...`
+  - if KFC is not installed yet in the client repo, use `npx --package @kamishino/kamiflow-codex kfc client install`
+- Wrong-context recovery:
+  - if you catch yourself giving repo-only `npm run ...` commands to a client repo, replace them with the nearest `kfc ...` recovery or lifecycle command before final output
+
+## First Run / Bootstrap
+
+- Maintainer path from the KFC repo:
+  - Windows: `./setup.ps1`
+  - Unix-like: `./setup.sh`
+  - explicit target: `npm run client:link-bootstrap -- --project <path>`
+- Client-folder first run:
+  - `npx --package @kamishino/kamiflow-codex kfc client install`
+- Re-entry after install:
+  - preferred: `kfc client status`
+  - no-PATH fallback: `npx --no-install kfc client status`
+
+## Common Client Commands
+
+- `kfc client`
+  - refresh client bootstrap state and repo-shape handoff
+- `kfc client status`
+  - verify install/readiness without mutating project state
+- `kfc client doctor --fix`
+  - recover broken client bootstrap or repo-shape drift
+- `kfc client done`
+  - clean up end-of-mission client bootstrap state
+- `kfc flow ensure-plan --project .`
+  - recover a missing or inconsistent active plan
+- `kfc flow ready --project .`
+  - verify build-readiness before implementation when plan state is uncertain
+
+## Common Repo Commands
+
+- `npm run build:scripts`
+  - rebuild policy and maintainer scripts after TypeScript edits in `scripts/`
+- `npm run build:server`
+  - rebuild the CLI/runtime surfaces after `src/` or package-runtime changes
+- `npm run verify:governance`
+  - run the repo governance and policy verification stack
+- `npm run codex:sync:skills -- --force`
+  - refresh generated runtime skill output from `resources/skills/`
+- `npm run client:link-bootstrap -- --project <path>`
+  - bootstrap a client repo from this KFC repo when you are on the maintainer lane
+
 ## Route Selection
 
 ### Continuity Metadata
@@ -74,3 +129,18 @@ Select exactly one route:
 - If scope grows beyond original assumptions, pause and reroute to `plan`.
 - If current mode mismatches route requirements, return `MODE_MISMATCH` and stop.
 - Every selected route must mutate the active plan markdown before final output.
+
+## Recovery Shortcuts
+
+- Missing `kfc` in PATH:
+  - already installed in client repo: `npx --no-install kfc client status`
+  - not installed yet in client repo: `npx --package @kamishino/kamiflow-codex kfc client install`
+- Missing active plan:
+  - `kfc flow ensure-plan --project .`
+- Build-readiness uncertainty:
+  - `kfc flow ready --project .`
+- Stale runtime skill/rules in the KFC repo:
+  - `npm run codex:sync:skills -- --force`
+- Wrong-context command usage:
+  - repo -> stay on `npm run ...`
+  - client -> switch to `kfc ...` or `npx --no-install kfc ...`

@@ -44,6 +44,19 @@ Use this route for focused issue resolution with minimal scope.
    - if unresolved checklist items remain, continue `fix/build -> check` iteration (do not hand off to done).
 14. End with concise next-step guidance; do not require verbose response footer fields.
 
+## Command Recipe
+
+- Repo context:
+  - use `npm run build:scripts` or `npm run build:server` only when the fix is inside this KFC repo
+  - use `npm run verify:governance` when the fix touches skill, rule, or policy contracts
+- Client context:
+  - recover missing plan state with `kfc flow ensure-plan --project .`
+  - verify readiness before continuing with `kfc flow ready --project .`
+  - repair broken bootstrap or install state with `kfc client doctor --project . --fix`
+  - if `kfc` is not visible in PATH, use `npx --no-install kfc ...`
+- Boundary rule:
+  - do not switch a client fix flow onto repo-only `npm run ...` unless the actual fix target is the KFC repo
+
 ## Route Output Contract
 
 - Return compact guidance shape with:

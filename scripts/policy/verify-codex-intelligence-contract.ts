@@ -122,7 +122,7 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
   {
     relPath: "resources/skills/kamiflow-core/SKILL.md",
     spec: {
-      headings: ["Smooth Flow Checklist", "Failure Recovery", "Route Confidence Gate"],
+      headings: ["Smooth Flow Checklist", "Failure Recovery", "Route Confidence Gate", "Command Boundary Quick Rules"],
       anchors: [
         "Chat-first operation",
         "Emoji is allowed",
@@ -140,13 +140,18 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
         "$kamiflow-core plan",
         "git commit --no-verify",
         "workflow, onboarding, and durable user-facing changes",
-        "Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`"
+        "Keep private project memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`",
+        "In KFC repo, prefer `npm run ...` maintainer commands.",
+        "In client projects, prefer `kfc ...` or `npx --no-install kfc ...`.",
+        "npx --package @kamishino/kamiflow-codex kfc client install",
+        "npm run codex:sync:skills -- --force"
       ]
     }
   },
   {
     relPath: "resources/skills/kamiflow-core/references/build.md",
     spec: {
+      headings: ["Command Recipe"],
       anchors: [
         "build-ready criteria",
         "Status: BLOCK",
@@ -162,6 +167,7 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
   {
     relPath: "resources/skills/kamiflow-core/references/fix.md",
     spec: {
+      headings: ["Command Recipe"],
       anchors: [
         "build-ready criteria",
         "Status: BLOCK",
@@ -176,12 +182,15 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
   {
     relPath: "resources/skills/kamiflow-core/references/command-map.md",
     spec: {
-      headings: ["Confidence Gate (Mandatory)"],
+      headings: ["Confidence Gate (Mandatory)", "Context Lock", "First Run / Bootstrap", "Common Client Commands", "Common Repo Commands", "Recovery Shortcuts"],
       anchors: [
         "Route Confidence",
         "Status: REROUTE",
         "Fallback Route: <start|plan|research>",
-        "Reason: <single concrete cause>"
+        "Reason: <single concrete cause>",
+        "npx --package @kamishino/kamiflow-codex kfc client install",
+        "npx --no-install kfc client status",
+        "npm run codex:sync:skills -- --force"
       ]
     }
   },
@@ -236,7 +245,7 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
   {
     relPath: "resources/docs/ROUTE_PROMPTS.md",
     spec: {
-      headings: ["Route Profile Matrix", "Route Confidence Gate"],
+      headings: ["Route Profile Matrix", "Command Boundary Quick Rules", "Route Confidence Gate"],
       anchors: [
         "Fallback order for all routes:",
         "| `start` | `plan` |",
@@ -249,6 +258,9 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
         "profile: `executor`",
         "profile: `review`",
         "Recover missing plan via `kfc flow ensure-plan --project .`.",
+        "In KFC repo, use `npm run ...` maintainer commands.",
+        "In client projects, use `kfc ...` or `npx --no-install kfc ...`.",
+        "npx --package @kamishino/kamiflow-codex kfc client install",
         "Status: REROUTE",
         "Route Confidence: <1-5>",
         "Fallback Route: <start|plan|research>",

@@ -31,6 +31,18 @@ Use this route when missing facts or high risk would make execution unsafe.
 8. Resolve next-step narrative from mutated state.
 9. End with concise next-step guidance; do not require verbose response footer fields.
 
+## Command Recipe
+
+- Repo context:
+  - use `npm run ...` only when research needs repo-maintainer checks or runtime sync in this KFC repo
+- Client context:
+  - use `kfc flow ensure-plan --project .` when the active plan is missing during research
+  - use `kfc flow ready --project .` when research is really about build-readiness uncertainty
+  - if `kfc` is not in PATH but the package is already present, use `npx --no-install kfc ...`
+  - if the repo is not yet bootstrapped, use `npx --package @kamishino/kamiflow-codex kfc client install`
+- Recovery discipline:
+  - when facts are still missing after command recovery, keep the route in `research`; do not jump to repo-only maintainer commands unless the work is actually in the KFC repo
+
 ## Output
 
 Provide:

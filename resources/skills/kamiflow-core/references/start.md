@@ -101,6 +101,19 @@ When the user explicitly asks for **simple**, **quick**, or **pre-brainstorm** m
    - when `diagram_mode: required`, write `Technical Solution Diagram` section with mermaid content
    - write `WIP Log` lines (`Status`, `Blockers`, `Next step`)
 
+## Command Recipe
+
+- Repo context:
+  - use `npm run ...` only for repo maintenance or verification work in `kamiflow-codex-starter`
+  - do not present repo-only maintainer commands as the normal next step for a client repo
+- Client context:
+  - if KFC is not installed yet, bootstrap with `npx --package @kamishino/kamiflow-codex kfc client install`
+  - if `kfc` is installed but not visible in PATH, use `npx --no-install kfc flow ensure-plan --project .`
+  - if plan state is missing or inconsistent, recover with `kfc flow ensure-plan --project .`
+- Route handoff:
+  - keep the user-facing `Run next:` command aligned with the resolved route and current context
+  - when pointing back into client execution, prefer `kfc ...` commands over repo-only `npm run ...`
+
 ## Route Output Contract
 
 - First turn:

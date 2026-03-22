@@ -23,6 +23,12 @@ const RULES = [
       "Status: REROUTE",
       "## Route Output Contract",
       "## Evidence Contract",
+      "## Command Boundary Quick Rules",
+      "In KFC repo, prefer `npm run ...` maintainer commands.",
+      "In client projects, prefer `kfc ...` or `npx --no-install kfc ...`.",
+      "First-time in-client bootstrap uses `npx --package @kamishino/kamiflow-codex kfc client install`.",
+      "Never surface repo-only `npm run ...` commands as the normal client path.",
+      "If runtime skill instructions are stale in repo, recover with `npm run codex:sync:skills -- --force`.",
       "All non-trivial route responses must use compact sections:",
       "Must not:",
       "Chat-first operation: run workflow commands directly instead of asking the user to run routine flow commands.",
@@ -48,11 +54,19 @@ const RULES = [
     file: "resources/skills/kamiflow-core/references/command-map.md",
     required: [
       "## Confidence Gate (Mandatory)",
+      "## Context Lock",
+      "## First Run / Bootstrap",
+      "## Common Client Commands",
+      "## Common Repo Commands",
+      "## Recovery Shortcuts",
       "assign `Route Confidence` (`1-5`)",
       "Status: REROUTE",
       "Route Confidence: <1-5>",
       "Fallback Route: <start|plan|research>",
-      "Reason: <single concrete cause>"
+      "Reason: <single concrete cause>",
+      "npx --package @kamishino/kamiflow-codex kfc client install",
+      "npx --no-install kfc client status",
+      "npm run codex:sync:skills -- --force"
     ]
   },
   {
@@ -70,7 +84,8 @@ const RULES = [
       "write `Technical Solution Diagram` section with mermaid content",
       "Run Diagram Need Decision immediately after user answers",
       "First turn contains only questions with options when `IDEATION_CONTEXT` is absent.",
-      "Route confidence for `start` must be `>=4` before execution."
+      "Route confidence for `start` must be `>=4` before execution.",
+      "## Command Recipe"
     ]
   },
   {
@@ -93,7 +108,8 @@ const RULES = [
       "Run Diagram Need Decision after planning details are clear",
       "Technical Solution Diagram section exists with Mermaid content",
       "Mermaid safety: avoid raw `|` in node labels",
-      "Route confidence for `plan` must be `>=4` before execution."
+      "Route confidence for `plan` must be `>=4` before execution.",
+      "## Command Recipe"
     ]
   },
   {
@@ -116,7 +132,8 @@ const RULES = [
       "Final response should use compact guidance shape",
       "Follow `diagram_mode` before implementing",
       "keep `Technical Solution Diagram` synchronized when `diagram_mode: required`",
-      "Route confidence for `build` must be `>=4` before execution."
+      "Route confidence for `build` must be `>=4` before execution.",
+      "## Command Recipe"
     ]
   },
   {
@@ -135,7 +152,8 @@ const RULES = [
       "Resolve next-step narrative from mutated state (`fix` or `done`).",
       "do not require verbose response footer fields",
       "Final response should use compact guidance shape",
-      "Route confidence for `check` must be `>=4` before execution."
+      "Route confidence for `check` must be `>=4` before execution.",
+      "## Command Recipe"
     ]
   },
   {
@@ -150,7 +168,8 @@ const RULES = [
       "END_IDEATION_CONTEXT",
       "Idea Categories (3-5)",
       "Top Shortlist (Quick Win, Balanced, Ambitious)",
-      "Route confidence for `research` must be `>=4` before execution."
+      "Route confidence for `research` must be `>=4` before execution.",
+      "## Command Recipe"
     ]
   },
   {
@@ -170,17 +189,21 @@ const RULES = [
       "mark the claim as `Unknown`",
       "Resolve next-step narrative from mutated frontmatter and remaining checklist state.",
       "do not require verbose response footer fields",
-      "Route confidence for `fix` must be `>=4` before execution."
+      "Route confidence for `fix` must be `>=4` before execution.",
+      "## Command Recipe"
     ]
   },
   {
     file: "resources/docs/ROUTE_PROMPTS.md",
     required: [
+      "## Command Boundary Quick Rules",
       "## Route Confidence Gate",
       "Status: REROUTE",
       "Route Confidence: <1-5>",
       "Fallback Route: <start|plan|research>",
-      "route confidence `>=4` for selected route (otherwise reroute)"
+      "route confidence `>=4` for selected route (otherwise reroute)",
+      "npx --package @kamishino/kamiflow-codex kfc client install",
+      "kfc flow ensure-plan --project ."
     ]
   },
   {

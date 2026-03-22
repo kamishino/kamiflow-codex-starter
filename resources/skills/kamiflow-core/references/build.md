@@ -63,6 +63,20 @@ Use this route to execute an approved plan in small, verifiable slices.
    - `Doing`: implemented slice and validations run
    - `Next`: one concrete next action (normally `check`)
 
+## Command Recipe
+
+- Repo context:
+  - use `npm run build:scripts` after `scripts/` or policy edits
+  - use `npm run build:server` after CLI/runtime edits
+  - use `npm run verify:governance` when repo-surface command or contract changes need closeout evidence
+- Client context:
+  - if plan state is missing, recover with `kfc flow ensure-plan --project .`
+  - if build-readiness is unclear, run `kfc flow ready --project .`
+  - if bootstrap/install state is broken, run `kfc client doctor --project . --fix`
+  - if `kfc` is not in PATH but installed locally, use `npx --no-install kfc ...`
+- Boundary rule:
+  - never tell a client repo to use repo-only `npm run ...` as its normal implementation command lane
+
 ## Route Output Contract
 
 - Return compact guidance shape with:

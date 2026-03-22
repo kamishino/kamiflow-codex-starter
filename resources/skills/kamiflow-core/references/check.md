@@ -40,6 +40,19 @@ Use this route for quality verification and release-readiness decisions.
    - `Doing`: findings and gate decisions
    - `Next`: one concrete action (`fix` or `done`)
 
+## Command Recipe
+
+- Repo context:
+  - use `npm run verify:governance` for repo-surface command, policy, docs, or skill closeout
+  - use `npm run codex:sync:skills -- --force` when the repo runtime skill must be refreshed from SSOT before validation
+- Client context:
+  - use `kfc client status` as the calm read-only verification command
+  - if `kfc` is not visible in PATH but already installed, use `npx --no-install kfc client status`
+  - if bootstrap state is broken, recover with `kfc client doctor --project . --fix`
+  - if plan state is missing while checking, recover with `kfc flow ensure-plan --project .`
+- Boundary rule:
+  - prefer `kfc ...` verification commands for client repos; do not surface repo-only `npm run ...` as the primary client check path
+
 ## Route Output Contract
 
 - Findings-first output remains required, then compact guidance:

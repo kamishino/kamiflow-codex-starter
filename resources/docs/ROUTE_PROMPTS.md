@@ -23,6 +23,20 @@ Fallback order for all routes:
 3. Re-read contracts (`AGENTS.md`, `.kfc/CODEX_READY.md` when present) and treat any client inspection summary there as the current repo-shape truth.
 4. Return `Status: BLOCK` with one concrete recovery action when still blocked.
 
+## Command Boundary Quick Rules
+
+- In KFC repo, use `npm run ...` maintainer commands.
+- In client projects, use `kfc ...` or `npx --no-install kfc ...`.
+- First-time in-client bootstrap command:
+  - `npx --package @kamishino/kamiflow-codex kfc client install`
+- Preferred client re-entry command:
+  - `kfc client status`
+- Missing plan recovery:
+  - `kfc flow ensure-plan --project .`
+- Build-readiness recovery:
+  - `kfc flow ready --project .`
+- Never present repo-only `npm run ...` as the normal client workflow.
+
 ## Route Confidence Gate
 
 Before executing any route, assign `Route Confidence` (`1-5`) to the selected route.

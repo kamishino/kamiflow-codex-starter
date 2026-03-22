@@ -33,7 +33,20 @@ const LIFECYCLE_CONTRACTS = [
       "If request is trivial and low-risk operational, do not force this skill; use the no-plan fast path instead.",
       "Touch active plan at route start (`updated_at` + WIP line).",
       "Touch active plan again before final output to persist actual results from this turn.",
-      "If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done."
+      "If completion is below 100%, amend remaining tasks/criteria and continue `build/fix -> check` loop instead of forcing done.",
+      "In KFC repo, prefer `npm run ...` maintainer commands.",
+      "In client projects, prefer `kfc ...` or `npx --no-install kfc ...`.",
+      "First-time in-client bootstrap uses `npx --package @kamishino/kamiflow-codex kfc client install`."
+    ]
+  },
+  {
+    file: "resources/docs/ROUTE_PROMPTS.md",
+    required: [
+      "## Command Boundary Quick Rules",
+      "In KFC repo, use `npm run ...` maintainer commands.",
+      "In client projects, use `kfc ...` or `npx --no-install kfc ...`.",
+      "npx --package @kamishino/kamiflow-codex kfc client install",
+      "kfc client status"
     ]
   },
   {

@@ -73,6 +73,19 @@ This route should leave no major ambiguity for the build phase.
    - `Doing`: current planning slice
    - `Next`: one concrete next action
 
+## Command Recipe
+
+- Repo context:
+  - use `npm run ...` when the planning work is tied to this KFC repo and needs maintainer-side validation or sync
+- Client context:
+  - recover missing plan state with `kfc flow ensure-plan --project .`
+  - confirm build-readiness with `kfc flow ready --project .`
+  - if `kfc` is not in PATH but already installed locally, use `npx --no-install kfc flow ready --project .`
+  - if the client repo is not bootstrapped yet, start with `npx --package @kamishino/kamiflow-codex kfc client install`
+- Handoff discipline:
+  - do not recommend repo-only `npm run ...` as the primary client planning command
+  - keep the next-step command exact and copy-pasteable for the current context
+
 ## Route Output Contract
 
 - Return compact guidance shape with:
