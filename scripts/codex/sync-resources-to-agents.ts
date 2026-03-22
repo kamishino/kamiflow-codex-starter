@@ -33,6 +33,7 @@ const projectArg = readFlag("--project", "");
 const profileArg = readFlag("--profile", "");
 const shouldSyncRules = only === "all" || only === "rules";
 const rulesProfile = shouldSyncRules ? resolveRulesProfile() : "n/a";
+// Skills are shared SSOT artifacts. Profile selection applies only to rules.
 const total = { copied: 0, skipped: 0 };
 const stats = {
   skills: { copied: 0, skipped: 0 },
@@ -51,6 +52,9 @@ if (!["all", "repo", "project", "home"].includes(scope)) {
 console.log(
   `[codex-sync] Starting sync (only=${only}, scope=${scope}, profile=${rulesProfile}, force=${force ? "on" : "off"})`
 );
+if (only === "all" || only === "skills") {
+  console.log("[codex-sync] Skills sync uses shared SSOT artifacts; --profile applies to rules only.");
+}
 
 if (only === "all" || only === "skills") {
   await syncSkills();

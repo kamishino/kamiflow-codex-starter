@@ -5,6 +5,7 @@ Generic, reusable container for portable Kami Flow Codex assets.
 ## Directories
 
 - `skills/`: Codex skills (`SKILL.md`-based), SSOT.
+  - skill runtime output is shared by target; do not fork dogfood/client skill variants unless a later banner-only overlay is explicitly needed.
 - `rules/`: Codex execution-policy rules (`.rules`), SSOT.
   - `base.rules`: shared baseline safety and sync allowances.
   - `profiles/dogfood.rules`: dogfood overlay.
@@ -25,7 +26,16 @@ npm run codex:sync
 ```
 
 `codex:sync` includes rules sync for `repo`, `project` (cwd fallback), and `home` scopes by default.
+Skill sync stays non-profiled: repo runtime and client runtime both receive the same `resources/skills/*` content.
 Use `codex:sync:rules -- --scope <repo|project|home>` for targeted sync.
+
+Skills sync example:
+
+```bash
+npm run codex:sync:skills -- --force
+```
+
+`--profile` is for rules only. Skills remain shared SSOT artifacts.
 
 Rules sync examples:
 

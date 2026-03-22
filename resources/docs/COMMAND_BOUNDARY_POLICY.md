@@ -10,6 +10,7 @@ For client onboarding, use `resources/docs/CLIENT_KICKOFF_PROMPT.md` as the stan
 1. Run in KFC repo (dogfooding/maintainer context): use `npm run ...`.
 2. Run in client project context: use `kfc ...` or `npx --no-install kfc ...`.
 3. Do not require `npm run ...` in client-project instructions.
+4. Keep one shared `kamiflow-core` skill body; dogfood versus client enforcement belongs in rules profiles and current-context command selection.
 
 ## Examples
 

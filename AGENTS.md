@@ -35,6 +35,7 @@ This repository has four active scopes:
 
 - Keep canonical docs/skills/rules content in `resources/`.
 - Keep canonical skill content in `resources/skills`.
+- Keep one shared canonical skill per skill name in `resources/skills`; do not create dogfood/client skill variants when rules profiles plus context routing are sufficient.
 - Keep shared runtime helper SSOT in `packages/kfc-runtime`; do not duplicate path-resolution helpers across `src/`, `scripts/`, and package code.
 - Use TypeScript first in active typed packages. In `packages/kfc-plan-web/`, `packages/kfc-chat/`, and `packages/kfc-web-ui/`, prefer `.ts`/`.tsx` for source changes and do not add new `.js` source files unless a documented bridge exception requires it.
 - Temporary JavaScript exceptions are allowed only where the current host/runtime boundary still needs them; keep those exceptions explicit and narrow.

@@ -243,6 +243,15 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
     }
   },
   {
+    relPath: "scripts/codex/sync-resources-to-agents.ts",
+    spec: {
+      anchors: [
+        "Skills are shared SSOT artifacts. Profile selection applies only to rules.",
+        "Skills sync uses shared SSOT artifacts; --profile applies to rules only."
+      ]
+    }
+  },
+  {
     relPath: "resources/docs/ROUTE_PROMPTS.md",
     spec: {
       headings: ["Route Profile Matrix", "Command Boundary Quick Rules", "Route Confidence Gate"],

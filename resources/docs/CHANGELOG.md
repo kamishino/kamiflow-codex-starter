@@ -1,5 +1,7 @@
 # Changelog
 
+- Clarified the runtime contract so `kamiflow-core` remains one shared SSOT skill for repo dogfood and client installs, while `dogfood|client` remains a rules-profile boundary rather than a split skill-variant boundary.
+
 Decision log for durable user-visible or workflow-affecting changes.
 
 ## 2026-03-22
