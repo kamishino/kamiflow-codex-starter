@@ -222,7 +222,7 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
         "Emoji is allowed",
         "Do not treat plan as done if archive fails.",
         "Lead -> Explorer(s) -> Worker(s) -> Reviewer -> Lead",
-        "sync generated doc artifacts"
+        "tracked docs source of truth"
       ]
     }
   },
@@ -263,7 +263,7 @@ const DOC_SPECS: Array<{ relPath: string; spec: MarkdownContractSpec }> = [
     spec: {
       anchors: [
         "workflow, onboarding, and durable user-facing changes",
-        "generated root mirrors",
+        "tracked docs source of truth",
         "Docs impact is reviewed before commit-safe completion."
       ]
     }

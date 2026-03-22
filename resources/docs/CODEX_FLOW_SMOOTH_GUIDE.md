@@ -92,7 +92,7 @@ When route execution fails or context is incomplete, use this exact order:
 - `auto|hidden`: diagram is optional; keep Tasks/Subtasks accurate for UI fallback.
 - Check phase: validate/test `Acceptance Criteria` and decide `PASS|BLOCK`.
 - Check closeout also reviews documentation impact for workflow, onboarding, and durable user-facing changes.
-- Generated root mirrors should be refreshed through `npm run docs:sync`; private lessons stay in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
+- `resources/docs/` is the tracked docs source of truth; `npm run docs:sync` remains the compatibility closeout command for docs hygiene checks. Private lessons stay in `.kfc/LESSONS.md` and `.local/kfc-lessons/`.
 - If check is `BLOCK`, amend tasks/criteria and loop `Build/Fix -> Check`.
 
 ## Plan Touch Cadence
@@ -133,10 +133,9 @@ When route execution fails or context is incomplete, use this exact order:
 - `AGENTS.md` for operating contract changes
 - `resources/docs/ROADMAP.md` for repo direction/context changes
 - `resources/docs/CHANGELOG.md` for durable decisions
-- `resources/docs/CHANGELOG.md` for durable decisions.
 - `scripts/policy/verify-kamiflow-route-health.ts` updates should also call out route-health report-mode (`npm run route-health:report`) in this guide.
 - focused runbooks (`KFC_CHAT_RUNBOOK`, `KFC_SESSION_RUNBOOK`, `PORTABILITY_RUNBOOK`) when client or hosted entrypoint behavior changes
-- root generated mirrors via `npm run docs:sync`
+- client-facing onboarding docs in `resources/docs/`
 - Private memory lane:
 - `.kfc/LESSONS.md` and `.local/kfc-lessons/`
 - Never store private client lessons in tracked repo docs.

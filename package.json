@@ -26,7 +26,7 @@
     "ci:test:integration": "npm run test:integration",
     "ci:test": "npm run ci:build && npm run ci:test:unit",
     "ci:test:full": "npm run ci:test && npm run ci:test:integration",
-    "ci:verify": "npm run verify:governance && npm run verify:kfc-plan-design-system && npm run verify:quickstart && npm run verify:client-kickoff",
+    "ci:verify": "npm run verify:governance && npm run verify:kfc-plan-design-system",
     "ci": "npm run ci:prepare && npm run ci:test:full && npm run ci:verify",
     "dev:cli": "npm run build:server && node bin/kamiflow.js",
     "test": "npm run ci:test",
@@ -82,9 +82,6 @@
     "pack:local": "npm pack",
     "pack:commit": "npm run build:scripts && node dist/scripts/release/pack-commit.js",
     "link:self": "npm link",
-    "docs:sync:quickstart": "npm run build:scripts && node dist/scripts/docs/sync-quickstart.js",
-    "docs:sync:client-kickoff": "npm run build:scripts && node dist/scripts/docs/sync-client-kickoff.js",
-    "docs:sync:changelog": "npm run build:scripts && node dist/scripts/docs/sync-changelog.js",
     "docs:sync": "npm run build:scripts && node dist/scripts/docs/sync-doc-artifacts.js",
     "verify:command-boundary": "npm run build:scripts && node dist/scripts/policy/verify-command-boundary.js",
     "verify:codex-client-contract": "npm run build:scripts && node dist/scripts/policy/verify-codex-client-contract.js",
@@ -101,8 +98,6 @@
     "verify:kfc-plan-contrast": "npm run build:scripts && node dist/scripts/policy/verify-kfc-plan-contrast.js",
     "verify:kfc-plan-spacing-grid": "npm run build:scripts && node dist/scripts/policy/verify-kfc-plan-spacing-grid.js",
     "verify:kfc-plan-design-system": "npm run verify:kfc-plan-contrast && npm run verify:kfc-plan-spacing-grid",
-    "verify:quickstart": "npm run build:scripts && node dist/scripts/docs/sync-quickstart.js --verify",
-    "verify:client-kickoff": "npm run build:scripts && node dist/scripts/docs/sync-client-kickoff.js --verify",
     "docs:verify-command-boundary": "npm run verify:command-boundary",
     "docs:verify:codex-client-contract": "npm run verify:codex-client-contract",
     "docs:verify:codex-intelligence": "npm run verify:codex-intelligence",
@@ -116,9 +111,7 @@
     "docs:verify:kfc-plan-timeline-contrast": "npm run verify:kfc-plan-timeline-contrast",
     "docs:verify:kfc-plan-contrast": "npm run verify:kfc-plan-contrast",
     "docs:verify:kfc-plan-spacing-grid": "npm run verify:kfc-plan-spacing-grid",
-    "docs:verify:kfc-plan-design-system": "npm run verify:kfc-plan-design-system",
-    "docs:verify:quickstart": "npm run verify:quickstart",
-    "docs:verify:client-kickoff": "npm run verify:client-kickoff"
+    "docs:verify:kfc-plan-design-system": "npm run verify:kfc-plan-design-system"
   },
   "files": [
     "bin",

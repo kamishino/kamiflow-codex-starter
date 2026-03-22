@@ -1,10 +1,10 @@
 # Changelog
 
 Decision log for durable user-visible or workflow-affecting changes.
-This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-22
 
+- Removed the root generated doc mirrors (`QUICKSTART.md`, `CLIENT_KICKOFF_PROMPT.md`, `CHANGELOG.md`) so `resources/docs/` is now the only tracked docs source of truth, and simplified the docs sync/governance toolchain accordingly.
 - Refreshed `README.md` and related client-install docs so the published guidance now consistently points to the repo-root wrapper flow for maintainers, `npx --package @kamishino/kamiflow-codex kfc client install` for first run inside a client repo, and `npx --no-install kfc client status` as the no-PATH fallback.
 - Switched the preferred client-folder bootstrap wording from `npm exec` to `npx`, so the official first-run command is now `npx --package @kamishino/kamiflow-codex kfc client install` and the printed no-PATH fallback is `npx --no-install kfc ...`.
 - Added `kfc client install` as the official client-folder-first bootstrap lane for `npx --package @kamishino/kamiflow-codex kfc client install`, so users can start inside a client repo, get a project-local `npx --no-install` fallback, and then return to normal bare `kfc` usage when global command exposure succeeds.

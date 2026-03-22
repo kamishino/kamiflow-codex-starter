@@ -4,9 +4,6 @@ This repository is the KFC CLI source plus dogfooding workspace.
 
 ## Start Here
 
-- [QUICKSTART.md](./QUICKSTART.md)
-- [CLIENT_KICKOFF_PROMPT.md](./CLIENT_KICKOFF_PROMPT.md)
-- [CHANGELOG.md](./CHANGELOG.md)
 - [resources/docs/QUICKSTART.md](./resources/docs/QUICKSTART.md) (SSOT)
 - [resources/docs/CLIENT_KICKOFF_PROMPT.md](./resources/docs/CLIENT_KICKOFF_PROMPT.md) (SSOT)
 - [resources/docs/CHANGELOG.md](./resources/docs/CHANGELOG.md) (SSOT)

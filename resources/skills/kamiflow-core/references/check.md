@@ -21,7 +21,7 @@ Use this route for quality verification and release-readiness decisions.
    - refresh tracked docs when required
    - when workflow-surface files changed, review `AGENTS.md` for operating-contract drift even if governance only emits a warning
    - keep private project memory on the `.kfc/LESSONS.md` and `.local/kfc-lessons/` lane
-   - generated root mirrors should be refreshed through the docs sync path before commit-safe completion
+   - `resources/docs/` remains the tracked docs source of truth, and `npm run docs:sync` remains the compatibility closeout command before commit-safe completion
 6. Decide pass or block.
 7. Persist check decision by direct markdown mutation:
    - set frontmatter: `lifecycle_phase: check`, `selected_mode`, `decision`, `status`, `next_command`, `next_mode`, `updated_at`, `route_confidence`, `flow_guardrail`

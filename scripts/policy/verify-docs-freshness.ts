@@ -49,7 +49,7 @@ const RULES: Rule[] = [
   },
   {
     id: "client-onboarding",
-    description: "Client bootstrap/onboarding changes must refresh onboarding docs and generated mirrors.",
+    description: "Client bootstrap/onboarding changes must refresh onboarding docs in resources/docs.",
     triggers: [
       "src/commands/client.ts",
       "src/lib/core/skill-sync.ts",
@@ -60,9 +60,7 @@ const RULES: Rule[] = [
     requiredDocs: [
       "resources/docs/QUICKSTART.md",
       "resources/docs/CLIENT_KICKOFF_PROMPT.md",
-      "resources/docs/CLIENT_A2Z_PLAYBOOK.md",
-      "QUICKSTART.md",
-      "CLIENT_KICKOFF_PROMPT.md"
+      "resources/docs/CLIENT_A2Z_PLAYBOOK.md"
     ]
   },
   {
@@ -80,7 +78,7 @@ const RULES: Rule[] = [
       "packages/kfc-session/src/",
       "packages/kfc-web/src/"
     ],
-    requiredDocs: ["resources/docs/CHANGELOG.md", "CHANGELOG.md"]
+    requiredDocs: ["resources/docs/CHANGELOG.md"]
   }
 ];
 

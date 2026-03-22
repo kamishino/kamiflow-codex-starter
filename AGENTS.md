@@ -203,7 +203,7 @@ This repository has four active scopes:
 - `AGENTS.md` for operating contract changes
 - `resources/docs/ROADMAP.md` for repo direction/context changes
 - `resources/docs/CHANGELOG.md` for durable workflow or user-facing decisions
-- generated root mirrors (`QUICKSTART.md`, `CLIENT_KICKOFF_PROMPT.md`, `CHANGELOG.md`)
+- `resources/docs/QUICKSTART.md` and `resources/docs/CLIENT_KICKOFF_PROMPT.md` for client-facing onboarding flow changes
 - `verify:docs-freshness` may emit an `agents-review` warning when workflow-surface files changed but `AGENTS.md` was not touched; treat that as a required review step and update `AGENTS.md` when the operating contract actually changed.
 - Keep private memory in `.kfc/LESSONS.md` and `.local/kfc-lessons/`; never move private lessons into tracked repo docs.
 - Before commit-safe completion, run `npm run docs:sync` and `npm run verify:governance` (the preferred commit helper does this automatically).
