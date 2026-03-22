@@ -40,7 +40,7 @@ If bare `kfc` is still not visible in your shell after install, use the exact `R
 npx --no-install kfc client status
 ```
 
-The repo-root wrapper flow still exists for maintainers who are starting from `kamiflow-codex-starter` and targeting an external client repo.
+The repo-root wrapper flow remains the preferred maintainer path when you are starting from `kamiflow-codex-starter` and targeting an external client repo.
 Bootstrap now includes one smart-recovery cycle, keeps `kamiflow.config.json` optional unless you already use advanced overrides, creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, syncs `.codex/rules/kamiflow.rules`, creates the private local binding at `.codex/config.toml`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, auto-recovers a missing active plan, and auto-launches Codex when a real mission is available:
 
 ```bash

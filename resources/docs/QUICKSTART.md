@@ -59,7 +59,7 @@ For a calm read-only re-entry check in an existing client repo:
 kfc client status
 ```
 
-If the wrapper reports that `kfc` is not yet visible in PATH for your shell, use the exact PATH fix it prints and then rerun `kfc client status`. Until PATH is fixed, the safe fallback inside the client repo is:
+If bootstrap reports that `kfc` is not yet visible in PATH for your shell, use the exact PATH fix it prints and then rerun `kfc client status`. Until PATH is fixed, the safe fallback inside the client repo is:
 
 ```bash
 npx --no-install kfc client status
@@ -234,7 +234,7 @@ Runbook: `resources/docs/KFC_CHAT_RUNBOOK.md`.
 
 ## Troubleshooting
 
-- `kfc: command not found`: run `npm link @kamishino/kamiflow-codex` again in the client project.
+- `kfc: command not found`: use the exact PATH `Recovery:` command printed by KFC, then rerun `kfc client status`. Until PATH is fixed, use `npx --no-install kfc client status`.
 - Missing plan UI: rerun `kfc client --force`.
 - Missing project-local KFC skill: rerun `kfc client --force`.
 - Missing client lessons file: rerun `kfc client --force`.

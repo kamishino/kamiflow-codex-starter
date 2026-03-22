@@ -5,6 +5,7 @@ This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
 ## 2026-03-22
 
+- Refreshed `README.md` and related client-install docs so the published guidance now consistently points to the repo-root wrapper flow for maintainers, `npx --package @kamishino/kamiflow-codex kfc client install` for first run inside a client repo, and `npx --no-install kfc client status` as the no-PATH fallback.
 - Switched the preferred client-folder bootstrap wording from `npm exec` to `npx`, so the official first-run command is now `npx --package @kamishino/kamiflow-codex kfc client install` and the printed no-PATH fallback is `npx --no-install kfc ...`.
 - Added `kfc client install` as the official client-folder-first bootstrap lane for `npx --package @kamishino/kamiflow-codex kfc client install`, so users can start inside a client repo, get a project-local `npx --no-install` fallback, and then return to normal bare `kfc` usage when global command exposure succeeds.
 - Added repo-root `setup.ps1` and `setup.sh` as the preferred linked client-install wrappers for external client developers, with the shared TypeScript `client:link-bootstrap` flow now handling interactive target selection, prerequisite checks, `kfc` PATH guidance, `kfc client --force --no-launch-codex`, scaffold artifact reporting, and a `kfc client status` re-entry hint.

@@ -150,7 +150,16 @@ If you need client linking, prepare the package from this repo:
 npm run link:self
 ```
 
-Maintainer convenience:
+Preferred maintainer path for onboarding an external client repo from this repository:
+
+```bash
+./setup.ps1 -Project <path-to-client-project>
+./setup.sh --project <path-to-client-project>
+```
+
+The wrappers validate `node`, `npm`, and `codex`, link KFC into the target repo, run `kfc client --force --no-launch-codex`, report the scaffolded client artifacts, and point you to `kfc client status`.
+
+Low-level maintainer fallback:
 
 ```bash
 npm run client:link-bootstrap -- --project <path-to-client-project>
@@ -158,12 +167,30 @@ npm run client:link-bootstrap -- --project <path-to-client-project>
 
 ### Run in Client Project
 
+If you are already inside the client repo and KFC is not installed yet, start with:
+
 ```bash
-npm link @kamishino/kamiflow-codex
-kfc client
+npx --package @kamishino/kamiflow-codex kfc client install
 ```
 
-Then tell Codex:
+That first-run command validates `node`, `npm`, and `codex`, prepares bare `kfc` on the machine when possible, ensures a project-local fallback for `npx --no-install`, runs `kfc client --project . --force --no-launch-codex`, and reports the scaffolded artifacts plus the next re-entry command.
+
+After install, the normal re-entry commands from the client repo are:
+
+```bash
+kfc client --force
+kfc client status
+```
+
+If bare `kfc` is still not visible in your shell after install, use the exact `Recovery:` command printed by KFC. The safe client-repo fallback remains:
+
+```bash
+npx --no-install kfc client status
+```
+
+Use the repo-root wrapper flow when you are starting from `kamiflow-codex-starter` and targeting an external client repo. Use the `npx --package @kamishino/kamiflow-codex kfc client install` flow when you are already inside the client repo and want the fastest first-run setup.
+
+Once the client repo is bootstrapped, tell Codex:
 
 - Read `AGENTS.md` first; KFC owns its managed block as the project-specific `/init` contract in this client repo.
 - Use the workflow command map in `AGENTS.md` for normal client-project commands: `kfc client`, `kfc plan validate --project .`, `kfc flow ensure-plan --project .`, `kfc flow ready --project .`, `kfc client doctor --project . --fix`, and `kfc client done`.
@@ -198,6 +225,14 @@ kfc client update --project . --apply
 ```
 
 `update` is preview-first. `upgrade` is an alias.
+
+## Troubleshooting
+
+- `kfc: command not found` after first run: use the exact `Recovery:` command printed by KFC, then rerun `kfc client status`. Until PATH is fixed, use `npx --no-install kfc client status`.
+- Missing plan UI, rules, skill, lessons, or AGENTS scaffold: rerun `kfc client --force` or `kfc client doctor --fix`.
+- Missing `package.json` in a non-empty folder: run `npm init -y`, then rerun `npx --package @kamishino/kamiflow-codex kfc client install`.
+- File/tarball update is blocked: rerun `kfc client update --project . --from <folder|tgz> --apply`.
+- Onboarding reports `Onboarding Status: BLOCK`: follow the printed `Recovery:` command exactly.
 
 ## Copy Codex Sessions
 

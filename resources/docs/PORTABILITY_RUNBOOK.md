@@ -41,7 +41,7 @@ npx --package @kamishino/kamiflow-codex kfc client install
 
 That client-folder flow validates `node`, `npm`, and `codex`, attempts to establish bare `kfc` on the machine, ensures a project-local fallback for `npx --no-install`, runs `kfc client --project . --force --no-launch-codex`, reports the scaffolded artifacts, and then points to `kfc client status`.
 
-Low-level fallback when you need the manual link steps:
+Low-level fallback only when you need the manual link steps instead of the wrapper or `npx` path:
 
 ```bash
 npm link
