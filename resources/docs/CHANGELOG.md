@@ -3,6 +3,12 @@
 Decision log for durable user-visible or workflow-affecting changes.
 This file is the SSOT. The root `CHANGELOG.md` is a generated mirror.
 
+## 2026-03-22
+
+- Switched the preferred client-folder bootstrap wording from `npm exec` to `npx`, so the official first-run command is now `npx --package @kamishino/kamiflow-codex kfc client install` and the printed no-PATH fallback is `npx --no-install kfc ...`.
+- Added `kfc client install` as the official client-folder-first bootstrap lane for `npx --package @kamishino/kamiflow-codex kfc client install`, so users can start inside a client repo, get a project-local `npx --no-install` fallback, and then return to normal bare `kfc` usage when global command exposure succeeds.
+- Added repo-root `setup.ps1` and `setup.sh` as the preferred linked client-install wrappers for external client developers, with the shared TypeScript `client:link-bootstrap` flow now handling interactive target selection, prerequisite checks, `kfc` PATH guidance, `kfc client --force --no-launch-codex`, scaffold artifact reporting, and a `kfc client status` re-entry hint.
+
 ## 2026-03-19
 
 - Strengthened the client-facing archive-first contract so the shared client template, generated client `AGENTS.md` block, and onboarding docs now say completion is valid only after successful archive and that `kfc client done` is cleanup only, not proof of mission completion.

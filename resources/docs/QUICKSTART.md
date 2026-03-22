@@ -18,10 +18,19 @@ npm run dogfood:link
 npm run dogfood:smoke
 ```
 
-If you need client linking, prepare the package from this repo once:
+If you want the easiest linked setup into an external client repo from this repository, use the wrapper for your shell:
 
 ```bash
-npm run link:self
+./setup.ps1 -Project <path-to-client-repo>
+./setup.sh --project <path-to-client-repo>
+```
+
+The wrappers guide the global-link flow, verify `node`, `npm`, and `codex`, link KFC into the target repo, run `kfc client --force --no-launch-codex`, report the scaffolded client artifacts, and point you to the first re-entry command.
+
+Low-level fallback:
+
+```bash
+npm run client:link-bootstrap -- --project <path-to-client-repo>
 ```
 
 ## Run in Client Project
@@ -29,6 +38,16 @@ npm run link:self
 Do not use `npm run ...` from this repo in client projects.
 
 From the root of the external client repository (new/existing folder, not `kamiflow-codex-starter`):
+
+First run from inside the client repo:
+
+```bash
+npx --package @kamishino/kamiflow-codex kfc client install
+```
+
+This client-folder bootstrap validates `node`, `npm`, and `codex`, establishes the preferred global `kfc` command for the machine, ensures a project-local package fallback for `npx --no-install`, runs `kfc client --project . --force --no-launch-codex`, reports the scaffolded artifacts, and ends by pointing you to `kfc client status`.
+
+After that first install succeeds, the normal re-entry commands are bare `kfc` commands from the client repo:
 
 ```bash
 kfc client --force
@@ -39,6 +58,14 @@ For a calm read-only re-entry check in an existing client repo:
 ```bash
 kfc client status
 ```
+
+If the wrapper reports that `kfc` is not yet visible in PATH for your shell, use the exact PATH fix it prints and then rerun `kfc client status`. Until PATH is fixed, the safe fallback inside the client repo is:
+
+```bash
+npx --no-install kfc client status
+```
+
+The repo-root wrappers remain the preferred maintainer path when you are starting from the KFC source repo and targeting an external client repo. The new `npx --package @kamishino/kamiflow-codex kfc client install` flow is the official fallback when you are already inside the client repo and want KFC to prepare bare `kfc` usage there.
 
 `kfc client` prints doc and quick-start hints from the active install location (project-level `resourcesDir` or package resources fallback), so the exact doc paths can vary by environment.
 

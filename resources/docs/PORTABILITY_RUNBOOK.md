@@ -27,14 +27,24 @@ Prove external-repo portability baseline first, then compare a small repo-shape 
 From this repo (`kamiflow-codex-starter`):
 
 ```bash
-npm link
+./setup.ps1 -Project <path-to-external-repo>
+./setup.sh --project <path-to-external-repo>
 ```
 
-### Run in Client Project
+This wrapper flow verifies `node`, `npm`, and `codex`, runs the global link, links KFC into the target repo, executes `kfc client --force --no-launch-codex`, reports the scaffolded artifacts, and points to the first `kfc client status` re-entry.
 
-From external repo:
+If you are already inside the client repo and want the first-run package-managed path instead of the repo-root wrapper, use:
 
 ```bash
+npx --package @kamishino/kamiflow-codex kfc client install
+```
+
+That client-folder flow validates `node`, `npm`, and `codex`, attempts to establish bare `kfc` on the machine, ensures a project-local fallback for `npx --no-install`, runs `kfc client --project . --force --no-launch-codex`, reports the scaffolded artifacts, and then points to `kfc client status`.
+
+Low-level fallback when you need the manual link steps:
+
+```bash
+npm link
 npm link @kamishino/kamiflow-codex
 ```
 
@@ -49,8 +59,13 @@ npm i -D @kamishino/kfc-plan-web
 ### Run in Client Project
 
 ```bash
-npx --no-install kfc --help
-npx --no-install kfc client --force --port 4310 --no-launch-codex
+kfc client status
+```
+
+If the wrapper reported that `kfc` is not yet visible in PATH, use the exact PATH fix it printed and then rerun `kfc client status`. Until PATH is fixed, use:
+
+```bash
+npx --no-install kfc client status
 ```
 
 What one-command client setup verifies:

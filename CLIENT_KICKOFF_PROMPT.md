@@ -7,22 +7,43 @@ Use this prompt in a client project so Codex can support KFC end-to-end.
 
 ## Run in KFC Repo
 
-Prepare the CLI link once from this repository:
+Prepare and link KFC into the target client repo from this repository:
 
 ```bash
 npm install
-npm run link:self
+./setup.ps1 -Project <path-to-client-repo>
+./setup.sh --project <path-to-client-repo>
+```
+
+Low-level fallback:
+
+```bash
+npm run client:link-bootstrap -- --project <path-to-client-repo>
 ```
 
 ## Run in Client Project
 
-Install/link KFC into the target client repository:
+If you are already inside the client repo and KFC is not installed yet, start with:
 
 ```bash
-kfc client --force
+npx --package @kamishino/kamiflow-codex kfc client install
 ```
 
-Run from the client repository root (external project folder, not this KFC repo).
+That first-run command prepares the preferred global `kfc` command when possible, installs a project-local fallback for `npx --no-install`, runs `kfc client --project . --force --no-launch-codex`, and reports the scaffolded client artifacts plus the next recommended status command.
+
+After install, the normal re-entry check from the client repository root is:
+
+```bash
+kfc client status
+```
+
+If bare `kfc` is still not visible in your shell after install, use the exact `Recovery:` command KFC printed. The safe client-repo fallback remains:
+
+```bash
+npx --no-install kfc client status
+```
+
+The repo-root wrapper flow still exists for maintainers who are starting from `kamiflow-codex-starter` and targeting an external client repo.
 Bootstrap now includes one smart-recovery cycle, keeps `kamiflow.config.json` optional unless you already use advanced overrides, creates or refreshes a root `AGENTS.md` managed contract, installs the project-local runtime skill at `.agents/skills/kamiflow-core/SKILL.md`, syncs `.codex/rules/kamiflow.rules`, creates the private local binding at `.codex/config.toml`, creates or refreshes `.kfc/CODEX_READY.md`, scaffolds private lessons at `.kfc/LESSONS.md` plus `.local/kfc-lessons/`, auto-recovers a missing active plan, and auto-launches Codex when a real mission is available:
 
 ```bash

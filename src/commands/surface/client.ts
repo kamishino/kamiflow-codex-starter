@@ -51,7 +51,7 @@ import { buildCodexExecManualCommand, runCodexAction } from "@kamishino/kfc-runt
 import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 import { runDoctor } from "./doctor.js";
 import { runFlow } from "./flow.js";
-import { runPlan } from "./plan.js";
+import { resolveKfcPlanRunner, runPlan } from "./plan.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,6 +82,16 @@ const CLIENT_GITIGNORE_ENTRIES = Object.freeze([".kfc/", ".local/", ".agents/", 
 const VALID_CLIENT_LESSON_TYPES = Object.freeze(["incident", "decision"]);
 const CLIENT_AGENTS_MANAGED_BEGIN = "<!-- KFC:BEGIN MANAGED -->";
 const CLIENT_AGENTS_MANAGED_END = "<!-- KFC:END MANAGED -->";
+const CLIENT_INSTALL_ARTIFACTS = Object.freeze([
+  CLIENT_AGENTS_FILE,
+  CLIENT_READY_FILE,
+  CLIENT_LESSONS_FILE,
+  path.join(".agents", "skills", "kamiflow-core", "SKILL.md"),
+  path.join(".codex", "rules", RULES_FILE_NAME),
+  CLIENT_CODEX_CONFIG_FILE,
+  path.join(".local", "plans"),
+  CLIENT_RAW_LESSONS_DIR
+]);
 const CLIENT_CODEX_FULL_AUTO_OPTION_PATTERNS = [
   "unexpected argument '--full-auto'",
   "unknown option '--full-auto'",
@@ -180,7 +190,7 @@ function getErrorCode(err: unknown): string {
 
 function usage() {
   info("Usage: kfc client [options]");
-  info("Usage: kfc client <bootstrap|doctor|done|update|upgrade|lessons> [options]");
+  info("Usage: kfc client <install|bootstrap|doctor|done|update|upgrade|lessons> [options]");
   info("Boundary: run `kfc` commands in client projects; use `npm run` only in the KFC source repo.");
   const docsHint = resolveClientResourcesHint(process.cwd());
   const docsRoot = path.join(docsHint, "docs");
@@ -193,6 +203,8 @@ function usage() {
   info("  kfc client --no-launch-codex");
   info("  kfc client --skip-git-repo-check");
   info("  kfc client done");
+  info("  kfc client install");
+  info("  npx --package @kamishino/kamiflow-codex kfc client install");
   info("  kfc client bootstrap");
   info("  kfc client bootstrap --profile client --port 4310 --no-launch-codex");
   info("  kfc client doctor");
@@ -242,7 +254,9 @@ async function parseArgs(baseCwd, args) {
     rest = rest.slice(1);
   }
 
-  const projectDir = await resolveProjectDir(baseCwd, rest);
+  const projectDir = subcommand === "install" && !rest.includes("--project")
+    ? path.resolve(baseCwd)
+    : await resolveProjectDir(baseCwd, rest);
 
   const parsed = {
     subcommand,
@@ -455,6 +469,121 @@ function checkCommandInPath(commandCandidates, args, label) {
   }
   error(`${label} is not available in PATH.`);
   return false;
+}
+
+function probeCommandInPath(commandCandidates, args, cwd) {
+  for (const candidate of commandCandidates) {
+    const useCmdWrapper = process.platform === "win32" && String(candidate).toLowerCase().endsWith(".cmd");
+    const result = useCmdWrapper
+      ? spawnSync("cmd.exe", ["/d", "/s", "/c", `${candidate} ${args.map(quoteForCmd).join(" ")}`], {
+          cwd,
+          encoding: "utf8"
+        })
+      : spawnSync(candidate, args, {
+          cwd,
+          encoding: "utf8"
+        });
+
+    if (result.error && getErrorCode(result.error) === "EPERM") {
+      return {
+        ok: true,
+        skipped: true,
+        candidate,
+        stdout: String(result.stdout || ""),
+        stderr: String(result.stderr || "")
+      };
+    }
+    if (result.status === 0) {
+      return {
+        ok: true,
+        skipped: false,
+        candidate,
+        stdout: String(result.stdout || ""),
+        stderr: String(result.stderr || "")
+      };
+    }
+    if (result.error && getErrorCode(result.error) === "ENOENT") {
+      continue;
+    }
+  }
+  return {
+    ok: false,
+    skipped: false,
+    candidate: "",
+    stdout: "",
+    stderr: ""
+  };
+}
+
+function probeBareKfcCommand(projectDir) {
+  const candidates = process.platform === "win32"
+    ? ["kfc", "kfc.cmd", "kfc.exe"]
+    : ["kfc"];
+  return probeCommandInPath(candidates, ["--help"], projectDir);
+}
+
+function resolveGlobalNpmBinDir(projectDir) {
+  const result = runNodeNpmNoThrow(["prefix", "-g"], projectDir);
+  if (!result.ok) {
+    return "";
+  }
+  const prefix = String(result.stdout || "").trim();
+  if (!prefix) {
+    return "";
+  }
+  return process.platform === "win32" ? prefix : path.join(prefix, "bin");
+}
+
+function buildClientInstallEntryCommand(projectDir) {
+  const parts = [
+    "npx",
+    "--package",
+    loadPackageName(),
+    "kfc",
+    "client",
+    "install",
+    "--project",
+    projectDir
+  ];
+  return parts.map(shellEscapeLiteral).join(" ");
+}
+
+function buildClientNoPathFallbackCommand(projectDir, subcommand = "status") {
+  const parts = [
+    "npx",
+    "--no-install",
+    "kfc",
+    "client",
+    subcommand,
+    "--project",
+    projectDir
+  ];
+  return parts.map(shellEscapeLiteral).join(" ");
+}
+
+function buildGlobalKfcPathRecoveryCommand(projectDir) {
+  const globalBinDir = resolveGlobalNpmBinDir(projectDir);
+  if (!globalBinDir) {
+    return "";
+  }
+  if (process.platform === "win32") {
+    return `$env:Path = "${globalBinDir};$env:Path"`;
+  }
+  return `export PATH="${globalBinDir}:$PATH"`;
+}
+
+function printClientInstallArtifacts(projectDir) {
+  info("Expected client artifacts:");
+  const missing: string[] = [];
+  for (const artifact of CLIENT_INSTALL_ARTIFACTS) {
+    const fullPath = path.join(projectDir, artifact);
+    const exists = fs.existsSync(fullPath);
+    info(`  ${artifact}: ${exists ? "present" : "missing"}`);
+    if (!exists) {
+      missing.push(artifact);
+    }
+  }
+  return missing;
 }
 
 function slugifyProjectPackageName(projectDir) {
@@ -694,6 +823,17 @@ async function assertProjectPreflight(projectDir, options: { requirePackageJson?
 function loadPackageName() {
   const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
   return pkg.name;
+}
+
+function loadPackageVersion() {
+  const pkg = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8"));
+  return String(pkg.version || "").trim();
+}
+
+function currentPackageRegistrySpec() {
+  const packageName = loadPackageName();
+  const packageVersion = loadPackageVersion();
+  return packageVersion ? `${packageName}@${packageVersion}` : packageName;
 }
 
 function packagedClientResourcesDir(projectDir) {
@@ -2311,6 +2451,160 @@ async function describeClientStatus(projectDir, options = {}): Promise<ClientSta
     nextSteps
   };
 }
+
+async function ensureGlobalKfcInstall(projectDir) {
+  const probe = probeBareKfcCommand(projectDir);
+  if (probe.ok) {
+    if (probe.skipped) {
+      warn("Bare `kfc` command check skipped: command spawn is restricted in this environment.");
+    } else {
+      info("Bare `kfc` command already available in PATH.");
+    }
+    return { installed: false, available: true, recovery: "", detail: "" };
+  }
+
+  const registrySpec = currentPackageRegistrySpec();
+  info(`Installing global KFC command: ${registrySpec}`);
+  let install = runNodeNpmNoThrow(["install", "-g", registrySpec], projectDir);
+  if (!install.ok) {
+    warn(
+      `Global registry install failed. stdout: ${install.stdout.trim() || "<empty>"} stderr: ${install.stderr.trim() || "<empty>"}. Trying package-path fallback.`
+    );
+    install = runNodeNpmNoThrow(["install", "-g", PACKAGE_ROOT], projectDir);
+  }
+
+  if (!install.ok) {
+    const detail = `Global KFC install failed. stdout: ${install.stdout.trim() || "<empty>"} stderr: ${install.stderr.trim() || "<empty>"}`;
+    warn(detail);
+    return {
+      installed: false,
+      available: false,
+      recovery: `npm install -g ${shellEscapeLiteral(registrySpec)}`,
+      detail
+    };
+  }
+
+  const recheck = probeBareKfcCommand(projectDir);
+  if (recheck.ok) {
+    if (recheck.skipped) {
+      warn("Bare `kfc` command re-check skipped: command spawn is restricted in this environment.");
+    } else {
+      info("Bare `kfc` command is now available in PATH.");
+    }
+    return { installed: true, available: true, recovery: "", detail: "" };
+  }
+
+  return {
+    installed: true,
+    available: false,
+    recovery: buildGlobalKfcPathRecoveryCommand(projectDir) || `npm install -g ${shellEscapeLiteral(registrySpec)}`,
+    detail: "Bare `kfc` command is still unavailable after global install. Apply the PATH fix or use the npm exec fallback."
+  };
+}
+
+async function ensureClientProjectPackageAccess(projectDir) {
+  let detection = null;
+  try {
+    detection = await detectClientInstallSource(projectDir);
+  } catch {
+    detection = null;
+  }
+
+  if (detection?.installed) {
+    info(
+      detection.sourceType === "link"
+        ? `Project-local KFC package already linked: ${detection.installedPath}`
+        : `Project-local KFC package already present: ${detection.installedPath}`
+    );
+    return detection;
+  }
+
+  const packageName = loadPackageName();
+  let linkResult = runNodeNpmNoThrow(["link", packageName], projectDir);
+  if (linkResult.ok) {
+    info(`Project-local KFC package linked: ${packageName}`);
+    return await detectClientInstallSource(projectDir);
+  }
+
+  warn(
+    `Project-local npm link failed. stdout: ${linkResult.stdout.trim() || "<empty>"} stderr: ${linkResult.stderr.trim() || "<empty>"}. Trying local no-save fallback.`
+  );
+  linkResult = runNodeNpmNoThrow(["install", "--no-save", PACKAGE_ROOT], projectDir);
+  if (linkResult.ok) {
+    warn("Project-local KFC package installed from the current package path without saving dependency metadata.");
+    try {
+      return await detectClientInstallSource(projectDir);
+    } catch {
+      return null;
+    }
+  }
+
+  throw createClientOnboardingError(
+    CLIENT_ONBOARDING_CODES.BOOTSTRAP_FAILED,
+    `Project-local KFC package setup failed. stdout: ${linkResult.stdout.trim() || "<empty>"} stderr: ${linkResult.stderr.trim() || "<empty>"}`,
+    buildClientInstallEntryCommand(projectDir),
+    {
+      next: buildClientInstallEntryCommand(projectDir),
+      stage: CLIENT_ONBOARDING_STAGES.BOOTSTRAP
+    }
+  );
+}
+
+async function runClientInstall(options) {
+  const preflightOk = await assertProjectPreflight(options.project, { requirePackageJson: false });
+  if (!preflightOk) {
+    return 1;
+  }
+
+  const packageJsonResult = await ensureProjectPackageJsonForBootstrap(options.project);
+  if (packageJsonResult.created) {
+    info("Client project was auto-initialized from an empty folder.");
+  }
+
+  const globalInstall = await ensureGlobalKfcInstall(options.project);
+  const detection = await ensureClientProjectPackageAccess(options.project);
+  if (detection?.sourceType === "link") {
+    info(`Install Source: link (${detection.realPath || detection.installedPath})`);
+  } else if (detection?.installedPath) {
+    info(`Install Source: project-local package (${detection.installedPath})`);
+  }
+
+  const bootstrapOptions = {
+    ...options,
+    force: true,
+    noLaunchCodex: true
+  };
+  const bootstrap = await runBootstrapWithSmartRecovery(bootstrapOptions, {
+    printPass: false,
+    suppressSuccessHints: true
+  });
+  const code = await runClientReadyHandoff(bootstrapOptions, bootstrap);
+  if (code !== 0) {
+    info(`Fallback: ${buildClientNoPathFallbackCommand(options.project)}`);
+    return code;
+  }
+
+  const missingArtifacts = printClientInstallArtifacts(options.project);
+  if (missingArtifacts.length > 0) {
+    error(`Client install is missing expected artifacts: ${missingArtifacts.join(", ")}`);
+    info(`Recovery: ${buildClientNoPathFallbackCommand(options.project, "install")}`);
+    return 1;
+  }
+
+  const bareKfc = probeBareKfcCommand(options.project);
+  if (!bareKfc.ok) {
+    const recovery = globalInstall.recovery || buildGlobalKfcPathRecoveryCommand(options.project) || buildClientInstallEntryCommand(options.project);
+    error(globalInstall.detail || "Client project bootstrapped, but bare `kfc` is still unavailable in PATH.");
+    info(`Recovery: ${recovery}`);
+    info(`Fallback: ${buildClientNoPathFallbackCommand(options.project)}`);
+    return 1;
+  }
+
+  info(`Next: kfc client status --project ${shellEscapeLiteral(options.project)}`);
+  info(`Fallback: ${buildClientNoPathFallbackCommand(options.project)}`);
+  return 0;
+}
+
 function buildUpdateManualRecovery(parsed, reason) {
   const projectArgs = buildProjectTargetArgs(parsed.project);
   const updateCommand = ["kfc", "client", "update", ...projectArgs];
@@ -2556,20 +2850,18 @@ async function ensureProjectConfig({ projectDir, explicitProfile, force }) {
   return { configPath, configData: config, selectedProfile, changed, source: "file" };
 }
 async function ensurePlanUi(projectDir) {
-  const kfcPlanBin = path.join(
-    projectDir,
-    "node_modules",
-    ".bin",
-    process.platform === "win32" ? "kfc-plan.cmd" : "kfc-plan"
-  );
-  if (fs.existsSync(kfcPlanBin)) {
-    info("KFC Plan dependency already available.");
+  try {
+    const runner = await resolveKfcPlanRunner(projectDir);
+    if (runner.args[0] === REPO_KFC_PLAN_BIN) {
+      info("Using bundled plan UI fallback from linked KFC repository.");
+    } else if (runner.command === process.execPath && runner.args[0]) {
+      info(`Using bundled plan UI fallback from linked KFC package: ${runner.args[0]}`);
+    } else {
+      info("KFC Plan dependency already available.");
+    }
     return;
-  }
-
-  if (fs.existsSync(REPO_KFC_PLAN_BIN)) {
-    info("Using bundled plan UI fallback from linked KFC repository.");
-    return;
+  } catch {
+    // Continue to package install fallback below.
   }
 
   info(`Installing ${PLAN_UI_PACKAGE} in target project...`);
@@ -3472,6 +3764,17 @@ export async function runClient(options) {
 
   if (parsed.subcommand === "doctor") {
     return await runClientDoctorOnly(parsed);
+  }
+
+  if (parsed.subcommand === "install") {
+    try {
+      return await runClientInstall(parsed);
+    } catch (err) {
+      const blockPayload = classifyClientOnboardingFailure(err, { projectDir: parsed.project });
+      await emitClientOnboardingEvent(parsed.project, blockPayload);
+      printClientOnboardingPayload(blockPayload, true);
+      return 1;
+    }
   }
 
   if (parsed.subcommand === "status") {

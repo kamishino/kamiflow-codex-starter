@@ -1,4 +1,5 @@
 import fs from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -9,7 +10,17 @@ import { detectProjectRoot } from "@kamishino/kfc-runtime/project-root";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, "../../..");
+const PACKAGE_JSON_PATH = path.join(PACKAGE_ROOT, "package.json");
 const REPO_KFC_PLAN_BIN = path.join(PACKAGE_ROOT, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
+
+function loadRootPackageName() {
+  try {
+    const parsed = JSON.parse(readFileSync(PACKAGE_JSON_PATH, "utf8"));
+    return String(parsed?.name || "").trim() || "@kamishino/kamiflow-codex";
+  } catch {
+    return "@kamishino/kamiflow-codex";
+  }
+}
 
 async function parseProjectDir(defaultCwd, args) {
   const idx = args.indexOf("--project");
@@ -44,7 +55,30 @@ async function pathExists(filePath) {
   }
 }
 
-async function resolveKfcPlanRunner(projectDir) {
+async function resolveClientLinkedKfcPlanBin(projectDir) {
+  const packageName = loadRootPackageName();
+  const installedPath = path.join(projectDir, "node_modules", packageName);
+  const candidates = [installedPath];
+  try {
+    candidates.unshift(await fs.realpath(installedPath));
+  } catch {
+    // Ignore missing or unreadable linked package metadata.
+  }
+
+  for (const candidateRoot of candidates) {
+    if (!candidateRoot) {
+      continue;
+    }
+    const candidateBin = path.join(candidateRoot, "packages", "kfc-plan-web", "bin", "kfc-plan.js");
+    if (await pathExists(candidateBin)) {
+      return candidateBin;
+    }
+  }
+
+  return "";
+}
+
+export async function resolveKfcPlanRunner(projectDir) {
   if (path.resolve(projectDir) === PACKAGE_ROOT && (await pathExists(REPO_KFC_PLAN_BIN))) {
     return {
       command: process.execPath,
@@ -69,6 +103,14 @@ async function resolveKfcPlanRunner(projectDir) {
     return {
       command: process.execPath,
       args: [REPO_KFC_PLAN_BIN]
+    };
+  }
+
+  const linkedFallback = await resolveClientLinkedKfcPlanBin(projectDir);
+  if (linkedFallback) {
+    return {
+      command: process.execPath,
+      args: [linkedFallback]
     };
   }
 
