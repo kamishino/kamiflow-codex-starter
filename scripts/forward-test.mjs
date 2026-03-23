@@ -7,6 +7,11 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
+  collectRelativeFilePaths,
+  installMetaRelativePath,
+  readInstallMeta
+} from "./skill-runtime.mjs";
+import {
   countCheckboxes,
   detectRepoRole,
   extractSection,
@@ -121,6 +126,8 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const stdoutPath = path.join(logDir, "codex.stdout.jsonl");
   const stderrPath = path.join(logDir, "codex.stderr.log");
   const installLogPath = path.join(logDir, "install.log");
+  const reinstallLogPath = path.join(logDir, "install-rerun.log");
+  const doctorLogPath = path.join(logDir, "doctor.log");
   const externalWorkspace = path.join(tempWorkspaceRoot, `${path.basename(runDir)}-${scenario.name}`);
 
   await fsp.rm(scenarioDir, { recursive: true, force: true });
@@ -174,6 +181,38 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   }
   const installState = await collectScenarioState(externalWorkspace, scenario);
 
+  let reinstallResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  let reinstallState = null;
+  if (scenario.rerunInstall) {
+    reinstallResult = await runCommand("npx", ["--yes", "--package", tarballPath, "kamiflow-core", "install", "--project", externalWorkspace], {
+      cwd: repoRoot
+    });
+    await fsp.writeFile(reinstallLogPath, `${reinstallResult.stdout}\n${reinstallResult.stderr}`.trim(), "utf8");
+    if (reinstallResult.code !== 0) {
+      const failure = buildFailureResult(scenario.name, "Second install step failed.", [
+        `second install exit code: ${reinstallResult.code}`
+      ]);
+      failure.timings_ms = {
+        total: Date.now() - scenarioStartedAtMs,
+        install: installFinishedAtMs - installStartedAtMs,
+        codex: 0
+      };
+      await writeJson(path.join(scenarioDir, "result.json"), failure);
+      await snapshotWorkspace(externalWorkspace, path.join(scenarioDir, "project"));
+      await fsp.rm(externalWorkspace, { recursive: true, force: true });
+      return failure;
+    }
+    reinstallState = await collectScenarioState(externalWorkspace, scenario);
+  }
+
+  let doctorResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runMaintainerDoctor) {
+    doctorResult = await runCommand("node", ["scripts/skill-doctor.mjs", "--project", externalWorkspace], {
+      cwd: repoRoot
+    });
+    await fsp.writeFile(doctorLogPath, `${doctorResult.stdout}\n${doctorResult.stderr}`.trim(), "utf8");
+  }
+
   let codexResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   let finalMessage = "";
   let codexStartedAtMs = Date.now();
@@ -211,6 +250,9 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     workspace: externalWorkspace,
     beforeState,
     installState,
+    reinstallResult,
+    reinstallState,
+    doctorResult,
     codexResult,
     finalMessage
   });
@@ -226,7 +268,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, reinstallResult, reinstallState, doctorResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -376,6 +418,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, c
     const projectBriefPath = path.join(workspace, ".local", "project.md");
     const projectBriefText = fs.existsSync(projectBriefPath) ? await fsp.readFile(projectBriefPath, "utf8") : "";
     const clientAgentsExcluded = await hasGitExcludeEntry(workspace, ROOT_AGENTS_PATH);
+    const clientInstallMeta = await readInstallMeta(path.join(workspace, ".agents", "skills", "kamiflow-core"));
 
     checks.push({
       label: "source-repo-detected-as-dogfood",
@@ -421,6 +464,117 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, c
       label: "client-agents-excluded-in-git",
       ok: clientAgentsExcluded,
       detail: clientAgentsExcluded ? "AGENTS.md excluded in .git/info/exclude" : "AGENTS.md missing from .git/info/exclude"
+    });
+    checks.push({
+      label: "client-install-meta-present",
+      ok: clientInstallMeta.valid,
+      detail: clientInstallMeta.valid ? clientInstallMeta.path : clientInstallMeta.reason
+    });
+    checks.push({
+      label: "client-install-meta-profile",
+      ok: clientInstallMeta.valid && clientInstallMeta.metadata.runtime_profile === "client-runtime",
+      detail: clientInstallMeta.valid ? clientInstallMeta.metadata.runtime_profile : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "reinstall-idempotence") {
+    checks.push({
+      label: "second-install-exit-zero",
+      ok: reinstallResult.code === 0,
+      detail: `exit code ${reinstallResult.code}`
+    });
+    checks.push({
+      label: "runtime-file-set-stable",
+      ok: installState.runtimeSkill.files.join("\n") === reinstallState?.runtimeSkill.files.join("\n"),
+      detail: installState.runtimeSkill.files.join("\n") === reinstallState?.runtimeSkill.files.join("\n")
+        ? "runtime file list unchanged across reinstall"
+        : "runtime file list changed across reinstall"
+    });
+    checks.push({
+      label: "runtime-contents-stable",
+      ok: installState.runtimeSkill.digest === reinstallState?.runtimeSkill.digest,
+      detail: installState.runtimeSkill.digest === reinstallState?.runtimeSkill.digest
+        ? "runtime contents unchanged apart from install metadata"
+        : "runtime contents changed across reinstall"
+    });
+    checks.push({
+      label: "agents-preserved-on-rerun",
+      ok: installState.fileHashes["AGENTS.md"] === reinstallState?.fileHashes["AGENTS.md"],
+      detail: installState.fileHashes["AGENTS.md"] === reinstallState?.fileHashes["AGENTS.md"]
+        ? "AGENTS.md unchanged on rerun"
+        : "AGENTS.md changed on rerun"
+    });
+    checks.push({
+      label: "project-brief-preserved-on-rerun",
+      ok: installState.fileHashes[".local/project.md"] === reinstallState?.fileHashes[".local/project.md"],
+      detail: installState.fileHashes[".local/project.md"] === reinstallState?.fileHashes[".local/project.md"]
+        ? ".local/project.md unchanged on rerun"
+        : ".local/project.md changed on rerun"
+    });
+    checks.push({
+      label: "install-meta-present-after-rerun",
+      ok: reinstallState?.installMeta.valid === true,
+      detail: reinstallState?.installMeta.valid ? reinstallState.installMeta.path : reinstallState?.installMeta.reason || "missing"
+    });
+  }
+
+  if (scenario.grader === "preserve-existing-agents") {
+    const agentsText = fs.existsSync(path.join(workspace, "AGENTS.md")) ? await fsp.readFile(path.join(workspace, "AGENTS.md"), "utf8") : "";
+    const agentsExcluded = await hasGitExcludeEntry(workspace, ROOT_AGENTS_PATH);
+    checks.push({
+      label: "existing-agents-preserved",
+      ok: beforeState.fileHashes["AGENTS.md"] === installState.fileHashes["AGENTS.md"],
+      detail: beforeState.fileHashes["AGENTS.md"] === installState.fileHashes["AGENTS.md"]
+        ? "existing AGENTS.md preserved"
+        : "existing AGENTS.md was modified"
+    });
+    checks.push({
+      label: "existing-agents-stays-user-owned",
+      ok: !/generated local repo contract for a client repo/i.test(agentsText),
+      detail: "installer must not replace user-owned AGENTS.md with the generated template"
+    });
+    checks.push({
+      label: "existing-agents-not-git-excluded",
+      ok: !agentsExcluded,
+      detail: agentsExcluded ? "existing AGENTS.md should not be auto-excluded" : "existing AGENTS.md left out of .git/info/exclude"
+    });
+    checks.push({
+      label: "install-meta-present",
+      ok: installState.installMeta.valid,
+      detail: installState.installMeta.valid ? installState.installMeta.path : installState.installMeta.reason
+    });
+  }
+
+  if (scenario.grader === "preserve-existing-project-brief") {
+    checks.push({
+      label: "existing-project-brief-preserved",
+      ok: beforeState.fileHashes[".local/project.md"] === installState.fileHashes[".local/project.md"],
+      detail: beforeState.fileHashes[".local/project.md"] === installState.fileHashes[".local/project.md"]
+        ? "existing .local/project.md preserved"
+        : "existing .local/project.md was modified"
+    });
+    checks.push({
+      label: "install-meta-present",
+      ok: installState.installMeta.valid,
+      detail: installState.installMeta.valid ? installState.installMeta.path : installState.installMeta.reason
+    });
+  }
+
+  if (scenario.grader === "doctor-client-install") {
+    checks.push({
+      label: "install-meta-present",
+      ok: installState.installMeta.valid,
+      detail: installState.installMeta.valid ? installState.installMeta.path : installState.installMeta.reason
+    });
+    checks.push({
+      label: "maintainer-doctor-passes",
+      ok: doctorResult.code === 0 && /Repo Skill Status:\s*PASS/i.test(doctorResult.stdout),
+      detail: doctorResult.code === 0 ? "maintainer doctor reported PASS" : `doctor exit code ${doctorResult.code}`
+    });
+    checks.push({
+      label: "doctor-uses-client-profile",
+      ok: /Runtime Profile:\s*client-runtime/i.test(doctorResult.stdout),
+      detail: /Runtime Profile:\s*client-runtime/i.test(doctorResult.stdout) ? "doctor reported client-runtime" : "doctor did not report client-runtime"
     });
   }
 
@@ -553,11 +707,46 @@ async function packRepo(runDir) {
 }
 
 async function collectScenarioState(workspace, scenario) {
-  const state = {};
+  const trackedFiles = new Set(Array.isArray(scenario.trackedFiles) ? scenario.trackedFiles : []);
   if (scenario.primaryFile) {
-    state.primaryFileHash = await hashFile(path.join(workspace, scenario.primaryFile));
+    trackedFiles.add(scenario.primaryFile);
+  }
+  const fileHashes = {};
+  for (const relativePath of trackedFiles) {
+    fileHashes[relativePath] = await hashFile(path.join(workspace, relativePath));
+  }
+
+  const runtimeSkill = await collectRuntimeSkillState(workspace);
+  const installMeta = await readInstallMeta(path.join(workspace, ".agents", "skills", "kamiflow-core"));
+  const state = {
+    fileHashes,
+    runtimeSkill,
+    installMeta
+  };
+  if (scenario.primaryFile) {
+    state.primaryFileHash = fileHashes[scenario.primaryFile] || "";
   }
   return state;
+}
+
+async function collectRuntimeSkillState(workspace) {
+  const runtimeSkillDir = path.join(workspace, ".agents", "skills", "kamiflow-core");
+  if (!fs.existsSync(runtimeSkillDir)) {
+    return {
+      exists: false,
+      files: [],
+      digest: ""
+    };
+  }
+
+  const files = (await collectRelativeFilePaths(runtimeSkillDir))
+    .filter((relativePath) => relativePath !== installMetaRelativePath);
+
+  return {
+    exists: true,
+    files,
+    digest: files.length > 0 ? await hashRelativeFiles(runtimeSkillDir, files) : ""
+  };
 }
 
 function summarizePlan(plan) {
@@ -636,6 +825,17 @@ async function hashFile(filePath) {
 async function writeJson(filePath, payload) {
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await fsp.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+async function hashRelativeFiles(rootDir, relativePaths) {
+  const hash = crypto.createHash("sha256");
+  for (const relativePath of relativePaths) {
+    const buffer = await fsp.readFile(path.join(rootDir, relativePath));
+    hash.update(`${relativePath}\n`, "utf8");
+    hash.update(buffer);
+    hash.update("\n---\n", "utf8");
+  }
+  return hash.digest("hex");
 }
 
 async function safeRevParse(...argsList) {

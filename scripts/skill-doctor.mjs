@@ -2,20 +2,24 @@
 import fs from "node:fs";
 import path from "node:path";
 import {
+  clientRuntimeRequiredFiles,
   collectRelativeFilePaths,
   computeTreeDigest,
   detectRepoRole,
   donePlanDirRelative,
+  getExpectedRuntimeFilesForProfile,
+  installMetaRelativePath,
   installedSkillDirRelative,
   parseCliArgs,
   pathExists,
   planDirRelative,
   projectBriefAssetRelativeForRole,
   projectBriefRelative,
+  readInstallMeta,
   REPO_ROLE_CLIENT,
   repoRoot,
   rootAgentsRelative,
-  runtimeRequiredFiles,
+  runtimeProfileForRole,
   skillSourceDir
 } from "./skill-runtime.mjs";
 import {
@@ -32,13 +36,23 @@ const donePlanDir = path.join(projectDir, donePlanDirRelative);
 const projectBriefPath = path.join(projectDir, projectBriefRelative);
 const repoContractPath = path.join(projectDir, rootAgentsRelative);
 const findings = [];
-const role = await detectRepoRole(projectDir);
-const recovery = role === REPO_ROLE_CLIENT
+const heuristicRole = await detectRepoRole(projectDir);
+const recovery = heuristicRole === REPO_ROLE_CLIENT
   ? "npx --package @kamishino/kamiflow-core kamiflow-core install --project ."
   : "npm run skill:sync";
 const runtimeSkillDirExists = await pathExists(runtimeSkillDir);
 const gitExcludePath = await resolveGitExcludePath(projectDir);
 const repoContractText = fs.existsSync(repoContractPath) ? await fs.promises.readFile(repoContractPath, "utf8") : "";
+const installMeta = runtimeSkillDirExists ? await readInstallMeta(runtimeSkillDir) : {
+  exists: false,
+  valid: false,
+  path: path.join(runtimeSkillDir, installMetaRelativePath),
+  reason: "missing"
+};
+const role = installMeta.valid ? installMeta.metadata.repo_role : heuristicRole;
+const runtimeProfile = installMeta.valid ? installMeta.metadata.runtime_profile : runtimeProfileForRole(heuristicRole);
+const roleSource = installMeta.valid ? "install-meta" : "heuristic fallback";
+const expectedProjectBriefAsset = projectBriefAssetRelativeForRole(role).replaceAll("\\", "/");
 
 for (const requiredDir of [runtimeSkillDir, planDir, donePlanDir]) {
   if (!(await pathExists(requiredDir))) {
@@ -62,45 +76,71 @@ if (role === REPO_ROLE_CLIENT && gitExcludePath && /generated local repo contrac
 }
 
 if (runtimeSkillDirExists) {
-  for (const relativePath of runtimeRequiredFiles) {
-    const absolutePath = path.join(runtimeSkillDir, relativePath);
-    if (!fs.existsSync(absolutePath)) {
-      findings.push(`Missing runtime file: ${path.join(installedSkillDirRelative, relativePath).replaceAll("\\", "/")}`);
+  if (!installMeta.valid) {
+    const metadataReason = installMeta.exists
+      ? `Runtime metadata is invalid at ${path.relative(projectDir, installMeta.path).replaceAll("\\", "/")}: ${installMeta.reason}.`
+      : `Runtime metadata is missing at ${path.relative(projectDir, installMeta.path).replaceAll("\\", "/")}; reinstall to mark this ${heuristicRole} runtime.`;
+    findings.push(metadataReason);
+  } else {
+    if (installMeta.metadata.project_brief_asset !== expectedProjectBriefAsset) {
+      findings.push(`Install metadata project brief asset does not match repo role ${role}.`);
+    }
+    if (installMeta.metadata.repo_role !== heuristicRole) {
+      findings.push(`Install metadata repo role ${installMeta.metadata.repo_role} does not match detected repo role ${heuristicRole}.`);
+    }
+  }
+
+  const runtimeFiles = await collectRelativeFilePaths(runtimeSkillDir);
+  const runtimeFilesWithoutMeta = runtimeFiles.filter((relativePath) => relativePath !== installMetaRelativePath);
+  const expectedRuntimeFiles = await getExpectedRuntimeFilesForProfile(runtimeProfile);
+  const expectedFilesWithoutMeta = expectedRuntimeFiles.filter((relativePath) => relativePath !== installMetaRelativePath);
+  const runtimeFileList = runtimeFilesWithoutMeta.join("\n");
+  const expectedFileList = expectedFilesWithoutMeta.join("\n");
+
+  if (runtimeFileList !== expectedFileList) {
+    findings.push(
+      runtimeProfile === "dogfood-source-sync"
+        ? "Dogfood runtime file set does not match the SSOT source tree."
+        : "Client runtime file set does not match the published package manifest."
+    );
+  } else if (expectedFilesWithoutMeta.length > 0) {
+    const sourceDigestPaths = runtimeProfile === "dogfood-source-sync"
+      ? expectedFilesWithoutMeta
+      : clientRuntimeRequiredFiles;
+    const sourceDigest = await computeTreeDigest(skillSourceDir, sourceDigestPaths);
+    const runtimeDigest = await computeTreeDigest(runtimeSkillDir, sourceDigestPaths);
+    if (sourceDigest !== runtimeDigest) {
+      findings.push(
+        runtimeProfile === "dogfood-source-sync"
+          ? "Dogfood runtime contents are stale relative to the SSOT source."
+          : "Client runtime contents are stale relative to the published package manifest."
+      );
     }
   }
 }
 
-const sourceFiles = await collectRelativeFilePaths(skillSourceDir);
-const runtimeFiles = runtimeSkillDirExists ? await collectRelativeFilePaths(runtimeSkillDir) : [];
-if (sourceFiles.length === 0) {
-  findings.push("Skill source tree is empty.");
-}
-
-if (sourceFiles.length > 0 && runtimeFiles.length > 0) {
-  const sourceDigest = await computeTreeDigest(skillSourceDir, sourceFiles);
-  const runtimeDigest = await computeTreeDigest(runtimeSkillDir, runtimeFiles);
-  const sourceFileList = sourceFiles.join("\n");
-  const runtimeFileList = runtimeFiles.join("\n");
-
-  if (sourceFileList !== runtimeFileList) {
-    findings.push("Runtime file set does not match the SSOT skill tree.");
-  } else if (sourceDigest !== runtimeDigest) {
-    findings.push("Runtime skill contents are stale relative to the SSOT source.");
-  }
-}
-
 const ok = findings.length === 0;
+const metadataStatus = installMeta.valid
+  ? "present"
+  : installMeta.exists
+    ? `invalid (${installMeta.reason})`
+    : runtimeSkillDirExists
+      ? "missing (legacy runtime)"
+      : "missing";
+
 console.log([
   `Repo Skill Status: ${ok ? "PASS" : "BLOCK"}`,
   `Project: ${projectDir}`,
-  `Repo Role: ${role}`,
+  `Repo Role: ${role} (${roleSource})`,
+  `Runtime Profile: ${runtimeProfile}`,
+  `Runtime Metadata: ${path.relative(projectDir, installMeta.path).replaceAll("\\", "/")} (${metadataStatus})`,
   `Repo Contract: ${path.relative(projectDir, repoContractPath).replaceAll("\\", "/")} (${repoContractKindForRole(role)})`,
-  `Project Brief: ${path.relative(projectDir, projectBriefPath).replaceAll("\\", "/")} (${projectBriefAssetRelativeForRole(role).replaceAll("\\", "/")})`,
+  `Project Brief: ${path.relative(projectDir, projectBriefPath).replaceAll("\\", "/")} (${expectedProjectBriefAsset})`,
   `Source Skill: ${path.relative(repoRoot, skillSourceDir).replaceAll("\\", "/")}`,
   `Runtime Skill: ${path.relative(projectDir, runtimeSkillDir).replaceAll("\\", "/")}`,
   `Codex Visibility Smoke: ${ok ? "PASS" : "BLOCK"}`,
   ok
-    ? "Reason: Repo contract, project brief, plan workspace, and runtime skill are present and current for this repo role."
+    ? "Reason: Repo contract, project brief, plan workspace, runtime profile, and runtime contents are present and current for this repo role."
     : `Reason: ${findings[0]}`,
   `Recovery: ${recovery}`
 ].join("\n"));

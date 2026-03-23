@@ -19,6 +19,7 @@ npm run skill:doctor
 ```
 
 `npm run skill:sync` installs the current SSOT skill into this repo's `.agents/skills/kamiflow-core/` runtime path. It keeps this tracked root `AGENTS.md` untouched and creates this repo's dogfood `.local/project.md` only when that runtime file is missing. `npm run skill:doctor` verifies the runtime copy exists, the repo-role-aware contract is present, `.local/plans/` is bootstrapped, and the installed runtime contents still match `resources/skills/kamiflow-core/`.
+It also rewrites `.agents/skills/kamiflow-core/install-meta.json` so the runtime stays explicitly marked as the dogfood source-repo sync profile.
 
 If Codex is already open in this repo, start a new session or reload the workspace after `npm run skill:sync` so the skill inventory refreshes.
 
@@ -29,7 +30,7 @@ npx --package @kamishino/kamiflow-core kamiflow-core install --project .
 ```
 
 That command copies the canonical skill into `.agents/skills/kamiflow-core/` and bootstraps `.local/plans/` for project-local workflow state.
-In a normal client repo it also creates a local-only `AGENTS.md` when one does not already exist, adds that file to `.git/info/exclude` when the target is a git repo, and creates `.local/project.md` as the human-facing project brief when that file does not already exist.
+In a normal client repo it treats the repo as the default target, writes `.agents/skills/kamiflow-core/install-meta.json`, creates a local-only `AGENTS.md` only when one does not already exist, adds that generated file to `.git/info/exclude` when the target is a git repo, and creates `.local/project.md` only when that human-facing project brief does not already exist. Rerunning the same command refreshes the skill runtime and install metadata while preserving existing `AGENTS.md` and `.local/project.md`.
 
 ## What Gets Installed
 
@@ -38,12 +39,13 @@ In a normal client repo it also creates a local-only `AGENTS.md` when one does n
 - `.agents/skills/kamiflow-core/references/*`
 - `.agents/skills/kamiflow-core/scripts/*`
 - `.agents/skills/kamiflow-core/assets/*`
+- `.agents/skills/kamiflow-core/install-meta.json`
 - `AGENTS.md` when the target is a client repo and the file is missing
 - `.local/project.md`
 - `.local/plans/`
 - `.local/plans/done/`
 
-The installer does not generate `.kfc/`, `.codex/rules/`, or any repo-specific scaffold. In this source repo, `npm run skill:sync` reuses the tracked root `AGENTS.md` instead of generating a new one.
+The installer does not generate `.kfc/`, `.codex/rules/`, or any repo-specific scaffold. In this source repo, `npm run skill:sync` reuses the tracked root `AGENTS.md` instead of generating a new one, and `npm run skill:doctor` trusts the runtime metadata to decide whether it should verify a lean client runtime or the full dogfood source sync.
 
 ## First Commands After Install
 

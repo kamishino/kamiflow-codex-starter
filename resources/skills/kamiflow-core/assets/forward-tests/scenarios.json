@@ -7,6 +7,41 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "reinstall-idempotence",
+    "grader": "reinstall-idempotence",
+    "initializeGit": true,
+    "skipCodex": true,
+    "rerunInstall": true,
+    "trackedFiles": ["AGENTS.md", ".local/project.md"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "preserve-existing-agents",
+    "fixtureDir": "preserve-existing-agents/fixture",
+    "grader": "preserve-existing-agents",
+    "initializeGit": true,
+    "skipCodex": true,
+    "trackedFiles": ["AGENTS.md"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "preserve-existing-project-brief",
+    "fixtureDir": "preserve-existing-project-brief/fixture",
+    "projectBriefFile": "project-brief.md",
+    "grader": "preserve-existing-project-brief",
+    "skipCodex": true,
+    "trackedFiles": [".local/project.md"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "doctor-client-install",
+    "grader": "doctor-client-install",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runMaintainerDoctor": true,
+    "modes": ["smoke", "full"]
+  },
+  {
     "name": "fresh-empty",
     "promptFile": "fresh-empty/prompt.md",
     "grader": "fresh-empty",

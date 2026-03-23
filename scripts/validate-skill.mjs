@@ -2,10 +2,13 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
+  clientRuntimeRequiredFiles,
   collectRelativeFilePaths,
-  runtimeRequiredFiles,
-  sourceRequiredFiles,
-  skillSourceDir as skillRoot
+  installMetaRelativePath,
+  publishedPackageFiles,
+  skillPackagePrefix,
+  skillSourceDir as skillRoot,
+  sourceOnlyRequiredFiles
 } from "./skill-runtime.mjs";
 
 const forbiddenPatterns = [
@@ -63,7 +66,27 @@ if (fs.existsSync(path.join(skillRoot, "templates"))) {
 
 const hasSourceOnlyAssets = fs.existsSync(path.join(skillRoot, "assets", "project-brief-dogfood.md"))
   || fs.existsSync(path.join(skillRoot, "assets", "forward-tests", "scenarios.json"));
-const requiredFiles = hasSourceOnlyAssets ? sourceRequiredFiles : runtimeRequiredFiles;
+if (clientRuntimeRequiredFiles.length === 0) {
+  fail("package.json files must publish at least one skill runtime file.");
+}
+
+const packagedInstallMetaPath = `${skillPackagePrefix}${installMetaRelativePath}`;
+if (publishedPackageFiles.includes(packagedInstallMetaPath)) {
+  fail("package.json must not publish install-meta.json because it is generated during install.");
+}
+
+for (const relativePath of clientRuntimeRequiredFiles) {
+  if (!fs.existsSync(path.join(skillRoot, relativePath))) {
+    fail(`package.json files references a missing skill runtime file: ${relativePath}`);
+  }
+}
+
+for (const relativePath of sourceOnlyRequiredFiles) {
+  const packagedPath = `${skillPackagePrefix}${relativePath}`;
+  if (publishedPackageFiles.includes(packagedPath)) {
+    fail(`package.json files must not publish source-only asset: ${relativePath}`);
+  }
+}
 
 const clientAgents = await fsp.readFile(path.join(skillRoot, "assets", "client-agents.md"), "utf8");
 for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/"]) {
@@ -95,9 +118,17 @@ if (hasSourceOnlyAssets) {
   }
 }
 
-for (const relativePath of requiredFiles) {
+for (const relativePath of clientRuntimeRequiredFiles) {
   if (!fs.existsSync(path.join(skillRoot, relativePath))) {
-    fail(`Missing required file: ${relativePath}`);
+    fail(`Missing client runtime file: ${relativePath}`);
+  }
+}
+
+if (hasSourceOnlyAssets) {
+  for (const relativePath of sourceOnlyRequiredFiles) {
+    if (!fs.existsSync(path.join(skillRoot, relativePath))) {
+      fail(`Missing source-only file: ${relativePath}`);
+    }
   }
 }
 

@@ -8,8 +8,10 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 
 - First install or refresh:
   - `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
+  - writes `.agents/skills/kamiflow-core/install-meta.json`, preserves existing `AGENTS.md` and `.local/project.md`, and creates the generated client `AGENTS.md` only when the repo does not already own one
 - In the kamiflow-core source repo, use:
   - `npm run skill:sync`
+  - refreshes the full source-repo runtime and rewrites the runtime metadata as the source-repo sync profile
 - Recover missing active plan or runtime project brief:
   - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
 - Check build readiness:
