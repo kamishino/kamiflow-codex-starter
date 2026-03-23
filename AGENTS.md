@@ -20,7 +20,7 @@ This repository has one product: the standalone `kamiflow-core` Codex skill.
 
 ## Command Boundary
 
-- In this source repo, use `npm run skill:sync`, `npm run skill:doctor`, `npm run validate`, `npm run forward-test`, `npm run forward-test -- --mode full`, `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`, and `npm pack` for maintainer work.
+- In this source repo, use `npm run skill:sync`, `npm run skill:doctor`, `npm run validate`, `npm run forward-test`, `npm run forward-test -- --mode full`, `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`, `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`, and `npm pack` for maintainer work.
 - In installed target projects, use `kamiflow-core install` for installation and the project-local helper scripts under `.agents/skills/kamiflow-core/scripts/` for workflow recovery.
 - Keep the three-layer contract explicit: `AGENTS.md` owns repo operation, `.local/project.md` owns product memory, and `.local/plans/*.md` own task execution state.
 - Do not reintroduce `kfc`, dogfood fixtures, rules profiles, web surfaces, or repo-specific bootstrap scaffolding on this branch.
@@ -46,6 +46,7 @@ This repository has one product: the standalone `kamiflow-core` Codex skill.
 - Update frontmatter at minimum: `updated_at`, `selected_mode`, `next_command`, `next_mode`, `status`, `decision`, `lifecycle_phase`.
 - In this SemVer-enabled repo, keep `## Release Impact` resolved before PASS archive.
 - Keep functional commits scanner-friendly; use `version-closeout.mjs` later for the release-only commit and the `vX.Y.Z` tag.
+- When the user asks to finish the slice, use `finish-status.mjs` to decide between `commit only`, `release only`, and `commit and release` instead of guessing from phrasing alone.
 - Append timestamped `WIP Log` lines for `Status`, `Blockers`, and `Next step`.
 - Archive only after `check` PASS and all Acceptance Criteria plus Go/No-Go items are checked.
 

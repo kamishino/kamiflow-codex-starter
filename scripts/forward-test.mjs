@@ -129,6 +129,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const reinstallLogPath = path.join(logDir, "install-rerun.log");
   const doctorLogPath = path.join(logDir, "doctor.log");
   const readyCheckLogPath = path.join(logDir, "ready-check.log");
+  const finishStatusLogPath = path.join(logDir, "finish-status.log");
   const versionCloseoutLogPath = path.join(logDir, "version-closeout.log");
   const archiveLogPath = path.join(logDir, "archive-plan.log");
   const baselineCommitLogPath = path.join(logDir, "baseline-commit.log");
@@ -255,6 +256,14 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.writeFile(readyCheckLogPath, `${readyCheckResult.stdout}\n${readyCheckResult.stderr}`.trim(), "utf8");
   }
 
+  let finishStatusResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runFinishStatus) {
+    finishStatusResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "finish-status.mjs"), "--project", "."], {
+      cwd: externalWorkspace
+    });
+    await fsp.writeFile(finishStatusLogPath, `${finishStatusResult.stdout}\n${finishStatusResult.stderr}`.trim(), "utf8");
+  }
+
   let versionCloseoutResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runVersionCloseout) {
     versionCloseoutResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "version-closeout.mjs"), "--project", "."], {
@@ -314,6 +323,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     reinstallState,
     doctorResult,
     readyCheckResult,
+    finishStatusResult,
     versionCloseoutResult,
     archivePlanResult,
     codexResult,
@@ -331,7 +341,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -339,6 +349,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   const combinedOutput = `${finalMessage}\n${codexResult.stdout}\n${codexResult.stderr}`;
   const userFacingOutput = finalMessage;
   const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
+  const finishStatusPayload = parseJsonMaybe(finishStatusResult.stdout);
   const findings = [];
   const checks = [];
 
@@ -686,6 +697,98 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "ready-check-has-no-findings",
       ok: Array.isArray(readyCheckPayload?.findings) && readyCheckPayload.findings.length === 0,
       detail: Array.isArray(readyCheckPayload?.findings) ? `${readyCheckPayload.findings.length} findings` : "ready-check did not return findings"
+    });
+  }
+
+  if (scenario.grader === "finish-status-commit-only") {
+    checks.push({
+      label: "finish-status-exits-zero",
+      ok: finishStatusResult.code === 0,
+      detail: `exit code ${finishStatusResult.code}`
+    });
+    checks.push({
+      label: "finish-status-recommends-commit-only",
+      ok: finishStatusPayload?.recommended_action === "commit-only",
+      detail: finishStatusPayload?.recommended_action || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-release-not-ready",
+      ok: finishStatusPayload?.release_ready === false,
+      detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
+    });
+    checks.push({
+      label: "finish-status-blocks-none-impact-release",
+      ok: /Release Impact is none/i.test((finishStatusPayload?.release_blockers || []).join(" | ")),
+      detail: (finishStatusPayload?.release_blockers || []).join(" | ") || "<missing>"
+    });
+  }
+
+  if (scenario.grader === "finish-status-release-only") {
+    checks.push({
+      label: "finish-status-exits-zero",
+      ok: finishStatusResult.code === 0,
+      detail: `exit code ${finishStatusResult.code}`
+    });
+    checks.push({
+      label: "finish-status-recommends-release-only",
+      ok: finishStatusPayload?.recommended_action === "release-only",
+      detail: finishStatusPayload?.recommended_action || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-release-ready",
+      ok: finishStatusPayload?.release_ready === true,
+      detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
+    });
+    checks.push({
+      label: "finish-status-uses-patch-plan",
+      ok: finishStatusPayload?.release_plan?.release_impact === "patch",
+      detail: finishStatusPayload?.release_plan?.release_impact || "<missing>"
+    });
+  }
+
+  if (scenario.grader === "finish-status-commit-and-release") {
+    checks.push({
+      label: "finish-status-exits-zero",
+      ok: finishStatusResult.code === 0,
+      detail: `exit code ${finishStatusResult.code}`
+    });
+    checks.push({
+      label: "finish-status-recommends-commit-and-release",
+      ok: finishStatusPayload?.recommended_action === "commit-and-release",
+      detail: finishStatusPayload?.recommended_action || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-release-blocked-by-dirty-worktree",
+      ok: /Git worktree is not clean/i.test((finishStatusPayload?.release_blockers || []).join(" | ")),
+      detail: (finishStatusPayload?.release_blockers || []).join(" | ") || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-release-not-ready",
+      ok: finishStatusPayload?.release_ready === false,
+      detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
+    });
+  }
+
+  if (scenario.grader === "finish-status-non-opt-in") {
+    checks.push({
+      label: "finish-status-exits-zero",
+      ok: finishStatusResult.code === 0,
+      detail: `exit code ${finishStatusResult.code}`
+    });
+    checks.push({
+      label: "finish-status-keeps-non-opt-in-commit-only",
+      ok: finishStatusPayload?.recommended_action === "commit-only",
+      detail: finishStatusPayload?.recommended_action || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-release-not-ready",
+      ok: finishStatusPayload?.release_ready === false,
+      detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
+    });
+    checks.push({
+      label: "finish-status-reports-semver-disabled",
+      ok: /SemVer workflow is disabled/i.test((finishStatusPayload?.release_blockers || []).join(" | ")),
+      detail: (finishStatusPayload?.release_blockers || []).join(" | ") || "<missing>"
     });
   }
 

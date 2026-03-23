@@ -585,6 +585,18 @@ export async function resolveActivePlan(projectDir) {
   return active[0] || null;
 }
 
+export async function resolveLatestDonePlan(projectDir) {
+  const plans = await listPlanRecords(projectDir, true);
+  const done = plans
+    .filter((record) => String(record.frontmatter.status || "").toLowerCase() === "done")
+    .sort((left, right) => right.stat.mtimeMs - left.stat.mtimeMs);
+  return done[0] || null;
+}
+
+export function isPassPlanRecord(plan) {
+  return String(plan?.frontmatter?.decision || "").toUpperCase() === "PASS";
+}
+
 export async function resolvePlanRef(projectDir, ref = "") {
   const trimmed = String(ref || "").trim();
   if (!trimmed) {

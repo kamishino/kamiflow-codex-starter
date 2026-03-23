@@ -70,6 +70,15 @@ Client repos can opt into SemVer closeout by adding this block to `AGENTS.md`:
 
 This first slice supports root single-package Node/npm repos only. In opted-in repos, active plans gain a `## Release Impact` section, PASS archive requires that section to be resolved, and `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` prepares the later release-only step. Repos that leave the workflow disabled keep the current behavior.
 
+For assistant-guided closeout, the finish model is:
+
+- `commit please`
+  - functional commit only
+- `release please`
+  - release closeout only
+- `finish please`
+  - inspect `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` and choose the right final action from repo state
+
 ## Repo Structure
 
 - `resources/skills/kamiflow-core/`: canonical skill source.
@@ -84,15 +93,22 @@ npm run skill:sync
 npm run skill:doctor
 npm run forward-test
 npm run forward-test -- --mode full
+node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .
 npm pack
 ```
 
-`npm run validate` checks the standalone skill contract without mutating the runtime copy. `npm run skill:sync` refreshes this repo's `.agents/skills/kamiflow-core/` runtime install, preserves the tracked root `AGENTS.md`, and creates the dogfood `.local/project.md` here if it is missing. `npm run skill:doctor` proves whether this repo is Codex-ready or stale and prints the exact recovery command when it is not. `npm run forward-test` is the faster smoke lane and now includes a non-Codex repo-role smoke for client vs source-repo runtime shape. `npm run forward-test -- --mode full` keeps the full serial behavioral suite and takes longer because it launches multiple real `codex exec` sessions against fresh temp projects from a packed tarball. Forward-test artifacts live under `.local/forward-tests/` and now include timing breakdowns. `npm pack` builds the publishable tarball for local smoke tests or release workflows.
+`npm run validate` checks the standalone skill contract without mutating the runtime copy. `npm run skill:sync` refreshes this repo's `.agents/skills/kamiflow-core/` runtime install, preserves the tracked root `AGENTS.md`, and creates the dogfood `.local/project.md` here if it is missing. `npm run skill:doctor` proves whether this repo is Codex-ready or stale and prints the exact recovery command when it is not. `npm run forward-test` is the faster smoke lane and now includes a non-Codex repo-role smoke for client vs source-repo runtime shape. `npm run forward-test -- --mode full` keeps the full serial behavioral suite and takes longer because it launches multiple real `codex exec` sessions against fresh temp projects from a packed tarball. `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` reports whether the current end-of-slice action should be commit-only, release-only, or commit-and-release. Forward-test artifacts live under `.local/forward-tests/` and now include timing breakdowns. `npm pack` builds the publishable tarball for local smoke tests or release workflows.
 
 This source repo also opts into the SemVer workflow. After a PASS plan with release impact `patch`, `minor`, or `major`, use this sequence:
 
-1. commit the functional changes with a normal scanner-friendly subject
-2. run:
+1. check the helper-backed finish recommendation:
+
+```bash
+node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .
+```
+
+2. if the helper says `commit-only` or `commit-and-release`, commit the functional changes with a normal scanner-friendly subject
+3. if the helper says release is still pending, run:
 
 ```bash
 node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .

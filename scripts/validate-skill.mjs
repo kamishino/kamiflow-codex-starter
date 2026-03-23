@@ -89,9 +89,16 @@ for (const relativePath of sourceOnlyRequiredFiles) {
 }
 
 const clientAgents = await fsp.readFile(path.join(skillRoot, "assets", "client-agents.md"), "utf8");
-for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/", "## Release Policy", "SemVer Workflow:", "Version Files:", "Pre-1.0 Policy:", "Release History:"]) {
+for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/", "## Release Policy", "SemVer Workflow:", "Version Files:", "Pre-1.0 Policy:", "Release History:", "finish-status.mjs", "commit please", "release please", "finish please"]) {
   if (!clientAgents.includes(requiredSnippet)) {
     fail(`assets/client-agents.md must mention ${requiredSnippet}`);
+  }
+}
+
+const commandMap = await fsp.readFile(path.join(skillRoot, "references", "command-map.md"), "utf8");
+for (const requiredSnippet of ["finish-status.mjs", "commit-only", "release-only", "commit-and-release"]) {
+  if (!commandMap.includes(requiredSnippet)) {
+    fail(`references/command-map.md must mention ${requiredSnippet}`);
   }
 }
 

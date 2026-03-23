@@ -88,6 +88,45 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "finish-status-commit-only",
+    "fixtureDir": "semver-none-impact/fixture",
+    "grader": "finish-status-commit-only",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runFinishStatus": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "finish-status-release-only",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "finish-status-release-only",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "runFinishStatus": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "finish-status-commit-and-release",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "finish-status-commit-and-release",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "createDirtyWorktreeFile": "notes/dirty.txt",
+    "runFinishStatus": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "finish-status-non-opt-in",
+    "fixtureDir": "semver-non-opt-in/fixture",
+    "grader": "finish-status-non-opt-in",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runFinishStatus": true,
+    "modes": ["smoke", "full"]
+  },
+  {
     "name": "semver-patch-closeout",
     "fixtureDir": "semver-patch-closeout/fixture",
     "grader": "semver-patch-closeout",

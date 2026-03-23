@@ -4,9 +4,11 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
+  isPassPlanRecord,
   parseCliArgs,
   parseReleaseImpact,
   readReleasePolicy,
+  resolveLatestDonePlan,
   resolvePlanRef,
   resolveProjectDir
 } from "./lib-plan.mjs";
@@ -15,12 +17,21 @@ const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));
 const requestedPlan = String(args.plan || "").trim();
 const releasePolicy = await readReleasePolicy(projectDir);
-const plan = await resolvePlanRef(projectDir, requestedPlan);
+const plan = requestedPlan
+  ? await resolvePlanRef(projectDir, requestedPlan)
+  : await resolveDefaultReleasePlan(projectDir);
 
 if (!plan) {
   console.error("SemVer Closeout: BLOCK");
-  console.error("Reason: No active plan matched the requested reference.");
-  console.error("Recovery: node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .");
+  console.error("Reason: No active PASS plan or latest archived PASS plan matched the requested reference.");
+  console.error("Recovery: Resolve or archive the target PASS plan, then rerun version-closeout.");
+  process.exit(1);
+}
+
+if (!isPassPlanRecord(plan)) {
+  console.error("SemVer Closeout: BLOCK");
+  console.error("Reason: The selected plan is not PASS yet. Release closeout is only valid after PASS closeout.");
+  console.error("Recovery: Finish validation and archive the PASS plan before rerunning version-closeout, or pass an explicit archived PASS plan with --plan.");
   process.exit(1);
 }
 
@@ -165,6 +176,16 @@ function buildCommitCommand(nextVersionValue, impact, planTitle, versionFiles) {
 
 function buildTagCommand(nextVersionValue) {
   return `git tag v${nextVersionValue}`;
+}
+
+async function resolveDefaultReleasePlan(projectDir) {
+  const activePlan = await resolvePlanRef(projectDir, "");
+  if (activePlan) {
+    return activePlan;
+  }
+
+  const latestDonePlan = await resolveLatestDonePlan(projectDir);
+  return latestDonePlan || null;
 }
 
 function shellEscape(value) {

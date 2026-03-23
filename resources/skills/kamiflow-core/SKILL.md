@@ -9,7 +9,7 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 
 ## Quick Start
 
-1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context. If `AGENTS.md` enables `SemVer Workflow`, treat release impact as part of closeout.
+1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context. If `AGENTS.md` enables `SemVer Workflow`, treat release impact as part of closeout and use `finish-status.mjs` before acting on commit, release, or finish requests.
 2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
 3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
 4. Infer the route automatically from intent aliases, active plan state, `.local/project.md`, and safety gates.
@@ -27,6 +27,8 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - verify whether the active plan is ready for `build` or `fix`
 - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
   - archive a completed PASS plan and prune old done plans
+- `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
+  - inspect repo state and recommend `commit-only`, `release-only`, or `commit-and-release` before acting on finish requests
 - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
   - for opted-in single-package Node/npm repos, run the release-only closeout step after the functional commit, update version files, and print guided release commit plus tag commands
 
@@ -83,6 +85,7 @@ For non-trivial route responses, keep the final answer compact:
 - Keep a short `Project Fit` section tied to `.local/project.md` instead of copying the whole brief into the plan.
 - When `SemVer Workflow` is enabled in `AGENTS.md`, keep a `## Release Impact` section in the plan and resolve it before PASS archive.
 - Keep functional commit history and release history separate in SemVer-enabled repos.
+- In SemVer-enabled repos, interpret `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the correct end-of-slice action from `finish-status.mjs`.
 - Archive only after all Acceptance Criteria and Go/No-Go items are checked.
 
 ## References

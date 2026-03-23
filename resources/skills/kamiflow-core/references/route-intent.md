@@ -42,6 +42,8 @@ This responsibility order does not replace route inference. It defines which loc
 
 Keep `start` as the internal route token. When the request says `brainstorm` or `idea`, report it as `Selected Route: start (brainstorm)` or `Selected Route: start (idea exploration)`.
 
+For SemVer-enabled repos, treat `commit please`, `release please`, and `finish please` as fast-path closeout requests. Before acting on any of them, inspect `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` and follow its `recommended_action`.
+
 ## Active Plan Hints
 
 - Prefer the explicit user alias over stale plan momentum.
@@ -76,6 +78,7 @@ Allowed fast-path categories:
 - status, diff, or log inspection
 - narrow read-only checks
 - commit or commit-message chores
+- release or finish chores that first consult `finish-status.mjs`
 - small operational follow-ups that do not need acceptance criteria or lifecycle tracking
 
 Do not use the fast path for feature work, bug fixing, closeout, or any request that needs acceptance criteria, validation, or plan continuity.

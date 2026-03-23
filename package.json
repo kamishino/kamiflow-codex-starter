@@ -38,6 +38,7 @@
     "resources/skills/kamiflow-core/scripts/ensure-plan.mjs",
     "resources/skills/kamiflow-core/scripts/ready-check.mjs",
     "resources/skills/kamiflow-core/scripts/archive-plan.mjs",
+    "resources/skills/kamiflow-core/scripts/finish-status.mjs",
     "resources/skills/kamiflow-core/scripts/version-closeout.mjs",
     "resources/skills/kamiflow-core/assets/client-agents.md",
     "resources/skills/kamiflow-core/assets/project-brief-client.md",

@@ -29,8 +29,11 @@ Use this route to verify behavior, review changes, and decide `PASS` or `BLOCK`.
 5. Mark acceptance criteria and Go/No-Go items only when evidence supports them.
 6. Promote durable conclusions into existing `.local/project.md` sections only: use `Architecture Guardrails` for repeatable future constraints, `Recent Decisions` for settled evidence-backed conclusions, and `Open Questions` for unresolved recurring concerns.
 7. Keep temporary debugging notes, one-off findings, and plan-local execution detail out of `.local/project.md`.
-8. If `AGENTS.md` enables `SemVer Workflow`, finalize `## Release Impact` before `PASS` archive. After the functional commit is made, use `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` when the final impact is `patch`, `minor`, or `major`.
-9. Archive the plan only after `PASS`, complete checklists, and any required SemVer release-impact resolution.
+8. If `AGENTS.md` enables `SemVer Workflow`, finalize `## Release Impact` before `PASS` archive.
+9. After closeout evidence is complete, use `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` to decide whether the next action is `commit-only`, `release-only`, or `commit-and-release`.
+10. Use `commit please` for functional commit only, `release please` for release closeout only, and `finish please` when the user wants Codex to choose the right final action from helper-backed repo state.
+11. Run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` only when finish guidance says release is still pending and the final impact is `patch`, `minor`, or `major`.
+12. Archive the plan only after `PASS`, complete checklists, and any required SemVer release-impact resolution.
 
 ## Minimum Plan Mutation
 
