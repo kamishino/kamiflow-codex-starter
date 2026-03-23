@@ -1,10 +1,14 @@
 #!/usr/bin/env node
+import fsp from "node:fs/promises";
 import path from "node:path";
 import {
   createPlan,
+  ensureReleaseImpactSectionContent,
   ensureRepoRuntimeState,
   parseCliArgs,
   printJson,
+  readPlanRecord,
+  readReleasePolicy,
   resolveActivePlan,
   resolveProjectDir
 } from "./lib-plan.mjs";
@@ -16,21 +20,29 @@ const topic = String(args.topic || "").trim();
 const forceNew = Boolean(args.new);
 
 const runtimeState = await ensureRepoRuntimeState(projectDir);
+const releasePolicy = await readReleasePolicy(projectDir);
 
 const activePlan = forceNew ? null : await resolveActivePlan(projectDir);
 if (activePlan) {
+  let resolvedPlan = activePlan;
+  const nextPlanContent = ensureReleaseImpactSectionContent(activePlan.content, releasePolicy);
+  if (nextPlanContent.changed) {
+    await fsp.writeFile(activePlan.path, nextPlanContent.content, "utf8");
+    resolvedPlan = await readPlanRecord(activePlan.path);
+  }
+
   printJson({
     ok: true,
     created: false,
     repo_role: runtimeState.role,
-    plan_id: activePlan.frontmatter.plan_id || "",
-    plan_path: activePlan.path,
+    plan_id: resolvedPlan.frontmatter.plan_id || "",
+    plan_path: resolvedPlan.path,
     repo_contract_path: runtimeState.repoContract.path,
     repo_contract_created: runtimeState.repoContract.created,
     project_brief_path: runtimeState.projectBrief.path,
     project_brief_created: runtimeState.projectBrief.created,
-    next_command: activePlan.frontmatter.next_command || "plan",
-    next_mode: activePlan.frontmatter.next_mode || "Plan",
+    next_command: resolvedPlan.frontmatter.next_command || "plan",
+    next_mode: resolvedPlan.frontmatter.next_mode || "Plan",
     recovery: `node ${path.join(".agents", "skills", "kamiflow-core", "scripts", "ensure-plan.mjs")} --project . --new`
   });
   process.exit(0);

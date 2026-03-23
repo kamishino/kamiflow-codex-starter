@@ -25,15 +25,17 @@ Use this route when the request is clear enough to specify implementation detail
 2. Read `AGENTS.md`, then `.local/project.md`, and identify the relevant priority, guardrail, open question, or recent decision.
 3. Replace placeholders with a concrete goal, scope, constraints, `Project Fit`, tasks, acceptance criteria, and validation commands.
 4. Keep `Project Fit` short: tie the slice to at least one priority or guardrail from `.local/project.md` instead of copying the whole brief.
-5. Close high-impact open decisions before handing off to implementation.
-6. Set frontmatter for build handoff: `decision: GO`, `next_command: build`, `next_mode: Build`.
-7. Persist updated `WIP Log` lines before the final response.
+5. If `AGENTS.md` enables `SemVer Workflow`, add or repair `## Release Impact`, keep it aligned with the likely release impact for the slice, and plan for a later release-only closeout step rather than turning the functionality commit into the release commit.
+6. Close high-impact open decisions before handing off to implementation.
+7. Set frontmatter for build handoff: `decision: GO`, `next_command: build`, `next_mode: Build`.
+8. Persist updated `WIP Log` lines before the final response.
 
 ## Minimum Plan Mutation
 
 - Set `lifecycle_phase: plan`.
 - Keep `selected_mode: Plan`.
 - Add a short `Project Fit` section that names at least one relevant priority or guardrail from `.local/project.md`.
+- In SemVer-enabled repos, keep `## Release Impact` present even if the exact impact will be finalized during `check`.
 - Set `decision: GO`, `next_command: build`, and `next_mode: Build` only when the plan is decision-complete.
 - If unresolved high-impact decisions remain, keep the plan active and reroute to `start` or `research` instead of pretending it is build-ready.
 

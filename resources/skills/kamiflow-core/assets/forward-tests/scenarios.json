@@ -42,6 +42,81 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "semver-non-opt-in",
+    "fixtureDir": "semver-non-opt-in/fixture",
+    "grader": "semver-non-opt-in",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runArchivePlan": true,
+    "trackedFiles": ["package.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "semver-impact-required",
+    "fixtureDir": "semver-impact-required/fixture",
+    "grader": "semver-impact-required",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runArchivePlan": true,
+    "trackedFiles": ["package.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "semver-none-impact",
+    "fixtureDir": "semver-none-impact/fixture",
+    "grader": "semver-none-impact",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runArchivePlan": true,
+    "trackedFiles": ["package.json", "package-lock.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "semver-patch-closeout",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "semver-patch-closeout",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "runVersionCloseout": true,
+    "trackedFiles": ["package.json", "package-lock.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "semver-dirty-worktree",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "semver-dirty-worktree",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "createDirtyWorktreeFile": "notes/dirty.txt",
+    "runVersionCloseout": true,
+    "trackedFiles": ["package.json", "package-lock.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "semver-major-pre1",
+    "fixtureDir": "semver-major-pre1/fixture",
+    "grader": "semver-major-pre1",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "runVersionCloseout": true,
+    "trackedFiles": ["package.json", "package-lock.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "semver-no-lockfile",
+    "fixtureDir": "semver-no-lockfile/fixture",
+    "grader": "semver-no-lockfile",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "runVersionCloseout": true,
+    "trackedFiles": ["package.json"],
+    "modes": ["smoke", "full"]
+  },
+  {
     "name": "fresh-empty",
     "promptFile": "fresh-empty/prompt.md",
     "grader": "fresh-empty",

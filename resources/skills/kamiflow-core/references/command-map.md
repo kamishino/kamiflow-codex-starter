@@ -18,11 +18,13 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
 - Archive completed PASS work:
   - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+- For opted-in root Node/npm repos, prepare version closeout:
+  - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
 
 ## Local State Ownership
 
 - `AGENTS.md`
-  - repo rules and operating behavior
+  - repo rules, operating behavior, and optional SemVer release policy
 - `.local/project.md`
   - human-facing project context and curated durable memory
 - `.local/plans/*.md`
@@ -63,6 +65,10 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - rerun `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on the next build or fix attempt
 - Archive gate fails:
   - finish the unchecked Implementation Tasks, Acceptance Criteria, and Go/No-Go items, then rerun `archive-plan.mjs`
+- SemVer closeout is enabled and release impact is patch, minor, or major:
+  - first commit the functional changes with a normal repo-owned subject
+  - run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
+  - use the printed release-only commit command and tag command after the functional commit
 
 ## Response Contract
 

@@ -128,6 +128,9 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const installLogPath = path.join(logDir, "install.log");
   const reinstallLogPath = path.join(logDir, "install-rerun.log");
   const doctorLogPath = path.join(logDir, "doctor.log");
+  const versionCloseoutLogPath = path.join(logDir, "version-closeout.log");
+  const archiveLogPath = path.join(logDir, "archive-plan.log");
+  const baselineCommitLogPath = path.join(logDir, "baseline-commit.log");
   const externalWorkspace = path.join(tempWorkspaceRoot, `${path.basename(runDir)}-${scenario.name}`);
 
   await fsp.rm(scenarioDir, { recursive: true, force: true });
@@ -181,6 +184,36 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   }
   const installState = await collectScenarioState(externalWorkspace, scenario);
 
+  if (scenario.prepareCommittedBaseline) {
+    const baselineCommitResult = await createBaselineCommit(externalWorkspace, scenario.baselineCommitMessage);
+    await fsp.writeFile(baselineCommitLogPath, `${baselineCommitResult.stdout}\n${baselineCommitResult.stderr}`.trim(), "utf8");
+    if (baselineCommitResult.code !== 0) {
+      const failure = buildFailureResult(scenario.name, "Baseline commit step failed.", [
+        `baseline commit exit code: ${baselineCommitResult.code}`
+      ]);
+      failure.timings_ms = {
+        total: Date.now() - scenarioStartedAtMs,
+        install: installFinishedAtMs - installStartedAtMs,
+        codex: 0
+      };
+      await writeJson(path.join(scenarioDir, "result.json"), failure);
+      await snapshotWorkspace(externalWorkspace, path.join(scenarioDir, "project"));
+      await fsp.rm(externalWorkspace, { recursive: true, force: true });
+      return failure;
+    }
+  }
+
+  if (scenario.createDirtyWorktreeFile) {
+    const dirtyRelativePath = String(scenario.createDirtyWorktreeFile);
+    const dirtyTargetPath = path.join(externalWorkspace, dirtyRelativePath);
+    await fsp.mkdir(path.dirname(dirtyTargetPath), { recursive: true });
+    await fsp.writeFile(
+      dirtyTargetPath,
+      String(scenario.createDirtyWorktreeContent || `dirty worktree fixture for ${scenario.name}\n`),
+      "utf8"
+    );
+  }
+
   let reinstallResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   let reinstallState = null;
   if (scenario.rerunInstall) {
@@ -211,6 +244,22 @@ async function runScenario({ scenario, tarballPath, runDir }) {
       cwd: repoRoot
     });
     await fsp.writeFile(doctorLogPath, `${doctorResult.stdout}\n${doctorResult.stderr}`.trim(), "utf8");
+  }
+
+  let versionCloseoutResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runVersionCloseout) {
+    versionCloseoutResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "version-closeout.mjs"), "--project", "."], {
+      cwd: externalWorkspace
+    });
+    await fsp.writeFile(versionCloseoutLogPath, `${versionCloseoutResult.stdout}\n${versionCloseoutResult.stderr}`.trim(), "utf8");
+  }
+
+  let archivePlanResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runArchivePlan) {
+    archivePlanResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "archive-plan.mjs"), "--project", "."], {
+      cwd: externalWorkspace
+    });
+    await fsp.writeFile(archiveLogPath, `${archivePlanResult.stdout}\n${archivePlanResult.stderr}`.trim(), "utf8");
   }
 
   let codexResult = { code: 0, stdout: "", stderr: "", timedOut: false };
@@ -245,14 +294,18 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.writeFile(stdoutPath, "", "utf8");
     await fsp.writeFile(stderrPath, "", "utf8");
   }
+  const finalState = await collectScenarioState(externalWorkspace, scenario);
   const scenarioResult = await gradeScenario({
     scenario,
     workspace: externalWorkspace,
     beforeState,
     installState,
+    finalState,
     reinstallResult,
     reinstallState,
     doctorResult,
+    versionCloseoutResult,
+    archivePlanResult,
     codexResult,
     finalMessage
   });
@@ -268,7 +321,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, reinstallResult, reinstallState, doctorResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -578,6 +631,168 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, r
     });
   }
 
+  if (scenario.grader === "semver-non-opt-in") {
+    checks.push({
+      label: "archive-without-release-impact-still-passes",
+      ok: archivePlanResult.code === 0 && !activePlan && Boolean(latestDonePlan),
+      detail: archivePlanResult.code === 0 ? "archive succeeded without SemVer enforcement" : `archive exit code ${archivePlanResult.code}`
+    });
+    checks.push({
+      label: "package-version-unchanged",
+      ok: installState.fileHashes["package.json"] === finalState.fileHashes["package.json"],
+      detail: installState.fileHashes["package.json"] === finalState.fileHashes["package.json"] ? "package.json unchanged" : "package.json changed"
+    });
+  }
+
+  if (scenario.grader === "semver-impact-required") {
+    const archiveOutput = `${archivePlanResult.stdout}\n${archivePlanResult.stderr}`;
+    checks.push({
+      label: "archive-blocked-without-release-impact",
+      ok: archivePlanResult.code !== 0,
+      detail: `archive exit code ${archivePlanResult.code}`
+    });
+    checks.push({
+      label: "release-impact-error-reported",
+      ok: /Release Impact/i.test(archiveOutput),
+      detail: "archive output should mention missing or unresolved Release Impact"
+    });
+    checks.push({
+      label: "active-plan-remains-present",
+      ok: Boolean(activePlan),
+      detail: activePlan ? activePlan.path : "active plan missing"
+    });
+  }
+
+  if (scenario.grader === "semver-none-impact") {
+    checks.push({
+      label: "none-impact-archives",
+      ok: archivePlanResult.code === 0 && !activePlan && Boolean(latestDonePlan),
+      detail: archivePlanResult.code === 0 ? "archive succeeded with none impact" : `archive exit code ${archivePlanResult.code}`
+    });
+    checks.push({
+      label: "package-version-unchanged",
+      ok: installState.fileHashes["package.json"] === finalState.fileHashes["package.json"],
+      detail: installState.fileHashes["package.json"] === finalState.fileHashes["package.json"] ? "package.json unchanged" : "package.json changed"
+    });
+    checks.push({
+      label: "lockfile-unchanged",
+      ok: installState.fileHashes["package-lock.json"] === finalState.fileHashes["package-lock.json"],
+      detail: installState.fileHashes["package-lock.json"] === finalState.fileHashes["package-lock.json"] ? "package-lock.json unchanged" : "package-lock.json changed"
+    });
+  }
+
+  if (scenario.grader === "semver-dirty-worktree") {
+    checks.push({
+      label: "version-closeout-blocks-dirty-worktree",
+      ok: versionCloseoutResult.code !== 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "dirty-worktree-error-reported",
+      ok: /Git worktree is not clean|Commit the functional changes first/i.test(`${versionCloseoutResult.stdout}\n${versionCloseoutResult.stderr}`),
+      detail: "version closeout should tell the user to commit functional changes first"
+    });
+    checks.push({
+      label: "package-version-unchanged",
+      ok: installState.fileHashes["package.json"] === finalState.fileHashes["package.json"],
+      detail: installState.fileHashes["package.json"] === finalState.fileHashes["package.json"] ? "package.json unchanged" : "package.json changed"
+    });
+    checks.push({
+      label: "lockfile-version-unchanged",
+      ok: installState.fileHashes["package-lock.json"] === finalState.fileHashes["package-lock.json"],
+      detail: installState.fileHashes["package-lock.json"] === finalState.fileHashes["package-lock.json"] ? "package-lock.json unchanged" : "package-lock.json changed"
+    });
+  }
+
+  if (scenario.grader === "semver-patch-closeout") {
+    checks.push({
+      label: "version-closeout-exits-zero",
+      ok: versionCloseoutResult.code === 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "patch-bump-computed",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.4.3",
+      detail: await readPackageVersion(path.join(workspace, "package.json"))
+    });
+    checks.push({
+      label: "lockfile-version-updated",
+      ok: await readPackageLockVersion(path.join(workspace, "package-lock.json")) === "0.4.3",
+      detail: await readPackageLockVersion(path.join(workspace, "package-lock.json")) || "<missing>"
+    });
+    checks.push({
+      label: "guided-commit-output-present",
+      ok: /git commit -m "release: v0\.4\.3"/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should print the guided release commit command"
+    });
+    checks.push({
+      label: "tag-output-present",
+      ok: /git tag v0\.4\.3/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should print the guided release tag command"
+    });
+    checks.push({
+      label: "only-version-files-changed",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, ["package.json", "package-lock.json"]),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+  }
+
+  if (scenario.grader === "semver-major-pre1") {
+    checks.push({
+      label: "version-closeout-exits-zero",
+      ok: versionCloseoutResult.code === 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "strict-pre1-major-bump",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "1.0.0",
+      detail: await readPackageVersion(path.join(workspace, "package.json"))
+    });
+    checks.push({
+      label: "guided-commit-output-present",
+      ok: /git commit -m "release: v1\.0\.0"/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should print the guided release commit command"
+    });
+    checks.push({
+      label: "tag-output-present",
+      ok: /git tag v1\.0\.0/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should print the guided release tag command"
+    });
+    checks.push({
+      label: "only-version-files-changed",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, ["package.json", "package-lock.json"]),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+  }
+
+  if (scenario.grader === "semver-no-lockfile") {
+    checks.push({
+      label: "version-closeout-exits-zero",
+      ok: versionCloseoutResult.code === 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "minor-bump-without-lockfile",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "1.3.0",
+      detail: await readPackageVersion(path.join(workspace, "package.json"))
+    });
+    checks.push({
+      label: "missing-lockfile-reported",
+      ok: /package-lock\.json \(not present\)/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should report the missing lockfile as skipped"
+    });
+    checks.push({
+      label: "tag-output-present",
+      ok: /git tag v1\.3\.0/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should print the guided release tag command"
+    });
+    checks.push({
+      label: "only-version-files-changed",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, ["package.json"]),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+  }
+
   if (scenario.grader === "draft-not-ready") {
     const afterHash = await hashFile(path.join(workspace, scenario.primaryFile));
     checks.push({
@@ -721,12 +936,46 @@ async function collectScenarioState(workspace, scenario) {
   const state = {
     fileHashes,
     runtimeSkill,
-    installMeta
+    installMeta,
+    git: await collectGitState(workspace)
   };
   if (scenario.primaryFile) {
     state.primaryFileHash = fileHashes[scenario.primaryFile] || "";
   }
   return state;
+}
+
+async function collectGitState(workspace) {
+  const gitMarkerPath = path.join(workspace, ".git");
+  if (!fs.existsSync(gitMarkerPath)) {
+    return {
+      insideWorktree: false,
+      dirtyPaths: []
+    };
+  }
+
+  const repoCheck = await runCommand("git", ["rev-parse", "--is-inside-work-tree"], { cwd: workspace });
+  if (repoCheck.code !== 0 || !/^true$/i.test(repoCheck.stdout.trim())) {
+    return {
+      insideWorktree: false,
+      dirtyPaths: []
+    };
+  }
+
+  const statusResult = await runCommand("git", ["status", "--porcelain"], { cwd: workspace });
+  const dirtyPaths = statusResult.code === 0
+    ? statusResult.stdout
+      .split(/\r?\n/)
+      .map((line) => line.replace(/\r$/, ""))
+      .filter((line) => line.trim().length > 0)
+      .map((line) => line.slice(3).trim())
+      .filter(Boolean)
+    : [];
+
+  return {
+    insideWorktree: true,
+    dirtyPaths
+  };
 }
 
 async function collectRuntimeSkillState(workspace) {
@@ -825,6 +1074,59 @@ async function hashFile(filePath) {
 async function writeJson(filePath, payload) {
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await fsp.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+async function readPackageVersion(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return "";
+  }
+  const parsed = JSON.parse(await fsp.readFile(filePath, "utf8"));
+  return String(parsed?.version || "").trim();
+}
+
+async function readPackageLockVersion(filePath) {
+  if (!fs.existsSync(filePath)) {
+    return "";
+  }
+  const parsed = JSON.parse(await fsp.readFile(filePath, "utf8"));
+  return String(parsed?.packages?.[""]?.version || parsed?.version || "").trim();
+}
+
+async function createBaselineCommit(workspace, message = "baseline-before-version-closeout") {
+  const gitUserName = await runCommand("git", ["config", "user.name", "kamiflow-forward-test"], { cwd: workspace });
+  if (gitUserName.code !== 0) {
+    return gitUserName;
+  }
+  const gitUserEmail = await runCommand("git", ["config", "user.email", "forward-test@example.invalid"], { cwd: workspace });
+  if (gitUserEmail.code !== 0) {
+    return gitUserEmail;
+  }
+  const gitAdd = await runCommand("git", ["add", "-A"], { cwd: workspace });
+  if (gitAdd.code !== 0) {
+    return gitAdd;
+  }
+  return await runCommand("git", ["commit", "-m", message], { cwd: workspace });
+}
+
+function hasExactDirtyPaths(actualPaths, expectedPaths) {
+  const actual = normalizeDirtyPaths(actualPaths);
+  const expected = normalizeDirtyPaths(expectedPaths);
+  if (actual.length !== expected.length) {
+    return false;
+  }
+  return actual.every((value, index) => value === expected[index]);
+}
+
+function normalizeDirtyPaths(paths) {
+  return [...new Set((Array.isArray(paths) ? paths : [])
+    .map((value) => String(value || "").replaceAll("\\", "/").trim())
+    .filter(Boolean))]
+    .sort();
+}
+
+function formatDirtyPathDetail(paths) {
+  const normalized = normalizeDirtyPaths(paths);
+  return normalized.length > 0 ? normalized.join(" | ") : "none";
 }
 
 async function hashRelativeFiles(rootDir, relativePaths) {

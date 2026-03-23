@@ -26,6 +26,10 @@ Use AGENTS.md for repo rules and `.local/project.md` for product memory. This pl
 ## Validation Commands
 - `command`
 
+## Release Impact (SemVer-enabled repos only)
+- Impact: none|patch|minor|major
+- Reason:
+
 ## Handoff
 - Next command: build
 - Next mode: Build

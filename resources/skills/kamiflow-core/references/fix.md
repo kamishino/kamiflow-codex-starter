@@ -30,6 +30,7 @@ Use this route for targeted remediation of a concrete bug, regression, or failed
 6. Run validation for the repaired behavior.
 7. Update the plan and hand off to `check`.
 8. Update `.local/project.md` only if the fix changes a durable decision or architecture guardrail. If the outcome is still provisional, keep it in the plan and let `check` decide whether it belongs in project memory.
+9. If `AGENTS.md` enables `SemVer Workflow`, keep `## Release Impact` current, but let `check` finalize whether the repair is none, patch, minor, or major. Keep the repair commit scanner-friendly and use a later release-only closeout step when needed.
 
 ## Minimum Plan Mutation
 

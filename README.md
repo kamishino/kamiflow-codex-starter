@@ -56,6 +56,20 @@ node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .
 
 Read `AGENTS.md` first for repo rules. Keep `.local/project.md` current as the human-facing project brief. The active plan stays in `.local/plans/*.md`. Direct markdown mutation is the normal workflow. The helper scripts are deterministic recovery commands for plan bootstrap, repo-contract repair, project-brief repair, readiness checks, and archive closeout.
 
+## Optional SemVer Workflow
+
+Client repos can opt into SemVer closeout by adding this block to `AGENTS.md`:
+
+```md
+## Release Policy
+- SemVer Workflow: enabled
+- Version Files: package.json, package-lock.json
+- Pre-1.0 Policy: strict
+- Release History: separate-release-commit-and-tag
+```
+
+This first slice supports root single-package Node/npm repos only. In opted-in repos, active plans gain a `## Release Impact` section, PASS archive requires that section to be resolved, and `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` prepares the later release-only step. Repos that leave the workflow disabled keep the current behavior.
+
 ## Repo Structure
 
 - `resources/skills/kamiflow-core/`: canonical skill source.
@@ -74,6 +88,22 @@ npm pack
 ```
 
 `npm run validate` checks the standalone skill contract without mutating the runtime copy. `npm run skill:sync` refreshes this repo's `.agents/skills/kamiflow-core/` runtime install, preserves the tracked root `AGENTS.md`, and creates the dogfood `.local/project.md` here if it is missing. `npm run skill:doctor` proves whether this repo is Codex-ready or stale and prints the exact recovery command when it is not. `npm run forward-test` is the faster smoke lane and now includes a non-Codex repo-role smoke for client vs source-repo runtime shape. `npm run forward-test -- --mode full` keeps the full serial behavioral suite and takes longer because it launches multiple real `codex exec` sessions against fresh temp projects from a packed tarball. Forward-test artifacts live under `.local/forward-tests/` and now include timing breakdowns. `npm pack` builds the publishable tarball for local smoke tests or release workflows.
+
+This source repo also opts into the SemVer workflow. After a PASS plan with release impact `patch`, `minor`, or `major`, use this sequence:
+
+1. commit the functional changes with a normal scanner-friendly subject
+2. run:
+
+```bash
+node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .
+```
+
+That helper blocks on a dirty worktree, updates `package.json`, updates `package-lock.json` when present, and prints:
+
+- the exact release-only commit command for `release: vX.Y.Z`
+- the exact tag command for `vX.Y.Z`
+
+It does not auto-commit, auto-tag, or publish.
 
 ## Clean `main` Cutover
 

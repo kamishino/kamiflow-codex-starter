@@ -6,7 +6,7 @@ Client repos are the default workflow target. Treat the kamiflow-core source rep
 
 ## Responsibility Order
 
-1. Read `AGENTS.md` to understand repo rules and operating behavior.
+1. Read `AGENTS.md` to understand repo rules, operating behavior, and any optional release policy.
 2. Read `.local/project.md` to understand product priorities, guardrails, open questions, and recent decisions.
 3. Read the active non-done plan to understand the current execution slice.
 

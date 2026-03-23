@@ -30,7 +30,8 @@ Use this route to implement one approved slice from the active plan. Client repo
 6. Run targeted validation commands.
 7. Update only `Implementation Tasks` progress in the plan, then set the next handoff to `check`.
 8. Update `.local/project.md` only if the work changed a durable priority, guardrail, or product decision. If the lesson is only a candidate, leave it in the plan or hand it off to `check` instead of promoting it immediately.
-9. Report a literal `Check: PASS` or `Check: BLOCK` line with evidence before the final response. Do not wrap `PASS` or `BLOCK` in backticks.
+9. If `AGENTS.md` enables `SemVer Workflow`, keep `## Release Impact` current, but leave final release-impact resolution to `check` when the evidence is complete. Do not use the functionality commit as the release commit.
+10. Report a literal `Check: PASS` or `Check: BLOCK` line with evidence before the final response. Do not wrap `PASS` or `BLOCK` in backticks.
 
 ## Minimum Plan Mutation
 

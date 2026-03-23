@@ -1,0 +1,5 @@
+{
+  "name": "semver-no-lockfile-fixture",
+  "version": "1.2.3",
+  "private": true
+}

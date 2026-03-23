@@ -19,6 +19,16 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 - Recover a missing plan or project brief with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
 - Check build readiness with `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
 - Archive a completed PASS plan with `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+- For opted-in Node/npm repos, run version closeout with `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
+
+## Release Policy
+
+- SemVer Workflow: disabled
+- Version Files: package.json, package-lock.json
+- Pre-1.0 Policy: strict
+- Release History: separate-release-commit-and-tag
+
+Leave this disabled unless the repo wants opt-in SemVer closeout for a root single-package Node/npm workflow.
 
 ## Working Rules
 
@@ -28,6 +38,8 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 - Treat `.local/project.md` as curated project memory, not task history or an automatic log.
 - Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
 - Express recurring anti-patterns as `Architecture Guardrails`, settled conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
+- If `SemVer Workflow` is enabled, keep `## Release Impact` current in the active plan and resolve it before PASS archive.
+- In SemVer-enabled repos, commit functionality first with a repo-owned subject, then use `version-closeout.mjs` for the release-only commit and `vX.Y.Z` tag.
 - Do not reintroduce legacy bootstrap commands or repo-specific bootstrap surfaces.
 - Treat this generated contract as the client-repo default, not the source-repo contract.
 

@@ -1,15 +1,15 @@
 ---
 name: kamiflow-core
-description: Route daily Codex work through a client-repo-first workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the right phase from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; write a decision-complete plan; implement in scoped slices; verify with evidence; or recover plan state inside any client repo. Treat the kamiflow-core source repo as the source-repo exception.
+description: Route daily Codex work through a client-repo-first workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the right phase from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; write a decision-complete plan; implement in scoped slices; verify with evidence; recover plan state inside any client repo; or honor an optional SemVer release policy in `AGENTS.md` for opted-in Node/npm repos. Treat the kamiflow-core source repo as the source-repo exception.
 ---
 
 # Kami Flow Core
 
-Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks. It needs route inference, one human-facing project brief, active plan continuity, and evidence-backed closeout.
+Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks. It needs route inference, one human-facing project brief, active plan continuity, evidence-backed closeout, and optional SemVer release control for repos that opt in through `AGENTS.md`.
 
 ## Quick Start
 
-1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context.
+1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context. If `AGENTS.md` enables `SemVer Workflow`, treat release impact as part of closeout.
 2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
 3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
 4. Infer the route automatically from intent aliases, active plan state, `.local/project.md`, and safety gates.
@@ -27,13 +27,15 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - verify whether the active plan is ready for `build` or `fix`
 - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
   - archive a completed PASS plan and prune old done plans
+- `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
+  - for opted-in single-package Node/npm repos, run the release-only closeout step after the functional commit, update version files, and print guided release commit plus tag commands
 
 Use direct markdown mutation as the primary workflow. Use the helper scripts only for deterministic bootstrap, readiness, and archive recovery.
 
 ## Three-Layer Contract
 
 - `AGENTS.md`
-  - repo rules, operating behavior, and the local artifacts Codex must read first
+  - repo rules, operating behavior, optional SemVer release policy, and the local artifacts Codex must read first
 - `.local/project.md`
   - human-facing product memory for priorities, guardrails, open questions, and durable decisions
 - `.local/plans/*.md`
@@ -79,6 +81,8 @@ For non-trivial route responses, keep the final answer compact:
 - Reuse the active plan unless the scope is explicitly split.
 - Update plan frontmatter and add timestamped `WIP Log` lines before the final response.
 - Keep a short `Project Fit` section tied to `.local/project.md` instead of copying the whole brief into the plan.
+- When `SemVer Workflow` is enabled in `AGENTS.md`, keep a `## Release Impact` section in the plan and resolve it before PASS archive.
+- Keep functional commit history and release history separate in SemVer-enabled repos.
 - Archive only after all Acceptance Criteria and Go/No-Go items are checked.
 
 ## References
@@ -103,4 +107,6 @@ For non-trivial route responses, keep the final answer compact:
 - If `ready-check.mjs` fails, the rest of that response is `plan`-only work. You may update plan markdown, but do not rerun readiness and continue to implementation in the same response.
 - Do not depend on repo-specific docs, hidden bootstrap files, or extra workflow tools outside this skill folder.
 - Treat client repos as the default operating target; describe the kamiflow-core source repo explicitly as the source-repo exception whenever you are working here.
+- Keep SemVer closeout opt-in only. Non-opted-in repos must not be forced into release-impact or version-file mutations.
+- Limit SemVer file mutation to root single-package Node/npm repos in this slice.
 - If the skill is missing from the project, reinstall it with `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`.

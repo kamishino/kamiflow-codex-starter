@@ -6,6 +6,8 @@ import {
   countCheckboxes,
   DONE_PLAN_DIR,
   extractSection,
+  parseReleaseImpact,
+  readReleasePolicy,
   nowIso,
   parseCliArgs,
   printJson,
@@ -20,6 +22,7 @@ const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(args.project || ".");
 const requestedPlan = String(args.plan || "").trim();
 const plan = await resolvePlanRef(projectDir, requestedPlan);
+const releasePolicy = await readReleasePolicy(projectDir);
 
 if (!plan) {
   printJson({
@@ -29,6 +32,33 @@ if (!plan) {
     recovery: "node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project ."
   });
   process.exit(1);
+}
+
+if (releasePolicy.enabled) {
+  if (!releasePolicy.valid) {
+    printJson({
+      ok: false,
+      archived: false,
+      plan_id: plan.frontmatter.plan_id || "",
+      plan_path: plan.path,
+      reason: `Archive gate failed because AGENTS.md Release Policy is invalid: ${releasePolicy.errors[0]}`,
+      recovery: "Fix the Release Policy block in AGENTS.md before archiving a PASS plan."
+    });
+    process.exit(1);
+  }
+
+  const releaseImpact = parseReleaseImpact(plan.content);
+  if (!releaseImpact.valid) {
+    printJson({
+      ok: false,
+      archived: false,
+      plan_id: plan.frontmatter.plan_id || "",
+      plan_path: plan.path,
+      reason: `Archive gate failed because Release Impact is missing or unresolved: ${releaseImpact.errors[0]}`,
+      recovery: "Resolve the Release Impact section with none, patch, minor, or major plus a short reason before archiving."
+    });
+    process.exit(1);
+  }
 }
 
 const implementationCounts = countCheckboxes(extractSection(plan.content, "Implementation Tasks"));

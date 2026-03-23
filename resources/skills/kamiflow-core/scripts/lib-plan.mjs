@@ -9,6 +9,13 @@ export const PROJECT_BRIEF_PATH = path.join(".local", "project.md");
 export const ROOT_AGENTS_PATH = "AGENTS.md";
 export const REPO_ROLE_CLIENT = "client";
 export const REPO_ROLE_DOGFOOD = "dogfood";
+export const RELEASE_POLICY_SECTION = "Release Policy";
+export const RELEASE_IMPACT_SECTION = "Release Impact";
+export const RELEASE_IMPACT_VALUES = Object.freeze(["none", "patch", "minor", "major"]);
+
+const DEFAULT_VERSION_FILES = Object.freeze(["package.json", "package-lock.json"]);
+const ALLOWED_VERSION_FILES = new Set(DEFAULT_VERSION_FILES);
+const ALLOWED_RELEASE_HISTORY = new Set(["separate-release-commit-and-tag"]);
 
 const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const clientAgentsTemplatePath = path.join(skillRoot, "assets", "client-agents.md");
@@ -219,6 +226,148 @@ export function routeToMode(route = "plan") {
   return route === "build" || route === "fix" ? "Build" : "Plan";
 }
 
+export async function readReleasePolicy(projectDir) {
+  const repoContractPath = path.join(projectDir, ROOT_AGENTS_PATH);
+  if (!fs.existsSync(repoContractPath)) {
+    return {
+      path: repoContractPath,
+      section_present: false,
+      enabled: false,
+      version_files: [...DEFAULT_VERSION_FILES],
+      pre_1_policy: "strict",
+      release_history: "separate-release-commit-and-tag",
+      valid: true,
+      errors: []
+    };
+  }
+
+  const repoContractText = await fsp.readFile(repoContractPath, "utf8");
+  return {
+    path: repoContractPath,
+    ...parseReleasePolicy(repoContractText)
+  };
+}
+
+export function parseReleasePolicy(markdown) {
+  const section = extractSection(markdown, RELEASE_POLICY_SECTION);
+  if (!section) {
+    return {
+      section_present: false,
+      enabled: false,
+      version_files: [...DEFAULT_VERSION_FILES],
+      pre_1_policy: "strict",
+      release_history: "separate-release-commit-and-tag",
+      valid: true,
+      errors: []
+    };
+  }
+
+  const semverWorkflow = extractSectionValue(section, "SemVer Workflow").toLowerCase() || "disabled";
+  const versionFiles = normalizeVersionFileList(extractSectionValue(section, "Version Files") || DEFAULT_VERSION_FILES.join(", "));
+  const pre1Policy = extractSectionValue(section, "Pre-1.0 Policy").toLowerCase() || "strict";
+  const releaseHistory = extractSectionValue(section, "Release History").toLowerCase() || "separate-release-commit-and-tag";
+  const errors = [];
+
+  if (!["enabled", "disabled"].includes(semverWorkflow)) {
+    errors.push(`SemVer Workflow must be enabled or disabled. Received: ${semverWorkflow || "<missing>"}`);
+  }
+  if (pre1Policy !== "strict") {
+    errors.push(`Pre-1.0 Policy must be strict in this slice. Received: ${pre1Policy || "<missing>"}`);
+  }
+  if (!ALLOWED_RELEASE_HISTORY.has(releaseHistory)) {
+    errors.push(`Release History must be separate-release-commit-and-tag in this slice. Received: ${releaseHistory || "<missing>"}`);
+  }
+  if (versionFiles.length === 0) {
+    errors.push("Version Files must include at least package.json.");
+  }
+  for (const fileName of versionFiles) {
+    if (!ALLOWED_VERSION_FILES.has(fileName)) {
+      errors.push(`Version Files contains unsupported entry: ${fileName}`);
+    }
+  }
+  if (semverWorkflow === "enabled" && !versionFiles.includes("package.json")) {
+    errors.push("SemVer-enabled repos must include package.json in Version Files.");
+  }
+
+  return {
+    section_present: true,
+    enabled: semverWorkflow === "enabled",
+    version_files: versionFiles,
+    pre_1_policy: pre1Policy,
+    release_history: releaseHistory,
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function parseReleaseImpact(markdown) {
+  const section = extractSection(markdown, RELEASE_IMPACT_SECTION);
+  if (!section) {
+    return {
+      section_present: false,
+      impact: "",
+      reason: "",
+      valid: false,
+      errors: ["Release Impact section is missing."]
+    };
+  }
+
+  const impact = extractSectionValue(section, "Impact").toLowerCase();
+  const reason = extractSectionValue(section, "Reason");
+  const errors = [];
+
+  if (!RELEASE_IMPACT_VALUES.includes(impact)) {
+    errors.push(`Impact must be one of ${RELEASE_IMPACT_VALUES.join(", ")}. Received: ${impact || "<missing>"}`);
+  }
+  if (!reason || /^resolve before/i.test(reason) || /^unknown$/i.test(reason)) {
+    errors.push("Reason must be resolved before PASS archive.");
+  }
+
+  return {
+    section_present: true,
+    impact,
+    reason,
+    valid: errors.length === 0,
+    errors
+  };
+}
+
+export function ensureReleaseImpactSectionContent(markdown, releasePolicy) {
+  if (!releasePolicy?.enabled) {
+    return {
+      changed: false,
+      content: markdown
+    };
+  }
+
+  const { frontmatter, body, hasFrontmatter } = splitFrontmatter(markdown);
+  if (extractSection(body, RELEASE_IMPACT_SECTION)) {
+    return {
+      changed: false,
+      content: markdown
+    };
+  }
+
+  const sectionBlock = [
+    `## ${RELEASE_IMPACT_SECTION}`,
+    "- Impact: Unknown",
+    "- Reason: Resolve before PASS archive in this SemVer-enabled repo."
+  ].join("\n");
+
+  const insertionMarker = /^## Implementation Tasks\s*$/m;
+  const nextBody = insertionMarker.test(body)
+    ? body.replace(insertionMarker, `${sectionBlock}\n\n## Implementation Tasks`)
+    : `${body.trimEnd()}\n\n${sectionBlock}\n`;
+  const serialized = hasFrontmatter
+    ? `${serializeFrontmatter(frontmatter)}\n${nextBody.trimEnd()}\n`
+    : `${nextBody.trimEnd()}\n`;
+
+  return {
+    changed: true,
+    content: serialized
+  };
+}
+
 export function splitFrontmatter(markdown) {
   const text = String(markdown || "");
   if (!text.startsWith("---\n") && !text.startsWith("---\r\n")) {
@@ -285,7 +434,7 @@ function formatFrontmatterValue(value) {
   return JSON.stringify(text);
 }
 
-export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = "null" }) {
+export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = "null", releasePolicy = null }) {
   const createdAt = nowIso();
   const selectedMode = routeToMode(route);
   const nextCommand = route === "start" || route === "research" ? "plan" : route === "plan" ? "build" : route;
@@ -338,6 +487,12 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
     "- [ ] Replace with decision-complete answers before build.",
     "- Remaining Count: 1",
     "",
+    ...(releasePolicy?.enabled ? [
+      `## ${RELEASE_IMPACT_SECTION}`,
+      "- Impact: Unknown",
+      "- Reason: Resolve before PASS archive in this SemVer-enabled repo.",
+      ""
+    ] : []),
     "## Implementation Tasks",
     "- [ ] Define the first implementation slice.",
     "",
@@ -454,6 +609,7 @@ export async function nextPlanSequence(projectDir, dateStamp) {
 
 export async function createPlan(projectDir, { route = "plan", topic = "" } = {}) {
   await ensureRepoRuntimeState(projectDir);
+  const releasePolicy = await readReleasePolicy(projectDir);
   const dateStamp = localDateStamp();
   const seq = await nextPlanSequence(projectDir, dateStamp);
   const topicSlug = topic ? `-${slugify(topic)}` : "";
@@ -461,7 +617,7 @@ export async function createPlan(projectDir, { route = "plan", topic = "" } = {}
   const planPath = path.join(projectDir, PLAN_DIR, fileName);
   const planId = `PLAN-${dateStamp}-${String(seq).padStart(3, "0")}`;
   const title = `${route}${topic ? `-${slugify(topic)}` : "-workflow"}`;
-  const content = buildPlanTemplate({ planId, title, route, topic });
+  const content = buildPlanTemplate({ planId, title, route, topic, releasePolicy });
   await fsp.writeFile(planPath, content, "utf8");
   return await readPlanRecord(planPath);
 }
@@ -546,4 +702,20 @@ export function printJson(payload) {
 
 function normalizeText(value) {
   return String(value).replace(/\r\n/g, "\n");
+}
+
+function extractSectionValue(sectionText, label) {
+  const match = String(sectionText || "").match(new RegExp(`^-\\s+${escapeRegex(label)}:\\s*(.*)$`, "im"));
+  return match?.[1]?.trim() || "";
+}
+
+function normalizeVersionFileList(value) {
+  return [...new Set(String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean))];
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

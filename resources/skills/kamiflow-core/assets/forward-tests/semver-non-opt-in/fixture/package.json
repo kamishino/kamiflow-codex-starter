@@ -1,0 +1,5 @@
+{
+  "name": "semver-non-opt-in-fixture",
+  "version": "1.2.3",
+  "private": true
+}
