@@ -29,7 +29,7 @@ Use this route for targeted remediation of a concrete bug, regression, or failed
 5. Implement the fix.
 6. Run validation for the repaired behavior.
 7. Update the plan and hand off to `check`.
-8. Update `.local/project.md` only if the fix changes a durable decision or architecture guardrail.
+8. Update `.local/project.md` only if the fix changes a durable decision or architecture guardrail. If the outcome is still provisional, keep it in the plan and let `check` decide whether it belongs in project memory.
 
 ## Minimum Plan Mutation
 

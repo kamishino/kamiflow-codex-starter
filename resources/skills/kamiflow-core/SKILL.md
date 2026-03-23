@@ -16,7 +16,7 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 5. Only load the matching route reference after the route is inferred.
 6. For simple operational work with no stronger route signal, use the fast path instead of forcing plan-heavy flow.
 7. Before `build` or `fix`, first make sure the active plan is a decision-complete implementation or repair slice. If it is still draft or placeholder, update it before running `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`. If readiness still fails after the plan is ready, do not edit implementation files, reroute to `plan`, and end the current response without resuming `build` or `fix`.
-8. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
+8. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 9. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
 
 ## Local Helpers
@@ -39,13 +39,17 @@ Use direct markdown mutation as the primary workflow. Use the helper scripts onl
 - `.local/plans/*.md`
   - task execution state for the current implementation slice
 
-Keep the ownership one-way: plans may reference `.local/project.md` through `Project Fit`, and `.local/project.md` may absorb durable decisions from completed work, but `.local/project.md` does not rewrite `AGENTS.md` and plans do not duplicate the full project brief.
+Keep the ownership one-way: plans may reference `.local/project.md` through `Project Fit`, and `.local/project.md` may absorb durable guardrails, decisions, or unresolved recurring concerns from completed work, but `.local/project.md` does not rewrite `AGENTS.md`, does not become an automatic log, and plans do not duplicate the full project brief.
 
 ## Project Memory
 
 - Keep long-lived project memory in `.local/project.md`.
-- Treat `.local/project.md` as human-facing context, not machine-only metadata.
+- Treat `.local/project.md` as human-facing context, not machine-only metadata, task history, or an automatic log.
 - Use it to remember product direction, current priorities, architecture guardrails, open questions, and durable decisions across sessions.
+- Put recurring future constraints in `Architecture Guardrails`.
+- Put settled evidence-backed conclusions in `Recent Decisions`.
+- Put unresolved recurring risks or lessons that still need evidence in `Open Questions`.
+- Treat `check` as the primary promotion point for durable project-memory updates after implementation or research.
 - Do not create extra namespaced local state unless a future machine-only need appears.
 
 ## Route Selector

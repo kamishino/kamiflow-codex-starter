@@ -10,7 +10,7 @@ Client repos are the default workflow target. Treat the kamiflow-core source rep
 2. Read `.local/project.md` to understand product priorities, guardrails, open questions, and recent decisions.
 3. Read the active non-done plan to understand the current execution slice.
 
-This responsibility order does not replace route inference. It defines which local artifacts own which kind of context.
+This responsibility order does not replace route inference. It defines which local artifacts own which kind of context. Treat `.local/project.md` as curated durable memory, not task history.
 
 ## Decision Order
 
@@ -53,8 +53,9 @@ Keep `start` as the internal route token. When the request says `brainstorm` or 
 
 - Use `Current Priorities` to decide whether the request is aligned, premature, or missing important context.
 - Use `Architecture Guardrails` to constrain plans before implementation starts.
-- Use `Open Questions` to detect when `research` or `start` is safer than `plan`.
+- Use `Open Questions` to detect when `research` or `start` is safer than `plan`, especially for unresolved recurring concerns.
 - Use `Recent Decisions` to avoid contradicting prior choices or re-litigating settled direction.
+- Express anti-patterns through the existing sections: repeatable constraints as guardrails, settled conclusions as decisions, unresolved concerns as open questions.
 
 ## Safety Overrides
 

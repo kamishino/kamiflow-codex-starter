@@ -26,8 +26,9 @@ Use this route to verify behavior, review changes, and decide `PASS` or `BLOCK`.
 3. Compare results against the plan and changed files.
 4. Report findings first when problems exist.
 5. Mark acceptance criteria and Go/No-Go items only when evidence supports them.
-6. Promote durable conclusions into `Recent Decisions` when the evidence supports a stable product or architecture decision.
-7. Archive the plan only after `PASS` and complete checklists.
+6. Promote durable conclusions into existing `.local/project.md` sections only: use `Architecture Guardrails` for repeatable future constraints, `Recent Decisions` for settled evidence-backed conclusions, and `Open Questions` for unresolved recurring concerns.
+7. Keep temporary debugging notes, one-off findings, and plan-local execution detail out of `.local/project.md`.
+8. Archive the plan only after `PASS` and complete checklists.
 
 ## Minimum Plan Mutation
 

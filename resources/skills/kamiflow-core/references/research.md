@@ -26,7 +26,7 @@ Use this route when facts are missing, risk is high, or the user needs a recomme
 4. Compare realistic options or identify the most likely root cause.
 5. End with a concrete recommendation and next route.
 6. Persist the research outcome in the active plan before the final response.
-7. Update `.local/project.md` only when the research resolves an open question or creates a durable decision.
+7. Update `.local/project.md` only when the research resolves an open question, creates a durable decision, or confirms a repeatable guardrail. Otherwise keep the finding in the plan until `check` closes it out.
 
 ## Minimum Plan Mutation
 

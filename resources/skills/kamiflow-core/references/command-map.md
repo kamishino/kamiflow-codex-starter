@@ -24,7 +24,7 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 - `AGENTS.md`
   - repo rules and operating behavior
 - `.local/project.md`
-  - human-facing project context and durable decisions
+  - human-facing project context and curated durable memory
 - `.local/plans/*.md`
   - active task execution state
 - `.local/plans/done/*.md`

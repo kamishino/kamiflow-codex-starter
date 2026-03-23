@@ -25,7 +25,9 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 - Keep claims evidence-backed.
 - Keep long-lived product direction in `.local/project.md`, not in `AGENTS.md`.
 - Keep plans tied to `.local/project.md` through a short `Project Fit` section.
+- Treat `.local/project.md` as curated project memory, not task history or an automatic log.
 - Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
+- Express recurring anti-patterns as `Architecture Guardrails`, settled conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 - Do not reintroduce legacy bootstrap commands or repo-specific bootstrap surfaces.
 - Treat this generated contract as the client-repo default, not the source-repo contract.
 
