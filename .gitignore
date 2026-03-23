@@ -1,0 +1,7 @@
+node_modules/
+*.tgz
+.npm-cache/
+.agents/
+.local/
+temp/
+.codex/

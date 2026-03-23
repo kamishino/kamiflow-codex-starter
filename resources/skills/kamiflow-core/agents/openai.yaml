@@ -1,0 +1,6 @@
+interface:
+  display_name: Kami Flow Core
+  short_description: Intent-driven workflow router with a repo contract in AGENTS.md, a human project brief, and local plan helpers for daily Codex work in any client repo.
+  default_prompt: Use Kami Flow Core to read AGENTS.md, the project brief, and the active plan in that order, infer the right route, and produce an evidence-backed next step.
+policy:
+  allow_implicit_invocation: false

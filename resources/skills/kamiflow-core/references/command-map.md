@@ -1,0 +1,69 @@
+# Command Map
+
+Use this map to execute the inferred route and the right recovery command.
+
+## Install Or Repair
+
+- First install or refresh:
+  - `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
+- Recover missing active plan or runtime project brief:
+  - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+- Check build readiness:
+  - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
+- Archive completed PASS work:
+  - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+
+## Local State Ownership
+
+- `AGENTS.md`
+  - repo rules and operating behavior
+- `.local/project.md`
+  - human-facing project context and durable decisions
+- `.local/plans/*.md`
+  - active task execution state
+- `.local/plans/done/*.md`
+  - archived PASS plans
+- `.agents/skills/kamiflow-core/`
+  - installed skill runtime
+
+For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then the active plan.
+
+## Route Inference
+
+- Use `references/route-intent.md` as the routing authority.
+- Keep `start` as the canonical route token even when the user says `brainstorm` or `idea`.
+- Read `.local/project.md` before non-fast-path route work.
+- If the request is trivial operational work and no stronger route signal exists, use the fast path instead of forcing plan-heavy routing.
+
+## Route Selection
+
+- `start`: request is broad, ambiguous, or asking for brainstorm or idea exploration.
+- `plan`: request is concrete enough to specify implementation details and acceptance criteria.
+- `build`: an approved plan exists and one implementation slice should be executed now.
+- `check`: validate the changed behavior and decide `PASS` or `BLOCK`.
+- `research`: gather facts, compare options, or de-risk uncertain work.
+- `fix`: repair a concrete issue and then validate it.
+
+## Recovery Shortcuts
+
+- Skill missing from the project:
+  - `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
+- Repo contract or project brief is missing:
+  - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+- No active plan exists:
+  - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+- Plan is not build-ready:
+  - make zero implementation edits, update the plan markdown directly, and end the current response as `plan`
+  - rerun `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on the next build or fix attempt
+- Archive gate fails:
+  - finish the unchecked Implementation Tasks, Acceptance Criteria, and Go/No-Go items, then rerun `archive-plan.mjs`
+
+## Response Contract
+
+Keep non-fast-path route responses compact:
+
+- `State`
+- `Doing`
+- `Next`
+
+Add a literal `Check: PASS` or `Check: BLOCK` line whenever work was implemented or validated. Do not wrap `PASS` or `BLOCK` in backticks or other formatting.

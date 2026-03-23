@@ -1,0 +1,34 @@
+{
+  "name": "@kamishino/kamiflow-core",
+  "version": "0.1.0",
+  "description": "Standalone Kami Flow Core Codex skill with a minimal installer.",
+  "type": "module",
+  "bin": {
+    "kamiflow-core": "bin/kamiflow-core.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "validate": "node scripts/validate-skill.mjs",
+    "skill:sync": "node bin/kamiflow-core.js install --project .",
+    "skill:doctor": "node scripts/skill-doctor.mjs --project .",
+    "forward-test": "node scripts/forward-test.mjs",
+    "forward-test:full": "node scripts/forward-test.mjs --mode full",
+    "cutover:main": "node scripts/cutover-main.mjs",
+    "pack:local": "npm pack"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "resources/skills/kamiflow-core",
+    "README.md"
+  ],
+  "keywords": [
+    "codex",
+    "skill",
+    "kamiflow",
+    "workflow"
+  ],
+  "license": "UNLICENSED"
+}

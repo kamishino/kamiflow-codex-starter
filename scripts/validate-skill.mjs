@@ -1,0 +1,143 @@
+import fs from "node:fs";
+import fsp from "node:fs/promises";
+import path from "node:path";
+import {
+  collectRelativeFilePaths,
+  runtimeRequiredFiles,
+  skillSourceDir as skillRoot
+} from "./skill-runtime.mjs";
+
+const forbiddenPatterns = [
+  { pattern: /\bkfc\b/i, reason: "legacy KFC command reference" },
+  { pattern: /\.kfc\b/i, reason: "legacy .kfc runtime dependency" },
+  { pattern: /dogfood/i, reason: "dogfood-only language", allowPaths: ["assets/project-brief-dogfood.md", "scripts/lib-plan.mjs"] },
+  { pattern: /client\.rules|dogfood\.rules|base\.rules/i, reason: "rules-profile dependency" },
+  { pattern: /resources\/docs\//i, reason: "legacy repo-doc reference" },
+  { pattern: /setup\.ps1|setup\.sh/i, reason: "legacy bootstrap wrapper reference" }
+];
+
+function fail(message) {
+  console.error(`VALIDATION FAILED: ${message}`);
+  process.exit(1);
+}
+
+function parseFrontmatter(markdown) {
+  const match = markdown.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
+  if (!match) {
+    return null;
+  }
+  const values = {};
+  for (const line of match[1].split(/\r?\n/)) {
+    const parts = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (!parts) {
+      continue;
+    }
+    values[parts[1]] = parts[2].trim();
+  }
+  return values;
+}
+
+for (const relativePath of runtimeRequiredFiles) {
+  const absolutePath = path.join(skillRoot, relativePath);
+  if (!fs.existsSync(absolutePath)) {
+    fail(`Missing required file: ${relativePath}`);
+  }
+}
+
+const skillMarkdown = await fsp.readFile(path.join(skillRoot, "SKILL.md"), "utf8");
+const frontmatter = parseFrontmatter(skillMarkdown);
+if (!frontmatter) {
+  fail("SKILL.md is missing YAML frontmatter.");
+}
+if (frontmatter.name !== "kamiflow-core") {
+  fail(`SKILL.md name must be kamiflow-core. Received: ${frontmatter.name || "<missing>"}`);
+}
+if (!frontmatter.description) {
+  fail("SKILL.md description is missing.");
+}
+
+const openaiYaml = await fsp.readFile(path.join(skillRoot, "agents", "openai.yaml"), "utf8");
+for (const requiredSnippet of ["display_name:", "short_description:", "default_prompt:"]) {
+  if (!openaiYaml.includes(requiredSnippet)) {
+    fail(`agents/openai.yaml is missing ${requiredSnippet}`);
+  }
+}
+
+if (fs.existsSync(path.join(skillRoot, "templates"))) {
+  fail("templates/ should not exist. Use assets/ instead.");
+}
+
+const clientAgents = await fsp.readFile(path.join(skillRoot, "assets", "client-agents.md"), "utf8");
+for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/"]) {
+  if (!clientAgents.includes(requiredSnippet)) {
+    fail(`assets/client-agents.md must mention ${requiredSnippet}`);
+  }
+}
+
+const clientProjectBrief = await fsp.readFile(path.join(skillRoot, "assets", "project-brief-client.md"), "utf8");
+const dogfoodProjectBrief = await fsp.readFile(path.join(skillRoot, "assets", "project-brief-dogfood.md"), "utf8");
+for (const [label, text] of [["client", clientProjectBrief], ["dogfood", dogfoodProjectBrief]]) {
+  for (const heading of ["# Project Brief", "## Product Summary", "## Current Priorities", "## Architecture Guardrails", "## Open Questions", "## Recent Decisions"]) {
+    if (!text.includes(heading)) {
+      fail(`assets/project-brief-${label}.md is missing heading: ${heading}`);
+    }
+  }
+}
+if (!/client repo/i.test(clientProjectBrief)) {
+  fail("assets/project-brief-client.md must clearly describe client-repo project memory.");
+}
+if (!/kamiflow-core/i.test(dogfoodProjectBrief) || !/dogfood/i.test(dogfoodProjectBrief)) {
+  fail("assets/project-brief-dogfood.md must clearly describe the kamiflow-core source repo memory.");
+}
+
+const skillFiles = await collectRelativeFilePaths(skillRoot);
+for (const relativePath of skillFiles) {
+  const filePath = path.join(skillRoot, relativePath);
+  const text = await fsp.readFile(filePath, "utf8");
+  for (const check of forbiddenPatterns) {
+    const allowed = Array.isArray(check.allowPaths) && check.allowPaths.includes(relativePath);
+    if (!allowed && check.pattern.test(text)) {
+      fail(`${check.reason} found in ${relativePath}`);
+    }
+  }
+}
+
+const forwardTestManifest = JSON.parse(await fsp.readFile(path.join(skillRoot, "assets", "forward-tests", "scenarios.json"), "utf8"));
+if (!Array.isArray(forwardTestManifest) || forwardTestManifest.length === 0) {
+  fail("assets/forward-tests/scenarios.json must contain at least one scenario.");
+}
+
+for (const scenario of forwardTestManifest) {
+  if (!scenario.name || !scenario.grader) {
+    fail("Each forward-test scenario must include name and grader.");
+  }
+  if (!Array.isArray(scenario.modes) || scenario.modes.length === 0) {
+    fail(`Forward-test scenario ${scenario.name} must declare at least one mode.`);
+  }
+  if (!scenario.modes.every((mode) => mode === "smoke" || mode === "full")) {
+    fail(`Forward-test scenario ${scenario.name} has an unsupported mode.`);
+  }
+  if (!scenario.skipCodex) {
+    if (!scenario.promptFile) {
+      fail(`Forward-test scenario ${scenario.name} must include promptFile unless skipCodex is true.`);
+    }
+    const promptPath = path.join(skillRoot, "assets", "forward-tests", scenario.promptFile);
+    if (!fs.existsSync(promptPath)) {
+      fail(`Forward-test prompt is missing: ${scenario.promptFile}`);
+    }
+  }
+  if (scenario.fixtureDir) {
+    const fixturePath = path.join(skillRoot, "assets", "forward-tests", scenario.fixtureDir);
+    if (!fs.existsSync(fixturePath)) {
+      fail(`Forward-test fixture directory is missing: ${scenario.fixtureDir}`);
+    }
+  }
+  if (scenario.projectBriefFile) {
+    const projectBriefPath = path.join(skillRoot, "assets", "forward-tests", scenario.fixtureDir || "", scenario.projectBriefFile);
+    if (!fs.existsSync(projectBriefPath)) {
+      fail(`Forward-test project brief fixture is missing: ${scenario.projectBriefFile}`);
+    }
+  }
+}
+
+console.log("Validation passed: standalone kamiflow-core skill structure is consistent.");

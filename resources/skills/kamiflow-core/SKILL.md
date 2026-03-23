@@ -1,0 +1,101 @@
+---
+name: kamiflow-core
+description: Route daily Codex work through a lightweight workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the right phase from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; write a decision-complete plan; implement in scoped slices; verify with evidence; or recover plan state inside any client repo.
+---
+
+# Kami Flow Core
+
+Use this skill for daily client-repo work that needs route inference, one human-facing project brief, active plan continuity, and evidence-backed closeout.
+
+## Quick Start
+
+1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`.
+2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
+3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
+4. Infer the route automatically from intent aliases, active plan state, `.local/project.md`, and safety gates.
+5. Only load the matching route reference after the route is inferred.
+6. For simple operational work with no stronger route signal, use the fast path instead of forcing plan-heavy flow.
+7. Before `build` or `fix`, run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`. If it fails, do not edit implementation files, reroute to `plan`, and end the current response without resuming `build` or `fix`.
+8. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
+9. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
+
+## Local Helpers
+
+- `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+  - create or recover one active non-done plan, repair `.local/project.md`, and recreate a missing client `AGENTS.md` only when the repo contract is absent
+- `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
+  - verify whether the active plan is ready for `build` or `fix`
+- `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+  - archive a completed PASS plan and prune old done plans
+
+Use direct markdown mutation as the primary workflow. Use the helper scripts only for deterministic bootstrap, readiness, and archive recovery.
+
+## Three-Layer Contract
+
+- `AGENTS.md`
+  - repo rules, operating behavior, and the local artifacts Codex must read first
+- `.local/project.md`
+  - human-facing product memory for priorities, guardrails, open questions, and durable decisions
+- `.local/plans/*.md`
+  - task execution state for the current implementation slice
+
+Keep the ownership one-way: plans may reference `.local/project.md` through `Project Fit`, and `.local/project.md` may absorb durable decisions from completed work, but `.local/project.md` does not rewrite `AGENTS.md` and plans do not duplicate the full project brief.
+
+## Project Memory
+
+- Keep long-lived project memory in `.local/project.md`.
+- Treat `.local/project.md` as human-facing context, not machine-only metadata.
+- Use it to remember product direction, current priorities, architecture guardrails, open questions, and durable decisions across sessions.
+- Do not create extra namespaced local state unless a future machine-only need appears.
+
+## Route Selector
+
+- `start`: clarify a fuzzy request, brainstorm options, or shape an early idea.
+- `plan`: produce a decision-complete implementation plan.
+- `build`: implement one approved slice.
+- `check`: verify behavior and decide `PASS` or `BLOCK`.
+- `research`: gather missing facts or compare risky options.
+- `fix`: repair a concrete bug or regression.
+
+Use `references/route-intent.md` as the routing authority. Keep `start` as the canonical internal token; report `brainstorm` and `idea` as aliases, for example `Selected Route: start (brainstorm)`.
+
+## Output Contract
+
+For non-trivial route responses, keep the final answer compact:
+
+- `State`
+- `Doing`
+- `Next`
+
+`build`, `fix`, and `check` must also report a literal `Check: PASS` or `Check: BLOCK` line with concrete evidence. Do not wrap `PASS` or `BLOCK` in backticks or other formatting.
+
+## Plan Contract
+
+- Keep one active non-done plan by default in `.local/plans/`.
+- Reuse the active plan unless the scope is explicitly split.
+- Update plan frontmatter and add timestamped `WIP Log` lines before the final response.
+- Keep a short `Project Fit` section tied to `.local/project.md` instead of copying the whole brief into the plan.
+- Archive only after all Acceptance Criteria and Go/No-Go items are checked.
+
+## References
+
+- `references/route-intent.md`: route inference order, aliases, safety overrides, and fast-path rules.
+- `references/command-map.md`: install, recovery, local-state ownership, and route-selection commands.
+- `references/start.md`
+- `references/plan.md`
+- `references/build.md`
+- `references/check.md`
+- `references/research.md`
+- `references/fix.md`
+- `assets/*.md`: lightweight output skeletons and runtime templates to reuse when they help.
+
+## Boundaries
+
+- Keep one route per response.
+- Do not ask the user to name a route unless the ambiguity is truly high-impact; infer it from the request first.
+- Do not claim completion without evidence from files, commands, or explicit user data.
+- Do not treat `.local/project.md` as tracked source; it is generated runtime state in installed projects.
+- Treat a failing `ready-check.mjs` as a hard stop for `build` and `fix`; zero implementation edits are allowed until the plan is ready.
+- If `ready-check.mjs` fails, the rest of that response is `plan`-only work. You may update plan markdown, but do not rerun readiness and continue to implementation in the same response.
+- Do not depend on repo-specific docs, hidden bootstrap files, or extra workflow tools outside this skill folder.
+- If the skill is missing from the project, reinstall it with `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`.

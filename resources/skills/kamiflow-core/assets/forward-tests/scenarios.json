@@ -1,0 +1,61 @@
+[
+  {
+    "name": "repo-role-smoke",
+    "grader": "repo-role-smoke",
+    "initializeGit": true,
+    "skipCodex": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "fresh-empty",
+    "promptFile": "fresh-empty/prompt.md",
+    "grader": "fresh-empty",
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "draft-not-ready",
+    "promptFile": "draft-not-ready/prompt.md",
+    "fixtureDir": "draft-not-ready/fixture",
+    "grader": "draft-not-ready",
+    "primaryFile": "calc.js",
+    "modes": ["full"]
+  },
+  {
+    "name": "small-bug",
+    "promptFile": "small-bug/prompt.md",
+    "fixtureDir": "small-bug/fixture",
+    "grader": "small-bug",
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "closeout-check",
+    "promptFile": "closeout-check/prompt.md",
+    "fixtureDir": "closeout-check/fixture",
+    "grader": "closeout-check",
+    "modes": ["full"]
+  },
+  {
+    "name": "plan-alias",
+    "promptFile": "plan-alias/prompt.md",
+    "fixtureDir": "plan-alias/fixture",
+    "grader": "plan-alias",
+    "modes": ["full"]
+  },
+  {
+    "name": "project-brief-plan",
+    "promptFile": "project-brief-plan/prompt.md",
+    "fixtureDir": "project-brief-plan/fixture",
+    "projectBriefFile": "project-brief.md",
+    "grader": "project-brief-plan",
+    "primaryFile": ".local/project.md",
+    "modes": ["full"]
+  },
+  {
+    "name": "research-alias",
+    "promptFile": "research-alias/prompt.md",
+    "fixtureDir": "research-alias/fixture",
+    "grader": "research-alias",
+    "primaryFile": "math.js",
+    "modes": ["full"]
+  }
+]
