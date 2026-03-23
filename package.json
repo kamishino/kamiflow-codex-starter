@@ -35,6 +35,7 @@
     "resources/skills/kamiflow-core/references/research.md",
     "resources/skills/kamiflow-core/references/fix.md",
     "resources/skills/kamiflow-core/scripts/lib-plan.mjs",
+    "resources/skills/kamiflow-core/scripts/lib-process.mjs",
     "resources/skills/kamiflow-core/scripts/ensure-plan.mjs",
     "resources/skills/kamiflow-core/scripts/ready-check.mjs",
     "resources/skills/kamiflow-core/scripts/archive-plan.mjs",

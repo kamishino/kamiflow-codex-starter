@@ -75,9 +75,24 @@ if (publishedPackageFiles.includes(packagedInstallMetaPath)) {
   fail("package.json must not publish install-meta.json because it is generated during install.");
 }
 
+const runtimeProcessHelperPath = "scripts/lib-process.mjs";
+if (!fs.existsSync(path.join(skillRoot, runtimeProcessHelperPath))) {
+  fail(`Missing runtime helper file: ${runtimeProcessHelperPath}`);
+}
+if (!clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
+  fail("package.json files must publish scripts/lib-process.mjs because runtime helpers depend on it.");
+}
+
 for (const relativePath of clientRuntimeRequiredFiles) {
   if (!fs.existsSync(path.join(skillRoot, relativePath))) {
     fail(`package.json files references a missing skill runtime file: ${relativePath}`);
+  }
+}
+
+for (const runtimeScriptPath of ["scripts/finish-status.mjs", "scripts/version-closeout.mjs"]) {
+  const runtimeScript = await fsp.readFile(path.join(skillRoot, runtimeScriptPath), "utf8");
+  if (runtimeScript.includes("./lib-process.mjs") && !clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
+    fail(`${runtimeScriptPath} imports ./lib-process.mjs but package.json files does not publish scripts/lib-process.mjs.`);
   }
 }
 

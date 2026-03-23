@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
@@ -13,6 +12,7 @@ import {
   resolveLatestDonePlan,
   resolveProjectDir
 } from "./lib-plan.mjs";
+import { readGitState } from "./lib-process.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));
@@ -245,52 +245,4 @@ async function readPackageVersion(projectDir) {
   } catch {
     return "";
   }
-}
-
-function readGitState(projectDir) {
-  const repoCheck = runGit(projectDir, ["rev-parse", "--is-inside-work-tree"]);
-  if (repoCheck.code !== 0 || !/^true$/i.test(repoCheck.stdout.trim())) {
-    return {
-      insideWorktree: false,
-      dirtyPaths: [],
-      headSubject: "",
-      tagsAtHead: []
-    };
-  }
-
-  return {
-    insideWorktree: true,
-    dirtyPaths: readGitStatus(projectDir),
-    headSubject: runGit(projectDir, ["log", "-1", "--pretty=%s"]).stdout.trim(),
-    tagsAtHead: runGit(projectDir, ["tag", "--points-at", "HEAD"]).stdout
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean)
-  };
-}
-
-function readGitStatus(projectDir) {
-  const statusResult = runGit(projectDir, ["status", "--porcelain"]);
-  if (statusResult.code !== 0) {
-    return [];
-  }
-  return statusResult.stdout
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\r$/, ""))
-    .filter((line) => line.trim().length > 0)
-    .map((line) => line.slice(3).trim())
-    .filter(Boolean);
-}
-
-function runGit(projectDir, args) {
-  const result = spawnSync("git", args, {
-    cwd: projectDir,
-    encoding: "utf8",
-    shell: process.platform === "win32"
-  });
-  return {
-    code: Number.isInteger(result.status) ? result.status : 1,
-    stdout: String(result.stdout || ""),
-    stderr: String(result.stderr || "")
-  };
 }

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
@@ -12,6 +11,7 @@ import {
   resolvePlanRef,
   resolveProjectDir
 } from "./lib-plan.mjs";
+import { isGitWorktree, readGitStatus as readGitStatusSync } from "./lib-process.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));
@@ -63,8 +63,7 @@ if (!releasePolicy.version_files.includes("package.json")) {
   process.exit(1);
 }
 
-const gitRepoCheck = runGit(projectDir, ["rev-parse", "--is-inside-work-tree"]);
-if (gitRepoCheck.code !== 0 || !/^true$/i.test(gitRepoCheck.stdout.trim())) {
+if (!isGitWorktree(projectDir)) {
   console.error("SemVer Closeout: BLOCK");
   console.error("Reason: SemVer closeout requires a Git worktree so release-only commits and tags can be created.");
   console.error("Recovery: Run this helper inside a Git repo after the functional changes are committed.");
@@ -193,27 +192,5 @@ function shellEscape(value) {
 }
 
 function readGitStatus(projectDir) {
-  const statusResult = runGit(projectDir, ["status", "--porcelain"]);
-  if (statusResult.code !== 0) {
-    return [];
-  }
-  return statusResult.stdout
-    .split(/\r?\n/)
-    .map((line) => line.replace(/\r$/, ""))
-    .filter((line) => line.trim().length > 0)
-    .map((line) => line.slice(3).trim())
-    .filter(Boolean);
-}
-
-function runGit(projectDir, args) {
-  const result = spawnSync("git", args, {
-    cwd: projectDir,
-    encoding: "utf8",
-    shell: process.platform === "win32"
-  });
-  return {
-    code: Number.isInteger(result.status) ? result.status : 1,
-    stdout: String(result.stdout || ""),
-    stderr: String(result.stderr || "")
-  };
+  return readGitStatusSync(projectDir);
 }

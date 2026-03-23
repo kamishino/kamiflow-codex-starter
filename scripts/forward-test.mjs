@@ -4,13 +4,13 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import {
   collectRelativeFilePaths,
   installMetaRelativePath,
   readInstallMeta
 } from "./skill-runtime.mjs";
+import { runCommand as runProcessCommand } from "../resources/skills/kamiflow-core/scripts/lib-process.mjs";
 import {
   countCheckboxes,
   detectRepoRole,
@@ -376,6 +376,22 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     ok: !fs.existsSync(path.join(workspace, ".kfc")) && !fs.existsSync(path.join(workspace, ".codex", "rules")),
     detail: "workspace contains only the skill install, not legacy scaffold"
   });
+
+  if (scenario.runFinishStatus) {
+    checks.push({
+      label: "finish-status-no-dep0190-warning",
+      ok: !/\[DEP0190\]/i.test(`${finishStatusResult.stdout}\n${finishStatusResult.stderr}`),
+      detail: "finish-status output should not emit the Node DEP0190 warning"
+    });
+  }
+
+  if (scenario.runVersionCloseout) {
+    checks.push({
+      label: "version-closeout-no-dep0190-warning",
+      ok: !/\[DEP0190\]/i.test(`${versionCloseoutResult.stdout}\n${versionCloseoutResult.stderr}`),
+      detail: "version-closeout output should not emit the Node DEP0190 warning"
+    });
+  }
 
   if (scenario.grader === "fresh-empty") {
     const lifecyclePhase = String(activePlan?.frontmatter.lifecycle_phase || "").toLowerCase();
@@ -1362,75 +1378,9 @@ function parseCliArgs(argv) {
   return parsed;
 }
 
-function resolveCommand(command) {
-  if (process.platform === "win32") {
-    return command;
-  }
-  if (/\.(cmd|exe|bat)$/i.test(command)) {
-    return command;
-  }
-  return command;
-}
-
 async function runCommand(command, args, options = {}) {
-  return await new Promise((resolve) => {
-    const child = spawn(resolveCommand(command), args, {
-      cwd: options.cwd || repoRoot,
-      env: {
-        ...process.env,
-        ...options.env
-      },
-      stdio: "pipe",
-      shell: process.platform === "win32"
-    });
-
-    let stdout = "";
-    let stderr = "";
-    let finished = false;
-
-    const finish = (code, signal, timedOut = false) => {
-      if (finished) {
-        return;
-      }
-      finished = true;
-      resolve({
-        code: timedOut ? -1 : code ?? 0,
-        signal: signal || "",
-        stdout,
-        stderr,
-        timedOut
-      });
-    };
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", (error) => {
-      stderr += error.message;
-      finish(1, "");
-    });
-
-    child.on("close", (code, signal) => {
-      finish(code, signal);
-    });
-
-    if (options.input) {
-      child.stdin.write(options.input);
-    }
-    child.stdin.end();
-
-    if (options.timeoutMs) {
-      setTimeout(() => {
-        if (!finished) {
-          child.kill("SIGTERM");
-          finish(-1, "SIGTERM", true);
-        }
-      }, options.timeoutMs);
-    }
+  return await runProcessCommand(command, args, {
+    ...options,
+    cwd: options.cwd || repoRoot
   });
 }

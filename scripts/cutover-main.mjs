@@ -3,8 +3,8 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { runCommand as runProcessCommand } from "../resources/skills/kamiflow-core/scripts/lib-process.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(here, "..");
@@ -380,71 +380,8 @@ function parseCliArgs(argv) {
 }
 
 async function runCommand(command, commandArgs, options = {}) {
-  return await new Promise((resolve) => {
-    const spawnSpec = buildSpawnSpec(command, commandArgs);
-    const child = spawn(spawnSpec.command, spawnSpec.args, {
-      cwd: options.cwd || repoRoot,
-      env: {
-        ...process.env,
-        ...options.env
-      },
-      stdio: "pipe",
-      shell: false
-    });
-
-    let stdout = "";
-    let stderr = "";
-    let finished = false;
-
-    const finish = (code, signal) => {
-      if (finished) {
-        return;
-      }
-      finished = true;
-      resolve({
-        code: code ?? 0,
-        signal: signal || "",
-        stdout,
-        stderr
-      });
-    };
-
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk.toString();
-    });
-
-    child.on("error", (error) => {
-      stderr += error.message;
-      finish(1, "");
-    });
-
-    child.on("close", (code, signal) => {
-      finish(code, signal);
-    });
+  return await runProcessCommand(command, commandArgs, {
+    ...options,
+    cwd: options.cwd || repoRoot
   });
-}
-
-function buildSpawnSpec(command, commandArgs) {
-  if (process.platform !== "win32") {
-    return {
-      command,
-      args: commandArgs
-    };
-  }
-
-  if (command === "npm" || command === "npx") {
-    return {
-      command: "cmd.exe",
-      args: ["/d", "/s", "/c", `${command}.cmd`, ...commandArgs]
-    };
-  }
-
-  return {
-    command,
-    args: commandArgs
-  };
 }
