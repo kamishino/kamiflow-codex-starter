@@ -2,7 +2,7 @@
 
 Use this map to execute the inferred route and the right recovery command.
 
-Client repos are the default target. Treat the kamiflow-core source repo as the source-repo exception and call that out explicitly when you are working in it.
+Client repos are the default target. Treat the kamiflow-core source repo as the source-repo exception, and keep the source-only forward-test bundle and maintainer checks there.
 
 ## Install Or Repair
 

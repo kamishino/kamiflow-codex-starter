@@ -23,7 +23,7 @@ export const projectBriefRelative = path.join(".local", "project.md");
 export const rootAgentsRelative = ROOT_AGENTS_PATH;
 export { REPO_ROLE_CLIENT, REPO_ROLE_DOGFOOD, detectRepoRole, projectBriefAssetRelativeForRole };
 
-export const runtimeRequiredFiles = [
+export const clientRuntimeRequiredFiles = [
   "SKILL.md",
   "agents/openai.yaml",
   "references/command-map.md",
@@ -40,12 +40,18 @@ export const runtimeRequiredFiles = [
   "scripts/archive-plan.mjs",
   "assets/client-agents.md",
   "assets/project-brief-client.md",
-  "assets/project-brief-dogfood.md",
   "assets/start-report.md",
   "assets/plan-spec.md",
   "assets/check-report.md",
+];
+
+export const sourceOnlyRequiredFiles = [
+  "assets/project-brief-dogfood.md",
   "assets/forward-tests/scenarios.json"
 ];
+
+export const runtimeRequiredFiles = clientRuntimeRequiredFiles;
+export const sourceRequiredFiles = [...clientRuntimeRequiredFiles, ...sourceOnlyRequiredFiles];
 
 export function parseCliArgs(argv) {
   const parsed = {};

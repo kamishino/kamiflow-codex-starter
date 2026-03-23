@@ -5,7 +5,7 @@ description: Route daily Codex work through a client-repo-first workflow with a 
 
 # Kami Flow Core
 
-Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception. It needs route inference, one human-facing project brief, active plan continuity, and evidence-backed closeout.
+Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks. It needs route inference, one human-facing project brief, active plan continuity, and evidence-backed closeout.
 
 ## Quick Start
 
