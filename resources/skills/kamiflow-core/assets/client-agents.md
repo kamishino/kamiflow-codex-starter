@@ -1,6 +1,6 @@
 # Repo Contract
 
-This file is the generated local repo contract for a client project using `kamiflow-core`.
+This file is the generated local repo contract for a client repo using `kamiflow-core`. Client repos are the default case; the kamiflow-core source repo keeps its tracked root `AGENTS.md` and treats itself as the source-repo exception.
 
 ## Ownership
 
@@ -27,6 +27,7 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 - Keep plans tied to `.local/project.md` through a short `Project Fit` section.
 - Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
 - Do not reintroduce legacy bootstrap commands or repo-specific bootstrap surfaces.
+- Treat this generated contract as the client-repo default, not the source-repo contract.
 
 ## Safety
 

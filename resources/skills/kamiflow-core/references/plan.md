@@ -1,6 +1,6 @@
 # Plan
 
-Use this route when the request is clear enough to specify implementation details and acceptance criteria.
+Use this route when the request is clear enough to specify implementation details and acceptance criteria. Client repos are the default target; the kamiflow-core source repo is the source-repo exception.
 
 ## Trigger Cues
 

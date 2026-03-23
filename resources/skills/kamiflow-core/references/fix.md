@@ -1,6 +1,6 @@
 # Fix
 
-Use this route for targeted remediation of a concrete bug, regression, or failed validation.
+Use this route for targeted remediation of a concrete bug, regression, or failed validation. Client repos are the default target; the kamiflow-core source repo is the source-repo exception and should be treated as maintainer repair.
 
 ## Trigger Cues
 
@@ -22,13 +22,14 @@ Use this route for targeted remediation of a concrete bug, regression, or failed
 
 ## Steps
 
-1. Run `ready-check.mjs` and stop on any failure before touching implementation files.
-2. Resolve the active plan, `AGENTS.md`, `.local/project.md`, and the specific failing behavior.
-3. State the suspected cause and the smallest repair slice.
-4. Implement the fix.
-5. Run validation for the repaired behavior.
-6. Update the plan and hand off to `check`.
-7. Update `.local/project.md` only if the fix changes a durable decision or architecture guardrail.
+1. Resolve the active plan, `AGENTS.md`, `.local/project.md`, and the specific failing behavior.
+2. If the plan is still draft or placeholder, upgrade it to a decision-complete repair slice before running `ready-check.mjs`.
+3. Run `ready-check.mjs` and stop on any failure before touching implementation files.
+4. State the suspected cause and the smallest repair slice.
+5. Implement the fix.
+6. Run validation for the repaired behavior.
+7. Update the plan and hand off to `check`.
+8. Update `.local/project.md` only if the fix changes a durable decision or architecture guardrail.
 
 ## Minimum Plan Mutation
 

@@ -1,6 +1,6 @@
 # Project Brief
 
-This file is the human-facing dogfood brief for the `kamiflow-core` source repo.
+This file is the human-facing dogfood brief for the `kamiflow-core` source repo. Use the client-project template for normal client repos; this file is the source-repo exception.
 Keep repo rules in the tracked root `AGENTS.md`. Keep task execution state in `.local/plans/*.md`.
 
 ## Product Summary
@@ -24,4 +24,4 @@ Keep repo rules in the tracked root `AGENTS.md`. Keep task execution state in `.
 
 ## Recent Decisions
 - Decision 1: `AGENTS.md` owns repo rules, `.local/project.md` owns product memory, and `.local/plans/*.md` own execution state
-- Decision 2: client repos get a generated local-only `AGENTS.md`, while this source repo keeps its tracked root `AGENTS.md`
+- Decision 2: client repos get a generated local-only `AGENTS.md`, while this source repo keeps its tracked root `AGENTS.md` as the dogfood exception

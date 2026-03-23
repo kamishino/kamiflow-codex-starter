@@ -1,6 +1,6 @@
 # Research
 
-Use this route when facts are missing, risk is high, or the user needs a recommendation grounded in evidence.
+Use this route when facts are missing, risk is high, or the user needs a recommendation grounded in evidence. Client repos are the default target; the kamiflow-core source repo is the source-repo exception.
 
 ## Trigger Cues
 

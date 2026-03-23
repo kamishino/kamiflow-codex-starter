@@ -1,6 +1,6 @@
 # Build
 
-Use this route to implement one approved slice from the active plan.
+Use this route to implement one approved slice from the active plan. Client repos are the default target; the kamiflow-core source repo is the source-repo exception and should be treated as maintainer work.
 
 ## Trigger Cues
 
@@ -14,7 +14,7 @@ Use this route to implement one approved slice from the active plan.
 ## Entry Gate
 
 - Required mode: `Build`.
-- A target plan must exist and be build-ready.
+- A target plan must exist and be build-ready. If it is still draft or placeholder, upgrade it to a decision-complete slice before running `ready-check.mjs`.
 - Read `AGENTS.md`, then `.local/project.md`, before editing implementation files.
 - Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` before editing implementation files.
 - If readiness is unclear or the command fails, stop immediately, make zero implementation edits, reroute to `plan`, and end the current response without returning to `build`.
@@ -22,14 +22,15 @@ Use this route to implement one approved slice from the active plan.
 
 ## Steps
 
-1. Run `ready-check.mjs` and stop on any failure before touching implementation files.
-2. Resolve the target plan, `AGENTS.md`, `.local/project.md`, and one concrete task slice.
-3. State the exact files or behaviors that will change.
-4. Implement the smallest useful slice.
-5. Run targeted validation commands.
-6. Update only `Implementation Tasks` progress in the plan, then set the next handoff to `check`.
-7. Update `.local/project.md` only if the work changed a durable priority, guardrail, or product decision.
-8. Report a literal `Check: PASS` or `Check: BLOCK` line with evidence before the final response. Do not wrap `PASS` or `BLOCK` in backticks.
+1. Resolve the target plan, `AGENTS.md`, `.local/project.md`, and one concrete task slice.
+2. If the plan is still draft or placeholder, upgrade it to a decision-complete slice before running `ready-check.mjs`.
+3. Run `ready-check.mjs` and stop on any failure before touching implementation files.
+4. State the exact files or behaviors that will change.
+5. Implement the smallest useful slice.
+6. Run targeted validation commands.
+7. Update only `Implementation Tasks` progress in the plan, then set the next handoff to `check`.
+8. Update `.local/project.md` only if the work changed a durable priority, guardrail, or product decision.
+9. Report a literal `Check: PASS` or `Check: BLOCK` line with evidence before the final response. Do not wrap `PASS` or `BLOCK` in backticks.
 
 ## Minimum Plan Mutation
 

@@ -1,6 +1,6 @@
 # Check
 
-Use this route to verify behavior, review changes, and decide `PASS` or `BLOCK`.
+Use this route to verify behavior, review changes, and decide `PASS` or `BLOCK`. Client repos are the default target; the kamiflow-core source repo is the source-repo exception and should be reviewed in maintainer context.
 
 ## Trigger Cues
 

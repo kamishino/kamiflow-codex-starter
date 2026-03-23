@@ -2,10 +2,14 @@
 
 Use this map to execute the inferred route and the right recovery command.
 
+Client repos are the default target. Treat the kamiflow-core source repo as the source-repo exception and call that out explicitly when you are working in it.
+
 ## Install Or Repair
 
 - First install or refresh:
   - `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
+- In the kamiflow-core source repo, use:
+  - `npm run skill:sync`
 - Recover missing active plan or runtime project brief:
   - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
 - Check build readiness:
@@ -26,7 +30,7 @@ Use this map to execute the inferred route and the right recovery command.
 - `.agents/skills/kamiflow-core/`
   - installed skill runtime
 
-For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then the active plan.
+For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then the active plan. In client repos, the client brief is the default context; in the source repo, the source-repo brief is the default context.
 
 ## Route Inference
 

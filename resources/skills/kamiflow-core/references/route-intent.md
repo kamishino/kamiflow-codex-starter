@@ -2,6 +2,8 @@
 
 Use this file as the routing authority for daily prompts.
 
+Client repos are the default workflow target. Treat the kamiflow-core source repo as the source-repo exception and keep maintainer-only context explicit whenever you are in it.
+
 ## Responsibility Order
 
 1. Read `AGENTS.md` to understand repo rules and operating behavior.
@@ -14,7 +16,7 @@ This responsibility order does not replace route inference. It defines which loc
 
 1. Check for explicit intent aliases in the user's request.
 2. If no explicit alias is present, use the active non-done plan's `next_command` or `lifecycle_phase` as the route hint.
-3. Read `.local/project.md` and use it to bias route framing and tradeoffs.
+3. Read `.local/project.md` and use it to bias route framing and tradeoffs, especially whether the workspace is a client repo or the kamiflow-core source repo.
 4. Apply safety overrides before doing work:
    - `build` and `fix` require `ready-check.mjs` to pass
    - `check` requires validation evidence before claiming `PASS`

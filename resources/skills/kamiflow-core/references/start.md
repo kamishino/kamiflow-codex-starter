@@ -1,6 +1,6 @@
 # Start
 
-Use this route when the request is fuzzy, early-stage, or explicitly asks to brainstorm or shape an idea before planning.
+Use this route when the request is fuzzy, early-stage, or explicitly asks to brainstorm or shape an idea before planning. Client repos are the default target; the kamiflow-core source repo is the source-repo exception.
 
 ## Trigger Cues
 

@@ -1,21 +1,21 @@
 ---
 name: kamiflow-core
-description: Route daily Codex work through a lightweight workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the right phase from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; write a decision-complete plan; implement in scoped slices; verify with evidence; or recover plan state inside any client repo.
+description: Route daily Codex work through a client-repo-first workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the right phase from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; write a decision-complete plan; implement in scoped slices; verify with evidence; or recover plan state inside any client repo. Treat the kamiflow-core source repo as the source-repo exception.
 ---
 
 # Kami Flow Core
 
-Use this skill for daily client-repo work that needs route inference, one human-facing project brief, active plan continuity, and evidence-backed closeout.
+Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception. It needs route inference, one human-facing project brief, active plan continuity, and evidence-backed closeout.
 
 ## Quick Start
 
-1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`.
+1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context.
 2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
 3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
 4. Infer the route automatically from intent aliases, active plan state, `.local/project.md`, and safety gates.
 5. Only load the matching route reference after the route is inferred.
 6. For simple operational work with no stronger route signal, use the fast path instead of forcing plan-heavy flow.
-7. Before `build` or `fix`, run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`. If it fails, do not edit implementation files, reroute to `plan`, and end the current response without resuming `build` or `fix`.
+7. Before `build` or `fix`, first make sure the active plan is a decision-complete implementation or repair slice. If it is still draft or placeholder, update it before running `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`. If readiness still fails after the plan is ready, do not edit implementation files, reroute to `plan`, and end the current response without resuming `build` or `fix`.
 8. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
 9. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
 
@@ -98,4 +98,5 @@ For non-trivial route responses, keep the final answer compact:
 - Treat a failing `ready-check.mjs` as a hard stop for `build` and `fix`; zero implementation edits are allowed until the plan is ready.
 - If `ready-check.mjs` fails, the rest of that response is `plan`-only work. You may update plan markdown, but do not rerun readiness and continue to implementation in the same response.
 - Do not depend on repo-specific docs, hidden bootstrap files, or extra workflow tools outside this skill folder.
+- Treat client repos as the default operating target; describe the kamiflow-core source repo explicitly as the source-repo exception whenever you are working here.
 - If the skill is missing from the project, reinstall it with `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`.
