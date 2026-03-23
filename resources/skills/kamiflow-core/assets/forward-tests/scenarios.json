@@ -42,6 +42,22 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "ready-check-placeholder",
+    "fixtureDir": "ready-check-placeholder/fixture",
+    "grader": "ready-check-placeholder",
+    "skipCodex": true,
+    "runReadyCheck": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "ready-check-build-ready",
+    "fixtureDir": "small-bug/fixture",
+    "grader": "ready-check-build-ready",
+    "skipCodex": true,
+    "runReadyCheck": true,
+    "modes": ["smoke", "full"]
+  },
+  {
     "name": "semver-non-opt-in",
     "fixtureDir": "semver-non-opt-in/fixture",
     "grader": "semver-non-opt-in",

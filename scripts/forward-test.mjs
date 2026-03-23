@@ -128,6 +128,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const installLogPath = path.join(logDir, "install.log");
   const reinstallLogPath = path.join(logDir, "install-rerun.log");
   const doctorLogPath = path.join(logDir, "doctor.log");
+  const readyCheckLogPath = path.join(logDir, "ready-check.log");
   const versionCloseoutLogPath = path.join(logDir, "version-closeout.log");
   const archiveLogPath = path.join(logDir, "archive-plan.log");
   const baselineCommitLogPath = path.join(logDir, "baseline-commit.log");
@@ -246,6 +247,14 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.writeFile(doctorLogPath, `${doctorResult.stdout}\n${doctorResult.stderr}`.trim(), "utf8");
   }
 
+  let readyCheckResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runReadyCheck) {
+    readyCheckResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "ready-check.mjs"), "--project", "."], {
+      cwd: externalWorkspace
+    });
+    await fsp.writeFile(readyCheckLogPath, `${readyCheckResult.stdout}\n${readyCheckResult.stderr}`.trim(), "utf8");
+  }
+
   let versionCloseoutResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runVersionCloseout) {
     versionCloseoutResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "version-closeout.mjs"), "--project", "."], {
@@ -304,6 +313,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     reinstallResult,
     reinstallState,
     doctorResult,
+    readyCheckResult,
     versionCloseoutResult,
     archivePlanResult,
     codexResult,
@@ -321,13 +331,14 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
   const latestDonePlan = donePlans.sort((left, right) => right.stat.mtimeMs - left.stat.mtimeMs)[0] || null;
   const combinedOutput = `${finalMessage}\n${codexResult.stdout}\n${codexResult.stderr}`;
   const userFacingOutput = finalMessage;
+  const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
   const findings = [];
   const checks = [];
 
@@ -631,6 +642,53 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
   }
 
+  if (scenario.grader === "ready-check-placeholder") {
+    const readyCheckOutput = `${readyCheckResult.stdout}\n${readyCheckResult.stderr}`;
+    checks.push({
+      label: "ready-check-blocks-placeholder-plan",
+      ok: readyCheckResult.code !== 0,
+      detail: `exit code ${readyCheckResult.code}`
+    });
+    checks.push({
+      label: "ready-check-build-ready-false",
+      ok: readyCheckPayload?.build_ready === false,
+      detail: readyCheckPayload ? `build_ready=${String(readyCheckPayload.build_ready)}` : "ready-check did not return JSON"
+    });
+    checks.push({
+      label: "goal-placeholder-reported",
+      ok: /Goal still contains placeholder content/i.test(readyCheckOutput),
+      detail: "ready-check should report placeholder Goal content"
+    });
+    checks.push({
+      label: "project-fit-placeholder-reported",
+      ok: /Project Fit is missing a concrete priority or guardrail tie-back/i.test(readyCheckOutput),
+      detail: "ready-check should report placeholder Project Fit content"
+    });
+    checks.push({
+      label: "validation-placeholder-reported",
+      ok: /Validation Commands/i.test(readyCheckOutput),
+      detail: "ready-check should report placeholder Validation Commands content"
+    });
+  }
+
+  if (scenario.grader === "ready-check-build-ready") {
+    checks.push({
+      label: "ready-check-passes-build-ready-plan",
+      ok: readyCheckResult.code === 0,
+      detail: `exit code ${readyCheckResult.code}`
+    });
+    checks.push({
+      label: "ready-check-build-ready-true",
+      ok: readyCheckPayload?.build_ready === true,
+      detail: readyCheckPayload ? `build_ready=${String(readyCheckPayload.build_ready)}` : "ready-check did not return JSON"
+    });
+    checks.push({
+      label: "ready-check-has-no-findings",
+      ok: Array.isArray(readyCheckPayload?.findings) && readyCheckPayload.findings.length === 0,
+      detail: Array.isArray(readyCheckPayload?.findings) ? `${readyCheckPayload.findings.length} findings` : "ready-check did not return findings"
+    });
+  }
+
   if (scenario.grader === "semver-non-opt-in") {
     checks.push({
       label: "archive-without-release-impact-still-passes",
@@ -802,7 +860,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
     checks.push({
       label: "readiness-failure-surfaced",
-      ok: /ready-check\.mjs|build-ready|decision is not GO|BLOCK/i.test(finalMessage),
+      ok: /ready-check\.mjs|build-ready|decision is not GO|Goal still contains placeholder content|Project Fit is missing a concrete priority or guardrail tie-back|Validation Commands/i.test(finalMessage),
       detail: "final message should mention readiness blocking or the recovery command"
     });
     checks.push({
@@ -1074,6 +1132,18 @@ async function hashFile(filePath) {
 async function writeJson(filePath, payload) {
   await fsp.mkdir(path.dirname(filePath), { recursive: true });
   await fsp.writeFile(filePath, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+}
+
+function parseJsonMaybe(text) {
+  const trimmed = String(text || "").trim();
+  if (!trimmed) {
+    return null;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return null;
+  }
 }
 
 async function readPackageVersion(filePath) {

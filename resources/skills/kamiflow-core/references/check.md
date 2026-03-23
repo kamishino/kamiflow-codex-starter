@@ -24,6 +24,7 @@ Use this route to verify behavior, review changes, and decide `PASS` or `BLOCK`.
 1. Resolve the target plan, the expected acceptance criteria, and the relevant context from `AGENTS.md` and `.local/project.md`.
 2. Run the relevant validation commands.
 3. Compare results against the plan and changed files.
+4. If the active plan still contains placeholder `Goal`, `Project Fit`, `Implementation Tasks`, `Acceptance Criteria`, or `Validation Commands` text, block closeout and send the slice back through planning instead of pretending it was build-ready.
 4. Report findings first when problems exist.
 5. Mark acceptance criteria and Go/No-Go items only when evidence supports them.
 6. Promote durable conclusions into existing `.local/project.md` sections only: use `Architecture Guardrails` for repeatable future constraints, `Recent Decisions` for settled evidence-backed conclusions, and `Open Questions` for unresolved recurring concerns.

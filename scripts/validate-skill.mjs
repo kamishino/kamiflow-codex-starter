@@ -95,6 +95,37 @@ for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/"
   }
 }
 
+const planSpec = await fsp.readFile(path.join(skillRoot, "assets", "plan-spec.md"), "utf8");
+for (const requiredSnippet of [
+  "# Plan Spec",
+  "## Goal",
+  "## Scope (In/Out)",
+  "## Constraints",
+  "## Project Fit",
+  "## Open Decisions",
+  "## Implementation Tasks",
+  "## Acceptance Criteria",
+  "## Validation Commands",
+  "## Release Impact",
+  "## Go/No-Go Checklist",
+  "## Handoff",
+  "## WIP Log"
+]) {
+  if (!planSpec.includes(requiredSnippet)) {
+    fail(`assets/plan-spec.md must mention ${requiredSnippet}`);
+  }
+}
+if (planSpec.includes("## Task Breakdown")) {
+  fail("assets/plan-spec.md must not mention Task Breakdown; use Implementation Tasks.");
+}
+
+const checkReport = await fsp.readFile(path.join(skillRoot, "assets", "check-report.md"), "utf8");
+for (const requiredSnippet of ["# Check Report", "Check: PASS|BLOCK", "State", "Doing", "Next"]) {
+  if (!checkReport.includes(requiredSnippet)) {
+    fail(`assets/check-report.md must mention ${requiredSnippet}`);
+  }
+}
+
 const clientProjectBrief = await fsp.readFile(path.join(skillRoot, "assets", "project-brief-client.md"), "utf8");
 const projectBriefs = [["client", clientProjectBrief]];
 let dogfoodProjectBrief = "";

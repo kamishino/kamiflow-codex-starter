@@ -27,8 +27,10 @@ Use this route when the request is clear enough to specify implementation detail
 4. Keep `Project Fit` short: tie the slice to at least one priority or guardrail from `.local/project.md` instead of copying the whole brief.
 5. If `AGENTS.md` enables `SemVer Workflow`, add or repair `## Release Impact`, keep it aligned with the likely release impact for the slice, and plan for a later release-only closeout step rather than turning the functionality commit into the release commit.
 6. Close high-impact open decisions before handing off to implementation.
-7. Set frontmatter for build handoff: `decision: GO`, `next_command: build`, `next_mode: Build`.
-8. Persist updated `WIP Log` lines before the final response.
+7. Remove placeholder plan filler before handoff. `ready-check.mjs` now blocks placeholder `Goal`, `Project Fit`, `Implementation Tasks`, `Acceptance Criteria`, and `Validation Commands` content.
+8. Keep `Project Fit` concrete: reference at least one real priority or guardrail from `.local/project.md`, not template filler.
+9. Set frontmatter for build handoff: `decision: GO`, `next_command: build`, `next_mode: Build`.
+10. Persist updated `WIP Log` lines before the final response.
 
 ## Minimum Plan Mutation
 
@@ -36,12 +38,14 @@ Use this route when the request is clear enough to specify implementation detail
 - Keep `selected_mode: Plan`.
 - Add a short `Project Fit` section that names at least one relevant priority or guardrail from `.local/project.md`.
 - In SemVer-enabled repos, keep `## Release Impact` present even if the exact impact will be finalized during `check`.
+- Replace placeholder content in `Goal`, `Project Fit`, `Implementation Tasks`, `Acceptance Criteria`, and `Validation Commands` before handing off to `build`.
 - Set `decision: GO`, `next_command: build`, and `next_mode: Build` only when the plan is decision-complete.
 - If unresolved high-impact decisions remain, keep the plan active and reroute to `start` or `research` instead of pretending it is build-ready.
 
 ## Command Recipe
 
 - Recover the active plan with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .` when needed.
+- Use `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` as the final build-handoff gate once the plan text is concrete.
 - Keep direct plan-file mutation as the primary planning mechanism.
 
 ## Output Contract

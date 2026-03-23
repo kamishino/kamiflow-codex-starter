@@ -455,7 +455,15 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
     archived_at: null
   };
 
-  const goal = topic ? `- ${topic}` : "- Capture the concrete goal before implementation.";
+  const goalLines = topic
+    ? [
+      `- Outcome: ${topic}`,
+      "- Out of scope: Replace with the explicit non-goal for this slice."
+    ]
+    : [
+      "- Outcome: Replace with the concrete implementation outcome for this slice.",
+      "- Out of scope: Replace with the explicit non-goal for this slice."
+    ];
   const body = [
     "## Start Summary",
     "- Required: no",
@@ -466,22 +474,22 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
     "- Handoff Confidence: 3",
     "",
     "## Goal",
-    goal,
+    ...goalLines,
     "",
     "## Scope (In/Out)",
-    "- In: Define the concrete implementation slice.",
-    "- Out: Anything not explicitly approved in this plan.",
+    "- In: Replace with the concrete implementation slice for this plan.",
+    "- Out: Replace with the explicit non-goals for this slice.",
     "",
     "## Constraints",
-    "- Keep evidence-backed claims only.",
-    "- Keep changes scoped to the selected route.",
+    "- Technical: Replace with the real technical constraints for this slice.",
+    "- Risk: Replace with the main execution risk for this slice.",
     "",
     "## Project Fit",
     "- Relevant priority: Replace with one priority from .local/project.md.",
     "- Relevant guardrail: Replace with one guardrail from .local/project.md.",
     "",
     "## Assumptions",
-    "- [ ] Replace with validated assumptions.",
+    "- [ ] Replace with validated assumptions or remove this placeholder.",
     "",
     "## Open Decisions",
     "- [ ] Replace with decision-complete answers before build.",
@@ -494,24 +502,28 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
       ""
     ] : []),
     "## Implementation Tasks",
-    "- [ ] Define the first implementation slice.",
+    "- [ ] Replace with the first concrete implementation step.",
     "",
     "## Acceptance Criteria",
-    "- [ ] Define testable acceptance criteria.",
+    "- [ ] Replace with one concrete acceptance check.",
     "",
     "## Validation Commands",
-    "- `Unknown`",
+    "- `replace-with-runnable-command`",
     "",
     "## Risks & Rollback",
-    "- Risk: Unknown until scope is clarified.",
-    "- Mitigation: Plan before build.",
-    "- Rollback: Revert the scoped slice only if needed.",
+    "- Risk: Replace with the main risk for this slice.",
+    "- Mitigation: Replace with the concrete mitigation for that risk.",
+    "- Rollback: Replace with the scoped rollback path if the slice fails.",
     "",
     "## Go/No-Go Checklist",
     "- [ ] Goal is explicit",
     "- [ ] Scope in/out is explicit",
     "- [ ] No unresolved high-impact decisions",
     "- [ ] Tasks and validation commands are implementation-ready",
+    "",
+    "## Handoff",
+    `- Next command: ${nextCommand}`,
+    `- Next mode: ${nextMode}`,
     "",
     "## WIP Log",
     `- ${createdAt} - Status: Plan created by Kami Flow Core.`,
