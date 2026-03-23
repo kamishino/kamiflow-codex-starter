@@ -1,6 +1,6 @@
 {
   "name": "@kamishino/kamiflow-core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Standalone Kami Flow Core Codex skill with a minimal installer.",
   "type": "module",
   "bin": {
@@ -38,6 +38,7 @@
     "resources/skills/kamiflow-core/scripts/ensure-plan.mjs",
     "resources/skills/kamiflow-core/scripts/ready-check.mjs",
     "resources/skills/kamiflow-core/scripts/archive-plan.mjs",
+    "resources/skills/kamiflow-core/scripts/version-closeout.mjs",
     "resources/skills/kamiflow-core/assets/client-agents.md",
     "resources/skills/kamiflow-core/assets/project-brief-client.md",
     "resources/skills/kamiflow-core/assets/start-report.md",
