@@ -15,6 +15,7 @@ Use this route for targeted remediation of a concrete bug, regression, or failed
 ## Entry Gate
 
 - Required mode: `Build`.
+- The active plan must already be a decision-complete repair slice. If it is draft or placeholder, reroute to `plan`, update the plan, and stop the current response.
 - Read `AGENTS.md`, then `.local/project.md`, before editing implementation files.
 - Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` before editing implementation files.
 - If readiness fails, stop immediately, make zero implementation edits, reroute to `plan`, and end the current response without returning to `fix`.
@@ -23,7 +24,7 @@ Use this route for targeted remediation of a concrete bug, regression, or failed
 ## Steps
 
 1. Resolve the active plan, `AGENTS.md`, `.local/project.md`, and the specific failing behavior.
-2. If the plan is still draft or placeholder, upgrade it to a decision-complete repair slice before running `ready-check.mjs`.
+2. If the plan is still draft or placeholder, reroute to `plan`, update the plan, and stop without touching implementation files.
 3. Run `ready-check.mjs` and stop on any failure before touching implementation files.
 4. State the suspected cause and the smallest repair slice.
 5. Implement the fix.
@@ -38,11 +39,13 @@ Use this route for targeted remediation of a concrete bug, regression, or failed
 - Set `lifecycle_phase: fix`.
 - Update the relevant `Implementation Tasks`.
 - Set `next_command: check` and `next_mode: Check` after the fix is validated.
+- Do not convert a draft or placeholder plan into a repair-ready slice and continue implementation in the same response.
 
 ## Command Recipe
 
 - Recover missing plan state with `ensure-plan.mjs`.
 - If build readiness is uncertain or `ready-check.mjs` fails, reroute to `plan`, keep implementation files unchanged, and stop the current response after the plan update.
+- If the active plan is draft or placeholder at route entry, do not rescue it and continue `fix` in the same response.
 
 ## Output Contract
 

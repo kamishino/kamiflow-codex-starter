@@ -12,10 +12,10 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context. If `AGENTS.md` enables `SemVer Workflow`, treat release impact as part of closeout and use `finish-status.mjs` before acting on commit, release, or finish requests.
 2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
 3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
-4. Infer the route automatically from intent aliases, active plan state, `.local/project.md`, and safety gates.
+4. Infer the route automatically from explicit intent, active plan state, `.local/project.md`, and safety gates. Treat active-plan `next_command` and `lifecycle_phase` as hints only.
 5. Only load the matching route reference after the route is inferred.
-6. For simple operational work with no stronger route signal, use the fast path instead of forcing plan-heavy flow.
-7. Before `build` or `fix`, first make sure the active plan is a decision-complete implementation or repair slice. If it is still draft or placeholder, update it before running `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`. If readiness still fails after the plan is ready, do not edit implementation files, reroute to `plan`, and end the current response without resuming `build` or `fix`.
+6. For narrow operational work like status, diff, summary, commit, release, or finish chores, prefer the fast path instead of forcing stale active-plan momentum back into plan-heavy flow.
+7. Before `build` or `fix`, first make sure the active plan is already a decision-complete implementation or repair slice. If it is still draft or placeholder, do not continue implementation in that response; reroute to `plan`, update the plan, and stop. Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on a later `build` or `fix` attempt after the plan is ready.
 8. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 9. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
 
@@ -86,6 +86,7 @@ For non-trivial route responses, keep the final answer compact:
 - When `SemVer Workflow` is enabled in `AGENTS.md`, keep a `## Release Impact` section in the plan and resolve it before PASS archive.
 - Keep functional commit history and release history separate in SemVer-enabled repos.
 - In SemVer-enabled repos, interpret `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the correct end-of-slice action from `finish-status.mjs`.
+- Keep explicit narrow operational asks lightweight even when an active plan exists. Do not reroute `commit please`, `release please`, `finish please`, status, diff, or summary requests into `plan`, `build`, or `check` unless the user is actually asking for implementation or closeout work.
 - Archive only after all Acceptance Criteria and Go/No-Go items are checked.
 
 ## References

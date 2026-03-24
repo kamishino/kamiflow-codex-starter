@@ -14,7 +14,7 @@ Use this route to implement one approved slice from the active plan. Client repo
 ## Entry Gate
 
 - Required mode: `Build`.
-- A target plan must exist and be build-ready. If it is still draft or placeholder, upgrade it to a decision-complete slice before running `ready-check.mjs`.
+- A target plan must already exist and be build-ready. If it is still draft or placeholder, reroute to `plan`, update the plan, and stop the current response.
 - Read `AGENTS.md`, then `.local/project.md`, before editing implementation files.
 - Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` before editing implementation files.
 - If readiness is unclear or the command fails, stop immediately, make zero implementation edits, reroute to `plan`, and end the current response without returning to `build`.
@@ -23,7 +23,7 @@ Use this route to implement one approved slice from the active plan. Client repo
 ## Steps
 
 1. Resolve the target plan, `AGENTS.md`, `.local/project.md`, and one concrete task slice.
-2. If the plan is still draft or placeholder, upgrade it to a decision-complete slice before running `ready-check.mjs`.
+2. If the plan is still draft or placeholder, reroute to `plan`, update the plan, and stop without touching implementation files.
 3. Run `ready-check.mjs` and stop on any failure before touching implementation files.
 4. State the exact files or behaviors that will change.
 5. Implement the smallest useful slice.
@@ -39,11 +39,13 @@ Use this route to implement one approved slice from the active plan. Client repo
 - Keep `lifecycle_phase: build`.
 - Mark only the completed `Implementation Tasks`.
 - Set `next_command: check` and `next_mode: Check` after the implementation slice is validated.
+- Do not convert a draft or placeholder plan into a build-ready slice and continue implementation in the same response.
 
 ## Command Recipe
 
 - Recover missing plan state with `ensure-plan.mjs`.
 - Confirm readiness with `ready-check.mjs` before edits; a failing result means reroute to `plan`, keep implementation files unchanged, and stop the current response after the plan update.
+- If the active plan is draft or placeholder at route entry, do not rescue it and continue `build` in the same response.
 - Prefer direct markdown mutation for progress tracking.
 
 ## Output Contract

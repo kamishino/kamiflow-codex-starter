@@ -15,13 +15,14 @@ This responsibility order does not replace route inference. It defines which loc
 ## Decision Order
 
 1. Check for explicit intent aliases in the user's request.
-2. If no explicit alias is present, use the active non-done plan's `next_command` or `lifecycle_phase` as the route hint.
-3. Read `.local/project.md` and use it to bias route framing and tradeoffs, especially whether the workspace is a client repo or the kamiflow-core source repo.
-4. Apply safety overrides before doing work:
+2. Before leaning on active-plan hints, check whether the request is a narrow operational ask that can stay on the fast path even with an active plan. Treat status, diff, summary, commit, release, and finish chores as operational unless the user is actually asking for new implementation, bug fixing, or validation closeout.
+3. If no stronger explicit user intent is present, use the active non-done plan's `next_command` or `lifecycle_phase` as the route hint.
+4. Read `.local/project.md` and use it to bias route framing and tradeoffs, especially whether the workspace is a client repo or the kamiflow-core source repo.
+5. Apply safety overrides before doing work:
    - `build` and `fix` require `ready-check.mjs` to pass
    - `check` requires validation evidence before claiming `PASS`
-5. If no stronger route is selected and the task is simple operational work, use the fast path instead of plan-heavy routing.
-6. If no route is still obvious, use fallback routing:
+6. If no stronger route is selected and the task is simple operational work, use the fast path instead of plan-heavy routing.
+7. If no route is still obvious, use fallback routing:
    - fuzzy request -> `start`
    - clear but under-specified implementation request -> `plan`
 
@@ -47,9 +48,25 @@ For SemVer-enabled repos, treat `commit please`, `release please`, and `finish p
 ## Active Plan Hints
 
 - Prefer the explicit user alias over stale plan momentum.
+- Treat `next_command` and `lifecycle_phase` as hints, not hard steering.
+- Do not let stale `build`, `fix`, or `check` momentum override explicit narrow operational asks.
 - When the user does not specify a route, use `next_command` first.
 - If `next_command` is missing, fall back to `lifecycle_phase`.
 - If the active plan is draft or decision-incomplete, bias toward `start`, `plan`, or `research` instead of `build` or `fix`.
+
+## Operational Override Examples
+
+- Ignore stale active-plan momentum when the user asks for:
+  - current status or a short summary
+  - a diff, log, or read-only inspection
+  - `commit please`
+  - `release please`
+  - `finish please`
+- Respect the active plan and normal route flow when the user asks for:
+  - implementation of the next slice
+  - a concrete bug fix
+  - readiness-gated build or repair work
+  - validation closeout or PASS/BLOCK evidence
 
 ## Project Brief Hints
 
@@ -71,7 +88,7 @@ For SemVer-enabled repos, treat `commit please`, `release please`, and `finish p
 
 ## Fast Path
 
-Use the fast path only when there is no stronger explicit route and no risky active-plan state.
+Use the fast path when the ask is narrow operational work and does not require new acceptance criteria, implementation edits, or validation closeout, even if an active plan exists.
 
 Allowed fast-path categories:
 - explain or summarize the current state

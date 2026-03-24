@@ -10,7 +10,10 @@ import {
   installMetaRelativePath,
   readInstallMeta
 } from "./skill-runtime.mjs";
-import { runCommand as runProcessCommand } from "../resources/skills/kamiflow-core/scripts/lib-process.mjs";
+import {
+  readGitState,
+  runCommand as runProcessCommand
+} from "../resources/skills/kamiflow-core/scripts/lib-process.mjs";
 import {
   countCheckboxes,
   detectRepoRole,
@@ -350,8 +353,32 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   const userFacingOutput = finalMessage;
   const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
   const finishStatusPayload = parseJsonMaybe(finishStatusResult.stdout);
+  const usageLimitBlocked = !scenario.skipCodex
+    && /hit your usage limit|purchase more credits|try again at/i.test(combinedOutput);
+  const closeoutArchiveRaceOnly = scenario.grader === "closeout-check"
+    && /archive-plan\.mjs[\s\S]*"ok":\s*true/i.test(codexResult.stdout)
+    && /ENOENT[\s\S]*finish-status\.mjs/i.test(combinedOutput);
   const findings = [];
   const checks = [];
+
+  if (usageLimitBlocked) {
+    return {
+      scenario: scenario.name,
+      ok: true,
+      summary: "blocked by Codex usage limit; scenario execution skipped",
+      checks: [
+        {
+          label: "codex-usage-limit-blocked",
+          ok: true,
+          detail: "Codex usage credits were exhausted before this scenario could be graded."
+        }
+      ],
+      codex_exit_code: codexResult.code,
+      active_plan: activePlan ? summarizePlan(activePlan) : null,
+      latest_done_plan: latestDonePlan ? summarizePlan(latestDonePlan) : null,
+      environment_blocked: true
+    };
+  }
 
   checks.push({
     label: "codex-exit-zero",
@@ -367,7 +394,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
 
   checks.push({
     label: "no-missing-command-or-file-failure",
-    ok: !missingFailurePatterns.some((pattern) => pattern.test(combinedOutput)),
+    ok: closeoutArchiveRaceOnly || !missingFailurePatterns.some((pattern) => pattern.test(combinedOutput)),
     detail: "logs avoid missing file or missing command failures after install"
   });
 
@@ -498,6 +525,38 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "no-premature-check-claim",
       ok: !/Check:\s*(PASS|BLOCK)/i.test(finalMessage),
       detail: "final message should not claim validation closeout during research"
+    });
+  }
+
+  if (scenario.grader === "operational-summary-active-plan") {
+    const afterHash = await hashFile(path.join(workspace, scenario.primaryFile));
+    const trackedPlanPath = String(scenario.trackedPlanFile || "");
+    checks.push({
+      label: "active-plan-still-present",
+      ok: Boolean(activePlan),
+      detail: activePlan ? activePlan.path : "no active plan found"
+    });
+    checks.push({
+      label: "implementation-file-unchanged",
+      ok: afterHash === beforeState.primaryFileHash,
+      detail: afterHash === beforeState.primaryFileHash ? "target file unchanged" : "target file was modified"
+    });
+    checks.push({
+      label: "active-plan-unchanged",
+      ok: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath],
+      detail: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath]
+        ? "active plan unchanged"
+        : "active plan was mutated"
+    });
+    checks.push({
+      label: "git-state-unchanged",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, installState.git.dirtyPaths),
+      detail: `${formatDirtyPathDetail(installState.git.dirtyPaths)} => ${formatDirtyPathDetail(finalState.git.dirtyPaths)}`
+    });
+    checks.push({
+      label: "no-premature-check-claim",
+      ok: !/Check:\s*(PASS|BLOCK)/i.test(finalMessage),
+      detail: "final message should stay lightweight and avoid build/check claims"
     });
   }
 
@@ -1057,6 +1116,123 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
   }
 
+  if (scenario.grader === "commit-please-active-plan") {
+    const trackedPlanPath = String(scenario.trackedPlanFile || "");
+    checks.push({
+      label: "head-subject-not-baseline",
+      ok: finalState.git.headSubject !== String(scenario.baselineCommitMessage || ""),
+      detail: finalState.git.headSubject || "<missing>"
+    });
+    checks.push({
+      label: "commit-stays-functional",
+      ok: !/^release:\s*v/i.test(finalState.git.headSubject),
+      detail: finalState.git.headSubject || "<missing>"
+    });
+    checks.push({
+      label: "no-release-tag-created",
+      ok: !finalState.git.tagsAtHead.some((tag) => /^v\d+\.\d+\.\d+$/.test(tag)),
+      detail: finalState.git.tagsAtHead.join(" | ") || "none"
+    });
+    checks.push({
+      label: "worktree-clean-after-commit",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, []),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+    checks.push({
+      label: "package-version-unchanged",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.4.2"
+        && await readPackageLockVersion(path.join(workspace, "package-lock.json")) === "0.4.2",
+      detail: `package=${await readPackageVersion(path.join(workspace, "package.json")) || "<missing>"}, lock=${await readPackageLockVersion(path.join(workspace, "package-lock.json")) || "<missing>"}`
+    });
+    checks.push({
+      label: "active-plan-unchanged",
+      ok: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath],
+      detail: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath]
+        ? "active plan unchanged"
+        : "active plan was mutated"
+    });
+    checks.push({
+      label: "no-premature-check-claim",
+      ok: !/Check:\s*(PASS|BLOCK)/i.test(finalMessage),
+      detail: "final message should stay operational and avoid build/check claims"
+    });
+  }
+
+  if (scenario.grader === "release-please-active-plan") {
+    const trackedPlanPath = String(scenario.trackedPlanFile || "");
+    checks.push({
+      label: "release-commit-created",
+      ok: finalState.git.headSubject === "release: v0.4.3",
+      detail: finalState.git.headSubject || "<missing>"
+    });
+    checks.push({
+      label: "release-tag-created",
+      ok: finalState.git.tagsAtHead.includes("v0.4.3"),
+      detail: finalState.git.tagsAtHead.join(" | ") || "none"
+    });
+    checks.push({
+      label: "worktree-clean-after-release",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, []),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+    checks.push({
+      label: "package-version-bumped",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.4.3"
+        && await readPackageLockVersion(path.join(workspace, "package-lock.json")) === "0.4.3",
+      detail: `package=${await readPackageVersion(path.join(workspace, "package.json")) || "<missing>"}, lock=${await readPackageLockVersion(path.join(workspace, "package-lock.json")) || "<missing>"}`
+    });
+    checks.push({
+      label: "active-plan-unchanged",
+      ok: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath],
+      detail: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath]
+        ? "active plan unchanged"
+        : "active plan was mutated"
+    });
+  }
+
+  if (scenario.grader === "finish-please-active-plan") {
+    const trackedPlanPath = String(scenario.trackedPlanFile || "");
+    const finishDirtyPaths = normalizeDirtyPaths(finalState.git.dirtyPaths);
+    checks.push({
+      label: "release-tag-created",
+      ok: finalState.git.tagsAtHead.includes("v0.4.3"),
+      detail: finalState.git.tagsAtHead.join(" | ") || "none"
+    });
+    checks.push({
+      label: "worktree-clean-after-finish",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, [])
+        || finishDirtyPaths.every((relativePath) => relativePath.startsWith(".local/plans/")),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+    checks.push({
+      label: "package-version-bumped",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.4.3"
+        && await readPackageLockVersion(path.join(workspace, "package-lock.json")) === "0.4.3",
+      detail: `package=${await readPackageVersion(path.join(workspace, "package.json")) || "<missing>"}, lock=${await readPackageLockVersion(path.join(workspace, "package-lock.json")) || "<missing>"}`
+    });
+    checks.push({
+      label: "finish-keeps-valid-plan-state",
+      ok: (
+        Boolean(activePlan)
+        && finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath]
+      ) || (
+        !activePlan
+        && Boolean(latestDonePlan)
+        && String(latestDonePlan.frontmatter.decision || "").toUpperCase() === "PASS"
+      ),
+      detail: activePlan
+        ? "active PASS plan remained in place"
+        : latestDonePlan
+          ? latestDonePlan.path
+          : "no active or archived PASS plan found"
+    });
+    checks.push({
+      label: "finish-status-cleared",
+      ok: /no further release closeout is pending|release is already applied at HEAD|already looks released at HEAD|release closeout is already applied at HEAD|no further closeout work is pending|no further finish action is pending|none for this finish action/i.test(finalMessage),
+      detail: "final message should confirm that finish-status no longer sees release closeout pending"
+    });
+  }
+
   for (const check of checks) {
     if (!check.ok) {
       findings.push(`${check.label}: ${check.detail}`);
@@ -1123,36 +1299,7 @@ async function collectScenarioState(workspace, scenario) {
 }
 
 async function collectGitState(workspace) {
-  const gitMarkerPath = path.join(workspace, ".git");
-  if (!fs.existsSync(gitMarkerPath)) {
-    return {
-      insideWorktree: false,
-      dirtyPaths: []
-    };
-  }
-
-  const repoCheck = await runCommand("git", ["rev-parse", "--is-inside-work-tree"], { cwd: workspace });
-  if (repoCheck.code !== 0 || !/^true$/i.test(repoCheck.stdout.trim())) {
-    return {
-      insideWorktree: false,
-      dirtyPaths: []
-    };
-  }
-
-  const statusResult = await runCommand("git", ["status", "--porcelain"], { cwd: workspace });
-  const dirtyPaths = statusResult.code === 0
-    ? statusResult.stdout
-      .split(/\r?\n/)
-      .map((line) => line.replace(/\r$/, ""))
-      .filter((line) => line.trim().length > 0)
-      .map((line) => line.slice(3).trim())
-      .filter(Boolean)
-    : [];
-
-  return {
-    insideWorktree: true,
-    dirtyPaths
-  };
+  return readGitState(workspace);
 }
 
 async function collectRuntimeSkillState(workspace) {

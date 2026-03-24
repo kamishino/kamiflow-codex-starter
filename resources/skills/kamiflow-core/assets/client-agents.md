@@ -42,6 +42,7 @@ Leave this disabled unless the repo wants opt-in SemVer closeout for a root sing
 - If `SemVer Workflow` is enabled, keep `## Release Impact` current in the active plan and resolve it before PASS archive.
 - In SemVer-enabled repos, commit functionality first with a repo-owned subject, then use `version-closeout.mjs` for the release-only commit and `vX.Y.Z` tag.
 - In SemVer-enabled repos, treat `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the right final action from `finish-status.mjs`.
+- Treat explicit narrow operational asks like status, diff, summary, commit, release, and finish as fast-path work even if an active plan exists. Do not let stale plan momentum force those asks back into plan-heavy routing.
 - Do not reintroduce legacy bootstrap commands or repo-specific bootstrap surfaces.
 - Treat this generated contract as the client-repo default, not the source-repo contract.
 

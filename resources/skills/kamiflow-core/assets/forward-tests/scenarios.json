@@ -178,6 +178,17 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "operational-summary-active-plan",
+    "promptFile": "operational-summary-active-plan/prompt.md",
+    "fixtureDir": "small-bug/fixture",
+    "grader": "operational-summary-active-plan",
+    "initializeGit": true,
+    "primaryFile": "math.js",
+    "trackedFiles": [".local/plans/2026-03-23-001-build-small-bug-fix.md"],
+    "trackedPlanFile": ".local/plans/2026-03-23-001-build-small-bug-fix.md",
+    "modes": ["full"]
+  },
+  {
     "name": "draft-not-ready",
     "promptFile": "draft-not-ready/prompt.md",
     "fixtureDir": "draft-not-ready/fixture",
@@ -221,6 +232,56 @@
     "fixtureDir": "research-alias/fixture",
     "grader": "research-alias",
     "primaryFile": "math.js",
+    "modes": ["full"]
+  },
+  {
+    "name": "commit-please-active-plan",
+    "promptFile": "commit-please-active-plan/prompt.md",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "commit-please-active-plan",
+    "initializeGit": true,
+    "prepareCommittedBaseline": true,
+    "baselineCommitMessage": "baseline-before-commit-please",
+    "createDirtyWorktreeFile": "notes/dirty.txt",
+    "trackedFiles": [
+      ".local/plans/2026-03-23-001-check-patch-impact.md",
+      "package.json",
+      "package-lock.json"
+    ],
+    "trackedPlanFile": ".local/plans/2026-03-23-001-check-patch-impact.md",
+    "modes": ["full"]
+  },
+  {
+    "name": "release-please-active-plan",
+    "promptFile": "release-please-active-plan/prompt.md",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "release-please-active-plan",
+    "initializeGit": true,
+    "prepareCommittedBaseline": true,
+    "baselineCommitMessage": "baseline-before-release-please",
+    "trackedFiles": [
+      ".local/plans/2026-03-23-001-check-patch-impact.md",
+      "package.json",
+      "package-lock.json"
+    ],
+    "trackedPlanFile": ".local/plans/2026-03-23-001-check-patch-impact.md",
+    "modes": ["full"]
+  },
+  {
+    "name": "finish-please-active-plan",
+    "promptFile": "finish-please-active-plan/prompt.md",
+    "fixtureDir": "semver-patch-closeout/fixture",
+    "grader": "finish-please-active-plan",
+    "initializeGit": true,
+    "prepareCommittedBaseline": true,
+    "baselineCommitMessage": "baseline-before-finish-please",
+    "createDirtyWorktreeFile": "notes/dirty.txt",
+    "trackedFiles": [
+      ".local/plans/2026-03-23-001-check-patch-impact.md",
+      "package.json",
+      "package-lock.json"
+    ],
+    "trackedPlanFile": ".local/plans/2026-03-23-001-check-patch-impact.md",
     "modes": ["full"]
   }
 ]

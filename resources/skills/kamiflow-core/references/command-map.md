@@ -44,7 +44,8 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
 - Use `references/route-intent.md` as the routing authority.
 - Keep `start` as the canonical route token even when the user says `brainstorm` or `idea`.
 - Read `.local/project.md` before non-fast-path route work.
-- If the request is trivial operational work and no stronger route signal exists, use the fast path instead of forcing plan-heavy routing.
+- Treat active-plan `next_command` and `lifecycle_phase` as hints, not hard steering.
+- If the request is a narrow operational ask like status, diff, summary, commit, release, or finish, let that explicit ask stay on the fast path instead of forcing stale plan-heavy routing.
 
 ## Route Selection
 
@@ -71,6 +72,7 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
 - User asks `commit please`, `release please`, or `finish please` in a SemVer-enabled repo:
   - first inspect `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - follow its `recommended_action` instead of guessing from the wording alone
+  - keep the request operational; do not reroute into plan/build/check unless the user is actually asking for implementation or closeout evidence
 - SemVer closeout is enabled and release impact is patch, minor, or major:
   - first commit the functional changes with a normal repo-owned subject
   - run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`

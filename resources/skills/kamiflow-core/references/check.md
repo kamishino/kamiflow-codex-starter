@@ -30,10 +30,11 @@ Use this route to verify behavior, review changes, and decide `PASS` or `BLOCK`.
 6. Promote durable conclusions into existing `.local/project.md` sections only: use `Architecture Guardrails` for repeatable future constraints, `Recent Decisions` for settled evidence-backed conclusions, and `Open Questions` for unresolved recurring concerns.
 7. Keep temporary debugging notes, one-off findings, and plan-local execution detail out of `.local/project.md`.
 8. If `AGENTS.md` enables `SemVer Workflow`, finalize `## Release Impact` before `PASS` archive.
-9. After closeout evidence is complete, use `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` to decide whether the next action is `commit-only`, `release-only`, or `commit-and-release`.
-10. Use `commit please` for functional commit only, `release please` for release closeout only, and `finish please` when the user wants Codex to choose the right final action from helper-backed repo state.
-11. Run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` only when finish guidance says release is still pending and the final impact is `patch`, `minor`, or `major`.
-12. Archive the plan only after `PASS`, complete checklists, and any required SemVer release-impact resolution.
+9. Archive the plan only after `PASS`, complete checklists, and any required SemVer release-impact resolution.
+10. Use `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` only when the user explicitly asks for commit, release, or finish guidance, or when SemVer closeout is actually relevant after PASS.
+11. If you use `finish-status.mjs` and `archive-plan.mjs` in the same response, run them serially instead of in parallel so archive movement does not race helper reads.
+12. Use `commit please` for functional commit only, `release please` for release closeout only, and `finish please` when the user wants Codex to choose the right final action from helper-backed repo state.
+13. Run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` only when finish guidance says release is still pending and the final impact is `patch`, `minor`, or `major`.
 
 ## Minimum Plan Mutation
 
