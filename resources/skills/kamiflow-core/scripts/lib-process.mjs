@@ -88,6 +88,25 @@ export async function runCommand(command, commandArgs = [], options = {}) {
   });
 }
 
+export async function runShellCommand(commandText, options = {}) {
+  const normalizedCommand = String(commandText || "").trim();
+  if (!normalizedCommand) {
+    return {
+      code: 1,
+      signal: "",
+      stdout: "",
+      stderr: "Command text is empty.",
+      timedOut: false
+    };
+  }
+
+  if (process.platform === "win32") {
+    return await runCommand("powershell.exe", ["-NoProfile", "-Command", normalizedCommand], options);
+  }
+
+  return await runCommand("sh", ["-lc", normalizedCommand], options);
+}
+
 export function runCommandSync(command, commandArgs = [], options = {}) {
   const spawnSpec = buildSpawnSpec(command, commandArgs);
   const result = spawnSync(spawnSpec.command, spawnSpec.args, {

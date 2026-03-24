@@ -1,24 +1,12 @@
 #!/usr/bin/env node
-import fs from "node:fs";
-import fsp from "node:fs/promises";
-import path from "node:path";
 import {
-  applyDoneRollover,
-  countCheckboxes,
-  DONE_PLAN_KEEP_LATEST,
-  DONE_PLAN_DIR,
-  extractSection,
-  parseReleaseImpact,
-  planDoneRollover,
+  archivePassPlan,
+  assessPlanCloseout,
   readReleasePolicy,
-  nowIso,
   parseCliArgs,
   printJson,
   resolvePlanRef,
-  resolvePlanRecordTimestampInfo,
-  resolveProjectDir,
-  serializeFrontmatter,
-  splitFrontmatter
+  resolveProjectDir
 } from "./lib-plan.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
@@ -37,115 +25,38 @@ if (!plan) {
   process.exit(1);
 }
 
-if (releasePolicy.enabled) {
-  if (!releasePolicy.valid) {
-    printJson({
-      ok: false,
-      archived: false,
-      plan_id: plan.frontmatter.plan_id || "",
-      plan_path: plan.path,
-      reason: `Archive gate failed because AGENTS.md Release Policy is invalid: ${releasePolicy.errors[0]}`,
-      recovery: "Fix the Release Policy block in AGENTS.md before archiving a PASS plan."
-    });
-    process.exit(1);
-  }
-
-  const releaseImpact = parseReleaseImpact(plan.content);
-  if (!releaseImpact.valid) {
-    printJson({
-      ok: false,
-      archived: false,
-      plan_id: plan.frontmatter.plan_id || "",
-      plan_path: plan.path,
-      reason: `Archive gate failed because Release Impact is missing or unresolved: ${releaseImpact.errors[0]}`,
-      recovery: "Resolve the Release Impact section with none, patch, minor, or major plus a short reason before archiving."
-    });
-    process.exit(1);
-  }
-}
-
-const implementationCounts = countCheckboxes(extractSection(plan.content, "Implementation Tasks"));
-const acceptanceCounts = countCheckboxes(extractSection(plan.content, "Acceptance Criteria"));
-const goNoGoCounts = countCheckboxes(extractSection(plan.content, "Go/No-Go Checklist"));
-const complete = implementationCounts.total > 0 && acceptanceCounts.total > 0 && goNoGoCounts.total > 0
-  && implementationCounts.total === implementationCounts.checked
-  && acceptanceCounts.total === acceptanceCounts.checked
-  && goNoGoCounts.total === goNoGoCounts.checked;
-
-if (!complete) {
+const closeout = assessPlanCloseout(plan, releasePolicy);
+if (!closeout.ok) {
   printJson({
     ok: false,
     archived: false,
     plan_id: plan.frontmatter.plan_id || "",
     plan_path: plan.path,
-    reason: "Archive gate failed because not all checklist items are checked.",
-    recovery: "Complete Implementation Tasks, Acceptance Criteria, and Go/No-Go Checklist before archiving."
+    reason: `Archive gate failed: ${closeout.findings[0]}`,
+    recovery: "Resolve checklist, validation, and Release Impact gates before archiving."
   });
   process.exit(1);
 }
-
-const { body } = splitFrontmatter(plan.content);
-const archivedAt = nowIso();
-const nextFrontmatter = {
-  ...plan.frontmatter,
-  status: "done",
-  decision: "PASS",
-  selected_mode: "Plan",
-  next_command: "done",
-  next_mode: "done",
-  lifecycle_phase: "done",
-  updated_at: archivedAt,
-  archived_at: archivedAt
-};
-const archiveWipLines = [
-  `- ${archivedAt} - Status: Archived after PASS closeout.`,
-  `- ${archivedAt} - Blockers: None.`,
-  `- ${archivedAt} - Next step: Done.`
-].join("\n");
-const trimmedBody = body.trimEnd();
-const nextBody = /^## WIP Log\s*$/m.test(trimmedBody)
-  ? trimmedBody.replace(/^## WIP Log\s*$/m, `## WIP Log\n${archiveWipLines}`)
-  : `${trimmedBody}\n\n## WIP Log\n${archiveWipLines}`;
-const nextContent = `${serializeFrontmatter(nextFrontmatter)}\n${nextBody}\n`;
-const targetPath = path.join(projectDir, DONE_PLAN_DIR, path.basename(plan.path));
-if (fs.existsSync(targetPath)) {
+let archived;
+try {
+  archived = await archivePassPlan(projectDir, plan);
+} catch (error) {
   printJson({
     ok: false,
     archived: false,
-    reason: `Done plan already exists at ${targetPath}`,
+    plan_id: plan.frontmatter.plan_id || "",
+    plan_path: plan.path,
+    reason: error.message,
     recovery: "Remove or rename the conflicting done plan before retrying archive."
   });
   process.exit(1);
 }
 
-const rolloverPlan = await planDoneRollover(projectDir, {
-  keep: DONE_PLAN_KEEP_LATEST,
-  pendingRecord: {
-    ...plan,
-    path: targetPath,
-    name: path.basename(targetPath),
-    frontmatter: nextFrontmatter,
-    stat: {
-      mtimeMs: resolvePlanRecordTimestampInfo({
-        ...plan,
-        frontmatter: nextFrontmatter,
-        stat: {
-          mtimeMs: Date.now()
-        }
-      }).ms || Date.now()
-    }
-  }
-});
-
-await fsp.mkdir(path.dirname(targetPath), { recursive: true });
-await fsp.writeFile(plan.path, nextContent, "utf8");
-await fsp.rename(plan.path, targetPath);
-const rolledOver = await applyDoneRollover(rolloverPlan);
 printJson({
   ok: true,
   archived: true,
-  plan_id: nextFrontmatter.plan_id || "",
-  archived_at: archivedAt,
-  archived_path: targetPath,
-  rolled_over: rolledOver
+  plan_id: plan.frontmatter.plan_id || "",
+  archived_at: archived.archived_at,
+  archived_path: archived.archived_path,
+  rolled_over: archived.rolled_over
 });

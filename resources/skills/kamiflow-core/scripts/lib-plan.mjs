@@ -932,6 +932,129 @@ export function countCheckboxes(sectionText) {
   return { total, checked };
 }
 
+export function extractValidationCommands(sectionText) {
+  return [...String(sectionText || "").matchAll(/`([^`]+)`/g)]
+    .map((match) => String(match[1] || "").trim())
+    .filter(Boolean);
+}
+
+export function assessPlanCloseout(plan, releasePolicy) {
+  const findings = [];
+  const implementationSection = extractSection(plan?.content, "Implementation Tasks");
+  const acceptanceSection = extractSection(plan?.content, "Acceptance Criteria");
+  const goNoGoSection = extractSection(plan?.content, "Go/No-Go Checklist");
+  const validationCommandsSection = extractSection(plan?.content, "Validation Commands");
+  const implementationCounts = countCheckboxes(implementationSection);
+  const acceptanceCounts = countCheckboxes(acceptanceSection);
+  const goNoGoCounts = countCheckboxes(goNoGoSection);
+  const validationCommands = extractValidationCommands(validationCommandsSection);
+
+  if (String(plan?.frontmatter?.status || "").toLowerCase() === "done") {
+    findings.push("Plan is already archived as done.");
+  }
+
+  if (implementationCounts.total === 0 || implementationCounts.total !== implementationCounts.checked) {
+    findings.push("Implementation Tasks is not fully checked.");
+  }
+  if (acceptanceCounts.total === 0 || acceptanceCounts.total !== acceptanceCounts.checked) {
+    findings.push("Acceptance Criteria is not fully checked.");
+  }
+  if (goNoGoCounts.total === 0 || goNoGoCounts.total !== goNoGoCounts.checked) {
+    findings.push("Go/No-Go Checklist is not fully checked.");
+  }
+
+  if (validationCommands.length === 0) {
+    findings.push("Validation Commands is missing runnable commands.");
+  }
+
+  const releaseImpact = releasePolicy?.enabled
+    ? parseReleaseImpact(plan?.content || "")
+    : {
+        section_present: false,
+        impact: "",
+        reason: "",
+        valid: true,
+        errors: []
+      };
+
+  if (releasePolicy?.enabled) {
+    if (!releasePolicy.valid) {
+      findings.push(`AGENTS.md Release Policy is invalid: ${releasePolicy.errors[0]}`);
+    } else if (!releaseImpact.valid) {
+      findings.push(`Release Impact is missing or unresolved: ${releaseImpact.errors[0]}`);
+    }
+  }
+
+  return {
+    ok: findings.length === 0,
+    findings,
+    implementation_counts: implementationCounts,
+    acceptance_counts: acceptanceCounts,
+    go_no_go_counts: goNoGoCounts,
+    validation_commands: validationCommands,
+    release_impact: releaseImpact
+  };
+}
+
+export async function archivePassPlan(projectDir, plan) {
+  const { body } = splitFrontmatter(plan.content);
+  const archivedAt = nowIso();
+  const nextFrontmatter = {
+    ...plan.frontmatter,
+    status: "done",
+    decision: "PASS",
+    selected_mode: "Plan",
+    next_command: "done",
+    next_mode: "done",
+    lifecycle_phase: "done",
+    updated_at: archivedAt,
+    archived_at: archivedAt
+  };
+  const archiveWipLines = [
+    `- ${archivedAt} - Status: Archived after PASS closeout.`,
+    `- ${archivedAt} - Blockers: None.`,
+    `- ${archivedAt} - Next step: Done.`
+  ].join("\n");
+  const trimmedBody = body.trimEnd();
+  const nextBody = /^## WIP Log\s*$/m.test(trimmedBody)
+    ? trimmedBody.replace(/^## WIP Log\s*$/m, `## WIP Log\n${archiveWipLines}`)
+    : `${trimmedBody}\n\n## WIP Log\n${archiveWipLines}`;
+  const nextContent = `${serializeFrontmatter(nextFrontmatter)}\n${nextBody}\n`;
+  const targetPath = path.join(projectDir, DONE_PLAN_DIR, path.basename(plan.path));
+  if (fs.existsSync(targetPath)) {
+    throw new Error(`Done plan already exists at ${targetPath}`);
+  }
+
+  const rolloverPlan = await planDoneRollover(projectDir, {
+    keep: DONE_PLAN_KEEP_LATEST,
+    pendingRecord: {
+      ...plan,
+      path: targetPath,
+      name: path.basename(targetPath),
+      frontmatter: nextFrontmatter,
+      stat: {
+        mtimeMs: resolvePlanRecordTimestampInfo({
+          ...plan,
+          frontmatter: nextFrontmatter,
+          stat: {
+            mtimeMs: Date.now()
+          }
+        }).ms || Date.now()
+      }
+    }
+  });
+
+  await fsp.mkdir(path.dirname(targetPath), { recursive: true });
+  await fsp.writeFile(plan.path, nextContent, "utf8");
+  await fsp.rename(plan.path, targetPath);
+  const rolledOver = await applyDoneRollover(rolloverPlan);
+  return {
+    archived_at: archivedAt,
+    archived_path: targetPath,
+    rolled_over: rolledOver
+  };
+}
+
 export async function planDoneRollover(projectDir, { keep = DONE_PLAN_KEEP_LATEST, pendingRecord = null } = {}) {
   const flatDoneRecords = await listDonePlanRecords(projectDir, false);
   const candidates = [...flatDoneRecords];

@@ -18,6 +18,10 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
 - Archive completed PASS work:
   - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+- Check closeout gates and optionally archive on PASS:
+  - `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .`
+  - `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project . --archive-if-pass`
+  - keeps release separate; `--archive-if-pass` is explicit and never triggers release closeout
 - Inspect plan hygiene without mutating plan files:
   - `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
   - reports stale active plans, orphan conditions, and done-plan weekly bucket counts
@@ -93,6 +97,10 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - treat its output as report-first guidance; do not guess whether older active plans are safe to ignore
 - Archive gate fails:
   - finish the unchecked Implementation Tasks, Acceptance Criteria, and Go/No-Go items, then rerun `archive-plan.mjs`
+- User asks to check and archive the current slice:
+  - first use `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .`
+  - if you want explicit archive on PASS, rerun with `--archive-if-pass`
+  - keep release separate and use `finish-status.mjs` afterward when the repo is SemVer-enabled
 - User asks `commit please`, `release please`, or `finish please` in a SemVer-enabled repo:
   - first inspect `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - follow its `recommended_action` instead of guessing from the wording alone

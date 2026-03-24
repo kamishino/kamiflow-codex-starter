@@ -28,6 +28,8 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - verify whether the active plan is ready for `build` or `fix`
 - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
   - archive a completed PASS plan and roll older done plans into weekly buckets like `.local/plans/done/2026/W13/`
+- `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project . [--archive-if-pass]`
+  - run deterministic closeout checks for the target plan, and archive it only when `--archive-if-pass` is explicitly requested and the result is `PASS`
 - `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
   - report stale active plans, orphan plan conditions, and done-plan distribution without mutating plan files
 - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
@@ -87,6 +89,7 @@ Keep the ownership one-way: plans may reference `.local/project.md` through `Pro
 - `plan`: produce a decision-complete implementation plan that is ready to hand off to `build`.
 - `build`: implement one approved slice.
 - `check`: verify behavior and decide `PASS` or `BLOCK`.
+- For explicit “check and archive” requests, prefer `check-closeout.mjs` over manually chaining validation and archive steps.
 - `research`: gather missing facts or compare risky options.
 - `fix`: repair a concrete bug or regression.
 
