@@ -24,6 +24,12 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 - Retrieve prior local context for planning or research:
   - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
   - returns bounded matches from `.local/project.md`, the active plan, and the latest archived PASS plans
+- Inspect the active plan in one compact snapshot:
+  - `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
+- Open the lightweight live plan view:
+  - `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
+- Stop the lightweight live plan view:
+  - `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
 - For opted-in root Node/npm repos, prepare version closeout:
   - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
 
@@ -37,6 +43,8 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - active task execution state
 - `.local/plans/done/*.md`
   - archived PASS plans
+- `.local/plan-view/runtime.json`
+  - ephemeral runtime marker for the optional live plan view
 - `.agents/skills/kamiflow-core/`
   - installed skill runtime
 
@@ -53,6 +61,7 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
 - Read `.local/project.md` before non-fast-path route work.
 - Treat active-plan `next_command` and `lifecycle_phase` as hints, not hard steering.
 - If the request is a narrow operational ask like status, diff, summary, commit, release, or finish, let that explicit ask stay on the fast path instead of forcing stale heavier-planning routing.
+- If the request is `open plan view`, keep it on the fast path and use `plan-view.mjs` rather than treating it as implementation work.
 - For `start`, `plan`, or `research`, use `plan-history.mjs` only when prior similar slices would materially improve the answer; keep it advisory, not mandatory.
 
 ## Route Selection
@@ -81,6 +90,10 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - first inspect `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - follow its `recommended_action` instead of guessing from the wording alone
   - keep the request operational; do not reroute into plan/build/check unless the user is actually asking for implementation or closeout evidence
+- User asks `open plan view`:
+  - first use `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
+  - rely on `plan-snapshot.mjs` as the live view's read model
+  - keep the request operational and do not mutate the active plan
 - SemVer closeout is enabled and release impact is patch, minor, or major:
   - first commit the functional changes with a normal repo-owned subject
   - run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`

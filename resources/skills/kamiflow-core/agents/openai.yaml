@@ -1,6 +1,6 @@
 interface:
   display_name: Kami Flow Core
   short_description: Intent-driven workflow router for client repos with a repo contract in AGENTS.md, a human project brief, local plan helpers, and an optional opt-in SemVer closeout policy; the kamiflow-core source repo is the source-repo exception.
-  default_prompt: Use Kami Flow Core to read AGENTS.md, the project brief, and the active plan in that order, infer the right route, and produce an evidence-backed next step. Treat client repos as the default target, the kamiflow-core source repo as the source-repo exception, honor any opt-in SemVer release policy declared in AGENTS.md, and use finish-status guidance before acting on commit, release, or finish requests.
+  default_prompt: Use Kami Flow Core to read AGENTS.md, the project brief, and the active plan in that order, infer the right route, and produce an evidence-backed next step. Treat client repos as the default target, the kamiflow-core source repo as the source-repo exception, honor any opt-in SemVer release policy declared in AGENTS.md, use finish-status guidance before acting on commit, release, or finish requests, and use the plan-snapshot or plan-view helpers for explicit plan-status and open-plan-view asks.
 policy:
   allow_implicit_invocation: false

@@ -26,7 +26,7 @@ This responsibility order does not replace route inference. It defines which loc
 ## Decision Order
 
 1. Check for explicit intent aliases in the user's request.
-2. Before leaning on active-plan hints, check whether the request is a narrow operational ask that can stay on the fast path even with an active plan. Treat status, diff, summary, commit, release, and finish chores as operational unless the user is actually asking for new implementation, bug fixing, or validation closeout.
+2. Before leaning on active-plan hints, check whether the request is a narrow operational ask that can stay on the fast path even with an active plan. Treat status, diff, summary, commit, release, finish, and `open plan view` chores as operational unless the user is actually asking for new implementation, bug fixing, or validation closeout.
 3. If no stronger explicit user intent is present, use the active non-done plan's `next_command` or `lifecycle_phase` as the route hint.
 4. Read `.local/project.md` and use it to bias route framing and tradeoffs, especially whether the workspace is a client repo or the kamiflow-core source repo.
 5. Apply safety overrides before doing work:
@@ -56,6 +56,8 @@ Keep `start` as the internal route token. When the request says `brainstorm` or 
 
 For SemVer-enabled repos, treat `commit please`, `release please`, and `finish please` as fast-path closeout requests. Before acting on any of them, inspect `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` and follow its `recommended_action`.
 
+Treat `open plan view` as a fast-path operational request. Use `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open` and keep the live view read-only over `plan-snapshot.mjs`.
+
 ## Active Plan Hints
 
 - Prefer the explicit user alias over stale plan momentum.
@@ -71,6 +73,7 @@ For SemVer-enabled repos, treat `commit please`, `release please`, and `finish p
 - Ignore stale active-plan momentum when the user asks for:
   - current status or a short summary
   - a diff, log, or read-only inspection
+  - `open plan view`
   - `commit please`
   - `release please`
   - `finish please`
@@ -108,6 +111,7 @@ Allowed fast-path categories:
 - narrow read-only checks
 - commit or commit-message chores
 - release or finish chores that first consult `finish-status.mjs`
+- `open plan view` requests that use `plan-view.mjs` and do not mutate the plan
 - small operational follow-ups that do not need acceptance criteria or lifecycle tracking
 
 Do not use the fast path for feature work, bug fixing, closeout, or any request that needs acceptance criteria, validation, or plan continuity.

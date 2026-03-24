@@ -52,9 +52,29 @@ The installer does not generate `.kfc/`, `.codex/rules/`, or any repo-specific s
 ```bash
 node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .
 node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .
+node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text
 ```
 
-Read `AGENTS.md` first for repo rules. Keep `.local/project.md` current as the human-facing project brief. The active plan stays in `.local/plans/*.md`. Direct markdown mutation is the normal workflow. The helper scripts are deterministic recovery commands for plan bootstrap, repo-contract repair, project-brief repair, readiness checks, and archive closeout.
+Read `AGENTS.md` first for repo rules. Keep `.local/project.md` current as the human-facing project brief. The active plan stays in `.local/plans/*.md`. Direct markdown mutation is the normal workflow. The helper scripts are deterministic recovery commands for plan bootstrap, repo-contract repair, project-brief repair, readiness checks, archive closeout, and lightweight read-only status views.
+
+## Optional Plan View
+
+For a compact status summary in the terminal:
+
+```bash
+node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text
+node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format markdown
+node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format json
+```
+
+For a lightweight live browser view of the active plan:
+
+```bash
+node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open
+node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop
+```
+
+This view stays read-only, serves only on localhost, reuses a healthy existing server when possible, and keeps `.local/plans/*.md` as the source of truth. Runtime reuse is tracked only through `.local/plan-view/runtime.json`.
 
 ## Optional SemVer Workflow
 

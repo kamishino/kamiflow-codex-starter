@@ -15,7 +15,7 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 4. Infer the route automatically from explicit intent, the three internal lanes, active plan state, `.local/project.md`, and safety gates. Treat active-plan `next_command` and `lifecycle_phase` as hints only.
 5. For `start`, `plan`, or `research`, optionally query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` when similar prior slices or durable project memory could materially improve the answer. Keep retrieval bounded and advisory only.
 6. Only load the matching route reference after the route is inferred.
-7. For narrow operational work like status, diff, summary, commit, release, or finish chores, prefer the fast path instead of forcing stale active-plan momentum back into heavier planning flow.
+7. For narrow operational work like status, diff, summary, commit, release, finish, or `open plan view`, prefer the fast path instead of forcing stale active-plan momentum back into heavier planning flow.
 8. Before `build` or `fix`, first make sure the active plan is already a decision-complete implementation or repair slice. If it is still draft or placeholder, do not continue implementation in that response; reroute to `plan`, update the plan, and stop. Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on a later `build` or `fix` attempt after the plan is ready.
 9. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 10. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
@@ -30,6 +30,12 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - archive a completed PASS plan and prune old done plans
 - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
   - retrieve bounded prior context from `.local/project.md`, the active plan, and recent archived PASS plans when `start`, `plan`, or `research` would benefit from similar prior slices
+- `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
+  - derive one compact active-plan snapshot for terminal summaries, markdown status cards, or JSON consumers
+- `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
+  - open or reuse the lightweight localhost plan view for the current repo
+- `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
+  - stop the current repo-local plan-view server and clear stale runtime state
 - `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - inspect repo state and recommend `commit-only`, `release-only`, or `commit-and-release` before acting on finish requests
 - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
@@ -100,7 +106,8 @@ For non-trivial route responses, keep the final answer compact:
 - When `SemVer Workflow` is enabled in `AGENTS.md`, keep a `## Release Impact` section in the plan and resolve it before PASS archive.
 - Keep functional commit history and release history separate in SemVer-enabled repos.
 - In SemVer-enabled repos, interpret `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the correct end-of-slice action from `finish-status.mjs`.
-- Keep explicit narrow operational asks lightweight even when an active plan exists. Do not reroute `commit please`, `release please`, `finish please`, status, diff, or summary requests into `plan`, `build`, or `check` unless the user is actually asking for implementation or closeout work.
+- Keep explicit narrow operational asks lightweight even when an active plan exists. Do not reroute `commit please`, `release please`, `finish please`, `open plan view`, status, diff, or summary requests into `plan`, `build`, or `check` unless the user is actually asking for implementation or closeout work.
+- Keep `plan-snapshot.mjs` as the canonical read model for both status summaries and the optional live plan view. The live view must stay read-only and must not parse plan files independently.
 - Treat `start` as the persisted plan-lite handoff into `plan`, not as a shortcut around the full-plan contract.
 - Archive only after all Acceptance Criteria and Go/No-Go items are checked.
 

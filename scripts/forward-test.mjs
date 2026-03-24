@@ -15,6 +15,12 @@ import {
   runCommand as runProcessCommand
 } from "../resources/skills/kamiflow-core/scripts/lib-process.mjs";
 import {
+  clearPlanViewRuntime,
+  probePlanView,
+  readPlanViewRuntime,
+  terminateProcess
+} from "../resources/skills/kamiflow-core/scripts/lib-plan-view.mjs";
+import {
   countCheckboxes,
   detectRepoRole,
   extractSection,
@@ -133,6 +139,10 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const doctorLogPath = path.join(logDir, "doctor.log");
   const readyCheckLogPath = path.join(logDir, "ready-check.log");
   const planHistoryLogPath = path.join(logDir, "plan-history.log");
+  const planSnapshotLogPath = path.join(logDir, "plan-snapshot.log");
+  const planViewOpenLogPath = path.join(logDir, "plan-view-open.log");
+  const planViewOpenSecondLogPath = path.join(logDir, "plan-view-open-second.log");
+  const planViewStopLogPath = path.join(logDir, "plan-view-stop.log");
   const finishStatusLogPath = path.join(logDir, "finish-status.log");
   const versionCloseoutLogPath = path.join(logDir, "version-closeout.log");
   const archiveLogPath = path.join(logDir, "archive-plan.log");
@@ -188,6 +198,8 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.rm(externalWorkspace, { recursive: true, force: true });
     return failure;
   }
+
+  const scenarioEnv = buildScenarioEnv(scenario);
   const installState = await collectScenarioState(externalWorkspace, scenario);
 
   if (scenario.prepareCommittedBaseline) {
@@ -218,6 +230,18 @@ async function runScenario({ scenario, tarballPath, runDir }) {
       String(scenario.createDirtyWorktreeContent || `dirty worktree fixture for ${scenario.name}\n`),
       "utf8"
     );
+  }
+
+  if (scenario.seedPlanViewRuntime === "stale") {
+    const runtimePath = path.join(externalWorkspace, ".local", "plan-view", "runtime.json");
+    await fsp.mkdir(path.dirname(runtimePath), { recursive: true });
+    await fsp.writeFile(runtimePath, `${JSON.stringify({
+      pid: 999999,
+      port: 9,
+      url: "http://127.0.0.1:9/",
+      project_dir: externalWorkspace,
+      started_at: "2026-03-24T00:00:00.000Z"
+    }, null, 2)}\n`, "utf8");
   }
 
   let reinstallResult = { code: 0, stdout: "", stderr: "", timedOut: false };
@@ -274,10 +298,60 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.writeFile(planHistoryLogPath, `${planHistoryResult.stdout}\n${planHistoryResult.stderr}`.trim(), "utf8");
   }
 
+  let planSnapshotResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runPlanSnapshot) {
+    planSnapshotResult = await runCommand("node", [
+      path.join(".agents", "skills", "kamiflow-core", "scripts", "plan-snapshot.mjs"),
+      "--project",
+      ".",
+      "--format",
+      String(scenario.planSnapshotFormat || "json")
+    ], {
+      cwd: externalWorkspace,
+      env: scenarioEnv
+    });
+    await fsp.writeFile(planSnapshotLogPath, `${planSnapshotResult.stdout}\n${planSnapshotResult.stderr}`.trim(), "utf8");
+  }
+
+  const planViewOpenResults = [];
+  if (scenario.runPlanViewOpen) {
+    const openCount = Math.max(1, Number(scenario.planViewOpenCount || 1));
+    for (let index = 0; index < openCount; index += 1) {
+      const openResult = await runCommand("node", [
+        path.join(".agents", "skills", "kamiflow-core", "scripts", "plan-view.mjs"),
+        "--project",
+        ".",
+        "--open"
+      ], {
+        cwd: externalWorkspace,
+        env: scenarioEnv,
+        timeoutMs: 15_000
+      });
+      planViewOpenResults.push(openResult);
+      await fsp.writeFile(index === 0 ? planViewOpenLogPath : planViewOpenSecondLogPath, `${openResult.stdout}\n${openResult.stderr}`.trim(), "utf8");
+    }
+  }
+
+  let planViewStopResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runPlanViewStop) {
+    planViewStopResult = await runCommand("node", [
+      path.join(".agents", "skills", "kamiflow-core", "scripts", "plan-view.mjs"),
+      "--project",
+      ".",
+      "--stop"
+    ], {
+      cwd: externalWorkspace,
+      env: scenarioEnv,
+      timeoutMs: 10_000
+    });
+    await fsp.writeFile(planViewStopLogPath, `${planViewStopResult.stdout}\n${planViewStopResult.stderr}`.trim(), "utf8");
+  }
+
   let finishStatusResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runFinishStatus) {
     finishStatusResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "finish-status.mjs"), "--project", "."], {
-      cwd: externalWorkspace
+      cwd: externalWorkspace,
+      env: scenarioEnv
     });
     await fsp.writeFile(finishStatusLogPath, `${finishStatusResult.stdout}\n${finishStatusResult.stderr}`.trim(), "utf8");
   }
@@ -285,7 +359,8 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   let versionCloseoutResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runVersionCloseout) {
     versionCloseoutResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "version-closeout.mjs"), "--project", "."], {
-      cwd: externalWorkspace
+      cwd: externalWorkspace,
+      env: scenarioEnv
     });
     await fsp.writeFile(versionCloseoutLogPath, `${versionCloseoutResult.stdout}\n${versionCloseoutResult.stderr}`.trim(), "utf8");
   }
@@ -293,7 +368,8 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   let archivePlanResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runArchivePlan) {
     archivePlanResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "archive-plan.mjs"), "--project", "."], {
-      cwd: externalWorkspace
+      cwd: externalWorkspace,
+      env: scenarioEnv
     });
     await fsp.writeFile(archiveLogPath, `${archivePlanResult.stdout}\n${archivePlanResult.stderr}`.trim(), "utf8");
   }
@@ -319,8 +395,9 @@ async function runScenario({ scenario, tarballPath, runDir }) {
       "-"
     ], {
       cwd: repoRoot,
+      env: scenarioEnv,
       input: prompt,
-      timeoutMs: 12 * 60 * 1000
+      timeoutMs: Number(scenario.codexTimeoutMs || 12 * 60 * 1000)
     });
     codexFinishedAtMs = Date.now();
     await fsp.writeFile(stdoutPath, codexResult.stdout, "utf8");
@@ -342,6 +419,9 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     doctorResult,
     readyCheckResult,
     planHistoryResult,
+    planSnapshotResult,
+    planViewOpenResults,
+    planViewStopResult,
     finishStatusResult,
     versionCloseoutResult,
     archivePlanResult,
@@ -354,13 +434,14 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     codex: codexFinishedAtMs - codexStartedAtMs
   };
 
+  await cleanupPlanViewServer(externalWorkspace);
   await snapshotWorkspace(externalWorkspace, path.join(scenarioDir, "project"));
   await writeJson(path.join(scenarioDir, "result.json"), scenarioResult);
   await fsp.rm(externalWorkspace, { recursive: true, force: true });
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, planHistoryResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, planHistoryResult, planSnapshotResult, planViewOpenResults, planViewStopResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -369,7 +450,13 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   const userFacingOutput = finalMessage;
   const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
   const planHistoryPayload = parseJsonMaybe(planHistoryResult.stdout);
+  const planSnapshotPayload = parseJsonMaybe(planSnapshotResult.stdout);
+  const planViewOpenPayloads = Array.isArray(planViewOpenResults) ? planViewOpenResults.map((result) => parseJsonMaybe(result.stdout)) : [];
+  const planViewStopPayload = parseJsonMaybe(planViewStopResult.stdout);
   const finishStatusPayload = parseJsonMaybe(finishStatusResult.stdout);
+  const completedTurnDespiteTimeout = codexResult.code === -1
+    && /"type":"turn\.completed"/.test(codexResult.stdout)
+    && String(finalMessage || "").trim().length > 0;
   const usageLimitBlocked = !scenario.skipCodex
     && /hit your usage limit|purchase more credits|try again at/i.test(combinedOutput);
   const closeoutArchiveRaceOnly = scenario.grader === "closeout-check"
@@ -399,8 +486,8 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
 
   checks.push({
     label: "codex-exit-zero",
-    ok: codexResult.code === 0,
-    detail: `exit code ${codexResult.code}`
+    ok: codexResult.code === 0 || completedTurnDespiteTimeout,
+    detail: completedTurnDespiteTimeout ? "turn completed before wrapper timeout" : `exit code ${codexResult.code}`
   });
 
   checks.push({
@@ -462,6 +549,49 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "plan-history-keeps-worktree-clean",
       ok: Array.isArray(finalState.git?.dirtyPaths) && finalState.git.dirtyPaths.length === 0,
       detail: Array.isArray(finalState.git?.dirtyPaths) ? finalState.git.dirtyPaths.join(" | ") || "git worktree remained clean" : "git state missing"
+    });
+  }
+
+  if (scenario.runPlanSnapshot) {
+    checks.push({
+      label: "plan-snapshot-exits-zero",
+      ok: planSnapshotResult.code === 0,
+      detail: `exit code ${planSnapshotResult.code}`
+    });
+    checks.push({
+      label: "plan-snapshot-returns-json",
+      ok: Boolean(planSnapshotPayload) && typeof planSnapshotPayload === "object",
+      detail: planSnapshotPayload ? "helper returned JSON" : "plan-snapshot did not return JSON"
+    });
+    checks.push({
+      label: "plan-snapshot-does-not-mutate-tracked-files",
+      ok: Object.keys(finalState.fileHashes).every((relativePath) => installState.fileHashes[relativePath] === finalState.fileHashes[relativePath]),
+      detail: "tracked fixture files should remain unchanged after read-only snapshotting"
+    });
+  }
+
+  if (scenario.runPlanViewOpen) {
+    checks.push({
+      label: "plan-view-open-exits-zero",
+      ok: planViewOpenResults.every((result) => result.code === 0),
+      detail: planViewOpenResults.map((result) => result.code).join(", ") || "no open result"
+    });
+    if (!scenario.runPlanViewStop) {
+      checks.push({
+        label: "plan-view-health-ok",
+        ok: Boolean(finalState.planView?.health?.ok),
+        detail: finalState.planView?.health?.ok
+          ? finalState.planView.health.url
+          : finalState.planView?.health?.error || "plan-view server was not healthy"
+      });
+    }
+  }
+
+  if (scenario.runPlanViewStop) {
+    checks.push({
+      label: "plan-view-stop-exits-zero",
+      ok: planViewStopResult.code === 0,
+      detail: `exit code ${planViewStopResult.code}`
     });
   }
 
@@ -925,6 +1055,123 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "plan-history-weak-query-empty",
       ok: Array.isArray(planHistoryPayload?.results) && planHistoryPayload.results.length === 0,
       detail: Array.isArray(planHistoryPayload?.results) ? `${planHistoryPayload.results.length} results` : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "plan-snapshot-no-active-plan") {
+    checks.push({
+      label: "snapshot-reports-no-active-plan",
+      ok: planSnapshotPayload?.has_active_plan === false && planSnapshotPayload?.derived_state === "No Active Plan",
+      detail: `has_active_plan=${String(planSnapshotPayload?.has_active_plan)}, derived_state=${String(planSnapshotPayload?.derived_state || "")}`
+    });
+    checks.push({
+      label: "snapshot-next-step-present",
+      ok: /ensure-plan|start a new planning slice/i.test(String(planSnapshotPayload?.latest_next_step || "")),
+      detail: String(planSnapshotPayload?.latest_next_step || "<missing>")
+    });
+  }
+
+  if (scenario.grader === "plan-snapshot-start-phase") {
+    checks.push({
+      label: "snapshot-derives-plan-lite",
+      ok: planSnapshotPayload?.has_active_plan === true
+        && planSnapshotPayload?.derived_state === "Plan-Lite"
+        && String(planSnapshotPayload?.next_command || "").toLowerCase() === "plan",
+      detail: `state=${String(planSnapshotPayload?.derived_state || "")}, next=${String(planSnapshotPayload?.next_command || "")}`
+    });
+    checks.push({
+      label: "snapshot-captures-open-decisions",
+      ok: Number(planSnapshotPayload?.open_decisions_remaining || 0) >= 1,
+      detail: String(planSnapshotPayload?.open_decisions_remaining || 0)
+    });
+  }
+
+  if (scenario.grader === "plan-snapshot-build-ready") {
+    checks.push({
+      label: "snapshot-derives-build-ready",
+      ok: planSnapshotPayload?.has_active_plan === true
+        && planSnapshotPayload?.derived_state === "Build Ready"
+        && String(planSnapshotPayload?.decision || "").toUpperCase() === "GO"
+        && String(planSnapshotPayload?.next_command || "").toLowerCase() === "build",
+      detail: `state=${String(planSnapshotPayload?.derived_state || "")}, decision=${String(planSnapshotPayload?.decision || "")}, next=${String(planSnapshotPayload?.next_command || "")}`
+    });
+  }
+
+  if (scenario.grader === "plan-view-open-starts-server") {
+    const firstOpenPayload = planViewOpenPayloads[0];
+    checks.push({
+      label: "plan-view-started",
+      ok: firstOpenPayload?.action === "started" && Boolean(finalState.planView?.runtime?.valid) && Boolean(finalState.planView?.health?.ok),
+      detail: `action=${String(firstOpenPayload?.action || "")}, health=${String(finalState.planView?.health?.ok || false)}`
+    });
+    checks.push({
+      label: "plan-view-plan-unchanged",
+      ok: finalState.fileHashes[String(scenario.trackedPlanFile || "")] === installState.fileHashes[String(scenario.trackedPlanFile || "")],
+      detail: finalState.fileHashes[String(scenario.trackedPlanFile || "")] === installState.fileHashes[String(scenario.trackedPlanFile || "")]
+        ? "active plan unchanged"
+        : "active plan was mutated"
+    });
+  }
+
+  if (scenario.grader === "plan-view-open-reuses-healthy-server") {
+    const firstOpenPayload = planViewOpenPayloads[0];
+    const secondOpenPayload = planViewOpenPayloads[1];
+    checks.push({
+      label: "plan-view-reused-second-open",
+      ok: firstOpenPayload?.action === "started"
+        && secondOpenPayload?.action === "reused"
+        && firstOpenPayload?.url === secondOpenPayload?.url,
+      detail: `first=${String(firstOpenPayload?.action || "")}, second=${String(secondOpenPayload?.action || "")}`
+    });
+  }
+
+  if (scenario.grader === "plan-view-open-replaces-stale-marker") {
+    const firstOpenPayload = planViewOpenPayloads[0];
+    checks.push({
+      label: "plan-view-replaced-stale-marker",
+      ok: firstOpenPayload?.action === "replaced-stale-and-started" && Boolean(finalState.planView?.health?.ok),
+      detail: `action=${String(firstOpenPayload?.action || "")}, health=${String(finalState.planView?.health?.ok || false)}`
+    });
+  }
+
+  if (scenario.grader === "plan-view-stop-terminates-server") {
+    checks.push({
+      label: "plan-view-stop-reported",
+      ok: planViewStopPayload?.action === "stopped",
+      detail: String(planViewStopPayload?.action || "<missing>")
+    });
+    checks.push({
+      label: "plan-view-runtime-cleared",
+      ok: finalState.planView?.runtime?.exists === false && finalState.planView?.health?.ok === false,
+      detail: `runtime_exists=${String(finalState.planView?.runtime?.exists || false)}, health=${String(finalState.planView?.health?.ok || false)}`
+    });
+  }
+
+  if (scenario.grader === "open-plan-view-fast-path") {
+    const trackedPlanPath = String(scenario.trackedPlanFile || "");
+    checks.push({
+      label: "plan-view-opened-operationally",
+      ok: Boolean(finalState.planView?.health?.ok),
+      detail: finalState.planView?.health?.ok
+        ? finalState.planView.health.url
+        : finalState.planView?.health?.error || "plan-view server was not healthy"
+    });
+    checks.push({
+      label: "active-plan-unchanged",
+      ok: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath],
+      detail: finalState.fileHashes[trackedPlanPath] === installState.fileHashes[trackedPlanPath]
+        ? "active plan unchanged"
+        : "active plan was mutated"
+    });
+    checks.push({
+      label: "open-plan-view-stays-fast-path",
+      ok: !/Check:\s*(PASS|BLOCK)/i.test(finalMessage),
+      detail: "final message should stay operational and avoid build/check claims"
+    });
+    checks.push({
+      label: "open-plan-view-surfaced-url",
+      ok: /127\.0\.0\.1:\d+|plan view/i.test(finalMessage),
+      detail: finalMessage || "<missing>"
     });
   }
 
@@ -1443,7 +1690,8 @@ async function collectScenarioState(workspace, scenario) {
     fileHashes,
     runtimeSkill,
     installMeta,
-    git: await collectGitState(workspace)
+    git: await collectGitState(workspace),
+    planView: await collectPlanViewState(workspace)
   };
   if (scenario.primaryFile) {
     state.primaryFileHash = fileHashes[scenario.primaryFile] || "";
@@ -1472,6 +1720,22 @@ async function collectRuntimeSkillState(workspace) {
     exists: true,
     files,
     digest: files.length > 0 ? await hashRelativeFiles(runtimeSkillDir, files) : ""
+  };
+}
+
+async function collectPlanViewState(workspace) {
+  const runtime = await readPlanViewRuntime(workspace);
+  const health = runtime.valid
+    ? await probePlanView(runtime.marker.url, "/health", 800)
+    : {
+      ok: false,
+      status: 0,
+      error: runtime.reason || "no runtime marker"
+    };
+
+  return {
+    runtime,
+    health
   };
 }
 
@@ -1627,6 +1891,35 @@ async function hashRelativeFiles(rootDir, relativePaths) {
     hash.update("\n---\n", "utf8");
   }
   return hash.digest("hex");
+}
+
+function buildScenarioEnv(scenario) {
+  const env = {};
+  if (scenario.planViewNoBrowser) {
+    env.KAMIFLOW_PLAN_VIEW_NO_BROWSER = "1";
+  }
+  return env;
+}
+
+async function cleanupPlanViewServer(workspace) {
+  const runtime = await readPlanViewRuntime(workspace);
+  if (!runtime.valid) {
+    if (runtime.exists) {
+      await clearPlanViewRuntime(workspace);
+    }
+    return;
+  }
+
+  terminateProcess(runtime.marker.pid);
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < 4_000) {
+    const probe = await probePlanView(runtime.marker.url, "/health", 600);
+    if (!probe.ok) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  await clearPlanViewRuntime(workspace);
 }
 
 async function safeRevParse(...argsList) {

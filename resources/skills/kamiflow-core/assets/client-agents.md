@@ -19,6 +19,9 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 - Recover a missing plan or project brief with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
 - Check build readiness with `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
 - Archive a completed PASS plan with `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+- Inspect the active plan state with `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
+- Open the lightweight live plan view with `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
+- Stop the lightweight live plan view with `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
 - Inspect finish guidance with `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
 - For opted-in Node/npm repos, run version closeout with `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
 
@@ -47,6 +50,7 @@ Leave this disabled unless the repo wants opt-in SemVer closeout for a root sing
 - In SemVer-enabled repos, commit functionality first with a repo-owned subject, then use `version-closeout.mjs` for the release-only commit and `vX.Y.Z` tag.
 - In SemVer-enabled repos, treat `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the right final action from `finish-status.mjs`.
 - Treat explicit narrow operational asks like status, diff, summary, commit, release, and finish as fast-path work even if an active plan exists. Do not let stale plan momentum force those asks back into heavier planning lanes.
+- Treat `open plan view` as the same kind of fast-path operational ask. It should stay read-only and use the helper-backed plan snapshot instead of becoming a second workflow.
 - Do not reintroduce legacy bootstrap commands or repo-specific bootstrap surfaces.
 - Treat this generated contract as the client-repo default, not the source-repo contract.
 
