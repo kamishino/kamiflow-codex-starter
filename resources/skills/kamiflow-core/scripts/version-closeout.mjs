@@ -6,7 +6,7 @@ import {
   parseCliArgs,
   readReleasePolicy,
   resolveProjectDir
-} from "./lib-plan.mjs";
+} from "./lib-plan-workspace.mjs";
 import { resolveReleaseWindow } from "./lib-release-window.mjs";
 import { isGitWorktree, readGitStatus as readGitStatusSync } from "./lib-process.mjs";
 

@@ -9,37 +9,50 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 - First install or refresh:
   - `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
   - writes `.agents/skills/kamiflow-core/install-meta.json`, preserves existing `AGENTS.md` and `.local/project.md`, and creates the generated client `AGENTS.md` only when the repo does not already own one
+  - use this for first install, reinstall, or repair after the skill runtime is missing
 - In the kamiflow-core source repo, use:
   - `npm run skill:sync`
   - refreshes the full source-repo runtime and rewrites the runtime metadata as the source-repo sync profile
+  - use this for repo-local source-repo sync, not for ordinary client repos
 - Recover missing active plan or runtime project brief:
   - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+  - use this for “recover the current plan state” or “recreate the project brief”
 - Check build readiness:
   - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
+  - use this before `build` or `fix` when you need a deterministic GO/BLOCK answer
 - Archive completed PASS work:
   - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+  - use this only after the plan already reached PASS closeout
 - Check closeout gates and optionally archive on PASS:
   - `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .`
   - `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project . --archive-if-pass`
   - keeps release separate; `--archive-if-pass` is explicit and never triggers release closeout
+  - use this for “check this slice”, “check and archive”, or any deterministic PASS/BLOCK closeout pass
 - Inspect plan hygiene without mutating plan files:
   - `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
   - reports stale active plans, orphan conditions, and done-plan weekly bucket counts
+  - use this before guessing how to handle stale or conflicting plans
 - Inspect the correct finish action:
   - `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - returns the helper-backed recommendation for `commit-only`, `release-only`, or `commit-and-release`
+  - use this before acting on `commit please`, `release please`, or `finish please`
 - Retrieve prior local context for planning or research:
   - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
   - returns bounded matches from `.local/project.md`, the active plan, and the latest archived PASS plans
+  - use this when a new `start`, `plan`, or `research` slice could benefit from similar prior work
 - Inspect the active plan in one compact snapshot:
   - `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
+  - use this for terminal summaries, compact status cards, or machine-readable active-plan reads
 - Open the lightweight live plan view:
   - `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
+  - use this when you want a read-only live plan screen in the browser
 - Stop the lightweight live plan view:
   - `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
+  - use this when the local plan-view server should be shut down or reset
 - For opted-in root Node/npm repos, prepare version closeout:
   - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
   - aggregates unreleased PASS-plan impact since the latest reachable release tag before printing the release-only commit and tag commands
+  - use this only after the functional commit is already done and `finish-status.mjs` recommends release work
 
 ## Local State Ownership
 

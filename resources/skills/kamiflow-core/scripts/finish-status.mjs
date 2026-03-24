@@ -3,14 +3,16 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
-  isPassPlanRecord,
   parseCliArgs,
   printJson,
   readReleasePolicy,
-  resolveActivePlan,
-  resolveLatestDonePlan,
   resolveProjectDir
-} from "./lib-plan.mjs";
+} from "./lib-plan-workspace.mjs";
+import {
+  isPassPlanRecord,
+  resolveActivePlan,
+  resolveLatestDonePlan
+} from "./lib-plan-records.mjs";
 import {
   buildReleaseWindowSummary,
   resolveReleaseWindow

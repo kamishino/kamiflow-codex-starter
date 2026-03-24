@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 import {
-  archivePassPlan,
-  assessPlanCloseout,
-  readReleasePolicy,
   parseCliArgs,
   printJson,
-  resolvePlanRef,
   resolveProjectDir
-} from "./lib-plan.mjs";
+} from "./lib-plan-workspace.mjs";
+import { readReleasePolicy } from "./lib-plan-workspace.mjs";
+import { resolvePlanRef } from "./lib-plan-records.mjs";
+import { archivePassPlan, assessPlanCloseout } from "./lib-plan-closeout.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(args.project || ".");

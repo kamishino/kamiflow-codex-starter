@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 import {
-  archivePassPlan,
-  assessPlanCloseout,
   parseCliArgs,
   printJson,
-  readReleasePolicy,
-  resolvePlanRef,
   resolveProjectDir
-} from "./lib-plan.mjs";
+} from "./lib-plan-workspace.mjs";
+import { readReleasePolicy } from "./lib-plan-workspace.mjs";
+import { resolvePlanRef } from "./lib-plan-records.mjs";
+import { archivePassPlan, assessPlanCloseout } from "./lib-plan-closeout.mjs";
 import { runShellCommand } from "./lib-process.mjs";
 
 const DEFAULT_TIMEOUT_MS = 120000;

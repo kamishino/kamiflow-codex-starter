@@ -2,9 +2,9 @@ import path from "node:path";
 import {
   isPassPlanRecord,
   listPlanRecords,
-  parseReleaseImpact,
   resolvePlanRef
-} from "./lib-plan.mjs";
+} from "./lib-plan-records.mjs";
+import { parseReleaseImpact } from "./lib-plan-closeout.mjs";
 import {
   isGitWorktree,
   runGitCommandSync

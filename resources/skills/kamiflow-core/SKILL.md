@@ -20,32 +20,18 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 9. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 10. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
 
-## Local Helpers
+## Helper Buckets
 
-- `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
-  - create or recover one active non-done plan, repair `.local/project.md`, and recreate a missing client `AGENTS.md` only when the repo contract is absent
-- `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
-  - verify whether the active plan is ready for `build` or `fix`
-- `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
-  - archive a completed PASS plan and roll older done plans into weekly buckets like `.local/plans/done/2026/W13/`
-- `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project . [--archive-if-pass]`
-  - run deterministic closeout checks for the target plan, and archive it only when `--archive-if-pass` is explicitly requested and the result is `PASS`
-- `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
-  - report stale active plans, orphan plan conditions, and done-plan distribution without mutating plan files
-- `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
-  - retrieve bounded prior context from `.local/project.md`, the active plan, and recent archived PASS plans when `start`, `plan`, or `research` would benefit from similar prior slices
-- `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
-  - derive one compact active-plan snapshot for terminal summaries, markdown status cards, or JSON consumers
-- `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
-  - open or reuse the lightweight localhost plan view for the current repo
-- `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
-  - stop the current repo-local plan-view server and clear stale runtime state
-- `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
-  - inspect repo state and recommend `commit-only`, `release-only`, or `commit-and-release` before acting on finish requests
-- `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
-  - for opted-in single-package Node/npm repos, run the release-only closeout step after the functional commit, aggregate unreleased PASS-plan impact since the latest reachable release tag, update version files, and print guided release commit plus tag commands
+Keep exact commands, arguments, and recovery shortcuts in `references/command-map.md`. Do not duplicate the full command catalog here.
 
-Use direct markdown mutation as the primary workflow. Use the helper scripts only for deterministic bootstrap, readiness, and archive recovery.
+- `bootstrap/recovery`
+  - `ensure-plan`, `ready-check`
+- `hygiene/closeout`
+  - `archive-plan`, `check-closeout`, `cleanup-plans`, `finish-status`, `version-closeout`
+- `read models`
+  - `plan-history`, `plan-snapshot`, `plan-view.mjs`
+
+Use direct markdown mutation as the primary workflow. Use helper scripts only for deterministic bootstrap, readiness, hygiene, closeout, and read-model support.
 
 ## Clarity-First Lanes
 

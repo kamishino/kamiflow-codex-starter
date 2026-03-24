@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 import {
-  analyzePlanCleanup,
   CLEANUP_STALE_AFTER_DAYS,
   parseCliArgs,
   printJson,
   resolveProjectDir
-} from "./lib-plan.mjs";
+} from "./lib-plan-workspace.mjs";
+import { analyzePlanCleanup } from "./lib-plan-cleanup.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));
