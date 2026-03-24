@@ -132,6 +132,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const reinstallLogPath = path.join(logDir, "install-rerun.log");
   const doctorLogPath = path.join(logDir, "doctor.log");
   const readyCheckLogPath = path.join(logDir, "ready-check.log");
+  const planHistoryLogPath = path.join(logDir, "plan-history.log");
   const finishStatusLogPath = path.join(logDir, "finish-status.log");
   const versionCloseoutLogPath = path.join(logDir, "version-closeout.log");
   const archiveLogPath = path.join(logDir, "archive-plan.log");
@@ -259,6 +260,20 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.writeFile(readyCheckLogPath, `${readyCheckResult.stdout}\n${readyCheckResult.stderr}`.trim(), "utf8");
   }
 
+  let planHistoryResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runPlanHistory) {
+    planHistoryResult = await runCommand("node", [
+      path.join(".agents", "skills", "kamiflow-core", "scripts", "plan-history.mjs"),
+      "--project",
+      ".",
+      "--query",
+      String(scenario.planHistoryQuery || "")
+    ], {
+      cwd: externalWorkspace
+    });
+    await fsp.writeFile(planHistoryLogPath, `${planHistoryResult.stdout}\n${planHistoryResult.stderr}`.trim(), "utf8");
+  }
+
   let finishStatusResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runFinishStatus) {
     finishStatusResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "finish-status.mjs"), "--project", "."], {
@@ -326,6 +341,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     reinstallState,
     doctorResult,
     readyCheckResult,
+    planHistoryResult,
     finishStatusResult,
     versionCloseoutResult,
     archivePlanResult,
@@ -344,7 +360,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, planHistoryResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -352,6 +368,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   const combinedOutput = `${finalMessage}\n${codexResult.stdout}\n${codexResult.stderr}`;
   const userFacingOutput = finalMessage;
   const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
+  const planHistoryPayload = parseJsonMaybe(planHistoryResult.stdout);
   const finishStatusPayload = parseJsonMaybe(finishStatusResult.stdout);
   const usageLimitBlocked = !scenario.skipCodex
     && /hit your usage limit|purchase more credits|try again at/i.test(combinedOutput);
@@ -417,6 +434,34 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "version-closeout-no-dep0190-warning",
       ok: !/\[DEP0190\]/i.test(`${versionCloseoutResult.stdout}\n${versionCloseoutResult.stderr}`),
       detail: "version-closeout output should not emit the Node DEP0190 warning"
+    });
+  }
+
+  if (scenario.runPlanHistory) {
+    checks.push({
+      label: "plan-history-exits-zero",
+      ok: planHistoryResult.code === 0,
+      detail: `exit code ${planHistoryResult.code}`
+    });
+    checks.push({
+      label: "plan-history-returns-json",
+      ok: Boolean(planHistoryPayload?.ok),
+      detail: planHistoryPayload ? "helper returned JSON" : "plan-history did not return JSON"
+    });
+    checks.push({
+      label: "plan-history-bounded-results",
+      ok: Array.isArray(planHistoryPayload?.results) && planHistoryPayload.results.length <= 5,
+      detail: Array.isArray(planHistoryPayload?.results) ? `${planHistoryPayload.results.length} results` : "plan-history results missing"
+    });
+    checks.push({
+      label: "plan-history-does-not-mutate-tracked-files",
+      ok: Object.keys(finalState.fileHashes).every((relativePath) => installState.fileHashes[relativePath] === finalState.fileHashes[relativePath]),
+      detail: "tracked project brief and plan files should remain unchanged after read-only retrieval"
+    });
+    checks.push({
+      label: "plan-history-keeps-worktree-clean",
+      ok: Array.isArray(finalState.git?.dirtyPaths) && finalState.git.dirtyPaths.length === 0,
+      detail: Array.isArray(finalState.git?.dirtyPaths) ? finalState.git.dirtyPaths.join(" | ") || "git worktree remained clean" : "git state missing"
     });
   }
 
@@ -772,6 +817,56 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "ready-check-has-no-findings",
       ok: Array.isArray(readyCheckPayload?.findings) && readyCheckPayload.findings.length === 0,
       detail: Array.isArray(readyCheckPayload?.findings) ? `${readyCheckPayload.findings.length} findings` : "ready-check did not return findings"
+    });
+  }
+
+  if (scenario.grader === "plan-history-archived-plan") {
+    const topResult = Array.isArray(planHistoryPayload?.results) ? planHistoryPayload.results[0] : null;
+    checks.push({
+      label: "plan-history-prefers-archived-release-plan",
+      ok: topResult?.source_type === "archived-plan" && topResult?.plan_id === "PLAN-2026-03-23-001",
+      detail: topResult ? `${topResult.source_type} / ${topResult.plan_id || "<missing>"}` : "<missing>"
+    });
+    checks.push({
+      label: "plan-history-archived-match-snippet",
+      ok: Array.isArray(topResult?.snippets) && topResult.snippets.some((snippet) => /tag command|release-only commit|release history/i.test(String(snippet))),
+      detail: Array.isArray(topResult?.snippets) ? topResult.snippets.join(" | ") : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "plan-history-project-brief") {
+    const topResult = Array.isArray(planHistoryPayload?.results) ? planHistoryPayload.results[0] : null;
+    checks.push({
+      label: "plan-history-prefers-project-brief",
+      ok: topResult?.source_type === "project-brief",
+      detail: topResult ? topResult.source_type : "<missing>"
+    });
+    checks.push({
+      label: "plan-history-project-brief-section-match",
+      ok: Array.isArray(topResult?.matched_sections) && topResult.matched_sections.includes("Current Priorities"),
+      detail: Array.isArray(topResult?.matched_sections) ? topResult.matched_sections.join(" | ") : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "plan-history-active-plan") {
+    const topResult = Array.isArray(planHistoryPayload?.results) ? planHistoryPayload.results[0] : null;
+    checks.push({
+      label: "plan-history-prefers-active-plan",
+      ok: topResult?.source_type === "active-plan" && topResult?.plan_id === "PLAN-2026-03-24-001",
+      detail: topResult ? `${topResult.source_type} / ${topResult.plan_id || "<missing>"}` : "<missing>"
+    });
+    checks.push({
+      label: "plan-history-active-plan-snippet",
+      ok: Array.isArray(topResult?.snippets) && topResult.snippets.some((snippet) => /retrieval helper|bounded matches|snippets/i.test(String(snippet))),
+      detail: Array.isArray(topResult?.snippets) ? topResult.snippets.join(" | ") : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "plan-history-weak-query") {
+    checks.push({
+      label: "plan-history-weak-query-empty",
+      ok: Array.isArray(planHistoryPayload?.results) && planHistoryPayload.results.length === 0,
+      detail: Array.isArray(planHistoryPayload?.results) ? `${planHistoryPayload.results.length} results` : "<missing>"
     });
   }
 

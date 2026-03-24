@@ -13,11 +13,12 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
 3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
 4. Infer the route automatically from explicit intent, active plan state, `.local/project.md`, and safety gates. Treat active-plan `next_command` and `lifecycle_phase` as hints only.
-5. Only load the matching route reference after the route is inferred.
-6. For narrow operational work like status, diff, summary, commit, release, or finish chores, prefer the fast path instead of forcing stale active-plan momentum back into plan-heavy flow.
-7. Before `build` or `fix`, first make sure the active plan is already a decision-complete implementation or repair slice. If it is still draft or placeholder, do not continue implementation in that response; reroute to `plan`, update the plan, and stop. Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on a later `build` or `fix` attempt after the plan is ready.
-8. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
-9. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
+5. For `start`, `plan`, or `research`, optionally query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` when similar prior slices or durable project memory could materially improve the answer. Keep retrieval bounded and advisory only.
+6. Only load the matching route reference after the route is inferred.
+7. For narrow operational work like status, diff, summary, commit, release, or finish chores, prefer the fast path instead of forcing stale active-plan momentum back into plan-heavy flow.
+8. Before `build` or `fix`, first make sure the active plan is already a decision-complete implementation or repair slice. If it is still draft or placeholder, do not continue implementation in that response; reroute to `plan`, update the plan, and stop. Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on a later `build` or `fix` attempt after the plan is ready.
+9. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
+10. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
 
 ## Local Helpers
 
@@ -27,6 +28,8 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - verify whether the active plan is ready for `build` or `fix`
 - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
   - archive a completed PASS plan and prune old done plans
+- `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
+  - retrieve bounded prior context from `.local/project.md`, the active plan, and recent archived PASS plans when `start`, `plan`, or `research` would benefit from similar prior slices
 - `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - inspect repo state and recommend `commit-only`, `release-only`, or `commit-and-release` before acting on finish requests
 - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`

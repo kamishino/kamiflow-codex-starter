@@ -23,14 +23,15 @@ Use this route when the request is clear enough to specify implementation detail
 
 1. Resolve or create the active plan.
 2. Read `AGENTS.md`, then `.local/project.md`, and identify the relevant priority, guardrail, open question, or recent decision.
-3. Replace placeholders with a concrete goal, scope, constraints, `Project Fit`, tasks, acceptance criteria, and validation commands.
-4. Keep `Project Fit` short: tie the slice to at least one priority or guardrail from `.local/project.md` instead of copying the whole brief.
-5. If `AGENTS.md` enables `SemVer Workflow`, add or repair `## Release Impact`, keep it aligned with the likely release impact for the slice, and plan for a later release-only closeout step rather than turning the functionality commit into the release commit.
-6. Close high-impact open decisions before handing off to implementation.
-7. Remove placeholder plan filler before handoff. `ready-check.mjs` now blocks placeholder `Goal`, `Project Fit`, `Implementation Tasks`, `Acceptance Criteria`, and `Validation Commands` content.
-8. Keep `Project Fit` concrete: reference at least one real priority or guardrail from `.local/project.md`, not template filler.
-9. Set frontmatter for build handoff: `decision: GO`, `next_command: build`, `next_mode: Build`.
-10. Persist updated `WIP Log` lines before the final response.
+3. If prior similar slices or durable decisions could change the plan, query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` and use the retrieved context as advisory evidence only.
+4. Replace placeholders with a concrete goal, scope, constraints, `Project Fit`, tasks, acceptance criteria, and validation commands.
+5. Keep `Project Fit` short: tie the slice to at least one priority or guardrail from `.local/project.md` instead of copying the whole brief.
+6. If `AGENTS.md` enables `SemVer Workflow`, add or repair `## Release Impact`, keep it aligned with the likely release impact for the slice, and plan for a later release-only closeout step rather than turning the functionality commit into the release commit.
+7. Close high-impact open decisions before handing off to implementation.
+8. Remove placeholder plan filler before handoff. `ready-check.mjs` now blocks placeholder `Goal`, `Project Fit`, `Implementation Tasks`, `Acceptance Criteria`, and `Validation Commands` content.
+9. Keep `Project Fit` concrete: reference at least one real priority or guardrail from `.local/project.md`, not template filler.
+10. Set frontmatter for build handoff: `decision: GO`, `next_command: build`, `next_mode: Build`.
+11. Persist updated `WIP Log` lines before the final response.
 
 ## Minimum Plan Mutation
 
@@ -45,6 +46,7 @@ Use this route when the request is clear enough to specify implementation detail
 ## Command Recipe
 
 - Recover the active plan with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .` when needed.
+- Optionally use `plan-history.mjs` when relevant archived slices or project-memory matches can improve the plan.
 - Use `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` as the final build-handoff gate once the plan text is concrete.
 - Keep direct plan-file mutation as the primary planning mechanism.
 

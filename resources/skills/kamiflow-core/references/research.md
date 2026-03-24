@@ -21,12 +21,13 @@ Use this route when facts are missing, risk is high, or the user needs a recomme
 ## Steps
 
 1. Read `AGENTS.md`, then `.local/project.md`, and identify which open question, priority, or guardrail makes the research necessary.
-2. Gather the minimum facts needed to answer the open question.
-3. Separate confirmed evidence from inference.
-4. Compare realistic options or identify the most likely root cause.
-5. End with a concrete recommendation and next route.
-6. Persist the research outcome in the active plan before the final response.
-7. Update `.local/project.md` only when the research resolves an open question, creates a durable decision, or confirms a repeatable guardrail. Otherwise keep the finding in the plan until `check` closes it out.
+2. If prior similar slices or durable project memory could materially improve the research, query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` and use the results as advisory context only.
+3. Gather the minimum facts needed to answer the open question.
+4. Separate confirmed evidence from inference.
+5. Compare realistic options or identify the most likely root cause.
+6. End with a concrete recommendation and next route.
+7. Persist the research outcome in the active plan before the final response.
+8. Update `.local/project.md` only when the research resolves an open question, creates a durable decision, or confirms a repeatable guardrail. Otherwise keep the finding in the plan until `check` closes it out.
 
 ## Minimum Plan Mutation
 
@@ -38,6 +39,7 @@ Use this route when facts are missing, risk is high, or the user needs a recomme
 ## Command Recipe
 
 - If no active plan exists, recover it with `ensure-plan.mjs`.
+- Optionally use `plan-history.mjs` when a prior similar slice or archived decision should shape the recommendation.
 - Keep the final recommendation tied to one next route: `start`, `plan`, or `fix`.
 
 ## Output Contract

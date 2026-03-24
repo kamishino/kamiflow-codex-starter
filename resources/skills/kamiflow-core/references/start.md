@@ -23,10 +23,11 @@ Use this route when the request is fuzzy, early-stage, or explicitly asks to bra
 
 1. Ask only the smallest set of clarification questions needed to remove high-impact ambiguity.
 2. Read `AGENTS.md`, then `.local/project.md`, and summarize the problem against current priorities, guardrails, and open questions.
-3. Produce exactly three options: `Quick Win`, `Balanced`, and `Ambitious`.
-4. Recommend one best option and explain the tradeoff.
-5. Update the active plan with a `Start Summary` and the next command.
-6. Update `.local/project.md` only if the idea work changes priorities, open questions, or a durable decision.
+3. If prior similar slices could materially reduce ambiguity, query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` and use the results as advisory context only.
+4. Produce exactly three options: `Quick Win`, `Balanced`, and `Ambitious`.
+5. Recommend one best option and explain the tradeoff.
+6. Update the active plan with a `Start Summary` and the next command.
+7. Update `.local/project.md` only if the idea work changes priorities, open questions, or a durable decision.
 
 ## Minimum Plan Mutation
 
@@ -38,6 +39,7 @@ Use this route when the request is fuzzy, early-stage, or explicitly asks to bra
 ## Command Recipe
 
 - If no active plan exists, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
+- Optionally use `plan-history.mjs` when a prior similar slice could sharpen the direction quickly.
 - Prefer direct markdown updates after plan recovery.
 
 ## Output Contract

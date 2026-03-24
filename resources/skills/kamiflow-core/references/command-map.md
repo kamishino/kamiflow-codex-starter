@@ -21,6 +21,9 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 - Inspect the correct finish action:
   - `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - returns the helper-backed recommendation for `commit-only`, `release-only`, or `commit-and-release`
+- Retrieve prior local context for planning or research:
+  - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
+  - returns bounded matches from `.local/project.md`, the active plan, and the latest archived PASS plans
 - For opted-in root Node/npm repos, prepare version closeout:
   - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
 
@@ -46,6 +49,7 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
 - Read `.local/project.md` before non-fast-path route work.
 - Treat active-plan `next_command` and `lifecycle_phase` as hints, not hard steering.
 - If the request is a narrow operational ask like status, diff, summary, commit, release, or finish, let that explicit ask stay on the fast path instead of forcing stale plan-heavy routing.
+- For `start`, `plan`, or `research`, use `plan-history.mjs` only when prior similar slices would materially improve the answer; keep it advisory, not mandatory.
 
 ## Route Selection
 

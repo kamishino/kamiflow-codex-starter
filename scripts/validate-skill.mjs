@@ -76,11 +76,18 @@ if (publishedPackageFiles.includes(packagedInstallMetaPath)) {
 }
 
 const runtimeProcessHelperPath = "scripts/lib-process.mjs";
+const planHistoryHelperPath = "scripts/plan-history.mjs";
 if (!fs.existsSync(path.join(skillRoot, runtimeProcessHelperPath))) {
   fail(`Missing runtime helper file: ${runtimeProcessHelperPath}`);
 }
 if (!clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
   fail("package.json files must publish scripts/lib-process.mjs because runtime helpers depend on it.");
+}
+if (!fs.existsSync(path.join(skillRoot, planHistoryHelperPath))) {
+  fail(`Missing runtime helper file: ${planHistoryHelperPath}`);
+}
+if (!clientRuntimeRequiredFiles.includes(planHistoryHelperPath)) {
+  fail("package.json files must publish scripts/plan-history.mjs because the retrieval helper is part of the runtime surface.");
 }
 
 for (const relativePath of clientRuntimeRequiredFiles) {
@@ -111,9 +118,15 @@ for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/"
 }
 
 const commandMap = await fsp.readFile(path.join(skillRoot, "references", "command-map.md"), "utf8");
-for (const requiredSnippet of ["finish-status.mjs", "commit-only", "release-only", "commit-and-release"]) {
+for (const requiredSnippet of ["finish-status.mjs", "plan-history.mjs", "commit-only", "release-only", "commit-and-release"]) {
   if (!commandMap.includes(requiredSnippet)) {
     fail(`references/command-map.md must mention ${requiredSnippet}`);
+  }
+}
+
+for (const requiredSnippet of ["plan-history.mjs", "start", "plan", "research"]) {
+  if (!skillMarkdown.includes(requiredSnippet)) {
+    fail(`SKILL.md must mention ${requiredSnippet}`);
   }
 }
 
