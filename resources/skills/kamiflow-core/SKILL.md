@@ -28,6 +28,8 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - verify whether the active plan is ready for `build` or `fix`
 - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
   - archive a completed PASS plan and roll older done plans into weekly buckets like `.local/plans/done/2026/W13/`
+- `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
+  - report stale active plans, orphan plan conditions, and done-plan distribution without mutating plan files
 - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
   - retrieve bounded prior context from `.local/project.md`, the active plan, and recent archived PASS plans when `start`, `plan`, or `research` would benefit from similar prior slices
 - `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
@@ -77,6 +79,7 @@ Keep the ownership one-way: plans may reference `.local/project.md` through `Pro
 - Put unresolved recurring risks or lessons that still need evidence in `Open Questions`.
 - Treat `check` as the primary promotion point for durable project-memory updates after implementation or research.
 - Do not create extra namespaced local state unless a future machine-only need appears.
+- Use `cleanup-plans.mjs` when plan hygiene is unclear instead of guessing whether old active plans are stale, orphaned, or safe to ignore.
 
 ## Route Selector
 

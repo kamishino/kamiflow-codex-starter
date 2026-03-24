@@ -18,6 +18,9 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
 - Archive completed PASS work:
   - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+- Inspect plan hygiene without mutating plan files:
+  - `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
+  - reports stale active plans, orphan conditions, and done-plan weekly bucket counts
 - Inspect the correct finish action:
   - `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - returns the helper-backed recommendation for `commit-only`, `release-only`, or `commit-and-release`
@@ -85,6 +88,9 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
 - Plan is not build-ready:
   - make zero implementation edits, update the plan markdown directly, and end the current response as `plan`
   - rerun `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on the next build or fix attempt
+- Plan state feels stale or messy:
+  - first inspect `node .agents/skills/kamiflow-core/scripts/cleanup-plans.mjs --project .`
+  - treat its output as report-first guidance; do not guess whether older active plans are safe to ignore
 - Archive gate fails:
   - finish the unchecked Implementation Tasks, Acceptance Criteria, and Go/No-Go items, then rerun `archive-plan.mjs`
 - User asks `commit please`, `release please`, or `finish please` in a SemVer-enabled repo:
