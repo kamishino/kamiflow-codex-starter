@@ -48,6 +48,7 @@ Leave this disabled unless the repo wants opt-in SemVer closeout for a root sing
 - Express recurring anti-patterns as `Architecture Guardrails`, settled conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 - If `SemVer Workflow` is enabled, keep `## Release Impact` current in the active plan and resolve it before PASS archive.
 - In SemVer-enabled repos, commit functionality first with a repo-owned subject, then use `version-closeout.mjs` for the release-only commit and `vX.Y.Z` tag.
+- In SemVer-enabled repos, release level comes from the unreleased PASS-plan window since the latest reachable `vX.Y.Z` tag; highest impact wins across that window.
 - In SemVer-enabled repos, treat `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the right final action from `finish-status.mjs`.
 - Treat explicit narrow operational asks like status, diff, summary, commit, release, and finish as fast-path work even if an active plan exists. Do not let stale plan momentum force those asks back into heavier planning lanes.
 - Treat `open plan view` as the same kind of fast-path operational ask. It should stay read-only and use the helper-backed plan snapshot instead of becoming a second workflow.

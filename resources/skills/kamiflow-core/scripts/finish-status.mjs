@@ -5,13 +5,16 @@ import path from "node:path";
 import {
   isPassPlanRecord,
   parseCliArgs,
-  parseReleaseImpact,
   printJson,
   readReleasePolicy,
   resolveActivePlan,
   resolveLatestDonePlan,
   resolveProjectDir
 } from "./lib-plan.mjs";
+import {
+  buildReleaseWindowSummary,
+  resolveReleaseWindow
+} from "./lib-release-window.mjs";
 import { readGitState } from "./lib-process.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
@@ -22,7 +25,9 @@ const latestDonePlan = await resolveLatestDonePlan(projectDir);
 const gitState = readGitState(projectDir);
 const packageVersion = await readPackageVersion(projectDir);
 const currentVersionTag = packageVersion ? `v${packageVersion}` : "";
+const releaseWindow = await resolveReleaseWindow(projectDir);
 const releaseAlreadyApplied = Boolean(currentVersionTag)
+  && releaseWindow.candidate_plans.length === 0
   && (
     gitState.headSubject === `release: ${currentVersionTag}`
     || gitState.tagsAtHead.includes(currentVersionTag)
@@ -35,7 +40,8 @@ const finishContext = resolveFinishContext({
   gitState,
   packageVersion,
   currentVersionTag,
-  releaseAlreadyApplied
+  releaseAlreadyApplied,
+  releaseWindow
 });
 
 printJson({
@@ -48,6 +54,7 @@ printJson({
   release_ready: finishContext.releaseReady,
   release_blockers: finishContext.releaseBlockers,
   release_plan: finishContext.releasePlan,
+  release_window: buildReleaseWindowSummary(releaseWindow),
   active_plan: summarizePlan(activePlan),
   latest_done_plan: summarizePlan(latestDonePlan),
   git: {
@@ -70,7 +77,8 @@ function resolveFinishContext({
   gitState: gitStateRecord,
   packageVersion: currentVersion,
   currentVersionTag: currentVersionTagValue,
-  releaseAlreadyApplied: releaseAlreadyAppliedForCurrentVersion
+  releaseAlreadyApplied: releaseAlreadyAppliedForCurrentVersion,
+  releaseWindow
 }) {
   const releaseBlockers = [];
   const hasDirtyWorktree = gitStateRecord.dirtyPaths.length > 0;
@@ -86,49 +94,39 @@ function resolveFinishContext({
     releaseBlockers.push(`Release Policy is invalid: ${releasePolicyRecord.errors[0]}`);
   }
 
-  let releasePlan = null;
-  let releaseImpact = null;
-
-  if (activePlanRecord) {
-    if (!isPassPlanRecord(activePlanRecord)) {
-      releaseBlockers.push("Active plan is not PASS yet, so release stays blocked until closeout is complete.");
-    } else {
-      releasePlan = buildReleasePlanSummary(activePlanRecord, "active-pass");
-      releaseImpact = parseReleaseImpact(activePlanRecord.content);
-    }
-  } else if (latestDonePlanRecord && isPassPlanRecord(latestDonePlanRecord)) {
-    releasePlan = buildReleasePlanSummary(latestDonePlanRecord, "latest-done-pass");
-    releaseImpact = parseReleaseImpact(latestDonePlanRecord.content);
-  } else {
-    releaseBlockers.push("No active or archived PASS plan is available for release evaluation.");
+  if (activePlanRecord && !isPassPlanRecord(activePlanRecord)) {
+    releaseBlockers.push("Active plan is not PASS yet, so release stays blocked until closeout is complete.");
   }
 
-  if (releasePlan && releaseImpact) {
-    releasePlan.release_impact = releaseImpact.valid ? releaseImpact.impact : "";
-    releasePlan.release_reason = releaseImpact.reason || "";
+  if (releaseWindow.invalid_impact_plans.length > 0) {
+    const impactedPlans = releaseWindow.invalid_impact_plans
+      .map((plan) => `${plan.plan_id || path.basename(plan.path)} (${plan.release_impact_errors[0] || "invalid Release Impact"})`)
+      .join(" | ");
+    releaseBlockers.push(`Release window contains PASS plans with unresolved Release Impact: ${impactedPlans}`);
   }
 
-  if (releasePlan && releasePolicyRecord.enabled && releasePolicyRecord.valid) {
-    if (!releaseImpact?.valid) {
-      releaseBlockers.push(`Release Impact is missing or unresolved: ${releaseImpact?.errors?.[0] || "unknown error"}`);
-    } else if (releaseImpact.impact === "none") {
-      releaseBlockers.push("Release Impact is none, so this slice should not cut a release.");
-    } else if (!currentVersion) {
+  const aggregatedImpact = releaseWindow.aggregated_impact;
+  const releasePlan = releaseWindow.primary_plan
+    ? buildReleasePlanSummary(releaseWindow.primary_plan, "release-window-primary")
+    : null;
+
+  if (releasePolicyRecord.enabled && releasePolicyRecord.valid) {
+    if (aggregatedImpact && !currentVersion) {
       releaseBlockers.push("package.json version is missing or unreadable, so release closeout cannot determine the current version.");
     } else if (releaseAlreadyAppliedForCurrentVersion) {
       releaseBlockers.push(`Release closeout already appears applied at HEAD for ${currentVersionTagValue}.`);
     }
   }
 
-  if (releasePlan && releaseImpact?.valid && releaseImpact.impact !== "none" && hasDirtyWorktree) {
+  if (aggregatedImpact && hasDirtyWorktree) {
     releaseBlockers.push("Git worktree is not clean; commit the functional changes before release closeout.");
   }
 
-  if (semverReady && releasePlan && releaseImpact?.valid && releaseImpact.impact !== "none" && !releaseAlreadyAppliedForCurrentVersion) {
+  if (semverReady && aggregatedImpact && !releaseAlreadyAppliedForCurrentVersion && releaseWindow.invalid_impact_plans.length === 0) {
     if (hasDirtyWorktree) {
       return {
         recommendedAction: "commit-and-release",
-        reason: "The slice is releasable, but functional changes are still uncommitted. Commit first, then run release closeout.",
+        reason: buildPendingReleaseReason(releaseWindow),
         releaseReady: false,
         releaseBlockers,
         releasePlan
@@ -138,7 +136,7 @@ function resolveFinishContext({
     if (gitStateRecord.insideWorktree) {
       return {
         recommendedAction: "release-only",
-        reason: "The functional work is already committed and the current PASS slice is releasable. Release closeout is the next step.",
+        reason: buildPendingReleaseReason(releaseWindow),
         releaseReady: true,
         releaseBlockers: [],
         releasePlan
@@ -152,8 +150,10 @@ function resolveFinishContext({
       hasDirtyWorktree,
       releasePolicy: releasePolicyRecord,
       activePlan: activePlanRecord,
+      latestDonePlan: latestDonePlanRecord,
+      releaseWindow,
       releasePlan,
-      releaseImpact,
+      aggregatedImpact,
       releaseAlreadyApplied: releaseAlreadyAppliedForCurrentVersion
     }),
     releaseReady: false,
@@ -162,7 +162,16 @@ function resolveFinishContext({
   };
 }
 
-function buildCommitOnlyReason({ hasDirtyWorktree, releasePolicy, activePlan, releasePlan, releaseImpact, releaseAlreadyApplied }) {
+function buildCommitOnlyReason({
+  hasDirtyWorktree,
+  releasePolicy,
+  activePlan,
+  latestDonePlan,
+  releaseWindow,
+  releasePlan,
+  aggregatedImpact,
+  releaseAlreadyApplied
+}) {
   if (!releasePolicy.enabled) {
     return hasDirtyWorktree
       ? "Functional changes are pending and this repo does not use SemVer release closeout."
@@ -179,20 +188,31 @@ function buildCommitOnlyReason({ hasDirtyWorktree, releasePolicy, activePlan, re
       : "Release stays blocked until the active plan reaches PASS closeout.";
   }
 
-  if (!releasePlan) {
+  if (!activePlan && !latestDonePlan) {
     return hasDirtyWorktree
       ? "Functional changes are pending, but there is no PASS plan ready for release closeout."
       : "No releasable PASS plan is available, so only normal commit flow applies.";
   }
 
-  if (!releaseImpact?.valid) {
-    return "Release closeout is blocked until Release Impact is resolved in the PASS plan.";
+  if (releaseWindow.invalid_impact_plans.length > 0) {
+    return "Release closeout is blocked until every PASS plan in the current unreleased window has a valid Release Impact.";
   }
 
-  if (releaseImpact.impact === "none") {
+  if (releaseWindow.candidate_plans.length === 0) {
+    if (releaseAlreadyApplied) {
+      return hasDirtyWorktree
+        ? "The current version already looks released at HEAD; commit the remaining functional changes only."
+        : `No unreleased PASS plans remain after ${releaseWindow.baseline.tag || "the current release baseline"}, so no release closeout is pending.`;
+    }
     return hasDirtyWorktree
-      ? "Release Impact is none, so only a functional commit is expected for this slice."
-      : "Release Impact is none, so there is no release closeout to run.";
+      ? "Functional changes are pending, but there is no unreleased PASS plan after the latest release tag."
+      : `No unreleased PASS plans remain after ${releaseWindow.baseline.tag || "the current release baseline"}, so no release closeout is pending.`;
+  }
+
+  if (!aggregatedImpact) {
+    return hasDirtyWorktree
+      ? "All unreleased PASS plans in the current window are none-impact, so only a functional commit is expected."
+      : `All unreleased PASS plans since ${releaseWindow.baseline.tag || "the start of history"} are none-impact, so there is no release closeout to run.`;
   }
 
   if (releaseAlreadyApplied) {
@@ -206,14 +226,25 @@ function buildCommitOnlyReason({ hasDirtyWorktree, releasePolicy, activePlan, re
     : "No release closeout is ready yet.";
 }
 
+function buildPendingReleaseReason(releaseWindow) {
+  const baselineLabel = releaseWindow.baseline.tag || "the start of history";
+  const planLabels = releaseWindow.releasable_plans
+    .map((plan) => `${plan.plan_id || path.basename(plan.path)}:${plan.release_impact}`)
+    .join(" | ");
+  return `Release closeout is pending from ${baselineLabel}. Aggregated impact is ${releaseWindow.aggregated_impact} across ${planLabels}.`;
+}
+
 function buildReleasePlanSummary(plan, source) {
   return {
     path: plan.path,
     source,
-    plan_id: plan.frontmatter.plan_id || "",
-    status: plan.frontmatter.status || "",
-    decision: plan.frontmatter.decision || "",
-    lifecycle_phase: plan.frontmatter.lifecycle_phase || ""
+    plan_id: plan.plan_id || "",
+    status: plan.status || "",
+    decision: plan.decision || "",
+    lifecycle_phase: plan.lifecycle_phase || "",
+    release_impact: plan.release_impact || "",
+    release_reason: plan.release_reason || "",
+    timestamp: plan.timestamp || ""
   };
 }
 

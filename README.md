@@ -88,7 +88,7 @@ Client repos can opt into SemVer closeout by adding this block to `AGENTS.md`:
 - Release History: separate-release-commit-and-tag
 ```
 
-This first slice supports root single-package Node/npm repos only. In opted-in repos, active plans gain a `## Release Impact` section, PASS archive requires that section to be resolved, and `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` prepares the later release-only step. Repos that leave the workflow disabled keep the current behavior.
+This first slice supports root single-package Node/npm repos only. In opted-in repos, active plans gain a `## Release Impact` section, PASS archive requires that section to be resolved, and `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` prepares the later release-only step. Release level is computed from the full unreleased PASS-plan window since the latest reachable `vX.Y.Z` tag, with highest impact winning across that window. Repos that leave the workflow disabled keep the current behavior.
 
 For assistant-guided closeout, the finish model is:
 
@@ -119,7 +119,7 @@ npm pack
 
 `npm run validate` checks the standalone skill contract without mutating the runtime copy. `npm run skill:sync` refreshes this repo's `.agents/skills/kamiflow-core/` runtime install, preserves the tracked root `AGENTS.md`, and creates the dogfood `.local/project.md` here if it is missing. `npm run skill:doctor` proves whether this repo is Codex-ready or stale and prints the exact recovery command when it is not. `npm run forward-test` is the faster smoke lane and now includes a non-Codex repo-role smoke for client vs source-repo runtime shape. `npm run forward-test -- --mode full` keeps the full serial behavioral suite and takes longer because it launches multiple real `codex exec` sessions against fresh temp projects from a packed tarball. `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .` reports whether the current end-of-slice action should be commit-only, release-only, or commit-and-release. Forward-test artifacts live under `.local/forward-tests/` and now include timing breakdowns. `npm pack` builds the publishable tarball for local smoke tests or release workflows.
 
-This source repo also opts into the SemVer workflow. After a PASS plan with release impact `patch`, `minor`, or `major`, use this sequence:
+This source repo also opts into the SemVer workflow. After one or more PASS plans with unreleased `patch`, `minor`, or `major` impact since the latest release tag, use this sequence:
 
 1. check the helper-backed finish recommendation:
 
@@ -134,7 +134,7 @@ node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .
 node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .
 ```
 
-That helper blocks on a dirty worktree, updates `package.json`, updates `package-lock.json` when present, and prints:
+That helper blocks on a dirty worktree, aggregates the unreleased PASS-plan window since the latest release tag, updates `package.json`, updates `package-lock.json` when present, and prints:
 
 - the exact release-only commit command for `release: vX.Y.Z`
 - the exact tag command for `vX.Y.Z`

@@ -36,6 +36,7 @@
     "resources/skills/kamiflow-core/references/fix.md",
     "resources/skills/kamiflow-core/scripts/lib-plan.mjs",
     "resources/skills/kamiflow-core/scripts/lib-process.mjs",
+    "resources/skills/kamiflow-core/scripts/lib-release-window.mjs",
     "resources/skills/kamiflow-core/scripts/core/plan-snapshot-core.mjs",
     "resources/skills/kamiflow-core/scripts/ensure-plan.mjs",
     "resources/skills/kamiflow-core/scripts/ready-check.mjs",

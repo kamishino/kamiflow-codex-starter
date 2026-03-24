@@ -39,7 +39,7 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 - `node .agents/skills/kamiflow-core/scripts/finish-status.mjs --project .`
   - inspect repo state and recommend `commit-only`, `release-only`, or `commit-and-release` before acting on finish requests
 - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
-  - for opted-in single-package Node/npm repos, run the release-only closeout step after the functional commit, update version files, and print guided release commit plus tag commands
+  - for opted-in single-package Node/npm repos, run the release-only closeout step after the functional commit, aggregate unreleased PASS-plan impact since the latest reachable release tag, update version files, and print guided release commit plus tag commands
 
 Use direct markdown mutation as the primary workflow. Use the helper scripts only for deterministic bootstrap, readiness, and archive recovery.
 
@@ -105,6 +105,7 @@ For non-trivial route responses, keep the final answer compact:
 - Keep a short `Project Fit` section tied to `.local/project.md` instead of copying the whole brief into the plan.
 - When `SemVer Workflow` is enabled in `AGENTS.md`, keep a `## Release Impact` section in the plan and resolve it before PASS archive.
 - Keep functional commit history and release history separate in SemVer-enabled repos.
+- In SemVer-enabled repos, release level comes from the highest unresolved `Release Impact` across PASS plans since the latest reachable `vX.Y.Z` tag.
 - In SemVer-enabled repos, interpret `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the correct end-of-slice action from `finish-status.mjs`.
 - Keep explicit narrow operational asks lightweight even when an active plan exists. Do not reroute `commit please`, `release please`, `finish please`, `open plan view`, status, diff, or summary requests into `plan`, `build`, or `check` unless the user is actually asking for implementation or closeout work.
 - Keep `plan-snapshot.mjs` as the canonical read model for both status summaries and the optional live plan view. The live view must stay read-only and must not parse plan files independently.

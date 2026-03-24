@@ -46,6 +46,7 @@ This repository has one product: the standalone `kamiflow-core` Codex skill.
 - Update frontmatter at minimum: `updated_at`, `selected_mode`, `next_command`, `next_mode`, `status`, `decision`, `lifecycle_phase`.
 - In this SemVer-enabled repo, keep `## Release Impact` resolved before PASS archive.
 - Keep functional commits scanner-friendly; use `version-closeout.mjs` later for the release-only commit and the `vX.Y.Z` tag.
+- In this SemVer-enabled repo, release level comes from the highest unresolved `Release Impact` across all PASS plans since the latest reachable `vX.Y.Z` tag, not just the latest archived or active plan.
 - When the user asks to finish the slice, use `finish-status.mjs` to decide between `commit only`, `release only`, and `commit and release` instead of guessing from phrasing alone.
 - Append timestamped `WIP Log` lines for `Status`, `Blockers`, and `Next step`.
 - Archive only after `check` PASS and all Acceptance Criteria plus Go/No-Go items are checked.

@@ -32,6 +32,7 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
 - For opted-in root Node/npm repos, prepare version closeout:
   - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
+  - aggregates unreleased PASS-plan impact since the latest reachable release tag before printing the release-only commit and tag commands
 
 ## Local State Ownership
 
@@ -95,6 +96,7 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - rely on `plan-snapshot.mjs` as the live view's read model
   - keep the request operational and do not mutate the active plan
 - SemVer closeout is enabled and release impact is patch, minor, or major:
+  - remember that the effective bump comes from the highest unresolved impact in the release window since the latest `vX.Y.Z` tag
   - first commit the functional changes with a normal repo-owned subject
   - run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
   - use the printed release-only commit command and tag command after the functional commit

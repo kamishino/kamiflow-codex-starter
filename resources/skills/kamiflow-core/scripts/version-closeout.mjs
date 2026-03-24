@@ -3,37 +3,21 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
-  isPassPlanRecord,
   parseCliArgs,
-  parseReleaseImpact,
   readReleasePolicy,
-  resolveLatestDonePlan,
-  resolvePlanRef,
   resolveProjectDir
 } from "./lib-plan.mjs";
+import { resolveReleaseWindow } from "./lib-release-window.mjs";
 import { isGitWorktree, readGitStatus as readGitStatusSync } from "./lib-process.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));
 const requestedPlan = String(args.plan || "").trim();
 const releasePolicy = await readReleasePolicy(projectDir);
-const plan = requestedPlan
-  ? await resolvePlanRef(projectDir, requestedPlan)
-  : await resolveDefaultReleasePlan(projectDir);
-
-if (!plan) {
-  console.error("SemVer Closeout: BLOCK");
-  console.error("Reason: No active PASS plan or latest archived PASS plan matched the requested reference.");
-  console.error("Recovery: Resolve or archive the target PASS plan, then rerun version-closeout.");
-  process.exit(1);
-}
-
-if (!isPassPlanRecord(plan)) {
-  console.error("SemVer Closeout: BLOCK");
-  console.error("Reason: The selected plan is not PASS yet. Release closeout is only valid after PASS closeout.");
-  console.error("Recovery: Finish validation and archive the PASS plan before rerunning version-closeout, or pass an explicit archived PASS plan with --plan.");
-  process.exit(1);
-}
+const releaseWindow = await resolveReleaseWindow(projectDir, {
+  requestedPlanRef: requestedPlan
+});
+const requestedPlanSummary = releaseWindow.requested_plan;
 
 if (!releasePolicy.enabled) {
   console.error("SemVer Closeout: BLOCK");
@@ -49,11 +33,27 @@ if (!releasePolicy.valid) {
   process.exit(1);
 }
 
-const releaseImpact = parseReleaseImpact(plan.content);
-if (!releaseImpact.valid) {
+if (requestedPlan && !requestedPlanSummary) {
   console.error("SemVer Closeout: BLOCK");
-  console.error(`Reason: Release Impact is missing or unresolved: ${releaseImpact.errors[0]}`);
-  console.error("Recovery: Resolve the Release Impact section in the active plan before rerunning version-closeout.");
+  console.error("Reason: No PASS plan matched the requested reference.");
+  console.error("Recovery: Resolve or archive the target PASS plan, then rerun version-closeout.");
+  process.exit(1);
+}
+
+if (requestedPlanSummary?.error) {
+  console.error("SemVer Closeout: BLOCK");
+  console.error(`Reason: ${requestedPlanSummary.error}`);
+  console.error("Recovery: Pass a PASS plan that is still inside the current unreleased release window.");
+  process.exit(1);
+}
+
+if (releaseWindow.invalid_impact_plans.length > 0) {
+  const invalidPlans = releaseWindow.invalid_impact_plans
+    .map((plan) => `${plan.plan_id || path.basename(plan.path)} (${plan.release_impact_errors[0] || "invalid Release Impact"})`)
+    .join(" | ");
+  console.error("SemVer Closeout: BLOCK");
+  console.error(`Reason: Release window contains PASS plans with unresolved Release Impact: ${invalidPlans}`);
+  console.error("Recovery: Resolve every PASS plan in the current unreleased window before rerunning version-closeout.");
   process.exit(1);
 }
 
@@ -70,7 +70,7 @@ if (!isGitWorktree(projectDir)) {
   process.exit(1);
 }
 
-if (releaseImpact.impact !== "none") {
+if (releaseWindow.aggregated_impact) {
   const worktreeStatus = readGitStatus(projectDir);
   if (worktreeStatus.length > 0) {
     console.error("SemVer Closeout: BLOCK");
@@ -95,11 +95,11 @@ if (!/^\d+\.\d+\.\d+$/.test(currentVersion)) {
   process.exit(1);
 }
 
-const nextVersion = bumpVersion(currentVersion, releaseImpact.impact);
+const nextVersion = bumpVersion(currentVersion, releaseWindow.aggregated_impact);
 const updatedFiles = [];
 const skippedFiles = [];
 
-if (releaseImpact.impact !== "none") {
+if (releaseWindow.aggregated_impact) {
   packageJson.version = nextVersion;
   await fsp.writeFile(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`, "utf8");
   updatedFiles.push("package.json");
@@ -120,36 +120,43 @@ if (releaseImpact.impact !== "none") {
   }
 }
 
-const status = releaseImpact.impact === "none" ? "NOOP" : "READY";
-const changedFiles = releaseImpact.impact === "none"
-  ? []
-  : readGitStatus(projectDir);
-const commitCommand = releaseImpact.impact === "none"
-  ? ""
-  : buildCommitCommand(nextVersion, releaseImpact.impact, plan.frontmatter.title || "", updatedFiles);
-const tagCommand = releaseImpact.impact === "none"
-  ? ""
-  : buildTagCommand(nextVersion);
+const status = releaseWindow.aggregated_impact ? "READY" : "NOOP";
+const changedFiles = releaseWindow.aggregated_impact
+  ? readGitStatus(projectDir)
+  : [];
+const commitCommand = releaseWindow.aggregated_impact
+  ? buildCommitCommand(nextVersion, releaseWindow.aggregated_impact, releaseWindow.primary_plan?.title || "", updatedFiles)
+  : "";
+const tagCommand = releaseWindow.aggregated_impact
+  ? buildTagCommand(nextVersion)
+  : "";
+const includedPlans = releaseWindow.candidate_plans
+  .map((plan) => formatReleasePlanLine(plan))
+  .join("\n");
 
 console.log([
   `SemVer Closeout: ${status}`,
   `Project: ${projectDir}`,
-  `Plan: ${plan.path}`,
-  `Impact: ${releaseImpact.impact}`,
-  `Reason: ${releaseImpact.reason}`,
+  `Requested Plan: ${requestedPlanSummary?.path || "none"}`,
+  `Baseline Tag: ${releaseWindow.baseline.tag || "none"}`,
+  `Baseline Version: ${releaseWindow.baseline.version || "none"}`,
+  `Baseline Committed At: ${releaseWindow.baseline.committed_at || "none"}`,
+  `Aggregated Impact: ${releaseWindow.aggregated_impact || "none"}`,
+  `Included Plans:`,
+  ...(includedPlans ? includedPlans.split("\n") : ["  none"]),
   `Current Version: ${currentVersion}`,
   `Next Version: ${nextVersion}`,
   `Updated: ${updatedFiles.length > 0 ? updatedFiles.join(" | ") : "none"}`,
   `Skipped: ${skippedFiles.length > 0 ? skippedFiles.join(" | ") : "none"}`,
   `Changed Files: ${changedFiles.length > 0 ? changedFiles.join(" | ") : "none"}`,
-  releaseImpact.impact === "none"
-    ? "Commit Guidance: No release-version commit is required because Release Impact is none."
-    : "Release Commit Command:",
-  ...(releaseImpact.impact === "none" ? [] : [`  ${commitCommand}`, "Tag Command:", `  ${tagCommand}`])
+  releaseWindow.aggregated_impact
+    ? "Release Commit Command:"
+    : "Commit Guidance: No release-version commit is required because the unreleased window has no patch/minor/major impact.",
+  ...(releaseWindow.aggregated_impact ? [`  ${commitCommand}`, "Tag Command:", `  ${tagCommand}`] : [])
 ].join("\n"));
 
 function bumpVersion(version, impact) {
-  if (impact === "none") {
+  if (!impact) {
     return version;
   }
 
@@ -169,7 +176,7 @@ function buildCommitCommand(nextVersionValue, impact, planTitle, versionFiles) {
     : shellEscape("package.json");
   const escapedVersion = shellEscape(`release: v${nextVersionValue}`);
   const escapedImpact = shellEscape(`Impact: ${impact}`);
-  const escapedPlan = shellEscape(`Plan: ${planTitle || "active plan"}`);
+  const escapedPlan = shellEscape(`Plan: ${planTitle || "release window"}`);
   return `git add ${addTarget} && git commit -m ${escapedVersion} -m ${escapedImpact} -m ${escapedPlan}`;
 }
 
@@ -177,14 +184,10 @@ function buildTagCommand(nextVersionValue) {
   return `git tag v${nextVersionValue}`;
 }
 
-async function resolveDefaultReleasePlan(projectDir) {
-  const activePlan = await resolvePlanRef(projectDir, "");
-  if (activePlan) {
-    return activePlan;
-  }
-
-  const latestDonePlan = await resolveLatestDonePlan(projectDir);
-  return latestDonePlan || null;
+function formatReleasePlanLine(plan) {
+  const impactLabel = plan.release_impact_valid ? plan.release_impact : "invalid";
+  const reasonLabel = plan.release_reason || (plan.release_impact_errors[0] || "no reason");
+  return `  - ${plan.plan_id || path.basename(plan.path)} | ${impactLabel} | ${plan.timestamp_source}=${plan.timestamp} | ${reasonLabel}`;
 }
 
 function shellEscape(value) {

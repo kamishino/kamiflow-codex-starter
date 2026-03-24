@@ -204,7 +204,11 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const installState = await collectScenarioState(externalWorkspace, scenario);
 
   if (scenario.prepareCommittedBaseline) {
-    const baselineCommitResult = await createBaselineCommit(externalWorkspace, scenario.baselineCommitMessage);
+    const baselineCommitResult = await createBaselineCommit(
+      externalWorkspace,
+      scenario.baselineCommitMessage,
+      scenario.baselineCommitDate
+    );
     await fsp.writeFile(baselineCommitLogPath, `${baselineCommitResult.stdout}\n${baselineCommitResult.stderr}`.trim(), "utf8");
     if (baselineCommitResult.code !== 0) {
       const failure = buildFailureResult(scenario.name, "Baseline commit step failed.", [
@@ -219,6 +223,25 @@ async function runScenario({ scenario, tarballPath, runDir }) {
       await snapshotWorkspace(externalWorkspace, path.join(scenarioDir, "project"));
       await fsp.rm(externalWorkspace, { recursive: true, force: true });
       return failure;
+    }
+
+    if (scenario.baselineTag) {
+      const baselineTagResult = await createGitTag(externalWorkspace, String(scenario.baselineTag));
+      await fsp.writeFile(path.join(logDir, "baseline-tag.log"), `${baselineTagResult.stdout}\n${baselineTagResult.stderr}`.trim(), "utf8");
+      if (baselineTagResult.code !== 0) {
+        const failure = buildFailureResult(scenario.name, "Baseline tag step failed.", [
+          `baseline tag exit code: ${baselineTagResult.code}`
+        ]);
+        failure.timings_ms = {
+          total: Date.now() - scenarioStartedAtMs,
+          install: installFinishedAtMs - installStartedAtMs,
+          codex: 0
+        };
+        await writeJson(path.join(scenarioDir, "result.json"), failure);
+        await snapshotWorkspace(externalWorkspace, path.join(scenarioDir, "project"));
+        await fsp.rm(externalWorkspace, { recursive: true, force: true });
+        return failure;
+      }
     }
   }
 
@@ -359,7 +382,15 @@ async function runScenario({ scenario, tarballPath, runDir }) {
 
   let versionCloseoutResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runVersionCloseout) {
-    versionCloseoutResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "version-closeout.mjs"), "--project", "."], {
+    const closeoutArgs = [
+      path.join(".agents", "skills", "kamiflow-core", "scripts", "version-closeout.mjs"),
+      "--project",
+      "."
+    ];
+    if (scenario.versionCloseoutPlan) {
+      closeoutArgs.push("--plan", String(scenario.versionCloseoutPlan));
+    }
+    versionCloseoutResult = await runCommand("node", closeoutArgs, {
       cwd: externalWorkspace,
       env: scenarioEnv
     });
@@ -1203,9 +1234,9 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
     });
     checks.push({
-      label: "finish-status-blocks-none-impact-release",
-      ok: /Release Impact is none/i.test((finishStatusPayload?.release_blockers || []).join(" | ")),
-      detail: (finishStatusPayload?.release_blockers || []).join(" | ") || "<missing>"
+      label: "finish-status-explains-none-impact-window",
+      ok: /none-impact|no release closeout/i.test(`${finishStatusPayload?.reason || ""} ${(finishStatusPayload?.release_blockers || []).join(" | ")}`),
+      detail: `${finishStatusPayload?.reason || "<missing>"} | ${(finishStatusPayload?.release_blockers || []).join(" | ") || "no blockers"}`
     });
   }
 
@@ -1226,9 +1257,27 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
     });
     checks.push({
-      label: "finish-status-uses-patch-plan",
-      ok: finishStatusPayload?.release_plan?.release_impact === "patch",
+      label: "finish-status-aggregates-minor-window",
+      ok: finishStatusPayload?.release_window?.aggregated_impact === "minor",
+      detail: finishStatusPayload?.release_window?.aggregated_impact || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-baseline-tag-reported",
+      ok: finishStatusPayload?.release_window?.baseline_tag === "v0.6.0",
+      detail: finishStatusPayload?.release_window?.baseline_tag || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-primary-plan-is-minor",
+      ok: finishStatusPayload?.release_plan?.release_impact === "minor",
       detail: finishStatusPayload?.release_plan?.release_impact || "<missing>"
+    });
+    checks.push({
+      label: "none-impact-plan-does-not_lower_bump",
+      ok: Array.isArray(finishStatusPayload?.release_window?.candidate_plans)
+        && finishStatusPayload.release_window.candidate_plans.some((plan) => plan.release_impact === "none"),
+      detail: Array.isArray(finishStatusPayload?.release_window?.candidate_plans)
+        ? finishStatusPayload.release_window.candidate_plans.map((plan) => `${plan.plan_id}:${plan.release_impact || "invalid"}`).join(" | ")
+        : "<missing>"
     });
   }
 
@@ -1252,6 +1301,11 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "finish-status-release-not-ready",
       ok: finishStatusPayload?.release_ready === false,
       detail: finishStatusPayload ? `release_ready=${String(finishStatusPayload.release_ready)}` : "finish-status did not return JSON"
+    });
+    checks.push({
+      label: "finish-status-dirty-window-still-aggregates-minor",
+      ok: finishStatusPayload?.release_window?.aggregated_impact === "minor",
+      detail: finishStatusPayload?.release_window?.aggregated_impact || "<missing>"
     });
   }
 
@@ -1384,6 +1438,46 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
   }
 
+  if (scenario.grader === "version-closeout-release-window") {
+    checks.push({
+      label: "version-closeout-exits-zero",
+      ok: versionCloseoutResult.code === 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "release-window-minor-bump",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.7.0",
+      detail: await readPackageVersion(path.join(workspace, "package.json"))
+    });
+    checks.push({
+      label: "baseline-tag-reported",
+      ok: /Baseline Tag:\s*v0\.6\.0/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should report v0.6.0 as the baseline tag"
+    });
+    checks.push({
+      label: "aggregated-impact-reported",
+      ok: /Aggregated Impact:\s*minor/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should report the aggregated minor impact"
+    });
+    checks.push({
+      label: "window-includes-minor-patch-and-none",
+      ok: /minor feature slice/i.test(versionCloseoutResult.stdout)
+        && /patch refactor slice/i.test(versionCloseoutResult.stdout)
+        && /internal none-impact slice/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should list every PASS plan in the window"
+    });
+    checks.push({
+      label: "guided-commit-output-present",
+      ok: /git commit -m "release: v0\.7\.0"/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should print the guided release commit command"
+    });
+    checks.push({
+      label: "only-version-files-changed",
+      ok: hasExactDirtyPaths(finalState.git.dirtyPaths, ["package.json", "package-lock.json"]),
+      detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+  }
+
   if (scenario.grader === "semver-major-pre1") {
     checks.push({
       label: "version-closeout-exits-zero",
@@ -1437,6 +1531,43 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "only-version-files-changed",
       ok: hasExactDirtyPaths(finalState.git.dirtyPaths, ["package.json"]),
       detail: formatDirtyPathDetail(finalState.git.dirtyPaths)
+    });
+  }
+
+  if (scenario.grader === "version-closeout-no-tag-window") {
+    checks.push({
+      label: "version-closeout-exits-zero",
+      ok: versionCloseoutResult.code === 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "no-tag-window-still-bumps-minor",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.7.0",
+      detail: await readPackageVersion(path.join(workspace, "package.json"))
+    });
+    checks.push({
+      label: "baseline-tag-reported-as-none",
+      ok: /Baseline Tag:\s*none/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should report no baseline tag"
+    });
+  }
+
+  if (scenario.grader === "version-closeout-plan-still-aggregates") {
+    checks.push({
+      label: "version-closeout-exits-zero",
+      ok: versionCloseoutResult.code === 0,
+      detail: `exit code ${versionCloseoutResult.code}`
+    });
+    checks.push({
+      label: "requested-plan-reported",
+      ok: /Requested Plan:\s*.*2026-03-24-003-check-patch-refactor\.md/i.test(versionCloseoutResult.stdout),
+      detail: "version closeout should report the requested patch plan path"
+    });
+    checks.push({
+      label: "requested-plan-does-not-lower-bump",
+      ok: await readPackageVersion(path.join(workspace, "package.json")) === "0.7.0"
+        && /Aggregated Impact:\s*minor/i.test(versionCloseoutResult.stdout),
+      detail: await readPackageVersion(path.join(workspace, "package.json"))
     });
   }
 
@@ -1865,7 +1996,7 @@ async function readPackageLockVersion(filePath) {
   return String(parsed?.packages?.[""]?.version || parsed?.version || "").trim();
 }
 
-async function createBaselineCommit(workspace, message = "baseline-before-version-closeout") {
+async function createBaselineCommit(workspace, message = "baseline-before-version-closeout", commitDate = "") {
   const gitUserName = await runCommand("git", ["config", "user.name", "kamiflow-forward-test"], { cwd: workspace });
   if (gitUserName.code !== 0) {
     return gitUserName;
@@ -1878,7 +2009,20 @@ async function createBaselineCommit(workspace, message = "baseline-before-versio
   if (gitAdd.code !== 0) {
     return gitAdd;
   }
-  return await runCommand("git", ["commit", "-m", message], { cwd: workspace });
+  const commitEnv = commitDate
+    ? {
+      GIT_AUTHOR_DATE: String(commitDate),
+      GIT_COMMITTER_DATE: String(commitDate)
+    }
+    : {};
+  return await runCommand("git", ["commit", "-m", message], {
+    cwd: workspace,
+    env: commitEnv
+  });
+}
+
+async function createGitTag(workspace, tagName) {
+  return await runCommand("git", ["tag", String(tagName)], { cwd: workspace });
 }
 
 function hasExactDirtyPaths(actualPaths, expectedPaths) {

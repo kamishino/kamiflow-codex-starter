@@ -76,6 +76,7 @@ if (publishedPackageFiles.includes(packagedInstallMetaPath)) {
 }
 
 const runtimeProcessHelperPath = "scripts/lib-process.mjs";
+const runtimeReleaseWindowHelperPath = "scripts/lib-release-window.mjs";
 const runtimePlanViewRuntimePath = "scripts/runtime/plan-view-runtime.mjs";
 const runtimePlanSnapshotCorePath = "scripts/core/plan-snapshot-core.mjs";
 const planHistoryHelperPath = "scripts/plan-history.mjs";
@@ -92,6 +93,12 @@ if (!fs.existsSync(path.join(skillRoot, runtimeProcessHelperPath))) {
 }
 if (!clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
   fail("package.json files must publish scripts/lib-process.mjs because runtime helpers depend on it.");
+}
+if (!fs.existsSync(path.join(skillRoot, runtimeReleaseWindowHelperPath))) {
+  fail(`Missing runtime helper file: ${runtimeReleaseWindowHelperPath}`);
+}
+if (!clientRuntimeRequiredFiles.includes(runtimeReleaseWindowHelperPath)) {
+  fail("package.json files must publish scripts/lib-release-window.mjs because release helpers depend on it.");
 }
 if (!fs.existsSync(path.join(skillRoot, runtimePlanViewRuntimePath))) {
   fail(`Missing runtime helper file: ${runtimePlanViewRuntimePath}`);
@@ -138,6 +145,9 @@ for (const runtimeScriptPath of ["scripts/finish-status.mjs", "scripts/version-c
   const runtimeScript = await fsp.readFile(path.join(skillRoot, runtimeScriptPath), "utf8");
   if (runtimeScript.includes("./lib-process.mjs") && !clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
     fail(`${runtimeScriptPath} imports ./lib-process.mjs but package.json files does not publish scripts/lib-process.mjs.`);
+  }
+  if (runtimeScript.includes("./lib-release-window.mjs") && !clientRuntimeRequiredFiles.includes(runtimeReleaseWindowHelperPath)) {
+    fail(`${runtimeScriptPath} imports ./lib-release-window.mjs but package.json files does not publish scripts/lib-release-window.mjs.`);
   }
   if (runtimeScript.includes("./runtime/plan-view-runtime.mjs") && !clientRuntimeRequiredFiles.includes(runtimePlanViewRuntimePath)) {
     fail(`${runtimeScriptPath} imports ./runtime/plan-view-runtime.mjs but package.json files does not publish scripts/runtime/plan-view-runtime.mjs.`);
