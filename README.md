@@ -2,6 +2,16 @@
 
 This repository is the source of truth for one standalone Codex skill: `kamiflow-core`.
 
+## Install From npm
+
+```bash
+npx --package @kamishino/kamiflow-core kamiflow-core install --project .
+```
+
+Use this in a client repo to install the skill, generate `.local/project.md`, bootstrap `.local/plans/`, and create a local-only `AGENTS.md` when the repo does not already have one.
+
+## Source Repo Dogfood
+
 For Codex to discover that skill inside this repo, the repo also needs a generated runtime install under `.agents/skills/kamiflow-core/`.
 
 ## Legacy KFC Line
@@ -24,10 +34,6 @@ It also rewrites `.agents/skills/kamiflow-core/install-meta.json` so the runtime
 If Codex is already open in this repo, start a new session or reload the workspace after `npm run skill:sync` so the skill inventory refreshes.
 
 ## Install Into Any Codex Project
-
-```bash
-npx --package @kamishino/kamiflow-core kamiflow-core install --project .
-```
 
 That command copies the canonical skill into `.agents/skills/kamiflow-core/` and bootstraps `.local/plans/` for project-local workflow state.
 In a normal client repo it treats the repo as the default target, writes `.agents/skills/kamiflow-core/install-meta.json`, creates a local-only `AGENTS.md` only when one does not already exist, adds that generated file to `.git/info/exclude` when the target is a git repo, and creates `.local/project.md` only when that human-facing project brief does not already exist. Rerunning the same command refreshes the skill runtime and install metadata while preserving existing `AGENTS.md` and `.local/project.md`.

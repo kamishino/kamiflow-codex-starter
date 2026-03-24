@@ -70,5 +70,16 @@
     "kamiflow",
     "workflow"
   ],
-  "license": "UNLICENSED"
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kamishino/kamiflow-codex-starter.git"
+  },
+  "homepage": "https://github.com/kamishino/kamiflow-codex-starter#readme",
+  "bugs": {
+    "url": "https://github.com/kamishino/kamiflow-codex-starter/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }
