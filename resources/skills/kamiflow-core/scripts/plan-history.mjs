@@ -3,6 +3,7 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
+  comparePlanRecordsByLogicalTimeDesc,
   extractSection,
   isPassPlanRecord,
   listPlanRecords,
@@ -13,7 +14,6 @@ import {
   resolveProjectDir
 } from "./lib-plan.mjs";
 
-const MAX_ARCHIVED_PLANS = 20;
 const MAX_RESULTS = 5;
 const SECTION_WEIGHTS = new Map([
   ["Title", 6],
@@ -135,8 +135,7 @@ async function collectCandidates(projectDir) {
   const archivedPlans = allPlans
     .filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done")
     .filter((plan) => isPassPlanRecord(plan))
-    .sort((left, right) => right.stat.mtimeMs - left.stat.mtimeMs)
-    .slice(0, MAX_ARCHIVED_PLANS);
+    .sort(comparePlanRecordsByLogicalTimeDesc);
 
   for (const plan of archivedPlans) {
     candidates.push(buildPlanCandidate(plan, "archived-plan"));

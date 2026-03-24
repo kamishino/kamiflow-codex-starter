@@ -3,16 +3,19 @@ import fs from "node:fs";
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
+  applyDoneRollover,
   countCheckboxes,
+  DONE_PLAN_KEEP_LATEST,
   DONE_PLAN_DIR,
   extractSection,
   parseReleaseImpact,
+  planDoneRollover,
   readReleasePolicy,
   nowIso,
   parseCliArgs,
   printJson,
-  pruneDonePlans,
   resolvePlanRef,
+  resolvePlanRecordTimestampInfo,
   resolveProjectDir,
   serializeFrontmatter,
   splitFrontmatter
@@ -115,15 +118,34 @@ if (fs.existsSync(targetPath)) {
   process.exit(1);
 }
 
+const rolloverPlan = await planDoneRollover(projectDir, {
+  keep: DONE_PLAN_KEEP_LATEST,
+  pendingRecord: {
+    ...plan,
+    path: targetPath,
+    name: path.basename(targetPath),
+    frontmatter: nextFrontmatter,
+    stat: {
+      mtimeMs: resolvePlanRecordTimestampInfo({
+        ...plan,
+        frontmatter: nextFrontmatter,
+        stat: {
+          mtimeMs: Date.now()
+        }
+      }).ms || Date.now()
+    }
+  }
+});
+
 await fsp.mkdir(path.dirname(targetPath), { recursive: true });
 await fsp.writeFile(plan.path, nextContent, "utf8");
 await fsp.rename(plan.path, targetPath);
-const pruned = await pruneDonePlans(projectDir, 20);
+const rolledOver = await applyDoneRollover(rolloverPlan);
 printJson({
   ok: true,
   archived: true,
   plan_id: nextFrontmatter.plan_id || "",
   archived_at: archivedAt,
   archived_path: targetPath,
-  pruned
+  rolled_over: rolledOver
 });

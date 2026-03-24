@@ -27,7 +27,7 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
 - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
   - verify whether the active plan is ready for `build` or `fix`
 - `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
-  - archive a completed PASS plan and prune old done plans
+  - archive a completed PASS plan and roll older done plans into weekly buckets like `.local/plans/done/2026/W13/`
 - `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"`
   - retrieve bounded prior context from `.local/project.md`, the active plan, and recent archived PASS plans when `start`, `plan`, or `research` would benefit from similar prior slices
 - `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
@@ -62,6 +62,8 @@ Keep the public route surface unchanged. `start` is the internal plan-lite lane;
   - human-facing product memory for priorities, guardrails, open questions, and durable decisions
 - `.local/plans/*.md`
   - task execution state for the current implementation slice
+- `.local/plans/done/**/*.md`
+  - archived PASS plans, with the newest 20 kept flat in `.local/plans/done/` and older ones rolled into weekly buckets like `2026/W13/`
 
 Keep the ownership one-way: plans may reference `.local/project.md` through `Project Fit`, and `.local/project.md` may absorb durable guardrails, decisions, or unresolved recurring concerns from completed work, but `.local/project.md` does not rewrite `AGENTS.md`, does not become an automatic log, and plans do not duplicate the full project brief.
 

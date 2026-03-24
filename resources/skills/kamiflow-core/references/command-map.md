@@ -42,8 +42,8 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - human-facing project context and curated durable memory
 - `.local/plans/*.md`
   - active task execution state
-- `.local/plans/done/*.md`
-  - archived PASS plans
+- `.local/plans/done/**/*.md`
+  - archived PASS plans, with the newest 20 kept flat in `.local/plans/done/` and older ones rolled into weekly buckets like `2026/W13/`
 - `.local/plan-view/runtime.json`
   - ephemeral runtime marker for the optional live plan view
 - `.agents/skills/kamiflow-core/`

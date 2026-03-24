@@ -12,6 +12,7 @@ export const REPO_ROLE_DOGFOOD = "dogfood";
 export const RELEASE_POLICY_SECTION = "Release Policy";
 export const RELEASE_IMPACT_SECTION = "Release Impact";
 export const RELEASE_IMPACT_VALUES = Object.freeze(["none", "patch", "minor", "major"]);
+export const DONE_PLAN_KEEP_LATEST = 20;
 
 const DEFAULT_VERSION_FILES = Object.freeze(["package.json", "package-lock.json"]);
 const ALLOWED_VERSION_FILES = new Set(DEFAULT_VERSION_FILES);
@@ -562,16 +563,7 @@ export async function listPlanRecords(projectDir, includeDone = false) {
   }
 
   if (includeDone) {
-    const doneDir = path.join(projectDir, DONE_PLAN_DIR);
-    if (fs.existsSync(doneDir)) {
-      const doneEntries = await fsp.readdir(doneDir, { withFileTypes: true });
-      for (const entry of doneEntries) {
-        if (!entry.isFile() || !entry.name.endsWith(".md")) {
-          continue;
-        }
-        records.push(await readPlanRecord(path.join(doneDir, entry.name)));
-      }
-    }
+    records.push(...await listDonePlanRecords(projectDir, true));
   }
 
   return records;
@@ -586,10 +578,10 @@ export async function resolveActivePlan(projectDir) {
 }
 
 export async function resolveLatestDonePlan(projectDir) {
-  const plans = await listPlanRecords(projectDir, true);
+  const plans = await listDonePlanRecords(projectDir, true);
   const done = plans
     .filter((record) => String(record.frontmatter.status || "").toLowerCase() === "done")
-    .sort((left, right) => right.stat.mtimeMs - left.stat.mtimeMs);
+    .sort(comparePlanRecordsByLogicalTimeDesc);
   return done[0] || null;
 }
 
@@ -612,6 +604,74 @@ export async function resolvePlanRef(projectDir, ref = "") {
 
   const allPlans = await listPlanRecords(projectDir, true);
   return allPlans.find((record) => String(record.frontmatter.plan_id || "") === trimmed) || null;
+}
+
+export async function listDonePlanRecords(projectDir, recursive = true) {
+  const doneDir = path.join(projectDir, DONE_PLAN_DIR);
+  if (!fs.existsSync(doneDir)) {
+    return [];
+  }
+
+  return recursive
+    ? await listMarkdownRecordsRecursive(doneDir)
+    : await listMarkdownRecordsShallow(doneDir);
+}
+
+export function resolvePlanRecordTimestampInfo(plan) {
+  const donePlan = String(plan?.frontmatter?.status || "").toLowerCase() === "done";
+  const archivedAt = String(plan?.frontmatter?.archived_at || "").trim();
+  const updatedAt = String(plan?.frontmatter?.updated_at || "").trim();
+
+  if (donePlan && archivedAt) {
+    const archivedMs = parseTimestamp(archivedAt);
+    if (Number.isFinite(archivedMs)) {
+      return {
+        valid: true,
+        iso: archivedAt,
+        ms: archivedMs,
+        source: "archived_at"
+      };
+    }
+  }
+
+  if (updatedAt) {
+    const updatedMs = parseTimestamp(updatedAt);
+    if (Number.isFinite(updatedMs)) {
+      return {
+        valid: true,
+        iso: updatedAt,
+        ms: updatedMs,
+        source: "updated_at"
+      };
+    }
+  }
+
+  if (plan?.stat?.mtimeMs) {
+    return {
+      valid: true,
+      iso: new Date(plan.stat.mtimeMs).toISOString(),
+      ms: plan.stat.mtimeMs,
+      source: "mtime"
+    };
+  }
+
+  return {
+    valid: false,
+    iso: "",
+    ms: Number.NaN,
+    source: ""
+  };
+}
+
+export function comparePlanRecordsByLogicalTimeDesc(left, right) {
+  const leftInfo = resolvePlanRecordTimestampInfo(left);
+  const rightInfo = resolvePlanRecordTimestampInfo(right);
+  const leftMs = Number.isFinite(leftInfo.ms) ? leftInfo.ms : Number.NEGATIVE_INFINITY;
+  const rightMs = Number.isFinite(rightInfo.ms) ? rightInfo.ms : Number.NEGATIVE_INFINITY;
+  if (rightMs !== leftMs) {
+    return rightMs - leftMs;
+  }
+  return left.path.localeCompare(right.path);
 }
 
 export async function nextPlanSequence(projectDir, dateStamp) {
@@ -678,27 +738,55 @@ export function countCheckboxes(sectionText) {
   return { total, checked };
 }
 
-export async function pruneDonePlans(projectDir, keep = 20) {
-  const doneDir = path.join(projectDir, DONE_PLAN_DIR);
-  if (!fs.existsSync(doneDir)) {
-    return [];
+export async function planDoneRollover(projectDir, { keep = DONE_PLAN_KEEP_LATEST, pendingRecord = null } = {}) {
+  const flatDoneRecords = await listDonePlanRecords(projectDir, false);
+  const candidates = [...flatDoneRecords];
+  if (pendingRecord) {
+    candidates.push(pendingRecord);
   }
-  const entries = await fsp.readdir(doneDir, { withFileTypes: true });
-  const files = [];
-  for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".md")) {
+
+  const overflow = candidates
+    .sort(comparePlanRecordsByLogicalTimeDesc)
+    .slice(keep)
+    .filter((record) => record.path !== pendingRecord?.path);
+
+  const moves = [];
+  const reservedTargets = new Set();
+  for (const record of overflow) {
+    const bucket = resolveDoneArchiveBucket(record);
+    if (!bucket.valid) {
       continue;
     }
-    const filePath = path.join(doneDir, entry.name);
-    const stat = await fsp.stat(filePath);
-    files.push({ filePath, mtimeMs: stat.mtimeMs });
+
+    const targetPath = path.join(projectDir, DONE_PLAN_DIR, bucket.year, bucket.week, record.name);
+    if (targetPath === record.path) {
+      continue;
+    }
+    if (fs.existsSync(targetPath)) {
+      throw new Error(`Weekly done-plan archive collision at ${targetPath}`);
+    }
+    if (reservedTargets.has(targetPath)) {
+      throw new Error(`Weekly done-plan archive collision planned twice for ${targetPath}`);
+    }
+
+    reservedTargets.add(targetPath);
+    moves.push({
+      from: record.path,
+      to: targetPath
+    });
   }
-  files.sort((left, right) => right.mtimeMs - left.mtimeMs);
-  const removals = files.slice(keep);
-  for (const item of removals) {
-    await fsp.rm(item.filePath, { force: true });
+
+  return moves;
+}
+
+export async function applyDoneRollover(moves) {
+  const movedPaths = [];
+  for (const move of moves) {
+    await fsp.mkdir(path.dirname(move.to), { recursive: true });
+    await fsp.rename(move.from, move.to);
+    movedPaths.push(move.to);
   }
-  return removals.map((item) => item.filePath);
+  return movedPaths;
 }
 
 export function parseCliArgs(argv) {
@@ -726,6 +814,76 @@ export function printJson(payload) {
 
 function normalizeText(value) {
   return String(value).replace(/\r\n/g, "\n");
+}
+
+async function listMarkdownRecordsShallow(rootDir) {
+  const entries = await fsp.readdir(rootDir, { withFileTypes: true });
+  const records = [];
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".md")) {
+      continue;
+    }
+    records.push(await readPlanRecord(path.join(rootDir, entry.name)));
+  }
+  return records;
+}
+
+async function listMarkdownRecordsRecursive(rootDir) {
+  const records = [];
+  const pendingDirs = [rootDir];
+  while (pendingDirs.length > 0) {
+    const currentDir = pendingDirs.pop();
+    const entries = await fsp.readdir(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(currentDir, entry.name);
+      if (entry.isDirectory()) {
+        pendingDirs.push(entryPath);
+        continue;
+      }
+      if (!entry.isFile() || !entry.name.endsWith(".md")) {
+        continue;
+      }
+      records.push(await readPlanRecord(entryPath));
+    }
+  }
+  return records;
+}
+
+function resolveDoneArchiveBucket(plan) {
+  const timestampInfo = resolvePlanRecordTimestampInfo(plan);
+  if (!timestampInfo.valid) {
+    return {
+      valid: false,
+      year: "",
+      week: ""
+    };
+  }
+
+  const weekInfo = isoWeekParts(timestampInfo.ms);
+  return {
+    valid: true,
+    year: String(weekInfo.year),
+    week: `W${String(weekInfo.week).padStart(2, "0")}`
+  };
+}
+
+function isoWeekParts(timestampMs) {
+  const date = new Date(timestampMs);
+  const utcDate = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
+  const day = utcDate.getUTCDay() || 7;
+  utcDate.setUTCDate(utcDate.getUTCDate() + 4 - day);
+  const isoYear = utcDate.getUTCFullYear();
+  const yearStart = new Date(Date.UTC(isoYear, 0, 1));
+  const week = Math.ceil((((utcDate - yearStart) / 86400000) + 1) / 7);
+  return {
+    year: isoYear,
+    week
+  };
+}
+
+function parseTimestamp(value) {
+  const ms = Date.parse(String(value || "").trim());
+  return Number.isFinite(ms) ? ms : Number.NaN;
 }
 
 function extractSectionValue(sectionText, label) {
