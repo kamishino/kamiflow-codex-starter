@@ -5,46 +5,22 @@ description: Route daily Codex work through a clarity-first, client-repo-first w
 
 # Kami Flow Core
 
-Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks. It needs clarity-first route inference, one human-facing project brief, active plan continuity, evidence-backed closeout, and optional SemVer release control for repos that opt in through `AGENTS.md`.
+Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks.
 
 ## Quick Start
 
-1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context. If `AGENTS.md` enables `SemVer Workflow`, treat release impact as part of closeout and use `finish-status.mjs` before acting on commit, release, or finish requests.
-2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
-3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
-4. Infer the route automatically from explicit intent, the three internal lanes, active plan state, `.local/project.md`, and safety gates. Treat active-plan `next_command` and `lifecycle_phase` as hints only.
-5. For `start`, `plan`, or `research`, optionally query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` when similar prior slices or durable project memory could materially improve the answer. Keep retrieval bounded and advisory only.
-6. Only load the matching route reference after the route is inferred.
-7. For narrow operational work like status, diff, summary, commit, release, finish, or `open plan view`, prefer the fast path instead of forcing stale active-plan momentum back into heavier planning flow.
-8. Before `build` or `fix`, first make sure the active plan is already a decision-complete implementation or repair slice. If it is still draft or placeholder, do not continue implementation in that response; reroute to `plan`, update the plan, and stop. Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on a later `build` or `fix` attempt after the plan is ready.
-9. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
-10. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
+For ordinary client-repo work, keep the default loop small:
 
-## Helper Buckets
+1. Read `AGENTS.md` and `.local/project.md`.
+2. Reuse the active plan, or recover one with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .` if the plan or project brief is missing.
+3. Infer the route from user intent and the current plan state, then load only the matching route reference.
+4. Before `build` or `fix`, use `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only when you need a deterministic build-ready GO/BLOCK answer.
+5. When explicitly closing a slice, prefer `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .` over manually chaining validation and archive steps.
+6. Keep non-trivial work grounded in plan markdown, and update `.local/project.md` only when durable priorities, guardrails, open questions, or decisions changed.
 
-Keep exact commands, arguments, and recovery shortcuts in `references/command-map.md`. Do not duplicate the full command catalog here.
+Everything else is advanced or condition-triggered. Keep the default client path centered on one active plan plus the minimum helper set.
 
-- `bootstrap/recovery`
-  - `ensure-plan`, `ready-check`
-- `hygiene/closeout`
-  - `archive-plan`, `check-closeout`, `cleanup-plans`, `finish-status`, `version-closeout`
-- `read models`
-  - `plan-history`, `plan-snapshot`, `plan-view.mjs`
-
-Use direct markdown mutation as the primary workflow. Use helper scripts only for deterministic bootstrap, readiness, hygiene, closeout, and read-model support.
-
-## Clarity-First Lanes
-
-- `fast path`
-  - use for clear, low-risk, narrow operational asks that do not need new acceptance criteria, implementation work, or validation closeout
-- `start`
-  - the persisted plan-lite lane for bounded but unclear work that still needs a chosen approach, clearer scope, explicit non-goals, or success checks before implementation planning
-- `plan`
-  - the full implementation-planning lane that defines `Implementation Tasks`, `Acceptance Criteria`, `Validation Commands`, and `Release Impact` when enabled, then hands off to `build`
-
-Keep the public route surface unchanged. `start` is the internal plan-lite lane; `plan` is the build-ready planning lane. `build` and `fix` still require the existing `ready-check.mjs` boundary before implementation.
-
-## Three-Layer Contract
+## Mental Model
 
 - `AGENTS.md`
   - repo rules, operating behavior, optional SemVer release policy, and the local artifacts Codex must read first
@@ -57,29 +33,48 @@ Keep the public route surface unchanged. `start` is the internal plan-lite lane;
 
 Keep the ownership one-way: plans may reference `.local/project.md` through `Project Fit`, and `.local/project.md` may absorb durable guardrails, decisions, or unresolved recurring concerns from completed work, but `.local/project.md` does not rewrite `AGENTS.md`, does not become an automatic log, and plans do not duplicate the full project brief.
 
-## Project Memory
+## Core Workflow
 
-- Keep long-lived project memory in `.local/project.md`.
-- Treat `.local/project.md` as human-facing context, not machine-only metadata, task history, or an automatic log.
-- Use it to remember product direction, current priorities, architecture guardrails, open questions, and durable decisions across sessions.
-- Put recurring future constraints in `Architecture Guardrails`.
-- Put settled evidence-backed conclusions in `Recent Decisions`.
-- Put unresolved recurring risks or lessons that still need evidence in `Open Questions`.
-- Treat `check` as the primary promotion point for durable project-memory updates after implementation or research.
-- Do not create extra namespaced local state unless a future machine-only need appears.
-- Use `cleanup-plans.mjs` when plan hygiene is unclear instead of guessing whether old active plans are stale, orphaned, or safe to ignore.
-
-## Route Selector
-
-- `start`: persist lightweight idea shaping for bounded but unclear work before full planning.
-- `plan`: produce a decision-complete implementation plan that is ready to hand off to `build`.
-- `build`: implement one approved slice.
-- `check`: verify behavior and decide `PASS` or `BLOCK`.
-- For explicit “check and archive” requests, prefer `check-closeout.mjs` over manually chaining validation and archive steps.
-- `research`: gather missing facts or compare risky options.
-- `fix`: repair a concrete bug or regression.
+- `fast path`
+  - use for clear, low-risk, narrow operational asks that do not need new acceptance criteria, implementation work, or validation closeout
+- `start`
+  - use for bounded but unclear work that still needs a chosen approach, clearer scope, explicit non-goals, or success checks before full planning
+- `plan`
+  - use for full implementation planning that defines `Implementation Tasks`, `Acceptance Criteria`, `Validation Commands`, and `Release Impact` when enabled, then hands off to `build`
+- `build`
+  - implement one approved slice
+- `check`
+  - verify behavior and decide `PASS` or `BLOCK`
+- `research`
+  - gather missing facts or compare risky options
+- `fix`
+  - repair a concrete bug or regression
 
 Use `references/route-intent.md` as the routing authority. Keep `start` as the canonical internal token; report `brainstorm` and `idea` as aliases, for example `Selected Route: start (brainstorm)`.
+
+Before `build` or `fix`, the active plan must already be decision-complete. If it is still draft or placeholder, reroute to `plan`, update the plan, and stop. A failing `ready-check.mjs` is a hard stop for implementation in that response.
+
+## Helper Buckets
+
+Keep exact commands, arguments, and recovery shortcuts in `references/command-map.md`. Do not duplicate the full command catalog here.
+
+- `core daily use`
+  - `ensure-plan`, `ready-check`, `check-closeout`
+- `advanced recovery`
+  - `archive-plan`, `cleanup-plans`, `plan-history`, `plan-snapshot`, `plan-view.mjs`
+- `release and maintainer`
+  - `finish-status`, `version-closeout`
+
+Use direct markdown mutation as the primary workflow. Keep the ordinary client path centered on the core daily-use helpers and reach for advanced helpers only when the situation explicitly calls for them.
+
+## Advanced Helpers
+
+These helpers stay available, but they are not part of the default client-repo loop:
+
+- use `plan-history.mjs` only when prior similar slices would materially improve `start`, `plan`, or `research`
+- use `cleanup-plans.mjs` only when active-plan state feels stale or conflicting
+- use `finish-status.mjs` and `version-closeout.mjs` only when the user is finishing or releasing work in a SemVer-enabled repo
+- use `plan-view.mjs` only when the user explicitly asks for a live read-only plan screen
 
 ## Output Contract
 
@@ -132,28 +127,17 @@ Use this rubric as a gate for any new helper proposal:
 - define the exact input/output shape
 - explain why the change stays lightweight
 
-Keep the current helper surface grouped mentally into three buckets:
-
-- `bootstrap/recovery`
-  - `ensure-plan`, `ready-check`
-- `hygiene/closeout`
-  - `archive-plan`, `cleanup-plans`, `finish-status`, `version-closeout`
-- `read models`
-  - `plan-history`, `plan-snapshot`, `plan-view`
-
-Resist adding helpers that overlap two buckets or require extra local state to justify themselves.
-
 ## References
 
-- `references/route-intent.md`: route inference order, aliases, safety overrides, and fast-path rules.
-- `references/command-map.md`: install, recovery, local-state ownership, and route-selection commands.
+- `references/route-intent.md`: route inference order, aliases, safety overrides, and fast-path rules
+- `references/command-map.md`: install, recovery, helper tiers, and route-selection commands
 - `references/start.md`
 - `references/plan.md`
 - `references/build.md`
 - `references/check.md`
 - `references/research.md`
 - `references/fix.md`
-- `assets/*.md`: lightweight output skeletons and runtime templates to reuse when they help.
+- `assets/*.md`: lightweight output skeletons and runtime templates to reuse when they help
 
 ## Boundaries
 
