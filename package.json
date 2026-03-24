@@ -1,6 +1,6 @@
 {
   "name": "@kamishino/kamiflow-core",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Standalone Kami Flow Core Codex skill with a minimal installer.",
   "type": "module",
   "bin": {
