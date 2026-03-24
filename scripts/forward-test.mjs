@@ -467,6 +467,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
 
   if (scenario.grader === "fresh-empty") {
     const lifecyclePhase = String(activePlan?.frontmatter.lifecycle_phase || "").toLowerCase();
+    const startSummarySection = extractSection(activePlan?.content || "", "Start Summary");
     checks.push({
       label: "active-plan-created",
       ok: Boolean(activePlan),
@@ -478,9 +479,61 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       detail: lifecyclePhase || "missing lifecycle_phase"
     });
     checks.push({
+      label: "start-handoff-stays-in-plan-mode",
+      ok: String(activePlan?.frontmatter.next_command || "").toLowerCase() === "plan"
+        && String(activePlan?.frontmatter.next_mode || "") === "Plan",
+      detail: `${String(activePlan?.frontmatter.next_command || "<missing>")} / ${String(activePlan?.frontmatter.next_mode || "<missing>")}`
+    });
+    checks.push({
+      label: "start-is-not-build-ready",
+      ok: String(activePlan?.frontmatter.decision || "").toUpperCase() !== "GO",
+      detail: String(activePlan?.frontmatter.decision || "<missing>")
+    });
+    checks.push({
+      label: "start-summary-placeholder-cleared",
+      ok: Boolean(startSummarySection) && !/Required:\s*yes\|no/i.test(startSummarySection),
+      detail: startSummarySection ? "start summary updated" : "missing Start Summary section"
+    });
+    checks.push({
       label: "no-premature-check-claim",
       ok: !/Check:\s*(PASS|BLOCK)/i.test(finalMessage),
       detail: "final message should not pretend build/check completed in a fresh planning scenario"
+    });
+  }
+
+  if (scenario.grader === "bounded-unclear-start") {
+    const lifecyclePhase = String(activePlan?.frontmatter.lifecycle_phase || "").toLowerCase();
+    const startSummarySection = extractSection(activePlan?.content || "", "Start Summary");
+    checks.push({
+      label: "active-plan-created",
+      ok: Boolean(activePlan),
+      detail: activePlan ? activePlan.path : "no active plan found"
+    });
+    checks.push({
+      label: "bounded-unclear-routes-to-start",
+      ok: lifecyclePhase === "start",
+      detail: lifecyclePhase || "missing lifecycle_phase"
+    });
+    checks.push({
+      label: "start-handoff-stays-in-plan-mode",
+      ok: String(activePlan?.frontmatter.next_command || "").toLowerCase() === "plan"
+        && String(activePlan?.frontmatter.next_mode || "") === "Plan",
+      detail: `${String(activePlan?.frontmatter.next_command || "<missing>")} / ${String(activePlan?.frontmatter.next_mode || "<missing>")}`
+    });
+    checks.push({
+      label: "start-is-not-build-ready",
+      ok: String(activePlan?.frontmatter.decision || "").toUpperCase() !== "GO",
+      detail: String(activePlan?.frontmatter.decision || "<missing>")
+    });
+    checks.push({
+      label: "start-summary-placeholder-cleared",
+      ok: Boolean(startSummarySection) && !/Required:\s*yes\|no/i.test(startSummarySection),
+      detail: startSummarySection ? "start summary updated" : "missing Start Summary section"
+    });
+    checks.push({
+      label: "no-premature-check-claim",
+      ok: !/Check:\s*(PASS|BLOCK)/i.test(finalMessage),
+      detail: "final message should stay in idea-shaping mode and avoid build/check claims"
     });
   }
 
@@ -501,6 +554,11 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       ok: String(activePlan?.frontmatter.next_command || "").toLowerCase() === "build"
         && String(activePlan?.frontmatter.next_mode || "") === "Build",
       detail: `${String(activePlan?.frontmatter.next_command || "<missing>")} / ${String(activePlan?.frontmatter.next_mode || "<missing>")}`
+    });
+    checks.push({
+      label: "plan-decision-is-go",
+      ok: String(activePlan?.frontmatter.decision || "").toUpperCase() === "GO",
+      detail: String(activePlan?.frontmatter.decision || "<missing>")
     });
     checks.push({
       label: "no-premature-check-claim",

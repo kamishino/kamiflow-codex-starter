@@ -1,21 +1,21 @@
 ---
 name: kamiflow-core
-description: Route daily Codex work through a client-repo-first workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the right phase from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; write a decision-complete plan; implement in scoped slices; verify with evidence; recover plan state inside any client repo; or honor an optional SemVer release policy in `AGENTS.md` for opted-in Node/npm repos. Treat the kamiflow-core source repo as the source-repo exception.
+description: Route daily Codex work through a clarity-first, client-repo-first workflow with a repo contract in `AGENTS.md`, human project memory in `.local/project.md`, and helper-backed task plans under `.local/plans/`. Use when Codex needs to infer the lightest safe lane from prompts like brainstorm, idea, plan, implement, fix, review, verify, or investigate; shape unclear work before implementation; write a decision-complete plan; implement in scoped slices; verify with evidence; recover plan state inside any client repo; or honor an optional SemVer release policy in `AGENTS.md` for opted-in Node/npm repos. Treat the kamiflow-core source repo as the source-repo exception.
 ---
 
 # Kami Flow Core
 
-Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks. It needs route inference, one human-facing project brief, active plan continuity, evidence-backed closeout, and optional SemVer release control for repos that opt in through `AGENTS.md`.
+Use this skill for client-repo work first. The kamiflow-core source repo is the source-repo exception and keeps the source-only forward-test bundle plus maintainer checks. It needs clarity-first route inference, one human-facing project brief, active plan continuity, evidence-backed closeout, and optional SemVer release control for repos that opt in through `AGENTS.md`.
 
 ## Quick Start
 
 1. For any non-fast-path task, read `AGENTS.md`, `.local/project.md`, `references/route-intent.md`, and `references/command-map.md`. If the workspace is a client repo, treat the client brief as the default; if it is the kamiflow-core source repo, use the source-repo brief and maintainer-only context. If `AGENTS.md` enables `SemVer Workflow`, treat release impact as part of closeout and use `finish-status.mjs` before acting on commit, release, or finish requests.
 2. Treat `AGENTS.md` as the repo operating contract, `.local/project.md` as human project memory, and `.local/plans/*.md` as task execution state.
 3. If `.local/plans/` has no active non-done plan or `.local/project.md` is missing, run `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`.
-4. Infer the route automatically from explicit intent, active plan state, `.local/project.md`, and safety gates. Treat active-plan `next_command` and `lifecycle_phase` as hints only.
+4. Infer the route automatically from explicit intent, the three internal lanes, active plan state, `.local/project.md`, and safety gates. Treat active-plan `next_command` and `lifecycle_phase` as hints only.
 5. For `start`, `plan`, or `research`, optionally query `node .agents/skills/kamiflow-core/scripts/plan-history.mjs --project . --query "<text>"` when similar prior slices or durable project memory could materially improve the answer. Keep retrieval bounded and advisory only.
 6. Only load the matching route reference after the route is inferred.
-7. For narrow operational work like status, diff, summary, commit, release, or finish chores, prefer the fast path instead of forcing stale active-plan momentum back into plan-heavy flow.
+7. For narrow operational work like status, diff, summary, commit, release, or finish chores, prefer the fast path instead of forcing stale active-plan momentum back into heavier planning flow.
 8. Before `build` or `fix`, first make sure the active plan is already a decision-complete implementation or repair slice. If it is still draft or placeholder, do not continue implementation in that response; reroute to `plan`, update the plan, and stop. Run `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on a later `build` or `fix` attempt after the plan is ready.
 9. Mutate the active plan markdown before the final response whenever the task is not on the fast path. Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed. Express recurring anti-patterns as `Architecture Guardrails`, settled evidence-backed conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
 10. State only evidence-backed claims. If evidence is missing, say `Unknown` and reroute.
@@ -36,6 +36,17 @@ Use this skill for client-repo work first. The kamiflow-core source repo is the 
   - for opted-in single-package Node/npm repos, run the release-only closeout step after the functional commit, update version files, and print guided release commit plus tag commands
 
 Use direct markdown mutation as the primary workflow. Use the helper scripts only for deterministic bootstrap, readiness, and archive recovery.
+
+## Clarity-First Lanes
+
+- `fast path`
+  - use for clear, low-risk, narrow operational asks that do not need new acceptance criteria, implementation work, or validation closeout
+- `start`
+  - the persisted plan-lite lane for bounded but unclear work that still needs a chosen approach, clearer scope, explicit non-goals, or success checks before implementation planning
+- `plan`
+  - the full implementation-planning lane that defines `Implementation Tasks`, `Acceptance Criteria`, `Validation Commands`, and `Release Impact` when enabled, then hands off to `build`
+
+Keep the public route surface unchanged. `start` is the internal plan-lite lane; `plan` is the build-ready planning lane. `build` and `fix` still require the existing `ready-check.mjs` boundary before implementation.
 
 ## Three-Layer Contract
 
@@ -61,8 +72,8 @@ Keep the ownership one-way: plans may reference `.local/project.md` through `Pro
 
 ## Route Selector
 
-- `start`: clarify a fuzzy request, brainstorm options, or shape an early idea.
-- `plan`: produce a decision-complete implementation plan.
+- `start`: persist lightweight idea shaping for bounded but unclear work before full planning.
+- `plan`: produce a decision-complete implementation plan that is ready to hand off to `build`.
 - `build`: implement one approved slice.
 - `check`: verify behavior and decide `PASS` or `BLOCK`.
 - `research`: gather missing facts or compare risky options.
@@ -90,6 +101,7 @@ For non-trivial route responses, keep the final answer compact:
 - Keep functional commit history and release history separate in SemVer-enabled repos.
 - In SemVer-enabled repos, interpret `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the correct end-of-slice action from `finish-status.mjs`.
 - Keep explicit narrow operational asks lightweight even when an active plan exists. Do not reroute `commit please`, `release please`, `finish please`, status, diff, or summary requests into `plan`, `build`, or `check` unless the user is actually asking for implementation or closeout work.
+- Treat `start` as the persisted plan-lite handoff into `plan`, not as a shortcut around the full-plan contract.
 - Archive only after all Acceptance Criteria and Go/No-Go items are checked.
 
 ## References

@@ -45,16 +45,20 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
 ## Route Inference
 
 - Use `references/route-intent.md` as the routing authority.
+- Keep the internal lane model clarity-first:
+  - fast path for narrow operational asks
+  - `start` for persisted plan-lite shaping
+  - `plan` for full implementation planning
 - Keep `start` as the canonical route token even when the user says `brainstorm` or `idea`.
 - Read `.local/project.md` before non-fast-path route work.
 - Treat active-plan `next_command` and `lifecycle_phase` as hints, not hard steering.
-- If the request is a narrow operational ask like status, diff, summary, commit, release, or finish, let that explicit ask stay on the fast path instead of forcing stale plan-heavy routing.
+- If the request is a narrow operational ask like status, diff, summary, commit, release, or finish, let that explicit ask stay on the fast path instead of forcing stale heavier-planning routing.
 - For `start`, `plan`, or `research`, use `plan-history.mjs` only when prior similar slices would materially improve the answer; keep it advisory, not mandatory.
 
 ## Route Selection
 
-- `start`: request is broad, ambiguous, or asking for brainstorm or idea exploration.
-- `plan`: request is concrete enough to specify implementation details and acceptance criteria.
+- `start`: request is bounded but unclear and still needs a chosen approach, clearer scope, or success checks before full planning.
+- `plan`: request is concrete enough to specify implementation details, acceptance criteria, and validation commands.
 - `build`: an approved plan exists and one implementation slice should be executed now.
 - `check`: validate the changed behavior and decide `PASS` or `BLOCK`.
 - `research`: gather facts, compare options, or de-risk uncertain work.

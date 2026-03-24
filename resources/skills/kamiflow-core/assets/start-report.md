@@ -2,14 +2,13 @@
 
 State
 - Route confidence:
-- Selected Route: start (brainstorm|idea exploration)
+- Selected Route: start (brainstorm|idea exploration|idea shaping)
 
 Doing
 - Problem summary:
-- Quick Win:
-- Balanced:
-- Ambitious:
-- Recommendation:
+- Clarified scope:
+- Recommended direction:
+- Remaining open decisions:
 
 Next
 - Run next:

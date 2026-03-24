@@ -12,6 +12,17 @@ Client repos are the default workflow target. Treat the kamiflow-core source rep
 
 This responsibility order does not replace route inference. It defines which local artifacts own which kind of context. Treat `.local/project.md` as curated durable memory, not task history.
 
+## Lane Model
+
+- `fast path`
+  - clear, low-risk, narrow operational work that does not need new acceptance criteria, implementation edits, or validation closeout
+- `start`
+  - the persisted plan-lite lane for bounded work that is still missing a chosen approach, explicit scope in/out, non-goals, or success checks
+- `plan`
+  - the full implementation-planning lane for work that is already concrete enough to define `Implementation Tasks`, `Acceptance Criteria`, and `Validation Commands`
+
+`research` remains fact-finding, not idea shaping. `build` and `fix` still depend on a build-ready full plan.
+
 ## Decision Order
 
 1. Check for explicit intent aliases in the user's request.
@@ -21,10 +32,10 @@ This responsibility order does not replace route inference. It defines which loc
 5. Apply safety overrides before doing work:
    - `build` and `fix` require `ready-check.mjs` to pass
    - `check` requires validation evidence before claiming `PASS`
-6. If no stronger route is selected and the task is simple operational work, use the fast path instead of plan-heavy routing.
+6. If no stronger route is selected and the task is simple operational work, use the fast path instead of heavier planning lanes.
 7. If no route is still obvious, use fallback routing:
-   - fuzzy request -> `start`
-   - clear but under-specified implementation request -> `plan`
+   - bounded but unclear implementation request -> `start`
+   - implementation-ready request -> `plan`
 
 ## Intent Aliases
 
@@ -53,6 +64,7 @@ For SemVer-enabled repos, treat `commit please`, `release please`, and `finish p
 - When the user does not specify a route, use `next_command` first.
 - If `next_command` is missing, fall back to `lifecycle_phase`.
 - If the active plan is draft or decision-incomplete, bias toward `start`, `plan`, or `research` instead of `build` or `fix`.
+- If the user has a bounded implementation idea but the plan still lacks a chosen approach, clear scope in/out, or success checks, prefer `start` over `plan`.
 
 ## Operational Override Examples
 

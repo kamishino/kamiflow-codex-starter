@@ -246,6 +246,12 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "bounded-unclear-start",
+    "promptFile": "bounded-unclear-start/prompt.md",
+    "grader": "bounded-unclear-start",
+    "modes": ["full"]
+  },
+  {
     "name": "operational-summary-active-plan",
     "promptFile": "operational-summary-active-plan/prompt.md",
     "fixtureDir": "small-bug/fixture",
