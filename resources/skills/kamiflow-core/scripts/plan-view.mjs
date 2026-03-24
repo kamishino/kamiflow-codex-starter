@@ -14,7 +14,7 @@ import {
   probePlanView,
   readPlanViewRuntime,
   terminateProcess
-} from "./lib-plan-view.mjs";
+} from "./runtime/plan-view-runtime.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));

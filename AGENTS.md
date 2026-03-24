@@ -58,6 +58,8 @@ This repository has one product: the standalone `kamiflow-core` Codex skill.
 - Keep forward-test prompts and fixtures under `resources/skills/kamiflow-core/assets/forward-tests/`; keep forward-test run artifacts private under `.local/forward-tests/`.
 - Default `npm run forward-test` is the smoke lane. The full serial behavioral suite lives behind `npm run forward-test -- --mode full` because it launches multiple real `codex exec` sessions and is intentionally slower.
 - Keep repo-local self-dogfooding explicit: `skill:sync` mutates `.agents/skills/kamiflow-core/`, preserves this tracked root `AGENTS.md`, and may create the dogfood `.local/project.md`; `skill:doctor` verifies role-aware runtime state; `validate` stays non-mutating.
+- Keep helper entrypoints thin. For touched multi-surface helpers, keep canonical read-model logic separate from runtime side effects, and keep static plan-view UI files under `assets/` instead of embedding them in runtime code.
+- Do not expand the plan view beyond the current single read-only screen without a separate user-approved slice. No second view, tabs, filters, widgets, edit UI, or dashboard framework on this branch.
 
 ## Safety
 

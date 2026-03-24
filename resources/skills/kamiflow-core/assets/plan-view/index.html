@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kami Flow Core Plan View</title>
+  <link rel="stylesheet" href="/plan-view.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="masthead">
+      <p class="eyebrow">Kami Flow Core / Plan View</p>
+      <h1 id="title">Loading active plan...</h1>
+      <div class="badge-row">
+        <span class="badge state" id="derived-state">Loading</span>
+        <span class="badge" id="decision">Decision: Unknown</span>
+        <span class="badge" id="release-impact">Release: none</span>
+        <span class="badge" id="freshness">Waiting for snapshot...</span>
+      </div>
+    </header>
+
+    <section class="layout">
+      <div class="band">
+        <div class="meta">
+          <div class="meta-block">
+            <span class="label">Next Command</span>
+            <span class="value" id="next-command">Unknown</span>
+          </div>
+          <div class="meta-block">
+            <span class="label">Next Mode</span>
+            <span class="value" id="next-mode">Unknown</span>
+          </div>
+          <div class="meta-block">
+            <span class="label">Open Decisions</span>
+            <span class="value" id="open-decisions">0</span>
+          </div>
+          <div class="meta-block">
+            <span class="label">Lifecycle</span>
+            <span class="value" id="lifecycle">Unknown</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="band">
+        <div class="progress-grid">
+          <div class="progress-strip">
+            <div class="progress-head"><span>Implementation</span><span id="tasks-count">0/0</span></div>
+            <div class="meter"><span id="tasks-meter" style="width:0%"></span></div>
+          </div>
+          <div class="progress-strip">
+            <div class="progress-head"><span>Acceptance</span><span id="acceptance-count">0/0</span></div>
+            <div class="meter"><span id="acceptance-meter" style="width:0%"></span></div>
+          </div>
+          <div class="progress-strip">
+            <div class="progress-head"><span>Go / No-Go</span><span id="gng-count">0/0</span></div>
+            <div class="meter"><span id="gng-meter" style="width:0%"></span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="band">
+        <div class="status-copy">
+          <p><strong>Status</strong><span id="latest-status">Waiting for snapshot...</span></p>
+          <p><strong>Blockers</strong><span id="latest-blockers">Waiting for snapshot...</span></p>
+          <p><strong>Next Step</strong><span id="latest-next-step">Waiting for snapshot...</span></p>
+        </div>
+      </div>
+
+      <div class="band">
+        <div class="meta">
+          <div class="meta-block">
+            <span class="label">Project Fit</span>
+            <span class="value small" id="project-fit">Waiting for snapshot...</span>
+          </div>
+          <div class="meta-block">
+            <span class="label">Updated</span>
+            <span class="value small" id="updated-at">Waiting for snapshot...</span>
+          </div>
+          <div class="meta-block">
+            <span class="label">Plan Path</span>
+            <span class="value small"><code id="plan-path">Waiting for snapshot...</code></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="footnote">Read-only projection of <code>.local/plans/*.md</code> via <code>plan-snapshot.mjs</code>.</p>
+  </main>
+
+  <script src="/plan-view.js"></script>
+</body>
+</html>

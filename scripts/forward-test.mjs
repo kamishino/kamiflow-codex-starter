@@ -17,9 +17,10 @@ import {
 import {
   clearPlanViewRuntime,
   probePlanView,
+  readPlanViewSnapshot,
   readPlanViewRuntime,
   terminateProcess
-} from "../resources/skills/kamiflow-core/scripts/lib-plan-view.mjs";
+} from "../resources/skills/kamiflow-core/scripts/runtime/plan-view-runtime.mjs";
 import {
   countCheckboxes,
   detectRepoRole,
@@ -1111,6 +1112,16 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
         ? "active plan unchanged"
         : "active plan was mutated"
     });
+    checks.push({
+      label: "plan-view-snapshot-matches-cli",
+      ok: JSON.stringify(finalState.planView?.snapshot || null) === JSON.stringify(planSnapshotPayload || null),
+      detail: finalState.planView?.snapshot ? "live snapshot matched CLI JSON" : "live snapshot missing"
+    });
+    checks.push({
+      label: "plan-view-runtime-marker-only",
+      ok: Array.isArray(finalState.planView?.files) && finalState.planView.files.length === 1 && finalState.planView.files[0] === "runtime.json",
+      detail: Array.isArray(finalState.planView?.files) ? finalState.planView.files.join(" | ") || "none" : "<missing>"
+    });
   }
 
   if (scenario.grader === "plan-view-open-reuses-healthy-server") {
@@ -1732,10 +1743,19 @@ async function collectPlanViewState(workspace) {
       status: 0,
       error: runtime.reason || "no runtime marker"
     };
+  const snapshot = runtime.valid && health.ok
+    ? (await readPlanViewSnapshot(runtime.marker.url, 800)).snapshot
+    : null;
+  const planViewDir = path.join(workspace, ".local", "plan-view");
+  const files = fs.existsSync(planViewDir)
+    ? (await fsp.readdir(planViewDir)).sort()
+    : [];
 
   return {
     runtime,
-    health
+    health,
+    snapshot,
+    files
   };
 }
 

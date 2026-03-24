@@ -169,6 +169,8 @@
     "grader": "plan-view-open-starts-server",
     "initializeGit": true,
     "skipCodex": true,
+    "runPlanSnapshot": true,
+    "planSnapshotFormat": "json",
     "runPlanViewOpen": true,
     "planViewOpenCount": 1,
     "planViewNoBrowser": true,

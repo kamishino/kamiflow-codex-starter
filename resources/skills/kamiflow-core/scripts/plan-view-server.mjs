@@ -7,13 +7,13 @@ import {
   resolveProjectDir
 } from "./lib-plan.mjs";
 import {
-  buildPlanViewHtml,
   clearPlanViewRuntime,
   PLAN_VIEW_IDLE_TIMEOUT_MS,
   PLAN_VIEW_POLL_INTERVAL_MS,
+  readPlanViewAsset,
   writePlanViewRuntime
-} from "./lib-plan-view.mjs";
-import { buildPlanSnapshot } from "./plan-snapshot.mjs";
+} from "./runtime/plan-view-runtime.mjs";
+import { buildPlanSnapshot } from "./core/plan-snapshot-core.mjs";
 
 const args = parseCliArgs(process.argv.slice(2));
 const projectDir = resolveProjectDir(String(args.project || "."));
@@ -40,10 +40,11 @@ const server = http.createServer(async (request, response) => {
       return;
     }
 
-    if (requestUrl.pathname === "/") {
+    const asset = await readPlanViewAsset(requestUrl.pathname);
+    if (asset) {
       lastInteractiveAt = Date.now();
-      response.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
-      response.end(buildPlanViewHtml());
+      response.writeHead(200, { "content-type": asset.contentType, "cache-control": "no-store" });
+      response.end(asset.body);
       return;
     }
 

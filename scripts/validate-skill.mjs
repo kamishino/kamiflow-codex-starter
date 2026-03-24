@@ -76,22 +76,34 @@ if (publishedPackageFiles.includes(packagedInstallMetaPath)) {
 }
 
 const runtimeProcessHelperPath = "scripts/lib-process.mjs";
-const runtimePlanViewHelperPath = "scripts/lib-plan-view.mjs";
+const runtimePlanViewRuntimePath = "scripts/runtime/plan-view-runtime.mjs";
+const runtimePlanSnapshotCorePath = "scripts/core/plan-snapshot-core.mjs";
 const planHistoryHelperPath = "scripts/plan-history.mjs";
 const planSnapshotHelperPath = "scripts/plan-snapshot.mjs";
 const planViewHelperPath = "scripts/plan-view.mjs";
 const planViewServerHelperPath = "scripts/plan-view-server.mjs";
+const planViewAssetFiles = [
+  "assets/plan-view/index.html",
+  "assets/plan-view/plan-view.css",
+  "assets/plan-view/plan-view.js"
+];
 if (!fs.existsSync(path.join(skillRoot, runtimeProcessHelperPath))) {
   fail(`Missing runtime helper file: ${runtimeProcessHelperPath}`);
 }
 if (!clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
   fail("package.json files must publish scripts/lib-process.mjs because runtime helpers depend on it.");
 }
-if (!fs.existsSync(path.join(skillRoot, runtimePlanViewHelperPath))) {
-  fail(`Missing runtime helper file: ${runtimePlanViewHelperPath}`);
+if (!fs.existsSync(path.join(skillRoot, runtimePlanViewRuntimePath))) {
+  fail(`Missing runtime helper file: ${runtimePlanViewRuntimePath}`);
 }
-if (!clientRuntimeRequiredFiles.includes(runtimePlanViewHelperPath)) {
-  fail("package.json files must publish scripts/lib-plan-view.mjs because plan-view helpers depend on it.");
+if (!clientRuntimeRequiredFiles.includes(runtimePlanViewRuntimePath)) {
+  fail("package.json files must publish scripts/runtime/plan-view-runtime.mjs because plan-view helpers depend on it.");
+}
+if (!fs.existsSync(path.join(skillRoot, runtimePlanSnapshotCorePath))) {
+  fail(`Missing runtime helper file: ${runtimePlanSnapshotCorePath}`);
+}
+if (!clientRuntimeRequiredFiles.includes(runtimePlanSnapshotCorePath)) {
+  fail("package.json files must publish scripts/core/plan-snapshot-core.mjs because plan-snapshot surfaces depend on it.");
 }
 if (!fs.existsSync(path.join(skillRoot, planHistoryHelperPath))) {
   fail(`Missing runtime helper file: ${planHistoryHelperPath}`);
@@ -107,6 +119,14 @@ for (const helperPath of [planSnapshotHelperPath, planViewHelperPath, planViewSe
     fail(`package.json files must publish ${helperPath} because the plan-view runtime depends on it.`);
   }
 }
+for (const assetPath of planViewAssetFiles) {
+  if (!fs.existsSync(path.join(skillRoot, assetPath))) {
+    fail(`Missing plan-view asset file: ${assetPath}`);
+  }
+  if (!clientRuntimeRequiredFiles.includes(assetPath)) {
+    fail(`package.json files must publish ${assetPath} because plan-view serves it at runtime.`);
+  }
+}
 
 for (const relativePath of clientRuntimeRequiredFiles) {
   if (!fs.existsSync(path.join(skillRoot, relativePath))) {
@@ -114,13 +134,16 @@ for (const relativePath of clientRuntimeRequiredFiles) {
   }
 }
 
-for (const runtimeScriptPath of ["scripts/finish-status.mjs", "scripts/version-closeout.mjs", "scripts/plan-view.mjs", "scripts/plan-view-server.mjs"]) {
+for (const runtimeScriptPath of ["scripts/finish-status.mjs", "scripts/version-closeout.mjs", "scripts/plan-view.mjs", "scripts/plan-view-server.mjs", "scripts/plan-snapshot.mjs"]) {
   const runtimeScript = await fsp.readFile(path.join(skillRoot, runtimeScriptPath), "utf8");
   if (runtimeScript.includes("./lib-process.mjs") && !clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
     fail(`${runtimeScriptPath} imports ./lib-process.mjs but package.json files does not publish scripts/lib-process.mjs.`);
   }
-  if (runtimeScript.includes("./lib-plan-view.mjs") && !clientRuntimeRequiredFiles.includes(runtimePlanViewHelperPath)) {
-    fail(`${runtimeScriptPath} imports ./lib-plan-view.mjs but package.json files does not publish scripts/lib-plan-view.mjs.`);
+  if (runtimeScript.includes("./runtime/plan-view-runtime.mjs") && !clientRuntimeRequiredFiles.includes(runtimePlanViewRuntimePath)) {
+    fail(`${runtimeScriptPath} imports ./runtime/plan-view-runtime.mjs but package.json files does not publish scripts/runtime/plan-view-runtime.mjs.`);
+  }
+  if (runtimeScript.includes("./core/plan-snapshot-core.mjs") && !clientRuntimeRequiredFiles.includes(runtimePlanSnapshotCorePath)) {
+    fail(`${runtimeScriptPath} imports ./core/plan-snapshot-core.mjs but package.json files does not publish scripts/core/plan-snapshot-core.mjs.`);
   }
 }
 
