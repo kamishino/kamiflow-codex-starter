@@ -105,6 +105,43 @@ For assistant-guided closeout, the finish model is:
 - `bin/`: minimal published binary for `kamiflow-core install`.
 - `scripts/`: installer, validator, doctor, and forward-test utilities for the published package and repo-local self-dogfooding.
 
+## Design Rubric
+
+Use this rubric when deciding whether `kamiflow-core` should gain a new helper or workflow feature.
+
+- `single-job clarity`
+  - every helper should do one obvious job
+- `inspect before mutate`
+  - prefer read-only helpers first and keep mutation explicit
+- `client-repo-first`
+  - default UX should optimize for normal client repos, not this source repo
+- `small local state`
+  - keep the contract centered on `AGENTS.md`, `.local/project.md`, `.local/plans/*.md`, and `.local/plans/done/**/*.md`
+- `evidence-backed output`
+  - prefer compact, stable summaries with counts, blockers, readiness, recommendations, and paths
+- `no orchestration theater`
+  - avoid role simulation, framework growth, or extra workflow layers
+- `portable by default`
+  - avoid unnecessary runtime stacks, OS coupling, or dashboard dependence
+
+Before adding a helper, write down:
+
+1. the problem it solves
+2. why an existing helper is insufficient
+3. the exact input/output shape
+4. why it stays lightweight
+
+Keep the current helper surface grouped into three buckets:
+
+- `bootstrap/recovery`
+  - `ensure-plan`, `ready-check`
+- `hygiene/closeout`
+  - `archive-plan`, `cleanup-plans`, `finish-status`, `version-closeout`
+- `read models`
+  - `plan-history`, `plan-snapshot`, `plan-view`
+
+Do not add helpers that blur these buckets unless the overlap is clearly worth the complexity.
+
 ## Maintainer Commands
 
 ```bash
@@ -140,6 +177,16 @@ That helper blocks on a dirty worktree, aggregates the unreleased PASS-plan wind
 - the exact tag command for `vX.Y.Z`
 
 It does not auto-commit, auto-tag, or publish.
+
+## Next Improvements
+
+Use the rubric above to prioritize the next changes in this order:
+
+1. sharpen helper output contracts so they return more stable machine-readable summaries
+2. tighten read-model consistency across `plan-snapshot`, `finish-status`, `cleanup-plans`, and `plan-history`
+3. add short usage examples for each helper so the intended loop is obvious
+4. reduce route ambiguity only where real prompts still misroute
+5. keep `plan-view` constrained as a read-only helper, not a dashboard product
 
 ## Clean `main` Cutover
 

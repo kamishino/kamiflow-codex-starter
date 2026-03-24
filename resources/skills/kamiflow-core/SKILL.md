@@ -117,6 +117,43 @@ For non-trivial route responses, keep the final answer compact:
 - Treat `start` as the persisted plan-lite handoff into `plan`, not as a shortcut around the full-plan contract.
 - Archive only after all Acceptance Criteria and Go/No-Go items are checked.
 
+## Design Rubric
+
+Judge every future helper or feature against this product bar before adding it.
+
+- `single-job clarity`
+  - a helper should do one obvious job, and its name should explain that job without extra interpretation
+- `inspect before mutate`
+  - prefer read-only helpers first; mutating helpers should be explicit, bounded, and easy to understand locally
+- `client-repo-first`
+  - optimize the default behavior for ordinary client repos; keep source-repo behavior as the explicit exception
+- `small local state`
+  - keep the contract limited to `AGENTS.md`, `.local/project.md`, `.local/plans/*.md`, and `.local/plans/done/**/*.md` unless a concrete need proves otherwise
+- `evidence-backed output`
+  - prefer compact, stable summaries with counts, blockers, readiness, recommendations, and paths over prose-heavy output
+- `no orchestration theater`
+  - do not introduce role simulation, agent-company framing, or framework-like workflow layers unless they clearly improve everyday repo work
+- `portable by default`
+  - avoid extra runtime stacks, OS-specific assumptions, or dashboard dependence in the baseline flow
+
+Use this rubric as a gate for any new helper proposal:
+
+- state the problem clearly
+- explain why an existing helper is insufficient
+- define the exact input/output shape
+- explain why the change stays lightweight
+
+Keep the current helper surface grouped mentally into three buckets:
+
+- `bootstrap/recovery`
+  - `ensure-plan`, `ready-check`
+- `hygiene/closeout`
+  - `archive-plan`, `cleanup-plans`, `finish-status`, `version-closeout`
+- `read models`
+  - `plan-history`, `plan-snapshot`, `plan-view`
+
+Resist adding helpers that overlap two buckets or require extra local state to justify themselves.
+
 ## References
 
 - `references/route-intent.md`: route inference order, aliases, safety overrides, and fast-path rules.
