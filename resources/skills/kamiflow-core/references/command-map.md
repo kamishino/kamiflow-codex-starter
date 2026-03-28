@@ -53,6 +53,10 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 - For opted-in root Node/npm repos, prepare version closeout:
   - `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
   - use this only after the functional commit is already done and `finish-status.mjs` recommends release work
+- In the kamiflow-core source repo, publish the npm package from GitHub Releases:
+  - publish the matching GitHub Release for the pushed `vX.Y.Z` tag
+  - the source repo workflow `.github/workflows/publish-npm.yml` performs validation and `npm publish`
+  - prefer npm Trusted Publishing; keep `NPM_TOKEN` only as the fallback path
 
 ## Local State Ownership
 
@@ -127,6 +131,7 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - first commit the functional changes with a normal repo-owned subject
   - run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
   - use the printed release-only commit command and tag command after the functional commit
+  - in the kamiflow-core source repo, push the tag and publish the matching GitHub Release so the npm publish workflow can run
 
 ## Response Contract
 

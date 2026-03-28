@@ -14,6 +14,45 @@ Use this in a client repo to install the skill, generate `.local/project.md`, bo
 
 For Codex to discover that skill inside this repo, the repo also needs a generated runtime install under `.agents/skills/kamiflow-core/`.
 
+## GitHub Release To npm
+
+This repo now publishes `@kamishino/kamiflow-core` to npm from GitHub Releases through [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml).
+
+The release contract is:
+
+1. prepare the functional change and merge it
+2. run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .` when the SemVer release commit and tag are due
+3. create the release-only commit and `vX.Y.Z` tag locally
+4. push the commit and tag to GitHub
+5. publish a GitHub Release from that tag
+6. let GitHub Actions run validation and `npm publish`
+
+The workflow is intentionally triggered only by `release.published`, not by every push to `main`.
+
+### Trusted Publishing Setup
+
+Recommended: configure npm Trusted Publishing for `@kamishino/kamiflow-core` instead of relying on a long-lived npm token.
+
+In npm package settings, add a trusted publisher with:
+
+- owner/repo: `kamishino/kamiflow-codex-starter`
+- workflow file: `.github/workflows/publish-npm.yml`
+- trigger: GitHub-hosted Actions
+
+Keep the workflow filename stable after npm is configured, because npm validates the exact repository and workflow path.
+
+The workflow already includes:
+
+- `permissions.id-token: write` for GitHub OIDC
+- validation before publish with `npm ci` and `npm run validate`
+- a release-tag check that requires the GitHub Release tag to match `package.json`
+- `npm pack` as a publishable tarball smoke check
+- `npm publish --provenance --access public`
+
+### Fallback `NPM_TOKEN`
+
+If Trusted Publishing is unavailable, add the repository secret `NPM_TOKEN`. The same workflow exports `NODE_AUTH_TOKEN` for npm's token fallback path while keeping Trusted Publishing as the default and preferred route.
+
 ## Legacy KFC Line
 
 If you need the pre-pivot KFC repository shape, use:
@@ -183,6 +222,8 @@ That helper blocks on a dirty worktree, aggregates the unreleased PASS-plan wind
 - the exact tag command for `vX.Y.Z`
 
 It does not auto-commit, auto-tag, or publish.
+
+After you push the release commit and tag, publish the GitHub Release for that `vX.Y.Z` tag. GitHub Actions then performs the npm publish automatically through [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml), using npm Trusted Publishing when configured and falling back to `NPM_TOKEN` only if needed.
 
 ## Next Improvements
 
