@@ -23,6 +23,14 @@ This responsibility order does not replace route inference. It defines which loc
 
 `research` remains fact-finding, not idea shaping. `build` and `fix` still depend on a build-ready full plan.
 
+## Unknown Type Matrix
+
+| If the missing piece is... | Route |
+| --- | --- |
+| direction, scope boundary, non-goals, or success checks | `start` |
+| evidence, comparison data, or root-cause facts | `research` |
+| concrete implementation tasks, acceptance criteria, and validation commands | `plan` |
+
 ## Decision Order
 
 1. Check for explicit intent aliases in the user's request.

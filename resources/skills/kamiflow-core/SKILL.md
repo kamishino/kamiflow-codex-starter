@@ -20,6 +20,26 @@ For ordinary client-repo work, keep the default loop small:
 
 Everything else is advanced or condition-triggered. Keep the default client path centered on one active plan plus the minimum helper set.
 
+## Route Quick Pick
+
+| Prompt shape | Route | First move |
+| --- | --- | --- |
+| status, diff, summary, `commit please`, `release please`, `finish please`, `open plan view` | `fast path` | Keep it operational and use helper-backed reads first |
+| bounded idea, brainstorm, unclear direction | `start` | Shape the slice before pretending it is implementation-ready |
+| implementation-ready spec or breakdown | `plan` | Make the plan decision-complete, then hand off to `build` |
+| missing facts, comparison, root-cause analysis | `research` | Gather evidence before choosing the slice |
+| approved implementation slice | `build` | Execute one scoped slice |
+| concrete bug/regression | `fix` | Repair the bug, then validate |
+| validation or closeout evidence | `check` | Produce PASS/BLOCK evidence and use `check-closeout` when closing the slice |
+
+## Unknown Type Matrix
+
+| If the missing piece is... | Use |
+| --- | --- |
+| direction, scope boundary, or success shape | `start` |
+| facts, evidence, or option comparison | `research` |
+| implementation details already understood well enough to write tasks and validation | `plan` |
+
 ## Mental Model
 
 - `AGENTS.md`

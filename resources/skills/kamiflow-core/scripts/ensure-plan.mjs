@@ -2,6 +2,8 @@
 import fsp from "node:fs/promises";
 import path from "node:path";
 import {
+  analyzePlanCleanup,
+  buildPlanHygieneSummary,
   createPlan,
   ensureReleaseImpactSectionContent,
   ensureRepoRuntimeState,
@@ -21,6 +23,7 @@ const forceNew = Boolean(args.new);
 
 const runtimeState = await ensureRepoRuntimeState(projectDir);
 const releasePolicy = await readReleasePolicy(projectDir);
+const hygieneBefore = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
 
 const activePlan = forceNew ? null : await resolveActivePlan(projectDir);
 if (activePlan) {
@@ -30,6 +33,7 @@ if (activePlan) {
     await fsp.writeFile(activePlan.path, nextPlanContent.content, "utf8");
     resolvedPlan = await readPlanRecord(activePlan.path);
   }
+  const hygieneAfter = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
 
   printJson({
     ok: true,
@@ -43,12 +47,17 @@ if (activePlan) {
     project_brief_created: runtimeState.projectBrief.created,
     next_command: resolvedPlan.frontmatter.next_command || "plan",
     next_mode: resolvedPlan.frontmatter.next_mode || "Plan",
+    hygiene: {
+      before: hygieneBefore,
+      after: hygieneAfter
+    },
     recovery: `node ${path.join(".agents", "skills", "kamiflow-core", "scripts", "ensure-plan.mjs")} --project . --new`
   });
   process.exit(0);
 }
 
 const createdPlan = await createPlan(projectDir, { route, topic });
+const hygieneAfter = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
 printJson({
   ok: true,
   created: true,
@@ -60,5 +69,9 @@ printJson({
   project_brief_path: runtimeState.projectBrief.path,
   project_brief_created: runtimeState.projectBrief.created,
   next_command: createdPlan.frontmatter.next_command || "plan",
-  next_mode: createdPlan.frontmatter.next_mode || "Plan"
+  next_mode: createdPlan.frontmatter.next_mode || "Plan",
+  hygiene: {
+    before: hygieneBefore,
+    after: hygieneAfter
+  }
 });

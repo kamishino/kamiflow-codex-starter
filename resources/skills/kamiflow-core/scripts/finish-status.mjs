@@ -9,6 +9,11 @@ import {
   resolveProjectDir
 } from "./lib-plan-workspace.mjs";
 import {
+  analyzePlanCleanup,
+  buildPlanHygieneNotice,
+  buildPlanHygieneSummary
+} from "./lib-plan-cleanup.mjs";
+import {
   isPassPlanRecord,
   resolveActivePlan,
   resolveLatestDonePlan
@@ -28,6 +33,7 @@ const gitState = readGitState(projectDir);
 const packageVersion = await readPackageVersion(projectDir);
 const currentVersionTag = packageVersion ? `v${packageVersion}` : "";
 const releaseWindow = await resolveReleaseWindow(projectDir);
+const hygiene = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
 const releaseAlreadyApplied = Boolean(currentVersionTag)
   && releaseWindow.candidate_plans.length === 0
   && (
@@ -45,6 +51,13 @@ const finishContext = resolveFinishContext({
   releaseAlreadyApplied,
   releaseWindow
 });
+const hygieneNotice = buildPlanHygieneNotice(hygiene);
+const releaseBlockers = hygiene.has_warnings
+  ? [...finishContext.releaseBlockers, `Warning only: ${hygieneNotice}`]
+  : finishContext.releaseBlockers;
+const reason = hygiene.has_warnings
+  ? `${finishContext.reason} ${hygieneNotice}`.trim()
+  : finishContext.reason;
 
 printJson({
   ok: true,
@@ -52,11 +65,12 @@ printJson({
   semver_enabled: releasePolicy.enabled,
   release_policy_valid: releasePolicy.valid,
   recommended_action: finishContext.recommendedAction,
-  reason: finishContext.reason,
+  reason,
   release_ready: finishContext.releaseReady,
-  release_blockers: finishContext.releaseBlockers,
+  release_blockers: releaseBlockers,
   release_plan: finishContext.releasePlan,
   release_window: buildReleaseWindowSummary(releaseWindow),
+  hygiene,
   active_plan: summarizePlan(activePlan),
   latest_done_plan: summarizePlan(latestDonePlan),
   git: {

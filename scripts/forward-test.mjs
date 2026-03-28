@@ -138,6 +138,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const installLogPath = path.join(logDir, "install.log");
   const reinstallLogPath = path.join(logDir, "install-rerun.log");
   const doctorLogPath = path.join(logDir, "doctor.log");
+  const ensurePlanLogPath = path.join(logDir, "ensure-plan.log");
   const readyCheckLogPath = path.join(logDir, "ready-check.log");
   const planHistoryLogPath = path.join(logDir, "plan-history.log");
   const planSnapshotLogPath = path.join(logDir, "plan-snapshot.log");
@@ -300,6 +301,26 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     await fsp.writeFile(doctorLogPath, `${doctorResult.stdout}\n${doctorResult.stderr}`.trim(), "utf8");
   }
 
+  let ensurePlanResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  if (scenario.runEnsurePlan) {
+    const ensurePlanArgs = [
+      path.join(".agents", "skills", "kamiflow-core", "scripts", "ensure-plan.mjs"),
+      "--project",
+      "."
+    ];
+    if (scenario.ensurePlanRoute) {
+      ensurePlanArgs.push("--route", String(scenario.ensurePlanRoute));
+    }
+    if (scenario.ensurePlanTopic) {
+      ensurePlanArgs.push("--topic", String(scenario.ensurePlanTopic));
+    }
+    ensurePlanResult = await runCommand("node", ensurePlanArgs, {
+      cwd: externalWorkspace,
+      env: scenarioEnv
+    });
+    await fsp.writeFile(ensurePlanLogPath, `${ensurePlanResult.stdout}\n${ensurePlanResult.stderr}`.trim(), "utf8");
+  }
+
   let readyCheckResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runReadyCheck) {
     readyCheckResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "ready-check.mjs"), "--project", "."], {
@@ -449,6 +470,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     reinstallResult,
     reinstallState,
     doctorResult,
+    ensurePlanResult,
     readyCheckResult,
     planHistoryResult,
     planSnapshotResult,
@@ -473,7 +495,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, readyCheckResult, planHistoryResult, planSnapshotResult, planViewOpenResults, planViewStopResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, ensurePlanResult, readyCheckResult, planHistoryResult, planSnapshotResult, planViewOpenResults, planViewStopResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -481,6 +503,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   const combinedOutput = `${finalMessage}\n${codexResult.stdout}\n${codexResult.stderr}`;
   const userFacingOutput = finalMessage;
   const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
+  const ensurePlanPayload = parseJsonMaybe(ensurePlanResult.stdout);
   const planHistoryPayload = parseJsonMaybe(planHistoryResult.stdout);
   const planSnapshotPayload = parseJsonMaybe(planSnapshotResult.stdout);
   const planViewOpenPayloads = Array.isArray(planViewOpenResults) ? planViewOpenResults.map((result) => parseJsonMaybe(result.stdout)) : [];
@@ -585,6 +608,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   }
 
   if (scenario.runPlanSnapshot) {
+    const expectsJsonSnapshot = String(scenario.planSnapshotFormat || "json").toLowerCase() === "json";
     checks.push({
       label: "plan-snapshot-exits-zero",
       ok: planSnapshotResult.code === 0,
@@ -592,8 +616,12 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
     checks.push({
       label: "plan-snapshot-returns-json",
-      ok: Boolean(planSnapshotPayload) && typeof planSnapshotPayload === "object",
-      detail: planSnapshotPayload ? "helper returned JSON" : "plan-snapshot did not return JSON"
+      ok: expectsJsonSnapshot
+        ? Boolean(planSnapshotPayload) && typeof planSnapshotPayload === "object"
+        : typeof planSnapshotResult.stdout === "string" && planSnapshotResult.stdout.trim().length > 0,
+      detail: expectsJsonSnapshot
+        ? (planSnapshotPayload ? "helper returned JSON" : "plan-snapshot did not return JSON")
+        : "helper returned non-empty formatted output"
     });
     checks.push({
       label: "plan-snapshot-does-not-mutate-tracked-files",
@@ -1129,6 +1157,65 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
   }
 
+  if (scenario.grader === "plan-snapshot-hygiene-done-plan") {
+    checks.push({
+      label: "snapshot-keeps-no-active-plan",
+      ok: planSnapshotPayload?.has_active_plan === false,
+      detail: `has_active_plan=${String(planSnapshotPayload?.has_active_plan)}`
+    });
+    checks.push({
+      label: "snapshot-surfaces-done-plan-warning",
+      ok: planSnapshotPayload?.hygiene?.has_warnings === true
+        && Array.isArray(planSnapshotPayload?.hygiene?.issue_types)
+        && planSnapshotPayload.hygiene.issue_types.includes("done-plan-in-active-dir"),
+      detail: Array.isArray(planSnapshotPayload?.hygiene?.issue_types)
+        ? planSnapshotPayload.hygiene.issue_types.join(" | ")
+        : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "plan-snapshot-hygiene-multiple-active") {
+    checks.push({
+      label: "snapshot-surfaces-multiple-active-warning",
+      ok: planSnapshotPayload?.hygiene?.has_warnings === true
+        && Array.isArray(planSnapshotPayload?.hygiene?.issue_types)
+        && planSnapshotPayload.hygiene.issue_types.includes("orphan-active-plan"),
+      detail: Array.isArray(planSnapshotPayload?.hygiene?.issue_types)
+        ? planSnapshotPayload.hygiene.issue_types.join(" | ")
+        : "<missing>"
+    });
+    checks.push({
+      label: "snapshot-counts-orphan-active-plan",
+      ok: Number(planSnapshotPayload?.hygiene?.orphan_count || 0) >= 1,
+      detail: String(planSnapshotPayload?.hygiene?.orphan_count || 0)
+    });
+  }
+
+  if (scenario.grader === "plan-snapshot-hygiene-incomplete-active") {
+    checks.push({
+      label: "snapshot-surfaces-incomplete-active-warning",
+      ok: planSnapshotPayload?.hygiene?.has_warnings === true
+        && Array.isArray(planSnapshotPayload?.hygiene?.issue_types)
+        && planSnapshotPayload.hygiene.issue_types.includes("incomplete-active-plan"),
+      detail: Array.isArray(planSnapshotPayload?.hygiene?.issue_types)
+        ? planSnapshotPayload.hygiene.issue_types.join(" | ")
+        : "<missing>"
+    });
+  }
+
+  if (scenario.grader === "plan-snapshot-hygiene-markdown") {
+    checks.push({
+      label: "snapshot-markdown-warning-section-present",
+      ok: /## Hygiene Warnings/i.test(planSnapshotResult.stdout),
+      detail: "markdown output should append a hygiene warning section"
+    });
+    checks.push({
+      label: "snapshot-markdown-names-issue-type",
+      ok: /done-plan-in-active-dir/i.test(planSnapshotResult.stdout),
+      detail: "markdown output should include the issue type"
+    });
+  }
+
   if (scenario.grader === "plan-view-open-starts-server") {
     const firstOpenPayload = planViewOpenPayloads[0];
     checks.push({
@@ -1329,6 +1416,53 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
       label: "finish-status-reports-semver-disabled",
       ok: /SemVer workflow is disabled/i.test((finishStatusPayload?.release_blockers || []).join(" | ")),
       detail: (finishStatusPayload?.release_blockers || []).join(" | ") || "<missing>"
+    });
+  }
+
+  if (scenario.grader === "finish-status-hygiene-warning") {
+    checks.push({
+      label: "finish-status-keeps-commit-only",
+      ok: finishStatusPayload?.recommended_action === "commit-only",
+      detail: finishStatusPayload?.recommended_action || "<missing>"
+    });
+    checks.push({
+      label: "finish-status-returns-hygiene-summary",
+      ok: finishStatusPayload?.hygiene?.has_warnings === true
+        && Array.isArray(finishStatusPayload?.hygiene?.issue_types)
+        && finishStatusPayload.hygiene.issue_types.includes("done-plan-in-active-dir"),
+      detail: Array.isArray(finishStatusPayload?.hygiene?.issue_types)
+        ? finishStatusPayload.hygiene.issue_types.join(" | ")
+        : "<missing>"
+    });
+    checks.push({
+      label: "finish-status-warning-text-present",
+      ok: /Plan hygiene warning/i.test(`${finishStatusPayload?.reason || ""} ${(finishStatusPayload?.release_blockers || []).join(" | ")}`),
+      detail: `${finishStatusPayload?.reason || "<missing>"} | ${(finishStatusPayload?.release_blockers || []).join(" | ") || "no blockers"}`
+    });
+  }
+
+  if (scenario.grader === "ensure-plan-hygiene-warning") {
+    checks.push({
+      label: "ensure-plan-exits-zero",
+      ok: ensurePlanResult.code === 0,
+      detail: `exit code ${ensurePlanResult.code}`
+    });
+    checks.push({
+      label: "ensure-plan-still-recovers-plan",
+      ok: ensurePlanPayload?.ok === true && Boolean(ensurePlanPayload?.plan_path),
+      detail: ensurePlanPayload?.plan_path || "<missing>"
+    });
+    checks.push({
+      label: "ensure-plan-reports-before-warning",
+      ok: ensurePlanPayload?.hygiene?.before?.has_warnings === true,
+      detail: JSON.stringify(ensurePlanPayload?.hygiene?.before || null)
+    });
+    checks.push({
+      label: "ensure-plan-reports-after-warning",
+      ok: ensurePlanPayload?.hygiene?.after?.has_warnings === true
+        && Array.isArray(ensurePlanPayload?.hygiene?.after?.issue_types)
+        && ensurePlanPayload.hygiene.after.issue_types.includes("done-plan-in-active-dir"),
+      detail: JSON.stringify(ensurePlanPayload?.hygiene?.after || null)
     });
   }
 

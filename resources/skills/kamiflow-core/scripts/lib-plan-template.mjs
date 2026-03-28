@@ -86,45 +86,32 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
   };
 
   const goalLines = topic
-    ? [
-      `- Outcome: ${topic}`,
-      "- Out of scope: Replace with the explicit non-goal for this slice."
-    ]
+    ? [`- Outcome: ${topic}`, "- Out of scope: Name the explicit non-goal for this slice."]
     : [
-      "- Outcome: Replace with the concrete implementation outcome for this slice.",
-      "- Out of scope: Replace with the explicit non-goal for this slice."
+      "- Outcome: Describe the concrete outcome for this slice.",
+      "- Out of scope: Name the explicit non-goal for this slice."
     ];
-  const body = [
-    "## Start Summary",
-    "- Required: no",
-    "- Reason: Kami Flow Core created this plan because no active non-done plan was available.",
-    "- Selected Idea: Pending clarification.",
-    "- Alternatives Considered: None yet.",
-    "- Pre-mortem Risk: Unknown until scope is clarified.",
-    "- Handoff Confidence: 3",
-    "",
-    "## Goal",
-    ...goalLines,
-    "",
+  const scopeSection = [
     "## Scope (In/Out)",
-    "- In: Replace with the concrete implementation slice for this plan.",
-    "- Out: Replace with the explicit non-goals for this slice.",
-    "",
+    "- In: Replace with the concrete slice.",
+    "- Out: Replace with the explicit non-goals."
+  ];
+  const constraintSection = [
     "## Constraints",
-    "- Technical: Replace with the real technical constraints for this slice.",
-    "- Risk: Replace with the main execution risk for this slice.",
-    "",
+    "- Technical: Replace with the real technical constraint.",
+    "- Risk: Replace with the main execution risk."
+  ];
+  const projectFitSection = [
     "## Project Fit",
-    "- Relevant priority: Replace with one priority from .local/project.md.",
-    "- Relevant guardrail: Replace with one guardrail from .local/project.md.",
-    "",
-    "## Assumptions",
-    "- [ ] Replace with validated assumptions or remove this placeholder.",
-    "",
+    "- Relevant priority: Replace with one real priority from .local/project.md.",
+    "- Relevant guardrail: Replace with one real guardrail from .local/project.md."
+  ];
+  const openDecisionsSection = [
     "## Open Decisions",
-    "- [ ] Replace with decision-complete answers before build.",
-    "- Remaining Count: 1",
-    "",
+    "- [ ] Replace with the one decision that must be resolved before build, or check this off.",
+    "- Remaining Count: 1"
+  ];
+  const implementationSections = [
     ...(releasePolicy?.enabled ? [
       `## ${RELEASE_IMPACT_SECTION}`,
       "- Impact: Unknown",
@@ -140,16 +127,49 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
     "## Validation Commands",
     "- `replace-with-runnable-command`",
     "",
-    "## Risks & Rollback",
-    "- Risk: Replace with the main risk for this slice.",
-    "- Mitigation: Replace with the concrete mitigation for that risk.",
-    "- Rollback: Replace with the scoped rollback path if the slice fails.",
-    "",
     "## Go/No-Go Checklist",
     "- [ ] Goal is explicit",
     "- [ ] Scope in/out is explicit",
     "- [ ] No unresolved high-impact decisions",
-    "- [ ] Tasks and validation commands are implementation-ready",
+    "- [ ] Tasks and validation commands are implementation-ready"
+  ];
+  const routeSpecificBody = route === "start"
+    ? [
+      "## Start Summary",
+      "- Required: yes",
+      "- Reason: Capture the bounded but still unclear slice before full planning.",
+      "- Selected Idea: Replace with the best current direction.",
+      "- Alternatives Considered: Replace only if real tradeoffs remain.",
+      "- Pre-mortem Risk: Replace with the main way this idea could fail.",
+      "- Handoff Confidence: 3",
+      "",
+      "## Goal",
+      ...goalLines,
+      "",
+      ...scopeSection,
+      "",
+      ...constraintSection,
+      "",
+      ...projectFitSection,
+      "",
+      ...openDecisionsSection
+    ]
+    : [
+      "## Goal",
+      ...goalLines,
+      "",
+      ...scopeSection,
+      "",
+      ...constraintSection,
+      "",
+      ...projectFitSection,
+      "",
+      ...openDecisionsSection,
+      "",
+      ...implementationSections
+    ];
+  const body = [
+    ...routeSpecificBody,
     "",
     "## Handoff",
     `- Next command: ${nextCommand}`,
@@ -157,8 +177,8 @@ export function buildPlanTemplate({ planId, title, route, topic, parentPlanId = 
     "",
     "## WIP Log",
     `- ${createdAt} - Status: Plan created by Kami Flow Core.`,
-    `- ${createdAt} - Blockers: Clarify scope and replace placeholder sections.`,
-    `- ${createdAt} - Next step: Run the appropriate route and update this plan directly.`
+    `- ${createdAt} - Blockers: Replace placeholder sections before relying on this plan.`,
+    `- ${createdAt} - Next step: Update this plan directly for the current route.`
   ].join("\n");
 
   return `${serializeFrontmatter(frontmatter)}\n${body}\n`;

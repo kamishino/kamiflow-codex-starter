@@ -4,6 +4,8 @@ Use `AGENTS.md` for repo rules and `.local/project.md` for product memory. This 
 
 `start` may persist lightweight shaping in the same plan file before promotion. During `start`, only `Start Summary`, `Goal`, `Scope (In/Out)`, `Constraints`, `Project Fit`, `Open Decisions`, `Handoff`, and `WIP Log` need substantive content, and the handoff must remain `next_command: plan` / `next_mode: Plan`. Promotion into the full-plan contract happens in `plan` before any `build` or `fix` work.
 
+New default plans stay lighter than this full reference. The generated template now seeds only the helper-relevant headings for the selected route; use the extra sections below only when they materially improve the slice.
+
 ## Start Summary
 - Required: yes|no
 - Reason:

@@ -152,6 +152,81 @@ export async function analyzePlanCleanup(projectDir, { staleAfterDays = CLEANUP_
   };
 }
 
+export function buildPlanHygieneSummary(cleanupSummary = {}) {
+  const staleActiveCount = Number(cleanupSummary.stale_active_count || 0);
+  const orphanCount = Number(cleanupSummary.orphan_count || 0);
+  const orphanIssues = Array.isArray(cleanupSummary.orphan_issues) ? cleanupSummary.orphan_issues : [];
+  const issueTypes = [...new Set([
+    ...(staleActiveCount > 0 ? ["stale-active-plan"] : []),
+    ...orphanIssues
+      .map((issue) => String(issue?.type || "").trim())
+      .filter(Boolean)
+  ])];
+  const recommendedActions = Array.isArray(cleanupSummary.recommended_actions)
+    ? cleanupSummary.recommended_actions
+    : [];
+
+  return {
+    has_warnings: staleActiveCount > 0 || orphanCount > 0,
+    active_plan_count: Number(cleanupSummary.active_plan_count || 0),
+    stale_active_count: staleActiveCount,
+    orphan_count: orphanCount,
+    recent_done_count: Number(cleanupSummary.recent_done_count || 0),
+    issue_types: issueTypes,
+    recommended_actions: recommendedActions
+  };
+}
+
+export function buildPlanHygieneNotice(hygieneSummary = {}) {
+  if (!hygieneSummary?.has_warnings) {
+    return "";
+  }
+
+  const parts = [];
+  if (Number(hygieneSummary.orphan_count || 0) > 0) {
+    parts.push(`${hygieneSummary.orphan_count} orphan plan issue${Number(hygieneSummary.orphan_count) === 1 ? "" : "s"}`);
+  }
+  if (Number(hygieneSummary.stale_active_count || 0) > 0) {
+    parts.push(`${hygieneSummary.stale_active_count} stale active plan${Number(hygieneSummary.stale_active_count) === 1 ? "" : "s"}`);
+  }
+
+  const issueTypes = Array.isArray(hygieneSummary.issue_types) && hygieneSummary.issue_types.length > 0
+    ? ` [${hygieneSummary.issue_types.join(", ")}]`
+    : "";
+
+  return `Plan hygiene warning: ${parts.join("; ")}${issueTypes}.`;
+}
+
+export function buildPlanHygieneLines(hygieneSummary = {}, format = "text") {
+  if (!hygieneSummary?.has_warnings) {
+    return [];
+  }
+
+  const recommendedAction = Array.isArray(hygieneSummary.recommended_actions)
+    ? hygieneSummary.recommended_actions[0]
+    : "";
+  const issueTypes = Array.isArray(hygieneSummary.issue_types) && hygieneSummary.issue_types.length > 0
+    ? hygieneSummary.issue_types.join(", ")
+    : "unknown";
+
+  if (format === "markdown") {
+    return [
+      "",
+      "## Hygiene Warnings",
+      `- Counts: stale ${Number(hygieneSummary.stale_active_count || 0)}; orphan ${Number(hygieneSummary.orphan_count || 0)}`,
+      `- Issue Types: ${issueTypes}`,
+      ...(recommendedAction ? [`- Recommended Action: ${recommendedAction}`] : [])
+    ];
+  }
+
+  return [
+    "Hygiene Warnings:",
+    `- Counts: stale ${Number(hygieneSummary.stale_active_count || 0)} | orphan ${Number(hygieneSummary.orphan_count || 0)}`,
+    `- Issue Types: ${issueTypes}`,
+    ...(recommendedAction ? [`- Recommended Action: ${recommendedAction}`] : [])
+  ];
+}
+
 export async function planDoneRollover(projectDir, { keep = DONE_PLAN_KEEP_LATEST, pendingRecord = null } = {}) {
   const flatDoneRecords = await listDonePlanRecords(projectDir, false);
   const candidates = [...flatDoneRecords];

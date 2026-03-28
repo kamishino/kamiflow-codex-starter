@@ -164,6 +164,46 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "plan-snapshot-hygiene-done-plan",
+    "fixtureDir": "hygiene-done-plan/fixture",
+    "grader": "plan-snapshot-hygiene-done-plan",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runPlanSnapshot": true,
+    "planSnapshotFormat": "json",
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "plan-snapshot-hygiene-multiple-active",
+    "fixtureDir": "hygiene-multiple-active/fixture",
+    "grader": "plan-snapshot-hygiene-multiple-active",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runPlanSnapshot": true,
+    "planSnapshotFormat": "json",
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "plan-snapshot-hygiene-incomplete-active",
+    "fixtureDir": "hygiene-incomplete-active/fixture",
+    "grader": "plan-snapshot-hygiene-incomplete-active",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runPlanSnapshot": true,
+    "planSnapshotFormat": "json",
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "plan-snapshot-hygiene-markdown",
+    "fixtureDir": "hygiene-done-plan/fixture",
+    "grader": "plan-snapshot-hygiene-markdown",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runPlanSnapshot": true,
+    "planSnapshotFormat": "markdown",
+    "modes": ["smoke", "full"]
+  },
+  {
     "name": "plan-view-open-starts-server",
     "fixtureDir": "plan-history/fixture",
     "grader": "plan-view-open-starts-server",
@@ -295,6 +335,26 @@
     "initializeGit": true,
     "skipCodex": true,
     "runFinishStatus": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "finish-status-hygiene-warning",
+    "fixtureDir": "finish-status-hygiene-warning/fixture",
+    "grader": "finish-status-hygiene-warning",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runFinishStatus": true,
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "ensure-plan-hygiene-warning",
+    "fixtureDir": "hygiene-done-plan/fixture",
+    "grader": "ensure-plan-hygiene-warning",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runEnsurePlan": true,
+    "ensurePlanRoute": "plan",
+    "ensurePlanTopic": "recover-hygiene-warning",
     "modes": ["smoke", "full"]
   },
   {

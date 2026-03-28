@@ -18,7 +18,8 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 - Install or refresh the skill with `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
 - Recover a missing plan or project brief with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
 - Check build readiness with `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
-- Archive a completed PASS plan with `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>`
+- Check PASS closeout and optionally archive with `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .` or `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project . --archive-if-pass`
+- Archive a completed PASS plan manually with `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>` only when direct archive recovery is explicitly needed
 - Inspect the active plan state with `node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format text|markdown|json`
 - Open the lightweight live plan view with `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --open`
 - Stop the lightweight live plan view with `node .agents/skills/kamiflow-core/scripts/plan-view.mjs --project . --stop`
@@ -40,6 +41,16 @@ Leave this disabled unless the repo wants opt-in SemVer closeout for a root sing
 - Keep long-lived product direction in `.local/project.md`, not in `AGENTS.md`.
 - Keep plans tied to `.local/project.md` through a short `Project Fit` section.
 - Treat `.local/project.md` as curated project memory, not task history or an automatic log.
+- Route from one quick screen first:
+  - fast path: status, diff, summary, `commit please`, `release please`, `finish please`, `open plan view`
+  - `start`: bounded but unclear direction, scope, or success shape
+  - `research`: missing facts, evidence, or comparisons
+  - `plan`: implementation-ready breakdown with tasks and validation
+  - `build` / `fix` / `check`: execute, repair, or validate an approved slice
+- Unknown-type matrix:
+  - unclear direction or scope boundary -> `start`
+  - missing facts or comparison -> `research`
+  - implementation details already concrete enough for tasks and validation -> `plan`
 - Use the lightest safe lane for the request:
   - fast path for narrow operational asks
   - `start` for bounded but unclear idea shaping

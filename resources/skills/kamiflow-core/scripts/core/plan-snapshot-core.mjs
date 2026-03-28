@@ -8,6 +8,11 @@ import {
   resolveActivePlan,
   resolveLatestDonePlan
 } from "../lib-plan.mjs";
+import {
+  analyzePlanCleanup,
+  buildPlanHygieneLines,
+  buildPlanHygieneSummary
+} from "../lib-plan-cleanup.mjs";
 
 export const SNAPSHOT_FORMATS = new Set(["text", "markdown", "json"]);
 
@@ -29,6 +34,7 @@ const EMPTY_PROGRESS = Object.freeze({
 export async function buildPlanSnapshot(projectDir) {
   const activePlan = await resolveActivePlan(projectDir);
   const projectBriefSummary = await readProjectBriefSummary(projectDir);
+  const hygiene = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
 
   if (!activePlan) {
     const latestDonePlan = await resolveLatestDonePlan(projectDir);
@@ -50,7 +56,8 @@ export async function buildPlanSnapshot(projectDir) {
       latest_blockers: "None.",
       latest_next_step: "Run ensure-plan.mjs or start a new planning slice when new work begins.",
       project_fit: projectBriefSummary || "No active plan.",
-      plan_path: ""
+      plan_path: "",
+      hygiene
     };
   }
 
@@ -84,7 +91,8 @@ export async function buildPlanSnapshot(projectDir) {
     latest_blockers: extractLatestWipValue(wipLogSection, "Blockers") || "None.",
     latest_next_step: extractLatestWipValue(wipLogSection, "Next step") || "No next step recorded.",
     project_fit: summarizeSection(projectFitSection) || projectBriefSummary || "No project-fit summary available.",
-    plan_path: activePlan.path
+    plan_path: activePlan.path,
+    hygiene
   };
 }
 
@@ -113,7 +121,8 @@ export function formatPlanSnapshotText(snapshot) {
     `Next Step: ${snapshot.latest_next_step || "No next step recorded."}`,
     `Project Fit: ${snapshot.project_fit || "No project-fit summary available."}`,
     `Updated: ${snapshot.updated_at || "Unknown"}`,
-    `Plan Path: ${snapshot.plan_path || "No active plan path."}`
+    `Plan Path: ${snapshot.plan_path || "No active plan path."}`,
+    ...buildPlanHygieneLines(snapshot.hygiene, "text")
   ].join("\n");
 }
 
@@ -137,7 +146,8 @@ export function formatPlanSnapshotMarkdown(snapshot) {
     "## Context",
     `- Project Fit: ${snapshot.project_fit || "No project-fit summary available."}`,
     `- Updated: ${snapshot.updated_at || "Unknown"}`,
-    `- Plan Path: ${snapshot.plan_path || "No active plan path."}`
+    `- Plan Path: ${snapshot.plan_path || "No active plan path."}`,
+    ...buildPlanHygieneLines(snapshot.hygiene, "markdown")
   ].join("\n");
 }
 

@@ -165,7 +165,7 @@ for (const relativePath of sourceOnlyRequiredFiles) {
 }
 
 const clientAgents = await fsp.readFile(path.join(skillRoot, "assets", "client-agents.md"), "utf8");
-for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/", "## Release Policy", "SemVer Workflow:", "Version Files:", "Pre-1.0 Policy:", "Release History:", "finish-status.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit please", "release please", "finish please"]) {
+for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/", "## Release Policy", "SemVer Workflow:", "Version Files:", "Pre-1.0 Policy:", "Release History:", "check-closeout.mjs", "finish-status.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit please", "release please", "finish please"]) {
   if (!clientAgents.includes(requiredSnippet)) {
     fail(`assets/client-agents.md must mention ${requiredSnippet}`);
   }
