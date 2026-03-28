@@ -58,7 +58,10 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
   - use this only after the functional commit is already done and `finish-status.mjs` recommends release work
 - In the kamiflow-core source repo, publish the npm package from GitHub Releases:
   - publish the matching GitHub Release for the pushed `vX.Y.Z` tag
+  - remember that pushing the tag alone does not publish to npm; the Release `published` event is the gate
   - the source repo workflow `.github/workflows/publish-npm.yml` performs validation and `npm publish`
+  - configure npm Trusted Publishing with owner `kamishino`, repository `kamiflow-codex-starter`, and workflow filename `publish-npm.yml`
+  - enter only the workflow filename on npm, not the full `.github/workflows/...` path
   - prefer npm Trusted Publishing; keep `NPM_TOKEN` only as the fallback path
 
 ## Local State Ownership
@@ -138,6 +141,7 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - run `node .agents/skills/kamiflow-core/scripts/version-closeout.mjs --project .`
   - use the printed release-only commit command and tag command after the functional commit
   - in the kamiflow-core source repo, push the tag and publish the matching GitHub Release so the npm publish workflow can run
+  - if the workflow fails with `ENEEDAUTH`, verify the Trusted Publisher repo and workflow filename first, then fall back to `NPM_TOKEN` only if necessary
 
 ## Response Contract
 

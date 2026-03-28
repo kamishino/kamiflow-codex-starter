@@ -183,9 +183,58 @@ for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/"
 }
 
 const commandMap = await fsp.readFile(path.join(skillRoot, "references", "command-map.md"), "utf8");
-for (const requiredSnippet of ["finish-status.mjs", "next-plan.mjs", "plan-history.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit-only", "release-only", "commit-and-release"]) {
+for (const requiredSnippet of ["finish-status.mjs", "next-plan.mjs", "plan-history.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit-only", "release-only", "commit-and-release", "publish-npm.yml", "NPM_TOKEN", "Release `published` event is the gate"]) {
   if (!commandMap.includes(requiredSnippet)) {
     fail(`references/command-map.md must mention ${requiredSnippet}`);
+  }
+}
+
+const rootReadme = await fsp.readFile(path.join(process.cwd(), "README.md"), "utf8");
+for (const requiredSnippet of [
+  "GitHub Release To npm",
+  "release.published",
+  "workflow filename: `publish-npm.yml`",
+  "Enter only the workflow filename on npm, not the full `.github/workflows/...` path.",
+  "Node.js `22.14.0` and npm CLI `11.5.1`",
+  "Trusted Publishing",
+  "NPM_TOKEN",
+  "Tags alone do not trigger npm publish in this repo."
+]) {
+  if (!rootReadme.includes(requiredSnippet)) {
+    fail(`README.md must mention ${requiredSnippet}`);
+  }
+}
+
+const rootAgents = await fsp.readFile(path.join(process.cwd(), "AGENTS.md"), "utf8");
+for (const requiredSnippet of [
+  "GitHub Release `published` event via `.github/workflows/publish-npm.yml`",
+  "Trusted Publisher Workflow Filename: `publish-npm.yml` on npm, not the full workflow path",
+  "Pushing the release tag alone does not publish to npm; the GitHub Release `published` event is the release gate."
+]) {
+  if (!rootAgents.includes(requiredSnippet)) {
+    fail(`AGENTS.md must mention ${requiredSnippet}`);
+  }
+}
+
+const publishWorkflowPath = path.join(process.cwd(), ".github", "workflows", "publish-npm.yml");
+if (!fs.existsSync(publishWorkflowPath)) {
+  fail(".github/workflows/publish-npm.yml is missing.");
+}
+const publishWorkflow = await fsp.readFile(publishWorkflowPath, "utf8");
+for (const requiredSnippet of [
+  "release:",
+  "published",
+  "id-token: write",
+  "node-version: \"22.14.0\"",
+  "npm install --global npm@11.5.1",
+  "npm ci",
+  "npm run validate",
+  "npm pack",
+  "npm publish --provenance --access public",
+  "NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}"
+]) {
+  if (!publishWorkflow.includes(requiredSnippet)) {
+    fail(`.github/workflows/publish-npm.yml must mention ${requiredSnippet}`);
   }
 }
 

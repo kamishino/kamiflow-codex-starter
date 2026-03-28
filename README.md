@@ -35,15 +35,17 @@ Recommended: configure npm Trusted Publishing for `@kamishino/kamiflow-core` ins
 
 In npm package settings, add a trusted publisher with:
 
-- owner/repo: `kamishino/kamiflow-codex-starter`
-- workflow file: `.github/workflows/publish-npm.yml`
-- trigger: GitHub-hosted Actions
+- organization or user: `kamishino`
+- repository: `kamiflow-codex-starter`
+- workflow filename: `publish-npm.yml`
+- runner: GitHub-hosted Actions
 
-Keep the workflow filename stable after npm is configured, because npm validates the exact repository and workflow path.
+Enter only the workflow filename on npm, not the full `.github/workflows/...` path. Keep that filename stable after npm is configured, because npm validates the exact repository and workflow filename.
 
 The workflow already includes:
 
 - `permissions.id-token: write` for GitHub OIDC
+- Node.js `22.14.0` and npm CLI `11.5.1` to meet npm Trusted Publishing requirements
 - validation before publish with `npm ci` and `npm run validate`
 - a release-tag check that requires the GitHub Release tag to match `package.json`
 - `npm pack` as a publishable tarball smoke check
@@ -51,7 +53,22 @@ The workflow already includes:
 
 ### Fallback `NPM_TOKEN`
 
-If Trusted Publishing is unavailable, add the repository secret `NPM_TOKEN`. The same workflow exports `NODE_AUTH_TOKEN` for npm's token fallback path while keeping Trusted Publishing as the default and preferred route.
+If Trusted Publishing is unavailable or temporarily misconfigured, add the repository secret `NPM_TOKEN`. The workflow still exports `NODE_AUTH_TOKEN` for npm's token fallback path, but keep that path as fallback-only and prefer fixing Trusted Publishing first.
+
+### Troubleshooting `ENEEDAUTH`
+
+If the publish workflow fails with `npm ERR! code ENEEDAUTH`, check these items in order:
+
+1. confirm the npm Trusted Publisher uses:
+   - organization or user `kamishino`
+   - repository `kamiflow-codex-starter`
+   - workflow filename `publish-npm.yml`
+   - GitHub-hosted Actions
+2. confirm the workflow still has `permissions.id-token: write`
+3. confirm the GitHub Release was published after the Trusted Publisher settings were saved
+4. if Trusted Publishing is not ready yet, add or rotate `NPM_TOKEN` as the fallback secret
+
+If a tag is pushed but npm stays unchanged, that is expected until the matching GitHub Release is published. Tags alone do not trigger npm publish in this repo.
 
 ## Legacy KFC Line
 
@@ -235,7 +252,7 @@ That helper blocks on a dirty worktree, aggregates the unreleased PASS-plan wind
 
 It does not auto-commit, auto-tag, or publish.
 
-After you push the release commit and tag, publish the GitHub Release for that `vX.Y.Z` tag. GitHub Actions then performs the npm publish automatically through [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml), using npm Trusted Publishing when configured and falling back to `NPM_TOKEN` only if needed.
+After you push the release commit and tag, publish the GitHub Release for that `vX.Y.Z` tag. GitHub Actions then performs the npm publish automatically through [`.github/workflows/publish-npm.yml`](.github/workflows/publish-npm.yml), using npm Trusted Publishing by default and falling back to `NPM_TOKEN` only if needed. Pushing the tag by itself does not publish to npm.
 
 ## Next Improvements
 
