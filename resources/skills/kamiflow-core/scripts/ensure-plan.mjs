@@ -3,6 +3,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import {
   analyzePlanCleanup,
+  buildSetupSummary,
   buildPlanHygieneSummary,
   createPlan,
   ensureReleaseImpactSectionContent,
@@ -34,6 +35,13 @@ if (activePlan) {
     resolvedPlan = await readPlanRecord(activePlan.path);
   }
   const hygieneAfter = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
+  const setup = await buildSetupSummary(projectDir, {
+    role: runtimeState.role,
+    repoContract: runtimeState.repoContract,
+    projectBrief: runtimeState.projectBrief,
+    releasePolicy,
+    hygiene: hygieneAfter
+  });
 
   printJson({
     ok: true,
@@ -45,6 +53,7 @@ if (activePlan) {
     repo_contract_created: runtimeState.repoContract.created,
     project_brief_path: runtimeState.projectBrief.path,
     project_brief_created: runtimeState.projectBrief.created,
+    setup,
     next_command: resolvedPlan.frontmatter.next_command || "plan",
     next_mode: resolvedPlan.frontmatter.next_mode || "Plan",
     hygiene: {
@@ -58,6 +67,13 @@ if (activePlan) {
 
 const createdPlan = await createPlan(projectDir, { route, topic });
 const hygieneAfter = buildPlanHygieneSummary(await analyzePlanCleanup(projectDir));
+const setup = await buildSetupSummary(projectDir, {
+  role: runtimeState.role,
+  repoContract: runtimeState.repoContract,
+  projectBrief: runtimeState.projectBrief,
+  releasePolicy,
+  hygiene: hygieneAfter
+});
 printJson({
   ok: true,
   created: true,
@@ -68,6 +84,7 @@ printJson({
   repo_contract_created: runtimeState.repoContract.created,
   project_brief_path: runtimeState.projectBrief.path,
   project_brief_created: runtimeState.projectBrief.created,
+  setup,
   next_command: createdPlan.frontmatter.next_command || "plan",
   next_mode: createdPlan.frontmatter.next_mode || "Plan",
   hygiene: {

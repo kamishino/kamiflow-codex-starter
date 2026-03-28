@@ -12,6 +12,9 @@ Client repos are the default target. Treat the kamiflow-core source repo as the 
 - Recover one active plan or the runtime project brief:
   - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
   - use this when `.local/project.md` or the active plan is missing
+- Inspect read-only next-plan suggestions:
+  - `node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format text|markdown|json`
+  - use this when no active plan exists and you want evidence-backed suggestions before creating a new slice
 - Check build readiness:
   - `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
   - use this before `build` or `fix` when you need a deterministic GO/BLOCK answer
@@ -106,6 +109,9 @@ For non-fast-path work, read `AGENTS.md` first, then `.local/project.md`, then t
   - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
 - No active plan exists:
   - `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+- No active plan exists but the next slice is unclear:
+  - first inspect `node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format text`
+  - treat its output as read-only guidance; do not auto-create a plan from it without an explicit user decision
 - Plan is not build-ready:
   - make zero implementation edits, update the plan markdown directly, and end the current response as `plan`
   - rerun `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only on the next build or fix attempt

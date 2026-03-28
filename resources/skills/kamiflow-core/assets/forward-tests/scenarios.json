@@ -358,6 +358,59 @@
     "modes": ["smoke", "full"]
   },
   {
+    "name": "ensure-plan-setup-warning",
+    "fixtureDir": "setup-diagnostics-warning/fixture",
+    "projectBriefFile": "project-brief.md",
+    "grader": "ensure-plan-setup-warning",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runEnsurePlan": true,
+    "ensurePlanRoute": "plan",
+    "ensurePlanTopic": "recover-setup-warning",
+    "trackedFiles": ["AGENTS.md", ".local/project.md"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "next-plan-weak-evidence",
+    "grader": "next-plan-weak-evidence",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runNextPlan": true,
+    "nextPlanFormat": "json",
+    "trackedFiles": ["AGENTS.md", ".local/project.md"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "next-plan-project-brief",
+    "fixtureDir": "next-plan-project-brief/fixture",
+    "projectBriefFile": "project-brief.md",
+    "grader": "next-plan-project-brief",
+    "initializeGit": true,
+    "skipCodex": true,
+    "runNextPlan": true,
+    "nextPlanFormat": "json",
+    "trackedFiles": [".local/project.md"],
+    "modes": ["smoke", "full"]
+  },
+  {
+    "name": "next-plan-release-window",
+    "fixtureDir": "next-plan-release-window/fixture",
+    "grader": "next-plan-release-window",
+    "initializeGit": true,
+    "skipCodex": true,
+    "prepareCommittedBaseline": true,
+    "baselineCommitDate": "2026-03-24T00:00:00.000Z",
+    "baselineTag": "v0.6.0",
+    "runNextPlan": true,
+    "nextPlanFormat": "json",
+    "trackedFiles": [
+      "package.json",
+      "package-lock.json",
+      ".local/plans/done/2026-03-24-001-check-patch-release-follow-up.md"
+    ],
+    "modes": ["smoke", "full"]
+  },
+  {
     "name": "version-closeout-release-window",
     "fixtureDir": "semver-release-window/fixture",
     "grader": "version-closeout-release-window",

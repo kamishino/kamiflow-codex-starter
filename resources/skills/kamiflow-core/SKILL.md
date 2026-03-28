@@ -13,10 +13,11 @@ For ordinary client-repo work, keep the default loop small:
 
 1. Read `AGENTS.md` and `.local/project.md`.
 2. Reuse the active plan, or recover one with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .` if the plan or project brief is missing.
-3. Infer the route from user intent and the current plan state, then load only the matching route reference.
-4. Before `build` or `fix`, use `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only when you need a deterministic build-ready GO/BLOCK answer.
-5. When explicitly closing a slice, prefer `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .` over manually chaining validation and archive steps.
-6. Keep non-trivial work grounded in plan markdown, and update `.local/project.md` only when durable priorities, guardrails, open questions, or decisions changed.
+3. If no active plan exists and the next slice is not obvious, inspect `node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format text` before inventing a new plan.
+4. Infer the route from user intent and the current plan state, then load only the matching route reference.
+5. Before `build` or `fix`, use `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .` only when you need a deterministic build-ready GO/BLOCK answer.
+6. When explicitly closing a slice, prefer `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .` over manually chaining validation and archive steps.
+7. Keep non-trivial work grounded in plan markdown, and update `.local/project.md` only when durable priorities, guardrails, open questions, or decisions changed.
 
 Everything else is advanced or condition-triggered. Keep the default client path centered on one active plan plus the minimum helper set.
 
@@ -79,7 +80,7 @@ Before `build` or `fix`, the active plan must already be decision-complete. If i
 Keep exact commands, arguments, and recovery shortcuts in `references/command-map.md`. Do not duplicate the full command catalog here.
 
 - `core daily use`
-  - `ensure-plan`, `ready-check`, `check-closeout`
+  - `ensure-plan`, `next-plan`, `ready-check`, `check-closeout`
 - `advanced recovery`
   - `archive-plan`, `cleanup-plans`, `plan-history`, `plan-snapshot`, `plan-view.mjs`
 - `release and maintainer`
@@ -91,6 +92,7 @@ Use direct markdown mutation as the primary workflow. Keep the ordinary client p
 
 These helpers stay available, but they are not part of the default client-repo loop:
 
+- use `next-plan.mjs` only when there is no active plan and you want read-only suggestions before opening a new slice
 - use `plan-history.mjs` only when prior similar slices would materially improve `start`, `plan`, or `research`
 - use `cleanup-plans.mjs` only when active-plan state feels stale or conflicting
 - use `finish-status.mjs` and `version-closeout.mjs` only when the user is finishing or releasing work in a SemVer-enabled repo
@@ -165,6 +167,7 @@ Use this rubric as a gate for any new helper proposal:
 - Do not ask the user to name a route unless the ambiguity is truly high-impact; infer it from the request first.
 - Do not claim completion without evidence from files, commands, or explicit user data.
 - Do not treat `.local/project.md` as tracked source; it is generated runtime state in installed projects.
+- Missing `AGENTS.md` or `.local/project.md` may be created by helper recovery, but existing curated copies should be preserved and only reported as needing attention.
 - Treat a failing `ready-check.mjs` as a hard stop for `build` and `fix`; zero implementation edits are allowed until the plan is ready.
 - If `ready-check.mjs` fails, the rest of that response is `plan`-only work. You may update plan markdown, but do not rerun readiness and continue to implementation in the same response.
 - Do not depend on repo-specific docs, hidden bootstrap files, or extra workflow tools outside this skill folder.

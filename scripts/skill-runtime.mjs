@@ -4,6 +4,7 @@ import fsp from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  buildSetupSummary,
   detectRepoRole,
   ensureRepoRuntimeState,
   projectBriefAssetRelativeForRole,
@@ -245,6 +246,11 @@ export async function syncSkillToProject(projectDir) {
 
   const runtimeState = await ensureRepoRuntimeState(projectDir);
   const installMeta = await writeInstallMeta(targetSkillDir, runtimeState.role);
+  const setupSummary = await buildSetupSummary(projectDir, {
+    role: runtimeState.role,
+    repoContract: runtimeState.repoContract,
+    projectBrief: runtimeState.projectBrief
+  });
   return {
     role: runtimeState.role,
     targetSkillDir,
@@ -256,6 +262,7 @@ export async function syncSkillToProject(projectDir) {
     projectBriefPath: runtimeState.projectBrief.path,
     projectBriefCreated: runtimeState.projectBrief.created,
     projectBriefAsset: projectBriefAssetRelativeForRole(runtimeState.role),
+    setupSummary,
     installMetaPath: installMeta.path,
     installMetaProfile: installMeta.metadata.runtime_profile
   };

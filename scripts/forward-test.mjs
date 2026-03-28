@@ -139,6 +139,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   const reinstallLogPath = path.join(logDir, "install-rerun.log");
   const doctorLogPath = path.join(logDir, "doctor.log");
   const ensurePlanLogPath = path.join(logDir, "ensure-plan.log");
+  const nextPlanLogPath = path.join(logDir, "next-plan.log");
   const readyCheckLogPath = path.join(logDir, "ready-check.log");
   const planHistoryLogPath = path.join(logDir, "plan-history.log");
   const planSnapshotLogPath = path.join(logDir, "plan-snapshot.log");
@@ -322,11 +323,26 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   }
 
   let readyCheckResult = { code: 0, stdout: "", stderr: "", timedOut: false };
+  let nextPlanResult = { code: 0, stdout: "", stderr: "", timedOut: false };
   if (scenario.runReadyCheck) {
     readyCheckResult = await runCommand("node", [path.join(".agents", "skills", "kamiflow-core", "scripts", "ready-check.mjs"), "--project", "."], {
       cwd: externalWorkspace
     });
     await fsp.writeFile(readyCheckLogPath, `${readyCheckResult.stdout}\n${readyCheckResult.stderr}`.trim(), "utf8");
+  }
+
+  if (scenario.runNextPlan) {
+    nextPlanResult = await runCommand("node", [
+      path.join(".agents", "skills", "kamiflow-core", "scripts", "next-plan.mjs"),
+      "--project",
+      ".",
+      "--format",
+      String(scenario.nextPlanFormat || "json")
+    ], {
+      cwd: externalWorkspace,
+      env: scenarioEnv
+    });
+    await fsp.writeFile(nextPlanLogPath, `${nextPlanResult.stdout}\n${nextPlanResult.stderr}`.trim(), "utf8");
   }
 
   let planHistoryResult = { code: 0, stdout: "", stderr: "", timedOut: false };
@@ -471,6 +487,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
     reinstallState,
     doctorResult,
     ensurePlanResult,
+    nextPlanResult,
     readyCheckResult,
     planHistoryResult,
     planSnapshotResult,
@@ -495,7 +512,7 @@ async function runScenario({ scenario, tarballPath, runDir }) {
   return scenarioResult;
 }
 
-async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, ensurePlanResult, readyCheckResult, planHistoryResult, planSnapshotResult, planViewOpenResults, planViewStopResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
+async function gradeScenario({ scenario, workspace, beforeState, installState, finalState, reinstallResult, reinstallState, doctorResult, ensurePlanResult, nextPlanResult, readyCheckResult, planHistoryResult, planSnapshotResult, planViewOpenResults, planViewStopResult, finishStatusResult, versionCloseoutResult, archivePlanResult, codexResult, finalMessage }) {
   const activePlan = await resolveActivePlan(workspace);
   const allPlans = await listPlanRecords(workspace, true);
   const donePlans = allPlans.filter((plan) => String(plan.frontmatter.status || "").toLowerCase() === "done");
@@ -504,6 +521,7 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
   const userFacingOutput = finalMessage;
   const readyCheckPayload = parseJsonMaybe(readyCheckResult.stdout);
   const ensurePlanPayload = parseJsonMaybe(ensurePlanResult.stdout);
+  const nextPlanPayload = parseJsonMaybe(nextPlanResult.stdout);
   const planHistoryPayload = parseJsonMaybe(planHistoryResult.stdout);
   const planSnapshotPayload = parseJsonMaybe(planSnapshotResult.stdout);
   const planViewOpenPayloads = Array.isArray(planViewOpenResults) ? planViewOpenResults.map((result) => parseJsonMaybe(result.stdout)) : [];
@@ -1157,6 +1175,38 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
     });
   }
 
+  if (scenario.runNextPlan) {
+    const expectsJsonSuggestions = String(scenario.nextPlanFormat || "json").toLowerCase() === "json";
+    checks.push({
+      label: "next-plan-exits-zero",
+      ok: nextPlanResult.code === 0,
+      detail: `exit code ${nextPlanResult.code}`
+    });
+    checks.push({
+      label: "next-plan-returns-json",
+      ok: expectsJsonSuggestions
+        ? Boolean(nextPlanPayload) && typeof nextPlanPayload === "object"
+        : typeof nextPlanResult.stdout === "string" && nextPlanResult.stdout.trim().length > 0,
+      detail: expectsJsonSuggestions
+        ? (nextPlanPayload ? "helper returned JSON" : "next-plan did not return JSON")
+        : "next-plan returned text output"
+    });
+    checks.push({
+      label: "next-plan-does-not-mutate-tracked-files",
+      ok: Object.keys(finalState.fileHashes).every((relativePath) => installState.fileHashes[relativePath] === finalState.fileHashes[relativePath]),
+      detail: "tracked files should remain unchanged after read-only suggestions"
+    });
+    checks.push({
+      label: "next-plan-keeps-worktree-clean",
+      ok: scenario.prepareCommittedBaseline
+        ? hasExactDirtyPaths(finalState.git?.dirtyPaths, [])
+        : hasExactDirtyPaths(finalState.git?.dirtyPaths, installState.git?.dirtyPaths),
+      detail: Array.isArray(finalState.git?.dirtyPaths)
+        ? finalState.git.dirtyPaths.join(" | ") || (scenario.prepareCommittedBaseline ? "git worktree remained clean after baseline commit" : "git worktree unchanged after install")
+        : "git state missing"
+    });
+  }
+
   if (scenario.grader === "plan-snapshot-hygiene-done-plan") {
     checks.push({
       label: "snapshot-keeps-no-active-plan",
@@ -1463,6 +1513,101 @@ async function gradeScenario({ scenario, workspace, beforeState, installState, f
         && Array.isArray(ensurePlanPayload?.hygiene?.after?.issue_types)
         && ensurePlanPayload.hygiene.after.issue_types.includes("done-plan-in-active-dir"),
       detail: JSON.stringify(ensurePlanPayload?.hygiene?.after || null)
+    });
+  }
+
+  if (scenario.grader === "ensure-plan-setup-warning") {
+    checks.push({
+      label: "ensure-plan-exits-zero",
+      ok: ensurePlanResult.code === 0,
+      detail: `exit code ${ensurePlanResult.code}`
+    });
+    checks.push({
+      label: "existing-agents-preserved",
+      ok: beforeState.fileHashes["AGENTS.md"] === installState.fileHashes["AGENTS.md"],
+      detail: beforeState.fileHashes["AGENTS.md"] === installState.fileHashes["AGENTS.md"]
+        ? "existing AGENTS.md preserved"
+        : "existing AGENTS.md was modified"
+    });
+    checks.push({
+      label: "existing-project-brief-preserved",
+      ok: beforeState.fileHashes[".local/project.md"] === installState.fileHashes[".local/project.md"],
+      detail: beforeState.fileHashes[".local/project.md"] === installState.fileHashes[".local/project.md"]
+        ? "existing .local/project.md preserved"
+        : "existing .local/project.md was modified"
+    });
+    checks.push({
+      label: "repo-contract-warning-reported",
+      ok: nextJsonArrayIncludes(ensurePlanPayload?.setup?.repo_contract?.issue_types, "repo-contract-missing-sections")
+        && nextJsonArrayIncludes(ensurePlanPayload?.setup?.repo_contract?.issue_types, "repo-contract-malformed-release-policy"),
+      detail: JSON.stringify(ensurePlanPayload?.setup?.repo_contract || null)
+    });
+    checks.push({
+      label: "project-brief-warning-reported",
+      ok: nextJsonArrayIncludes(ensurePlanPayload?.setup?.project_brief?.issue_types, "project-brief-placeholder-heavy"),
+      detail: JSON.stringify(ensurePlanPayload?.setup?.project_brief || null)
+    });
+    checks.push({
+      label: "setup-recommendations-present",
+      ok: Array.isArray(ensurePlanPayload?.setup?.recommended_actions) && ensurePlanPayload.setup.recommended_actions.length > 0,
+      detail: JSON.stringify(ensurePlanPayload?.setup?.recommended_actions || null)
+    });
+  }
+
+  if (scenario.grader === "next-plan-weak-evidence") {
+    const topSuggestion = Array.isArray(nextPlanPayload?.suggestions) ? nextPlanPayload.suggestions[0] : null;
+    checks.push({
+      label: "no-active-plan-present",
+      ok: nextPlanPayload?.has_active_plan === false,
+      detail: `has_active_plan=${String(nextPlanPayload?.has_active_plan)}`
+    });
+    checks.push({
+      label: "weak-evidence-stays-low-confidence",
+      ok: topSuggestion?.confidence === "low",
+      detail: topSuggestion ? `${topSuggestion.route} / ${topSuggestion.confidence}` : "<missing>"
+    });
+    checks.push({
+      label: "weak-evidence-suggests-brief-curation",
+      ok: topSuggestion?.topic === "curate-project-brief",
+      detail: topSuggestion?.topic || "<missing>"
+    });
+  }
+
+  if (scenario.grader === "next-plan-project-brief") {
+    const suggestions = Array.isArray(nextPlanPayload?.suggestions) ? nextPlanPayload.suggestions : [];
+    checks.push({
+      label: "research-suggestion-present",
+      ok: suggestions.some((suggestion) => suggestion.route === "research" && suggestion.follow_up_type === "research"),
+      detail: suggestions.map((suggestion) => `${suggestion.route}:${suggestion.topic}`).join(" | ") || "<missing>"
+    });
+    checks.push({
+      label: "plan-suggestion-present",
+      ok: suggestions.some((suggestion) => suggestion.route === "plan" && suggestion.follow_up_type === "planning"),
+      detail: suggestions.map((suggestion) => `${suggestion.route}:${suggestion.topic}`).join(" | ") || "<missing>"
+    });
+    checks.push({
+      label: "project-brief-guidance-is-not-placeholder-only",
+      ok: suggestions.some((suggestion) => suggestion.confidence === "medium"),
+      detail: suggestions.map((suggestion) => suggestion.confidence).join(" | ") || "<missing>"
+    });
+  }
+
+  if (scenario.grader === "next-plan-release-window") {
+    const suggestions = Array.isArray(nextPlanPayload?.suggestions) ? nextPlanPayload.suggestions : [];
+    checks.push({
+      label: "release-closeout-suggestion-present",
+      ok: suggestions.some((suggestion) => suggestion.route === "fast path" && suggestion.follow_up_type === "operational"),
+      detail: suggestions.map((suggestion) => `${suggestion.route}:${suggestion.follow_up_type}`).join(" | ") || "<missing>"
+    });
+    checks.push({
+      label: "release-closeout-stays-high-confidence",
+      ok: suggestions.some((suggestion) => suggestion.confidence === "high" && /release/i.test(String(suggestion.title || ""))),
+      detail: suggestions.map((suggestion) => `${suggestion.confidence}:${suggestion.title}`).join(" | ") || "<missing>"
+    });
+    checks.push({
+      label: "release-closeout-action-points-to-helper",
+      ok: suggestions.some((suggestion) => /finish-status\.mjs/i.test(String(suggestion.recommended_action || ""))),
+      detail: suggestions.map((suggestion) => suggestion.recommended_action).join(" | ") || "<missing>"
     });
   }
 
@@ -2112,6 +2257,10 @@ function parseJsonMaybe(text) {
   } catch {
     return null;
   }
+}
+
+function nextJsonArrayIncludes(values, wanted) {
+  return Array.isArray(values) && values.includes(wanted);
 }
 
 async function readPackageVersion(filePath) {

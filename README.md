@@ -77,6 +77,8 @@ If Codex is already open in this repo, start a new session or reload the workspa
 That command copies the canonical skill into `.agents/skills/kamiflow-core/` and bootstraps `.local/plans/` for project-local workflow state.
 In a normal client repo it treats the repo as the default target, writes `.agents/skills/kamiflow-core/install-meta.json`, creates a local-only `AGENTS.md` only when one does not already exist, adds that generated file to `.git/info/exclude` when the target is a git repo, and creates `.local/project.md` only when that human-facing project brief does not already exist. Rerunning the same command refreshes the skill runtime and install metadata while preserving existing `AGENTS.md` and `.local/project.md`.
 
+Install and recovery stay conservative: missing runtime files may be created, but existing `AGENTS.md` and `.local/project.md` are treated as curated repo memory and are only reported as needing attention when they look structurally thin, placeholder-heavy, or incompatible with helper expectations.
+
 ## What Gets Installed
 
 - `.agents/skills/kamiflow-core/SKILL.md`
@@ -111,6 +113,16 @@ node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format
 node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format markdown
 node .agents/skills/kamiflow-core/scripts/plan-snapshot.mjs --project . --format json
 ```
+
+For suggestion-only next-slice guidance when no active plan exists:
+
+```bash
+node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format text
+node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format markdown
+node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format json
+```
+
+This helper stays read-only. It may suggest a next slice from current priorities, open questions, release state, and plan hygiene, but it does not create a new plan or rewrite repo memory files.
 
 For a lightweight live browser view of the active plan:
 

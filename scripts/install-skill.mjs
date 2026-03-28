@@ -35,7 +35,8 @@ export async function installSkill(argv = []) {
     repoContractKind,
     projectBriefPath,
     projectBriefCreated,
-    projectBriefAsset
+    projectBriefAsset,
+    setupSummary
   } = await syncSkillToProject(projectDir);
 
   const action = hadExistingInstall ? "Refreshed" : "Installed";
@@ -77,6 +78,15 @@ export async function installSkill(argv = []) {
         "  node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .",
         "  node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project ."
       ];
+  const setupLines = [
+    `  Repo Contract: ${formatSetupState(setupSummary.repo_contract)} (${setupSummary.repo_contract.path})`,
+    `  Project Brief: ${formatSetupState(setupSummary.project_brief)} (${setupSummary.project_brief.path})`,
+    `  Plan Workspace: ${formatPlanWorkspaceState(setupSummary.plan_workspace)}`
+  ];
+
+  if (Array.isArray(setupSummary.recommended_actions) && setupSummary.recommended_actions.length > 0) {
+    setupLines.push(...setupSummary.recommended_actions.map((action) => `  Attention: ${action}`));
+  }
 
   console.log([
     `${action} kamiflow-core skill.`,
@@ -93,8 +103,27 @@ export async function installSkill(argv = []) {
     `Preserved: ${preserved.length > 0 ? preserved.join(" | ") : "none"}`,
     `Project Brief Template: ${projectBriefAsset}`,
     `Skill Refresh: ${hadExistingInstall ? "existing runtime replaced with current source" : "fresh runtime installed"}`,
+    "Setup:",
+    ...setupLines,
     "Next:",
     ...nextLines,
     "  If Codex is already open in this repo, start a new session or reload the workspace so the skill list refreshes."
   ].join("\n"));
+}
+
+function formatSetupState(summary) {
+  if (!summary) {
+    return "unknown";
+  }
+  if (summary.needs_attention) {
+    return `${summary.state} | attention-needed`;
+  }
+  return summary.state;
+}
+
+function formatPlanWorkspaceState(summary) {
+  if (!summary) {
+    return "unknown";
+  }
+  return summary.needs_attention ? "attention-needed" : "current";
 }

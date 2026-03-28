@@ -77,8 +77,10 @@ if (publishedPackageFiles.includes(packagedInstallMetaPath)) {
 
 const runtimeProcessHelperPath = "scripts/lib-process.mjs";
 const runtimeReleaseWindowHelperPath = "scripts/lib-release-window.mjs";
+const runtimeNextPlanCorePath = "scripts/core/next-plan-core.mjs";
 const runtimePlanViewRuntimePath = "scripts/runtime/plan-view-runtime.mjs";
 const runtimePlanSnapshotCorePath = "scripts/core/plan-snapshot-core.mjs";
+const nextPlanHelperPath = "scripts/next-plan.mjs";
 const planHistoryHelperPath = "scripts/plan-history.mjs";
 const planSnapshotHelperPath = "scripts/plan-snapshot.mjs";
 const planViewHelperPath = "scripts/plan-view.mjs";
@@ -100,6 +102,12 @@ if (!fs.existsSync(path.join(skillRoot, runtimeReleaseWindowHelperPath))) {
 if (!clientRuntimeRequiredFiles.includes(runtimeReleaseWindowHelperPath)) {
   fail("package.json files must publish scripts/lib-release-window.mjs because release helpers depend on it.");
 }
+if (!fs.existsSync(path.join(skillRoot, runtimeNextPlanCorePath))) {
+  fail(`Missing runtime helper file: ${runtimeNextPlanCorePath}`);
+}
+if (!clientRuntimeRequiredFiles.includes(runtimeNextPlanCorePath)) {
+  fail("package.json files must publish scripts/core/next-plan-core.mjs because next-plan surfaces depend on it.");
+}
 if (!fs.existsSync(path.join(skillRoot, runtimePlanViewRuntimePath))) {
   fail(`Missing runtime helper file: ${runtimePlanViewRuntimePath}`);
 }
@@ -118,7 +126,7 @@ if (!fs.existsSync(path.join(skillRoot, planHistoryHelperPath))) {
 if (!clientRuntimeRequiredFiles.includes(planHistoryHelperPath)) {
   fail("package.json files must publish scripts/plan-history.mjs because the retrieval helper is part of the runtime surface.");
 }
-for (const helperPath of [planSnapshotHelperPath, planViewHelperPath, planViewServerHelperPath]) {
+for (const helperPath of [nextPlanHelperPath, planSnapshotHelperPath, planViewHelperPath, planViewServerHelperPath]) {
   if (!fs.existsSync(path.join(skillRoot, helperPath))) {
     fail(`Missing runtime helper file: ${helperPath}`);
   }
@@ -141,13 +149,16 @@ for (const relativePath of clientRuntimeRequiredFiles) {
   }
 }
 
-for (const runtimeScriptPath of ["scripts/finish-status.mjs", "scripts/version-closeout.mjs", "scripts/plan-view.mjs", "scripts/plan-view-server.mjs", "scripts/plan-snapshot.mjs"]) {
+for (const runtimeScriptPath of ["scripts/finish-status.mjs", "scripts/version-closeout.mjs", "scripts/plan-view.mjs", "scripts/plan-view-server.mjs", "scripts/plan-snapshot.mjs", "scripts/next-plan.mjs"]) {
   const runtimeScript = await fsp.readFile(path.join(skillRoot, runtimeScriptPath), "utf8");
   if (runtimeScript.includes("./lib-process.mjs") && !clientRuntimeRequiredFiles.includes(runtimeProcessHelperPath)) {
     fail(`${runtimeScriptPath} imports ./lib-process.mjs but package.json files does not publish scripts/lib-process.mjs.`);
   }
   if (runtimeScript.includes("./lib-release-window.mjs") && !clientRuntimeRequiredFiles.includes(runtimeReleaseWindowHelperPath)) {
     fail(`${runtimeScriptPath} imports ./lib-release-window.mjs but package.json files does not publish scripts/lib-release-window.mjs.`);
+  }
+  if (runtimeScript.includes("./core/next-plan-core.mjs") && !clientRuntimeRequiredFiles.includes(runtimeNextPlanCorePath)) {
+    fail(`${runtimeScriptPath} imports ./core/next-plan-core.mjs but package.json files does not publish scripts/core/next-plan-core.mjs.`);
   }
   if (runtimeScript.includes("./runtime/plan-view-runtime.mjs") && !clientRuntimeRequiredFiles.includes(runtimePlanViewRuntimePath)) {
     fail(`${runtimeScriptPath} imports ./runtime/plan-view-runtime.mjs but package.json files does not publish scripts/runtime/plan-view-runtime.mjs.`);
@@ -165,20 +176,20 @@ for (const relativePath of sourceOnlyRequiredFiles) {
 }
 
 const clientAgents = await fsp.readFile(path.join(skillRoot, "assets", "client-agents.md"), "utf8");
-for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/", "## Release Policy", "SemVer Workflow:", "Version Files:", "Pre-1.0 Policy:", "Release History:", "check-closeout.mjs", "finish-status.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit please", "release please", "finish please"]) {
+for (const requiredSnippet of ["AGENTS.md", ".local/project.md", ".local/plans/", "## Release Policy", "SemVer Workflow:", "Version Files:", "Pre-1.0 Policy:", "Release History:", "check-closeout.mjs", "finish-status.mjs", "next-plan.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit please", "release please", "finish please"]) {
   if (!clientAgents.includes(requiredSnippet)) {
     fail(`assets/client-agents.md must mention ${requiredSnippet}`);
   }
 }
 
 const commandMap = await fsp.readFile(path.join(skillRoot, "references", "command-map.md"), "utf8");
-for (const requiredSnippet of ["finish-status.mjs", "plan-history.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit-only", "release-only", "commit-and-release"]) {
+for (const requiredSnippet of ["finish-status.mjs", "next-plan.mjs", "plan-history.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "commit-only", "release-only", "commit-and-release"]) {
   if (!commandMap.includes(requiredSnippet)) {
     fail(`references/command-map.md must mention ${requiredSnippet}`);
   }
 }
 
-for (const requiredSnippet of ["plan-history.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "start", "plan", "research"]) {
+for (const requiredSnippet of ["next-plan.mjs", "plan-history.mjs", "plan-snapshot.mjs", "plan-view.mjs", "open plan view", "start", "plan", "research"]) {
   if (!skillMarkdown.includes(requiredSnippet)) {
     fail(`SKILL.md must mention ${requiredSnippet}`);
   }

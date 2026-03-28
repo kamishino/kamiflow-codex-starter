@@ -17,6 +17,7 @@ Read `AGENTS.md` first, then `.local/project.md`, then the active plan.
 
 - Install or refresh the skill with `npx --package @kamishino/kamiflow-core kamiflow-core install --project .`
 - Recover a missing plan or project brief with `node .agents/skills/kamiflow-core/scripts/ensure-plan.mjs --project .`
+- Inspect suggestion-only next-slice guidance with `node .agents/skills/kamiflow-core/scripts/next-plan.mjs --project . --format text|markdown|json`
 - Check build readiness with `node .agents/skills/kamiflow-core/scripts/ready-check.mjs --project .`
 - Check PASS closeout and optionally archive with `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project .` or `node .agents/skills/kamiflow-core/scripts/check-closeout.mjs --project . --archive-if-pass`
 - Archive a completed PASS plan manually with `node .agents/skills/kamiflow-core/scripts/archive-plan.mjs --project . --plan <path>` only when direct archive recovery is explicitly needed
@@ -57,12 +58,14 @@ Leave this disabled unless the repo wants opt-in SemVer closeout for a root sing
   - `plan` for full implementation planning
 - Update `.local/project.md` only when priorities, guardrails, open questions, or durable decisions changed.
 - Express recurring anti-patterns as `Architecture Guardrails`, settled conclusions as `Recent Decisions`, and unresolved recurring concerns as `Open Questions`.
+- Treat existing `AGENTS.md` and `.local/project.md` as curated repo memory. Missing files may be created, but existing files should be preserved and only flagged when they need attention.
 - If `SemVer Workflow` is enabled, keep `## Release Impact` current in the active plan and resolve it before PASS archive.
 - In SemVer-enabled repos, commit functionality first with a repo-owned subject, then use `version-closeout.mjs` for the release-only commit and `vX.Y.Z` tag.
 - In SemVer-enabled repos, release level comes from the unreleased PASS-plan window since the latest reachable `vX.Y.Z` tag; highest impact wins across that window.
 - In SemVer-enabled repos, treat `commit please` as functional commit only, `release please` as release closeout only, and `finish please` as a request to choose the right final action from `finish-status.mjs`.
 - Treat explicit narrow operational asks like status, diff, summary, commit, release, and finish as fast-path work even if an active plan exists. Do not let stale plan momentum force those asks back into heavier planning lanes.
 - Treat `open plan view` as the same kind of fast-path operational ask. It should stay read-only and use the helper-backed plan snapshot instead of becoming a second workflow.
+- Use `next-plan.mjs` only as read-only guidance. It may suggest the next slice, but it must not auto-create a plan or rewrite repo memory files.
 - Do not reintroduce legacy bootstrap commands or repo-specific bootstrap surfaces.
 - Treat this generated contract as the client-repo default, not the source-repo contract.
 

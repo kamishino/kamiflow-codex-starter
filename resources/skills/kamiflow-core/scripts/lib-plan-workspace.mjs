@@ -22,6 +22,22 @@ const skillRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..
 const clientAgentsTemplatePath = path.join(skillRoot, "assets", "client-agents.md");
 const clientProjectBriefTemplatePath = path.join(skillRoot, "assets", "project-brief-client.md");
 const sourceProjectBriefTemplatePath = path.join(skillRoot, "assets", "project-brief-" + "dog" + "food.md");
+const CLIENT_REPO_CONTRACT_HEADINGS = Object.freeze([
+  "# Repo Contract",
+  "## Ownership",
+  "## Command Boundary",
+  "## Release Policy",
+  "## Working Rules",
+  "## Safety"
+]);
+const PROJECT_BRIEF_HEADINGS = Object.freeze([
+  "# Project Brief",
+  "## Product Summary",
+  "## Current Priorities",
+  "## Architecture Guardrails",
+  "## Open Questions",
+  "## Recent Decisions"
+]);
 
 export async function ensureSkillWorkspace(projectDir) {
   const dirs = [
@@ -133,8 +149,171 @@ export async function ensureProjectBrief(projectDir, role = null) {
   };
 }
 
+export async function buildSetupSummary(projectDir, options = {}) {
+  const role = options.role || await detectRepoRole(projectDir);
+  const releasePolicy = options.releasePolicy || await readReleasePolicy(projectDir);
+  const allowCreate = options.allowCreate !== false;
+  const repoContract = options.repoContract
+    || await resolveRepoContractRuntimeState(projectDir, role, allowCreate);
+  const projectBrief = options.projectBrief
+    || await resolveProjectBriefRuntimeState(projectDir, role, allowCreate);
+  const hygiene = options.hygiene || null;
+
+  const repoContractSummary = await analyzeRepoContractState(projectDir, {
+    role,
+    repoContract,
+    releasePolicy
+  });
+  const projectBriefSummary = await analyzeProjectBriefState(projectDir, {
+    role,
+    projectBrief
+  });
+  const planWorkspaceSummary = buildPlanWorkspaceSetupState(hygiene);
+
+  const issueTypes = uniqueValues([
+    ...repoContractSummary.issue_types,
+    ...projectBriefSummary.issue_types,
+    ...planWorkspaceSummary.issue_types
+  ]);
+  const recommendedActions = uniqueValues([
+    ...repoContractSummary.recommended_actions,
+    ...projectBriefSummary.recommended_actions,
+    ...planWorkspaceSummary.recommended_actions
+  ]);
+
+  return {
+    has_warnings: issueTypes.length > 0,
+    issue_types: issueTypes,
+    recommended_actions: recommendedActions,
+    repo_contract: repoContractSummary,
+    project_brief: projectBriefSummary,
+    plan_workspace: planWorkspaceSummary
+  };
+}
+
 function resolveProjectBriefTemplatePath(role) {
   return role === REPO_ROLE_SOURCE ? sourceProjectBriefTemplatePath : clientProjectBriefTemplatePath;
+}
+
+async function resolveRepoContractRuntimeState(projectDir, role, allowCreate) {
+  if (allowCreate) {
+    return await ensureRepoContract(projectDir, role);
+  }
+
+  const repoContractPath = path.join(projectDir, ROOT_AGENTS_PATH);
+  const exists = fs.existsSync(repoContractPath);
+  return {
+    path: repoContractPath,
+    created: false,
+    preserved: exists,
+    excluded: false,
+    kind: repoContractKindForRole(role),
+    missing: !exists
+  };
+}
+
+async function resolveProjectBriefRuntimeState(projectDir, role, allowCreate) {
+  if (allowCreate) {
+    return await ensureProjectBrief(projectDir, role);
+  }
+
+  const projectBriefPath = path.join(projectDir, PROJECT_BRIEF_PATH);
+  const exists = fs.existsSync(projectBriefPath);
+  return {
+    path: projectBriefPath,
+    created: false,
+    asset_relative_path: projectBriefAssetRelativeForRole(role),
+    missing: !exists
+  };
+}
+
+async function analyzeRepoContractState(projectDir, { role, repoContract, releasePolicy }) {
+  const repoContractPath = repoContract.path || path.join(projectDir, ROOT_AGENTS_PATH);
+  const content = fs.existsSync(repoContractPath) ? await fsp.readFile(repoContractPath, "utf8") : "";
+  const missingSections = role === REPO_ROLE_SOURCE
+    ? []
+    : collectMissingHeadings(content, CLIENT_REPO_CONTRACT_HEADINGS);
+  const issueTypes = [];
+  const recommendedActions = [];
+
+  if (repoContract.missing) {
+    issueTypes.push("repo-contract-missing");
+    recommendedActions.push(`Create ${ROOT_AGENTS_PATH} with install or ensure-plan before depending on repo-contract automation.`);
+  }
+
+  if (missingSections.length > 0) {
+    issueTypes.push("repo-contract-missing-sections");
+    recommendedActions.push(`Review ${ROOT_AGENTS_PATH} and add the missing sections needed for the client repo contract.`);
+  }
+
+  if (releasePolicy?.section_present && !releasePolicy.valid) {
+    issueTypes.push("repo-contract-malformed-release-policy");
+    recommendedActions.push(`Fix the Release Policy block in ${ROOT_AGENTS_PATH} so SemVer helpers can trust the repo contract.`);
+  }
+
+  return {
+    path: repoContractPath,
+    kind: repoContract.kind || repoContractKindForRole(role),
+    state: repoContract.created ? "created" : repoContract.missing ? "missing" : "preserved",
+    needs_attention: issueTypes.length > 0,
+    issue_types: issueTypes,
+    missing_sections: missingSections,
+    release_policy_valid: Boolean(releasePolicy?.valid),
+    recommended_actions: recommendedActions
+  };
+}
+
+async function analyzeProjectBriefState(projectDir, { role, projectBrief }) {
+  const projectBriefPath = projectBrief.path || path.join(projectDir, PROJECT_BRIEF_PATH);
+  const content = fs.existsSync(projectBriefPath) ? await fsp.readFile(projectBriefPath, "utf8") : "";
+  const templateContent = await fsp.readFile(resolveProjectBriefTemplatePath(role), "utf8");
+  const missingSections = collectMissingHeadings(content, PROJECT_BRIEF_HEADINGS);
+  const templateLineMatches = countTemplateLineMatches(content, templateContent);
+  const issueTypes = [];
+  const recommendedActions = [];
+
+  if (projectBrief.missing) {
+    issueTypes.push("project-brief-missing");
+    recommendedActions.push(`Create ${PROJECT_BRIEF_PATH} with install or ensure-plan before relying on project-memory suggestions.`);
+  }
+
+  if (missingSections.length > 0) {
+    issueTypes.push("project-brief-missing-sections");
+    recommendedActions.push(`Fill in the missing sections in ${PROJECT_BRIEF_PATH} so project memory stays structurally usable.`);
+  }
+
+  if (templateLineMatches >= 3) {
+    issueTypes.push("project-brief-placeholder-heavy");
+    recommendedActions.push(`Replace placeholder lines in ${PROJECT_BRIEF_PATH} with repo-specific priorities, guardrails, questions, and decisions.`);
+  }
+
+  return {
+    path: projectBriefPath,
+    state: projectBrief.created ? "created" : projectBrief.missing ? "missing" : "preserved",
+    needs_attention: issueTypes.length > 0,
+    issue_types: issueTypes,
+    missing_sections: missingSections,
+    placeholder_line_count: templateLineMatches,
+    recommended_actions: recommendedActions
+  };
+}
+
+function buildPlanWorkspaceSetupState(hygiene) {
+  if (!hygiene) {
+    return {
+      state: "current",
+      needs_attention: false,
+      issue_types: [],
+      recommended_actions: []
+    };
+  }
+
+  return {
+    state: hygiene.has_warnings ? "attention-needed" : "current",
+    needs_attention: hygiene.has_warnings,
+    issue_types: Array.isArray(hygiene.issue_types) ? [...hygiene.issue_types] : [],
+    recommended_actions: Array.isArray(hygiene.recommended_actions) ? [...hygiene.recommended_actions] : []
+  };
 }
 
 export async function resolveGitExcludePath(projectDir) {
@@ -321,6 +500,29 @@ export function printJson(payload) {
   console.log(JSON.stringify(payload, null, 2));
 }
 
+function collectMissingHeadings(text, expectedHeadings) {
+  return expectedHeadings.filter((heading) => !String(text || "").includes(heading));
+}
+
+function countTemplateLineMatches(text, template) {
+  const templateLines = new Set(extractMeaningfulBulletLines(template));
+  if (templateLines.size === 0) {
+    return 0;
+  }
+  return extractMeaningfulBulletLines(text)
+    .filter((line) => templateLines.has(line))
+    .length;
+}
+
+function extractMeaningfulBulletLines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => /^-\s+/.test(line))
+    .map((line) => line.replace(/\s+/g, " ").toLowerCase())
+    .filter(Boolean);
+}
+
 function normalizeText(value) {
   return String(value).replace(/\r\n/g, "\n");
 }
@@ -335,6 +537,10 @@ function normalizeVersionFileList(value) {
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean))];
+}
+
+function uniqueValues(values) {
+  return [...new Set((Array.isArray(values) ? values : []).filter(Boolean))];
 }
 
 function escapeRegex(value) {
